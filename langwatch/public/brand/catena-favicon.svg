@@ -1,0 +1,21 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Catena favicon</title>
+  <desc id="desc">The Catena chain-cat mark adapts to light and dark browser themes.</desc>
+  <style>
+    .mark { fill: #000000; }
+    @media (prefers-color-scheme: dark) { .mark { fill: #ffffff; } }
+  </style>
+  <g class="mark">
+    <rect x="38" y="12" width="8" height="18" rx="4" transform="rotate(-31 42 21)"/>
+    <rect x="54" y="12" width="8" height="18" rx="4" transform="rotate(31 58 21)"/>
+    <circle cx="72" cy="30" r="5"/>
+    <circle cx="78" cy="46" r="5"/>
+    <circle cx="75" cy="64" r="5"/>
+    <circle cx="63" cy="77" r="5"/>
+    <circle cx="46" cy="82" r="5"/>
+    <circle cx="30" cy="75" r="5"/>
+    <circle cx="21" cy="61" r="5"/>
+    <circle cx="21" cy="43" r="5"/>
+    <circle cx="29" cy="29" r="5"/>
+  </g>
+</svg>

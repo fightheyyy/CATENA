@@ -1,0 +1,57 @@
+# syntax=docker/dockerfile:1.7
+
+FROM node:20-alpine AS barena-build
+WORKDIR /build/barena
+COPY --from=barena-source /package.json /package-lock.json ./
+RUN npm ci
+COPY --from=barena-source /tsconfig.json ./
+COPY --from=barena-source /src ./src
+RUN npm run build && npm prune --omit=dev
+
+FROM xiaoba-source AS xiaoba-source-stage
+
+FROM node:20-alpine AS xiaoba-runtime
+WORKDIR /opt/xiaoba
+COPY --from=xiaoba-source-stage /package.json /package-lock.json ./
+# XiaoBaOS currently declares legacy deasync but does not import it. Skipping
+# dependency lifecycle scripts avoids compiling that unused native addon; the
+# ordinary chat/evolution path is verified by the image readiness probe.
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+COPY --from=xiaoba-source-stage /roles ./roles
+COPY --from=xiaoba-source-stage /skills ./skills
+COPY --from=xiaoba-source-stage /prompts ./prompts
+COPY --from=xiaoba-source-stage /skill-registry.json ./skill-registry.json
+
+FROM xiaoba-runtime AS xiaoba-build
+WORKDIR /opt/xiaoba
+RUN npm install --prefix /opt/typescript-build --no-save --ignore-scripts \
+  typescript@5.9.3 \
+  @types/node@20.19.30 \
+  @types/deasync@0.1.5 \
+  @types/express@5.0.6 \
+  @types/glob@8.1.0 \
+  @types/inquirer@9.0.9 \
+  @types/turndown@5.0.6 \
+  && mkdir -p node_modules/@types \
+  && cp -R /opt/typescript-build/node_modules/@types/. node_modules/@types/
+COPY --from=xiaoba-source-stage /tsconfig.json ./
+COPY --from=xiaoba-source-stage /src ./src
+RUN /opt/typescript-build/node_modules/.bin/tsc
+
+FROM xiaoba-runtime AS xiaoba-package
+COPY --from=xiaoba-build /opt/xiaoba/dist ./dist
+
+FROM node:20-alpine
+ENV NODE_ENV=production
+WORKDIR /opt/barena
+COPY --from=barena-build /build/barena/package.json ./package.json
+COPY --from=barena-build /build/barena/node_modules ./node_modules
+COPY --from=barena-build /build/barena/dist ./dist
+COPY --from=xiaoba-package /opt/xiaoba /opt/xiaoba
+RUN ln -s /opt/xiaoba/dist/index.js /usr/local/bin/xiaoba \
+  && chmod +x /opt/xiaoba/dist/index.js \
+  && mkdir -p /var/lib/catena/runs /var/lib/catena/evolution \
+  && chown -R node:node /var/lib/catena /opt/barena
+USER node
+EXPOSE 8790
+CMD ["node", "dist/runner-service.js"]

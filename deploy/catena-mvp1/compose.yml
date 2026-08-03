@@ -1,0 +1,194 @@
+name: catena
+
+services:
+  catena-app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.catena-mvp1
+    image: catena/app:mvp1
+    command: ["bash", "scripts/start-catena-compose.sh"]
+    working_dir: /app/langwatch
+    environment:
+      NODE_ENV: production
+      SKIP_ENV_VALIDATION: "true"
+      INSTALL_METHOD: docker
+      PORT: "5560"
+      BASE_HOST: http://localhost:${CATENA_APP_PORT:-5570}
+      NEXTAUTH_URL: http://localhost:${CATENA_APP_PORT:-5570}
+      NEXTAUTH_PROVIDER: ${CATENA_AUTH_PROVIDER:-email}
+      GITHUB_CLIENT_ID: ${CATENA_GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${CATENA_GITHUB_CLIENT_SECRET:-}
+      NEXTAUTH_SECRET: ${CATENA_NEXTAUTH_SECRET:-catena-local-nextauth-secret-change-me}
+      API_TOKEN_JWT_SECRET: ${CATENA_API_TOKEN_SECRET:-catena-local-api-token-secret-change-me}
+      CREDENTIALS_SECRET: ${CATENA_CREDENTIALS_SECRET:-catena-local-credentials-secret-change-me}
+      DATABASE_URL: postgresql://langwatch:langwatch-local@postgres:5432/langwatch?schema=public
+      CLICKHOUSE_URL: http://default:langwatch@clickhouse:8123/langwatch
+      REDIS_URL: redis://redis:6379
+      GLOBAL_QUEUE_CONCURRENCY: "24"
+      LANGWATCH_ENDPOINT: http://catena-app:5560
+      LANGWATCH_NLP_SERVICE: http://catena-app:5561
+      LANGEVALS_ENDPOINT: http://catena-app:5562
+      BARENA_CONTROL_PLANE_URL: http://catena-core:8787
+      SPIRAL_RUNNER_URL: http://catena-runner:8790
+      BARENA_GATEWAY_SECRET: ${CATENA_GATEWAY_SECRET:-catena-local-demo-gateway-secret-change-me}
+      ALLOWED_PROXY_HOSTS: ${CATENA_ALLOWED_PROXY_HOSTS:-host.docker.internal,127.0.0.1,localhost}
+    ports:
+      - "127.0.0.1:${CATENA_APP_PORT:-5570}:5560"
+    depends_on:
+      catena-core:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5560/ >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 45s
+    restart: unless-stopped
+
+  catena-core:
+    build:
+      context: ../..
+      dockerfile: deploy/catena-mvp1/Dockerfile.core
+    image: catena/core:mvp1
+    environment:
+      BARENA_SERVER_ADDR: 0.0.0.0:8787
+      BARENA_ALLOW_REMOTE: "1"
+      BARENA_INTERNAL_MODE: "1"
+      BARENA_GATEWAY_SECRET: ${CATENA_GATEWAY_SECRET:-catena-local-demo-gateway-secret-change-me}
+      BARENA_DATABASE_URL: postgresql://catena_core:catena-core-local@postgres:5432/catena_core?sslmode=disable
+      BARENA_NODE: /usr/local/bin/catena-runner-client
+      BARENA_ENGINE_WORKER: /opt/catena/engine-worker.js
+      BARENA_XIAOBA_EVOLUTION_WORKER: /opt/catena/evolution-runtime-worker.js
+      BARENA_RUNS_ROOT: /var/lib/catena/runs
+      BARENA_XIAOBA_EVOLUTION_ROOT: /var/lib/catena/evolution
+      BARENA_XIAOBA_COMMAND: /usr/local/bin/xiaoba
+      BARENA_XIAOBA_PROJECT_ROOT: /opt/xiaoba
+      BARENA_XIAOBA_ROLES_ROOT: /opt/xiaoba/roles
+      BARENA_XIAOBA_SKILLS_ROOT: /opt/xiaoba/skills
+      BARENA_XIAOBA_ENV_ALLOWLIST: XIAOBA_LLM_PROVIDER,XIAOBA_LLM_API_BASE,XIAOBA_LLM_API_KEY,XIAOBA_LLM_MODEL,XIAOBA_LLM_MAX_TOKENS,XIAOBA_OBSERVABILITY_ENABLED,XIAOBA_OBSERVABILITY_TRACES_EXPORTER,OTEL_SERVICE_NAME,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_HEADERS
+      SPIRAL_RUNNER_URL: http://catena-runner:8790
+    ports:
+      - "127.0.0.1:${CATENA_CORE_PORT:-8787}:8787"
+    volumes:
+      - catena-data:/var/lib/catena
+    depends_on:
+      catena-runner:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8787/readyz >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  catena-runner:
+    build:
+      context: ../..
+      dockerfile: deploy/catena-mvp1/Dockerfile.runner
+      additional_contexts:
+        barena-source: "${CATENA_BARENA_CONTEXT:-https://github.com/fightheyyy/barena.git#catena-mvp1-engine-20260803}"
+        xiaoba-source: "${CATENA_XIAOBA_CONTEXT:-https://github.com/fightheyyy/xiaobaOS.git#b4d5af58a0fa171c372a875618c5f46ab15ddb36}"
+    image: catena/runner:mvp1
+    environment:
+      SPIRAL_RUNNER_ADDR: 0.0.0.0:8790
+      SPIRAL_RUNS_ROOT: /var/lib/catena/runs
+      SPIRAL_EVOLUTION_ROOT: /var/lib/catena/evolution
+      SPIRAL_EVOLUTION_TURN_TIMEOUT_MS: "120000"
+      SPIRAL_XIAOBA_COMMAND: /usr/local/bin/xiaoba
+      SPIRAL_XIAOBA_PROJECT_ROOT: /opt/xiaoba
+      SPIRAL_XIAOBA_ROLES_ROOT: /opt/xiaoba/roles
+      SPIRAL_XIAOBA_SKILLS_ROOT: /opt/xiaoba/skills
+      SPIRAL_XIAOBA_ENV_ALLOWLIST: XIAOBA_LLM_PROVIDER,XIAOBA_LLM_API_BASE,XIAOBA_LLM_API_KEY,XIAOBA_LLM_MODEL,XIAOBA_LLM_MAX_TOKENS,XIAOBA_OBSERVABILITY_ENABLED,XIAOBA_OBSERVABILITY_TRACES_EXPORTER,OTEL_SERVICE_NAME,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_HEADERS
+      XIAOBA_LLM_PROVIDER: ${XIAOBA_LLM_PROVIDER:-openai}
+      XIAOBA_LLM_API_BASE: ${XIAOBA_LLM_API_BASE:-http://host.docker.internal:8317/v1}
+      XIAOBA_LLM_API_KEY: ${XIAOBA_LLM_API_KEY:-}
+      XIAOBA_LLM_MODEL: ${XIAOBA_LLM_MODEL:-gpt-5.6-sol}
+      XIAOBA_LLM_MAX_TOKENS: ${XIAOBA_LLM_MAX_TOKENS:-4096}
+      XIAOBA_OBSERVABILITY_ENABLED: ${XIAOBA_OBSERVABILITY_ENABLED:-false}
+      XIAOBA_OBSERVABILITY_TRACES_EXPORTER: otlp
+      OTEL_SERVICE_NAME: catena-evolution-runtime
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://catena-app:5560/api/otel
+      BARENA_PLATFORM_INTERNAL_URL: http://catena-app:5560
+      BARENA_GATEWAY_SECRET: ${CATENA_GATEWAY_SECRET:-catena-local-demo-gateway-secret-change-me}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${CATENA_RUNNER_PORT:-8790}:8790"
+    volumes:
+      - catena-data:/var/lib/catena
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8790/readyz').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${CATENA_POSTGRES_ADMIN_PASSWORD:-catena-postgres-local}
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1:${CATENA_POSTGRES_PORT:-54329}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/10-catena-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  clickhouse:
+    image: langwatch/clickhouse-serverless:0.2.0
+    environment:
+      CLICKHOUSE_PASSWORD: langwatch
+    ports:
+      - "127.0.0.1:${CATENA_CLICKHOUSE_PORT:-8123}:8123"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${CATENA_REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  catena-data:
+  postgres-data:
+  clickhouse-data:
+  redis-data:
