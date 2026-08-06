@@ -25,13 +25,16 @@ jobs:
       run:
         working-directory: catena-web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+          run_install: false
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: catena-web/pnpm-lock.yaml
-      - run: corepack enable
       - run: pnpm install --frozen-lockfile --ignore-workspace
       - run: pnpm test
       - run: pnpm typecheck
@@ -43,8 +46,8 @@ jobs:
       run:
         working-directory: control-plane
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.25.x"
           cache-dependency-path: control-plane/go.sum
@@ -55,7 +58,7 @@ jobs:
   compose-contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Validate local Compose
         run: docker compose -f deploy/catena-mvp1/compose.yml config >/dev/null
       - name: Validate public Compose
