@@ -185,6 +185,7 @@ services:
   clickhouse:
     image: langwatch/clickhouse-serverless:0.2.0
     environment:
+      CLICKHOUSE_DB: langwatch
       CLICKHOUSE_PASSWORD: ${CATENA_CLICKHOUSE_PASSWORD:-langwatch}
     ports:
       - "127.0.0.1:${CATENA_CLICKHOUSE_PORT:-8123}:8123"
@@ -290,7 +291,7 @@ services:
     image: neo4j:5.15.0
     environment:
       NEO4J_AUTH: neo4j/${CATENA_NEO4J_PASSWORD:-catena-neo4j-local}
-      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_PLUGINS: '${CATENA_NEO4J_PLUGINS:-["apoc", "graph-data-science"]}'
       NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
       NEO4J_dbms_security_procedures_allowlist: apoc.*,gds.*
       NEO4J_server_memory_heap_initial__size: 256m

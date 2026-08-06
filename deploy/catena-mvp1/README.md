@@ -111,6 +111,11 @@ settings shown in `.env.example`, then start the optional profile:
 docker compose --profile memory -f deploy/catena-mvp1/compose.yml up -d --build
 ```
 
+Neo4j normally installs APOC and Graph Data Science on first boot. On a host
+without outbound access to the Neo4j plugin registry, preload the compatible
+GDS jar into the `neo4j-plugins` volume and set
+`CATENA_NEO4J_PLUGINS='["apoc"]'`; the default remains the self-installing path.
+
 The browser still calls only Catena. Go retrieves an owned XiaoBaOS
 user-visible Conversation, removes common credential patterns, bounds the
 payload, and submits it to the private GauzMem API. Ordinary Conversation sync
