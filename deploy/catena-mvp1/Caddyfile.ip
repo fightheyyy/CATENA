@@ -1,3 +1,7 @@
+{
+	default_sni {$CATENA_DOMAIN}
+}
+
 {$CATENA_DOMAIN} {
 	tls {
 		issuer acme {
