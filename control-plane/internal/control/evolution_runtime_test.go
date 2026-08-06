@@ -136,7 +136,11 @@ func TestRuntimeAPIExposesEmbeddedRuntimeAndExternalTargetBoundary(t *testing.T)
 	}
 	body, _ = io.ReadAll(response.Body)
 	response.Body.Close()
-	if !strings.Contains(string(body), `"evolution_runtime":"ready"`) {
+	if !strings.Contains(string(body), `"evolution_runtime":"ready"`) ||
+		!strings.Contains(string(body), `"run_bundle":"barena.run_bundle.v1"`) ||
+		!strings.Contains(string(body), `"evolution_protocol":"barena.xiaoba_evolution_request.v1"`) ||
+		strings.Contains(string(body), `"engine_protocol"`) ||
+		strings.Contains(string(body), `"run_package"`) {
 		t.Fatalf("system status does not include Runtime readiness: %s", body)
 	}
 }

@@ -1,0 +1,76 @@
+services:
+  caddy:
+    image: caddy:2.10.2-alpine
+    environment:
+      CATENA_DOMAIN: ${CATENA_DOMAIN:?CATENA_DOMAIN is required}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      catena-core:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  catena-core:
+    environment:
+      BARENA_INTERNAL_MODE: "0"
+      BARENA_GATEWAY_SECRET: ${CATENA_GATEWAY_SECRET:?CATENA_GATEWAY_SECRET is required}
+      BARENA_API_TOKEN_ENCRYPTION_KEY: ${CATENA_API_TOKEN_SECRET:?CATENA_API_TOKEN_SECRET is required}
+      BARENA_GITHUB_CLIENT_ID: ${CATENA_GITHUB_CLIENT_ID:?CATENA_GITHUB_CLIENT_ID is required}
+      BARENA_GITHUB_CLIENT_SECRET: ${CATENA_GITHUB_CLIENT_SECRET:?CATENA_GITHUB_CLIENT_SECRET is required}
+      BARENA_GITHUB_REDIRECT_URL: https://${CATENA_DOMAIN:?CATENA_DOMAIN is required}/api/auth/callback/github
+      BARENA_DATABASE_URL: postgresql://catena_core:${CATENA_CORE_DB_PASSWORD:?CATENA_CORE_DB_PASSWORD is required}@postgres:5432/catena_core?sslmode=disable
+      CATENA_CLICKHOUSE_DSN: http://default:${CATENA_CLICKHOUSE_PASSWORD:?CATENA_CLICKHOUSE_PASSWORD is required}@clickhouse:8123/langwatch?dial_timeout=5s
+    logging:
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  catena-runner:
+    environment:
+      XIAOBA_LLM_API_BASE: ${XIAOBA_LLM_API_BASE:?XIAOBA_LLM_API_BASE is required}
+      XIAOBA_LLM_API_KEY: ${XIAOBA_LLM_API_KEY:?XIAOBA_LLM_API_KEY is required}
+      XIAOBA_LLM_MODEL: ${XIAOBA_LLM_MODEL:?XIAOBA_LLM_MODEL is required}
+    logging:
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ${CATENA_POSTGRES_ADMIN_PASSWORD:?CATENA_POSTGRES_ADMIN_PASSWORD is required}
+      CATENA_CORE_DB_PASSWORD: ${CATENA_CORE_DB_PASSWORD:?CATENA_CORE_DB_PASSWORD is required}
+      LANGWATCH_DB_PASSWORD: ${CATENA_LANGWATCH_DB_PASSWORD:?CATENA_LANGWATCH_DB_PASSWORD is required}
+    logging:
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  clickhouse:
+    environment:
+      CLICKHOUSE_PASSWORD: ${CATENA_CLICKHOUSE_PASSWORD:?CATENA_CLICKHOUSE_PASSWORD is required}
+    logging:
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  caddy-data:
+  caddy-config:

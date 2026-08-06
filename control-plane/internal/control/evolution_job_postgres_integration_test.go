@@ -2,8 +2,11 @@ package control
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -55,6 +58,7 @@ func TestPostgresEvolutionJobPersistenceAndIdempotency(t *testing.T) {
 	job := EvolutionJob{
 		Schema:             evolutionJobSchema,
 		ID:                 newID("evolution-pg-job"),
+		SourceKind:         EvolutionSourceRunTrace,
 		SourceRunID:        run.ID,
 		SourceTraceID:      traceID,
 		Objective:          "Persist one candidate proposal.",
@@ -121,5 +125,59 @@ func TestPostgresEvolutionJobPersistenceAndIdempotency(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("persisted Evolution Job %s was not listed", job.ID)
+	}
+}
+
+func TestPostgresTraceOnlyEvolutionJobHasNoSyntheticRun(t *testing.T) {
+	databaseURL := os.Getenv("BARENA_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("BARENA_TEST_DATABASE_URL is not configured")
+	}
+	ctx := context.Background()
+	store, err := OpenPostgres(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	now := time.Now().UTC()
+	traceID := fmt.Sprintf("%032x", now.UnixNano())
+	pack := EvolutionEvidencePack{
+		Schema: evolutionEvidenceSchema, SourceKind: EvolutionSourceTrace,
+		SourceTraceID: traceID, Spans: []EvolutionEvidenceSpan{}, RunEvents: []EngineEvent{},
+		Redacted: true, Boundary: EvolutionEvidenceBoundary{
+			ReleaseAuthority: evolutionReleaseAuthority, CandidateStatus: evolutionCandidateStatus,
+			ReviewScope: evolutionReviewScope,
+		}, CreatedAt: now,
+	}
+	digestInput, err := evolutionEvidenceDigestInput(pack)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(digestInput)
+	pack.SHA256 = hex.EncodeToString(digest[:])
+	job := EvolutionJob{
+		Schema: evolutionJobSchema, ID: newID("trace-only-pg-job"),
+		SourceKind: EvolutionSourceTrace, SourceTraceID: traceID,
+		IdempotencyKey:     newID("trace-only-pg-key"),
+		RequestFingerprint: newID("trace-only-pg-fingerprint"),
+		State:              EvolutionJobQueued, Stages: cloneEvolutionStages(evolutionJobStages),
+		EvidencePack: &pack, Boundary: pack.Boundary, CreatedAt: now, UpdatedAt: now,
+	}
+	created, wasCreated, err := store.CreateEvolutionJob(ctx, job)
+	if err != nil || !wasCreated || created.SourceRunID != "" || created.SourceKind != EvolutionSourceTrace {
+		t.Fatalf("Trace-only Evolution Job create failed: job=%#v created=%v err=%v", created, wasCreated, err)
+	}
+	retry := job
+	retry.ID = newID("must-not-create-trace-only-job")
+	duplicate, wasCreated, err := store.CreateEvolutionJob(ctx, retry)
+	if err != nil || wasCreated || duplicate.ID != job.ID || duplicate.SourceRunID != "" {
+		t.Fatalf("Trace-only Evolution retry was not idempotent: job=%#v created=%v err=%v", duplicate, wasCreated, err)
+	}
+	stored, err := store.GetEvolutionJob(ctx, job.ID)
+	if err != nil || stored.SourceRunID != "" || stored.EvidencePack == nil ||
+		stored.EvidencePack.SHA256 != pack.SHA256 ||
+		!validEvolutionEvidencePack(*stored.EvidencePack, stored) {
+		t.Fatalf("Trace-only Evolution persistence invented a Run or lost evidence: job=%#v err=%v", stored, err)
 	}
 }

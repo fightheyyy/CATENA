@@ -1,14 +1,29 @@
+# syntax=docker/dockerfile:1.7
+
+FROM node:24-alpine AS web-build
+RUN corepack enable
+WORKDIR /src/catena-web
+COPY catena-web/package.json catena-web/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --ignore-workspace
+COPY catena-web/index.html catena-web/tsconfig.json catena-web/tsconfig.app.json catena-web/tsconfig.node.json catena-web/vite.config.ts ./
+COPY catena-web/public ./public
+COPY catena-web/src ./src
+RUN pnpm build
+
 FROM golang:1.25-alpine AS build
 WORKDIR /src/control-plane
 COPY control-plane/go.mod control-plane/go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY control-plane ./
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/catena-core ./cmd/barena-server \
+RUN rm -rf internal/control/web
+COPY --from=web-build /src/catena-web/dist ./internal/control/web
+RUN --mount=type=cache,target=/root/.cache/go-build \
+  CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/catena-server ./cmd/barena-server \
   && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/catena-runner-client ./cmd/spiral-runner-client
 
 FROM alpine:3.22
 RUN apk add --no-cache ca-certificates
-COPY --from=build /out/catena-core /usr/local/bin/catena-core
+COPY --from=build /out/catena-server /usr/local/bin/catena-server
 COPY --from=build /out/catena-runner-client /usr/local/bin/catena-runner-client
 COPY deploy/catena-mvp1/worker-markers /opt/catena
 # The shared catena-data volume is also written by the Node runner image,
@@ -21,4 +36,4 @@ RUN addgroup -S -g 1000 catena \
   && chown -R catena:catena /var/lib/catena
 USER catena
 EXPOSE 8787
-ENTRYPOINT ["/usr/local/bin/catena-core"]
+ENTRYPOINT ["/usr/local/bin/catena-server"]

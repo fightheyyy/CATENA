@@ -4,9 +4,125 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
+
+func TestPostgresConcurrentProjectIdentityUpsert(t *testing.T) {
+	databaseURL := os.Getenv("BARENA_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("BARENA_TEST_DATABASE_URL is not configured")
+	}
+	ctx := context.Background()
+	store, err := OpenPostgres(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	identity := platformProjectUser(newID("project-pg-upsert"), time.Now().UTC())
+	const callers = 12
+	start := make(chan struct{})
+	results := make(chan User, callers)
+	errors := make(chan error, callers)
+	var waitGroup sync.WaitGroup
+	for range callers {
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			<-start
+			persisted, err := store.UpsertUser(ctx, identity)
+			if err != nil {
+				errors <- err
+				return
+			}
+			results <- persisted
+		}()
+	}
+	close(start)
+	waitGroup.Wait()
+	close(results)
+	close(errors)
+
+	for err := range errors {
+		t.Errorf("concurrent identity upsert failed: %v", err)
+	}
+	for persisted := range results {
+		if persisted.ID != identity.ID || persisted.GitHubID != identity.GitHubID {
+			t.Errorf("unexpected persisted identity: %#v", persisted)
+		}
+	}
+}
+
+func TestPostgresAPITokenRecoverySurvivesStoreRestart(t *testing.T) {
+	databaseURL := os.Getenv("BARENA_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("BARENA_TEST_DATABASE_URL is not configured")
+	}
+	ctx := context.Background()
+	store, err := OpenPostgres(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	user, err := store.UpsertUser(ctx, User{
+		ID:          newID("usr-token-pg"),
+		GitHubID:    now.UnixNano(),
+		Login:       newID("token-pg"),
+		DisplayName: "Token persistence test",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
+	if err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	const plaintext = "barena_pat_postgres_restart_secret"
+	tokenID := newID("pat-pg")
+	encrypted, err := encryptAPIToken(plaintext, tokenID, testGatewaySecret)
+	if err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	if err := store.CreateAPIToken(ctx, APIToken{
+		ID:             tokenID,
+		TokenHash:      sessionTokenHash(plaintext),
+		EncryptedToken: encrypted,
+		UserID:         user.ID,
+		Name:           "Restart-safe Runner",
+		CreatedAt:      now,
+	}); err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	store.Close()
+
+	reopened, err := OpenPostgres(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	retained, err := reopened.GetAPITokenByUser(ctx, user.ID, tokenID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recovered, err := decryptAPIToken(
+		retained.EncryptedToken,
+		retained.ID,
+		testGatewaySecret,
+	)
+	if err != nil || recovered != plaintext {
+		t.Fatalf("unexpected retained token %q err=%v", recovered, err)
+	}
+	authenticated, err := reopened.GetUserByAPITokenHash(ctx, sessionTokenHash(plaintext))
+	if err != nil || authenticated.ID != user.ID {
+		t.Fatalf("hash authentication changed after restart: user=%#v err=%v", authenticated, err)
+	}
+	if err := reopened.DeleteAPIToken(ctx, user.ID, tokenID); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestPostgresTraceIssuePromotion(t *testing.T) {
 	databaseURL := os.Getenv("BARENA_TEST_DATABASE_URL")

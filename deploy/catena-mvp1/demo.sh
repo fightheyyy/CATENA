@@ -15,7 +15,7 @@ case "$action" in
     "${compose[@]}" config
     ;;
   build)
-    "${compose[@]}" build catena-runner catena-core catena-app
+    "${compose[@]}" build catena-runner catena-core
     ;;
   up)
     "${compose[@]}" up -d --build --wait --wait-timeout 600
@@ -25,13 +25,16 @@ case "$action" in
     "$deploy_dir/smoke.sh"
     ;;
   logs)
-    "${compose[@]}" logs -f --tail=200 catena-app catena-core catena-runner
+    "${compose[@]}" logs -f --tail=200 catena-core catena-runner
+    ;;
+  legacy-up)
+    "${compose[@]}" --profile legacy up -d --build --wait --wait-timeout 600
     ;;
   down)
     "${compose[@]}" down --remove-orphans
     ;;
   *)
-    echo "usage: $0 {config|build|up|smoke|logs|down}" >&2
+    echo "usage: $0 {config|build|up|smoke|logs|legacy-up|down}" >&2
     exit 2
     ;;
 esac

@@ -2,6 +2,7 @@ name: catena
 
 services:
   catena-app:
+    profiles: ["legacy"]
     build:
       context: ../..
       dockerfile: Dockerfile.catena-mvp1
@@ -13,27 +14,34 @@ services:
       SKIP_ENV_VALIDATION: "true"
       INSTALL_METHOD: docker
       PORT: "5560"
-      BASE_HOST: http://localhost:${CATENA_APP_PORT:-5570}
-      NEXTAUTH_URL: http://localhost:${CATENA_APP_PORT:-5570}
+      BASE_HOST: http://localhost:${CATENA_LEGACY_PORT:-5671}
+      NEXTAUTH_URL: http://localhost:${CATENA_LEGACY_PORT:-5671}
       NEXTAUTH_PROVIDER: ${CATENA_AUTH_PROVIDER:-email}
       GITHUB_CLIENT_ID: ${CATENA_GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${CATENA_GITHUB_CLIENT_SECRET:-}
+      GOOGLE_CLIENT_ID: ${CATENA_GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${CATENA_GOOGLE_CLIENT_SECRET:-}
       NEXTAUTH_SECRET: ${CATENA_NEXTAUTH_SECRET:-catena-local-nextauth-secret-change-me}
       API_TOKEN_JWT_SECRET: ${CATENA_API_TOKEN_SECRET:-catena-local-api-token-secret-change-me}
       CREDENTIALS_SECRET: ${CATENA_CREDENTIALS_SECRET:-catena-local-credentials-secret-change-me}
       DATABASE_URL: postgresql://langwatch:langwatch-local@postgres:5432/langwatch?schema=public
       CLICKHOUSE_URL: http://default:langwatch@clickhouse:8123/langwatch
       REDIS_URL: redis://redis:6379
-      GLOBAL_QUEUE_CONCURRENCY: "24"
+      # Keep the single-node MVP responsive on an 8 GB Docker Desktop VM while
+      # imported OTLP history is being folded into ClickHouse. Production can
+      # raise this explicitly after sizing the ClickHouse worker pool.
+      GLOBAL_QUEUE_CONCURRENCY: "6"
       LANGWATCH_ENDPOINT: http://catena-app:5560
       LANGWATCH_NLP_SERVICE: http://catena-app:5561
       LANGEVALS_ENDPOINT: http://catena-app:5562
       BARENA_CONTROL_PLANE_URL: http://catena-core:8787
       SPIRAL_RUNNER_URL: http://catena-runner:8790
       BARENA_GATEWAY_SECRET: ${CATENA_GATEWAY_SECRET:-catena-local-demo-gateway-secret-change-me}
-      ALLOWED_PROXY_HOSTS: ${CATENA_ALLOWED_PROXY_HOSTS:-host.docker.internal,127.0.0.1,localhost}
+      ALLOWED_PROXY_HOSTS: ${CATENA_ALLOWED_PROXY_HOSTS:-catena-host,127.0.0.1,localhost}
+    extra_hosts:
+      - "catena-host:host-gateway"
     ports:
-      - "127.0.0.1:${CATENA_APP_PORT:-5570}:5560"
+      - "127.0.0.1:${CATENA_LEGACY_PORT:-5671}:5560"
     depends_on:
       catena-core:
         condition: service_healthy
@@ -61,7 +69,16 @@ services:
       BARENA_ALLOW_REMOTE: "1"
       BARENA_INTERNAL_MODE: "1"
       BARENA_GATEWAY_SECRET: ${CATENA_GATEWAY_SECRET:-catena-local-demo-gateway-secret-change-me}
-      BARENA_DATABASE_URL: postgresql://catena_core:catena-core-local@postgres:5432/catena_core?sslmode=disable
+      BARENA_API_TOKEN_ENCRYPTION_KEY: ${CATENA_API_TOKEN_SECRET:-catena-local-api-token-secret-change-me}
+      BARENA_GITHUB_CLIENT_ID: ${CATENA_GITHUB_CLIENT_ID:-}
+      BARENA_GITHUB_CLIENT_SECRET: ${CATENA_GITHUB_CLIENT_SECRET:-}
+      BARENA_GITHUB_REDIRECT_URL: ${CATENA_GITHUB_REDIRECT_URL:-}
+      BARENA_DATABASE_URL: postgresql://catena_core:${CATENA_CORE_DB_PASSWORD:-catena-core-local}@postgres:5432/catena_core?sslmode=disable
+      CATENA_CLICKHOUSE_DSN: ${CATENA_CLICKHOUSE_DSN:-http://default:langwatch@clickhouse:8123/langwatch?dial_timeout=5s}
+      # Set CATENA_MEMORY_URL=http://gauzmem:1235 together with the `memory`
+      # Compose profile after configuring the model and embedding credentials.
+      CATENA_MEMORY_URL: ${CATENA_MEMORY_URL:-}
+      CATENA_MEMORY_API_KEY: ${CATENA_MEMORY_API_KEY:-}
       BARENA_NODE: /usr/local/bin/catena-runner-client
       BARENA_ENGINE_WORKER: /opt/catena/engine-worker.js
       BARENA_XIAOBA_EVOLUTION_WORKER: /opt/catena/evolution-runtime-worker.js
@@ -74,13 +91,15 @@ services:
       BARENA_XIAOBA_ENV_ALLOWLIST: XIAOBA_LLM_PROVIDER,XIAOBA_LLM_API_BASE,XIAOBA_LLM_API_KEY,XIAOBA_LLM_MODEL,XIAOBA_LLM_MAX_TOKENS,XIAOBA_OBSERVABILITY_ENABLED,XIAOBA_OBSERVABILITY_TRACES_EXPORTER,OTEL_SERVICE_NAME,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_HEADERS
       SPIRAL_RUNNER_URL: http://catena-runner:8790
     ports:
-      - "127.0.0.1:${CATENA_CORE_PORT:-8787}:8787"
+      - "127.0.0.1:${CATENA_APP_PORT:-5570}:8787"
     volumes:
       - catena-data:/var/lib/catena
     depends_on:
       catena-runner:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      clickhouse:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8787/readyz >/dev/null"]
@@ -99,6 +118,7 @@ services:
         xiaoba-source: "${CATENA_XIAOBA_CONTEXT:-https://github.com/fightheyyy/xiaobaOS.git#b4d5af58a0fa171c372a875618c5f46ab15ddb36}"
     image: catena/runner:mvp1
     environment:
+      CATENA_RUNNER_MODE: evolution
       SPIRAL_RUNNER_ADDR: 0.0.0.0:8790
       SPIRAL_RUNS_ROOT: /var/lib/catena/runs
       SPIRAL_EVOLUTION_ROOT: /var/lib/catena/evolution
@@ -110,15 +130,18 @@ services:
       SPIRAL_XIAOBA_ENV_ALLOWLIST: XIAOBA_LLM_PROVIDER,XIAOBA_LLM_API_BASE,XIAOBA_LLM_API_KEY,XIAOBA_LLM_MODEL,XIAOBA_LLM_MAX_TOKENS,XIAOBA_OBSERVABILITY_ENABLED,XIAOBA_OBSERVABILITY_TRACES_EXPORTER,OTEL_SERVICE_NAME,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_HEADERS
       XIAOBA_LLM_PROVIDER: ${XIAOBA_LLM_PROVIDER:-openai}
       XIAOBA_LLM_API_BASE: ${XIAOBA_LLM_API_BASE:-http://host.docker.internal:8317/v1}
-      XIAOBA_LLM_API_KEY: ${XIAOBA_LLM_API_KEY:-}
+      # Local CLIProxy accepts this non-secret development token by default.
+      # Override XIAOBA_LLM_API_KEY for any shared or production deployment.
+      XIAOBA_LLM_API_KEY: ${XIAOBA_LLM_API_KEY:-xiaoba-local}
       XIAOBA_LLM_MODEL: ${XIAOBA_LLM_MODEL:-gpt-5.6-sol}
       XIAOBA_LLM_MAX_TOKENS: ${XIAOBA_LLM_MAX_TOKENS:-4096}
       XIAOBA_OBSERVABILITY_ENABLED: ${XIAOBA_OBSERVABILITY_ENABLED:-false}
       XIAOBA_OBSERVABILITY_TRACES_EXPORTER: otlp
       OTEL_SERVICE_NAME: catena-evolution-runtime
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://catena-app:5560/api/otel
-      BARENA_PLATFORM_INTERNAL_URL: http://catena-app:5560
-      BARENA_GATEWAY_SECRET: ${CATENA_GATEWAY_SECRET:-catena-local-demo-gateway-secret-change-me}
+      # Disabled by default. When enabled, the embedded Evolution Runtime emits
+      # through the same canonical OTLP receiver as every external Agent; it
+      # must never depend on the optional legacy LangWatch container.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://catena-core:8787/v1/otlp
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -145,11 +168,13 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${CATENA_POSTGRES_ADMIN_PASSWORD:-catena-postgres-local}
       POSTGRES_DB: postgres
+      CATENA_CORE_DB_PASSWORD: ${CATENA_CORE_DB_PASSWORD:-catena-core-local}
+      LANGWATCH_DB_PASSWORD: ${CATENA_LANGWATCH_DB_PASSWORD:-langwatch-local}
     ports:
       - "127.0.0.1:${CATENA_POSTGRES_PORT:-54329}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./postgres-init.sql:/docker-entrypoint-initdb.d/10-catena-databases.sql:ro
+      - ./postgres-init.sh:/docker-entrypoint-initdb.d/10-catena-databases.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 3s
@@ -160,7 +185,7 @@ services:
   clickhouse:
     image: langwatch/clickhouse-serverless:0.2.0
     environment:
-      CLICKHOUSE_PASSWORD: langwatch
+      CLICKHOUSE_PASSWORD: ${CATENA_CLICKHOUSE_PASSWORD:-langwatch}
     ports:
       - "127.0.0.1:${CATENA_CLICKHOUSE_PORT:-8123}:8123"
     volumes:
@@ -174,6 +199,7 @@ services:
     restart: unless-stopped
 
   redis:
+    profiles: ["legacy"]
     image: redis:7.4.7-alpine
     command: ["redis-server", "--appendonly", "yes"]
     ports:
@@ -187,8 +213,108 @@ services:
       retries: 30
     restart: unless-stopped
 
+  gauzmem:
+    profiles: ["memory"]
+    build:
+      context: ../..
+      dockerfile: deploy/catena-mvp1/Dockerfile.gauzmem
+      additional_contexts:
+        gauzmem-source: "${CATENA_GAUZMEM_CONTEXT:-https://github.com/fightheyyy/gauzrag.git#27750ccf3611bb4dc9e5bca0e77023a277d677fe}"
+    image: catena/gauzmem:mvp1
+    environment:
+      GAUZ_ENV: development
+      GAUZ_DEV_SKIP_AUTH: "true"
+      GAUZ_JSON_LOGS: "true"
+      GAUZ_LOG_FILE: ""
+      GAUZ_LLM_PROVIDER: openai
+      GAUZ_LLM_API_BASE: ${GAUZ_LLM_API_BASE:-http://host.docker.internal:8317/v1}
+      GAUZ_LLM_API_KEY: ${GAUZ_LLM_API_KEY:-xiaoba-local}
+      GAUZ_LLM_MODEL: ${GAUZ_LLM_MODEL:-gpt-5.6-sol}
+      GAUZ_LLM_MAX_TOKENS: ${GAUZ_LLM_MAX_TOKENS:-4096}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-memory-embedding-key-not-configured}
+      DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      DASHSCOPE_EMBEDDING_MODEL: ${DASHSCOPE_EMBEDDING_MODEL:-text-embedding-v4}
+      MYSQL_HOST: gauzmem-mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: gauzmem
+      MYSQL_PASSWORD: ${CATENA_GAUZMEM_MYSQL_PASSWORD:-gauzmem-local-change-me}
+      MYSQL_DB: gauzmem
+      QDRANT_MODE: local
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ${CATENA_NEO4J_PASSWORD:-catena-neo4j-local}
+      # Redis and MinIO are deliberately absent. Catena only integrates Conversation
+      # memory; GauzMem falls back to in-process task state and file ingestion
+      # remains outside this product boundary.
+      REDIS_URL: ""
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - gauzmem-data:/app/output
+    depends_on:
+      gauzmem-mysql:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:1235/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+    restart: unless-stopped
+
+  gauzmem-mysql:
+    profiles: ["memory"]
+    image: mysql:8.0.46
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: gauzmem
+      MYSQL_USER: gauzmem
+      MYSQL_PASSWORD: ${CATENA_GAUZMEM_MYSQL_PASSWORD:-gauzmem-local-change-me}
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - gauzmem-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u gauzmem -p\"$$MYSQL_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  neo4j:
+    profiles: ["memory"]
+    image: neo4j:5.15.0
+    environment:
+      NEO4J_AUTH: neo4j/${CATENA_NEO4J_PASSWORD:-catena-neo4j-local}
+      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
+      NEO4J_dbms_security_procedures_allowlist: apoc.*,gds.*
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 768m
+      NEO4J_server_memory_pagecache_size: 256m
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+      - neo4j-plugins:/plugins
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
 volumes:
   catena-data:
   postgres-data:
   clickhouse-data:
   redis-data:
+  gauzmem-data:
+  gauzmem-mysql-data:
+  neo4j-data:
+  neo4j-logs:
+  neo4j-plugins:

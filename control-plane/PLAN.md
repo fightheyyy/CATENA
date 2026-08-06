@@ -1,27 +1,72 @@
 # Catena Control Plane Plan
 
-Updated 2026-08-01.
+Updated 2026-08-06.
 
 ## Current Status
 
-The repository already contains a working local vertical slice: Go controls
-Run lifecycle and PostgreSQL persistence, a Node worker invokes the TypeScript
-Engine, and an embedded React client renders live evaluation evidence.
+The repository contains a standalone Go control plane and React product
+surface. Go owns authentication, OTLP ingress, owner-scoped Agent/Trace queries,
+owner-scoped XiaoBaOS Conversation ingestion/query, PostgreSQL Job state, and
+orchestration of a restricted XiaoBaOS Evolution Runtime. LangWatch remains a
+migration/rollback source, not the product request path.
 
-The Catena repository is the selected Apache-2.0 platform downstream. MVP1
-joins its Web/Trace subsystem and Go control plane through an authenticated
-server-side proxy. A genuine
-OTLP/protobuf XiaoBaOS Explore Trace can become an evidence-backed Issue, one
-reviewed immutable Case, a canonical Replay, a persisted Evaluation, and a
-Release Gate in the same browser workflow.
+The final boundary is locked: Barena runs Explore, UserCat, target interaction,
+Replay, Compare, verifier, and Release Check beside the target Runtime. Catena
+owns durable OTLP/Run evidence and the multi-user evolution workflow. Its
+restricted XiaoBaOS Evolution Runtime consumes Evidence Packs through
+InspectorCat, EvolutionCat, and ReviewerCat and emits portable Agent assets plus
+XiaoBaOS-only Harness optimization.
+The target Agent Runtime stays external; Go does not reimplement Agent
+reasoning or verifier semantics and never recomputes a Barena release verdict.
 
-The final boundary is locked: the LangWatch-derived Platform uses its existing
-Scenario UI and orchestration for registered HTTP Agent Explore and owns the raw
-Trace subsystem; its User Simulator and trace-aware Judge call the restricted
-XiaoBaOS Runtime as UserCat and ReviewerCat. The TypeScript Engine owns
-deterministic Replay and Release Check; Go owns the multi-user evolution
-workflow. The target Agent Runtime stays external, and Go does not reimplement
-agent reasoning, verifier, or OTLP.
+## Active Milestone: Edge evidence to cloud evolution
+
+- [x] Remove current Case/Memory generation and Replay handoff semantics from
+      the Agent Trace Set path. Accept `agent_md`, Skill, and Role for all
+      Agents, and Harness only for canonical XiaoBaOS.
+
+- [x] Add `xiaoba.conversation_batch.v1` API-key ingress, idempotent
+      PostgreSQL persistence, owner-scoped list/detail reads, and Trace
+      correlation without changing OTLP ingestion.
+
+- [x] Unify direct standalone API-key ingress for Barena Run Events, terminal
+      Run Bundle facts, and correlated OTLP.
+- [x] Keep local Barena completion authoritative when cloud synchronization
+      fails; retain a retryable sync state.
+- [x] Preserve the versioned single-Trace Evidence Pack and optional Run context
+      for legacy API consumers and completed Jobs only.
+- [x] Build a versioned Agent Trace Set Evidence Pack from one observed Agent
+      plus a bounded time window containing at least two owned Traces; freeze
+      the exact included Trace IDs before execution.
+- [x] Return OTel-derived Agent classification with `identity_source`, using
+      `service.name` only as the disclosed MVP fallback.
+- [x] Merge known Codex live/history source aliases into one canonical Agent;
+      expand canonical filters for Trace queries and Trace Set snapshots while
+      preserving original Trace source identity.
+- [x] Classify known Barena target telemetry as the observed Agent while
+      keeping its orchestrator, User Simulator, Inspector, and Reviewer as
+      Trace-only internal evidence.
+- [x] Execute InspectorCat → EvolutionCat → ReviewerCat without invoking the
+      target Agent.
+- [x] Persist evidence-linked legacy candidate records for compatibility.
+- [x] Remove target execution and deterministic Replay from the default cloud
+      Runner profile after the edge synchronization path passes acceptance.
+
+### Acceptance
+
+- One observed Agent plus a bounded time window resolves to at least two owned
+  Traces; the server freezes their exact IDs into an immutable Evidence Pack.
+- The Agent Trace Set completes one three-stage XiaoBaOS Evolution Job and keeps
+  plural source provenance on every output.
+- The candidate page shows stage evidence, provenance, content, and an explicit
+  unverified state.
+- Single-Trace detail contains no cloud Evolution action; it remains an
+  observation, Memory, and Replay-evidence surface.
+- Agent classification discloses `identity_source` and source aliases; known
+  Codex sources resolve to one Agent and unknown sources retain the explicit
+  `service.name` fallback.
+- Catena outage changes only sync status, never the local Explore verdict.
+- No Catena service invokes or stores credentials for the target Agent.
 
 ## Current Milestone: Embedded XiaoBaOS evolution Runtime
 
@@ -146,6 +191,8 @@ write set, final verification, and MVP1 acceptance.
 - [x] Freeze source-of-truth, repository, authentication, and data ownership
       across the TypeScript Engine, Platform fork, and Go service.
 - [x] Add revocable, owner-scoped personal API tokens for Barena Runner.
+- [x] Add encrypted token recovery, owner-only no-store reveal, legacy
+      hash-only compatibility, and restart-safe PostgreSQL persistence.
 - [x] Add edge Run creation, ordered Event ingestion, and explicit completion.
 - [x] Preserve the existing local worker path as compatibility mode.
 - [x] Refocus primary navigation on Explore, Traces, History, and Settings.
@@ -176,6 +223,9 @@ write set, final verification, and MVP1 acceptance.
       both Run gateway and OTLP setup; do not expose a second Go credential.
 - [x] Scope fork-originated Go tenancy to signed fork-project context while
       preserving existing Run IDs and compatibility principals.
+- [x] Serialize PostgreSQL compatibility-principal upserts per external
+      identity and cover the fresh-project fan-out race with an integration
+      test.
 - [x] Persist and checksum-validate immutable Run Packages, scorecard facts, and
       Engine-produced decision records without recomputing Release Check.
 - [x] Add Harness Version lineage and durable source/replay Trace correlation
@@ -203,6 +253,9 @@ write set, final verification, and MVP1 acceptance.
       `BARENA_PLATFORM_API_KEY`.
 - [x] Verify invalid-key denial, project isolation, complete edge lifecycle,
       GitHub provider configuration, and Compose wiring.
+- [x] Normalize standalone GitHub login to the configured callback origin,
+      preserve strict state/PKCE validation, and verify localhost/127.0.0.1
+      regression coverage.
 
 ## Deferred
 
@@ -219,13 +272,67 @@ write set, final verification, and MVP1 acceptance.
 
 ## Active Milestone: Catena Trace-to-Evolution MVP1
 
+- [x] Add owner-scoped Agent Trace queries and create Evolution from one Agent
+      plus a bounded time window containing at least two Traces, freezing the
+      exact source Trace IDs.
+- [x] Introduce the versioned Agent Trace Set Evidence Pack and plural
+      provenance while retaining completed single-Trace Jobs as compatibility
+      records only.
+- [x] Remove the single-Trace Evolution creation route from the product Web
+      flow after Agent Trace Set creation passes API and browser acceptance.
+
+### GauzMem private memory service
+
+- [x] Add an owner-scoped Fact graph read contract through Go, retain the
+      private GauzMem project boundary, and verify request scope, safe provider
+      errors, and live Neo4j-backed Fact/Entity/Relation output.
+
+- [x] Keep GauzMem behind a replaceable `MemoryBackend`; browsers never call
+      the Python service or choose their own tenant namespace.
+- [x] Expose owner-scoped recent-memory, recall, readiness, and explicit
+      Conversation-retention APIs from Go; keep Trace retention compatibility
+      API-only.
+- [x] Preserve source Conversation, Agent/Runtime, surface, time, and visible
+      content provenance while bounding and redacting it before it leaves
+      Catena.
+- [x] Verify the pinned GauzMem image, MySQL authority, local Qdrant index,
+      Neo4j graph path, Go race suite, and live private-network health.
+- [x] Move the current product write path to authenticated XiaoBaOS
+      Conversation documents with stable Conversation provenance; retain the
+      older Trace method only for API compatibility.
+- [x] Patch the pinned GauzMem Step 8 Qdrant Local lock failure by reusing the
+      already initialized project-scoped vector client. Remove this patch when
+      the upstream pin includes the same correction.
+- [x] Patch the pinned GauzMem bundle-search mismatch by adding the missing
+      bounded async graph-expansion adapter to its infrastructure Neo4j store.
+      Remove this patch when the upstream pin includes the same correction.
+
+- [x] Promote the Go control plane to the only Catena product backend in the
+      standalone migration slice.
+- [x] Serve the standalone `catena-web` React build with SPA fallback.
+- [x] Move project/API-key and Trace ingress/query ownership into Go.
+- [ ] Add PostgreSQL job leases, heartbeat, retry, cancellation, and recovery.
+- [ ] Preserve TypeScript/Python engines behind versioned worker contracts;
+      do not port evaluation logic to Go.
+- [x] Remove LangWatch from the public proxy/auth path; retain its legacy port
+      only until retained Trace parity.
+
 - [x] Lock Catena as the platform name and Barena as the embedded release
       engine; record the three-service/six-container ADR.
-- [ ] Add persistent, tenant-isolated, idempotent Evolution Jobs sourced from a
-      terminal Run and retained Trace.
-- [ ] Retain InspectorCat -> EvolutionCat -> ReviewerCat stage state and expose
-      Finding, Case proposal, draft Candidate, and proposal-only Review.
-- [ ] Expose the workflow through the signed project gateway and bilingual
+- [x] Retain persistent, tenant-isolated, idempotent single-Trace Evolution Jobs
+      for legacy API/history compatibility, with optional terminal Run context
+      and no synthetic Run. Do not expose this creation path in the current Web.
+- [x] Retain InspectorCat -> EvolutionCat -> ReviewerCat stage state and expose
+      Finding, `draft/unverified` Memory/Role/Skill/Harness/Case candidates, and
+      proposal-only Review.
+- [x] Accept one owner-scoped, immutable `barena.run_bundle.v1` with a
+      hash-verified opaque terminal fact; retain the legacy three-step edge
+      ingest endpoints only for compatibility.
+- [x] Build and retain a bounded/redacted
+      `catena.evolution_evidence_pack.v1` from real stored Trace spans/tool
+      evidence plus optional Run Bundle facts, and expose the explicit
+      no-target-execution/no-Release boundary.
+- [x] Expose the workflow through the signed project gateway and bilingual
       Evolution page.
 - [ ] Run Barena engine and XiaoBa evolution workers behind a functional
       `catena-runner` in Compose.
@@ -266,6 +373,83 @@ write set, final verification, and MVP1 acceptance.
 
 ## Verification Log
 
+- 2026-08-06: the owner-scoped Fact graph contract passed unit, full, vet, and
+  race verification. `GET /v1/memories/facts/{fact_id}/graph` derives the
+  private GauzMem project from the authenticated owner, forwards the private
+  service credential, strips `project_id`, and hides provider failures. The
+  live route returned Fact 27 with four Entities and two typed Relations.
+
+- 2026-08-06: live Conversation memory acceptance passed through the Go-only
+  public boundary. The private GauzMem pipeline completed 8/8 stages in 41.4
+  seconds and persisted 14 Facts plus 4 relations; the authenticated React
+  client then recalled the expected `release-brief.md` Fact, original
+  Conversation, and Topic. The final three-path request completed in 4.379
+  seconds without an expansion error, and direct Neo4j acceptance expanded all
+  14 seed Facts. The LexVoice DashScope credential was injected only into the
+  running private service and was not stored in the repository.
+
+- 2026-08-06: the Agent-asset protocol passed focused and full control-plane
+  tests. Inspector emits only a finding; Evolution accepts `agent_md`, Skill,
+  and Role for any Agent, rejects Memory/Case, rejects Harness for Codex, and
+  accepts Harness for canonical XiaoBaOS. Go full tests, vet, and race tests
+  passed; historical Candidate/Case fields remain readable.
+
+- 2026-08-06: Conversation control-plane acceptance passed. Personal API-token
+  and signed-gateway ingestion enforce XiaoBaOS-only visible message schemas,
+  exact retries are idempotent, mutations and sequence conflicts fail atomically,
+  and list/detail reads remain owner-scoped. The full Go suite, vet,
+  `go test -race ./internal/control`, and a real PostgreSQL integration run
+  passed.
+
+- 2026-08-06 Barena target/internal identity: exact
+  `barena-xiaoba-target` now resolves to canonical `xiaobaos / XiaoBaOS` and
+  expands only to XiaoBaOS target aliases. Exact Barena engine, User Simulator,
+  Inspector, and Reviewer sources return no selectable Agent identity; direct
+  internal Agent paths fail validation, while unknown sources still use the
+  disclosed `service.name` fallback. Focused handler and Evolution tests prove
+  that only target Traces enter a Trace Set and candidate provenance. The real
+  ClickHouse integration preserves raw source names and all global Traces while
+  returning only the target through `xiaobaos`. Go full/race/vet and the live
+  2-Trace / 12-Span read model passed.
+
+- 2026-08-05 canonical Agent identity: the deterministic resolver maps
+  `codex`, `codex-app-server`, and `Codex Desktop` to `agent_id=codex`, returns
+  auditable live/history `sources`, and preserves unknown `service.name`
+  identities. Agent Trace reads and Evolution membership checks expand the
+  alias family without rewriting raw Trace summaries. `go test ./...`, `go
+  vet ./...`, `go test -race ./...`, and the real ClickHouse integration test
+  passed; the live owner read model returned one Codex row across both retained
+  sources.
+
+- 2026-08-05 Agent Trace Set acceptance: `go test ./...`, `go vet ./...`, and
+  `go test -race ./...` passed. Focused HTTP tests cover plural immutable
+  provenance and reject zero/one-Trace windows with `422` without persisting a
+  Job. The rebuilt PostgreSQL/ClickHouse/Go/Runner Compose path remained
+  healthy and completed live Job `evolution-job-1785938466699-1ca39c9ec534d530`
+  for Agent `Codex Desktop`: 29 Traces matched the seven-day window, the server
+  froze 12 error-first/newest Trace IDs, and InspectorCat, EvolutionCat, and
+  ReviewerCat completed without invoking the target Agent. The stored Finding,
+  Case proposal, candidate, Review, and Replay handoff retain the Agent,
+  bounded window, Evidence Pack digest, and plural Trace provenance.
+
+- 2026-08-05 legacy compatibility: Trace-only Evolution accepts any
+  owner-scoped stored OTLP Trace
+  without synthesizing a Run, persists a bounded/redacted Evidence Pack, and
+  retains InspectorCat -> EvolutionCat -> ReviewerCat output as provenance-bound
+  `draft/unverified` candidates. Canonical `barena.run_bundle.v1` ingest is
+  atomic and idempotent, validates exact terminal fact SHA-256 and 12 KiB/1 MiB
+  limits, and associates both Event and `run.input.trace_ids` Traces. Focused
+  contract tests, the complete Go race suite, vet, and diff checks passed.
+
+- 2026-08-05: OAuth host-normalization tests prove that `127.0.0.1` receives no
+  flow cookie and redirects to `localhost` before GitHub authorization. A stale
+  callback remains rejected and receives a safe restart location. The complete
+  Go race suite and vet passed against the rebuilt service.
+
+- 2026-08-04: the Go CSP now allows only Catena-owned images plus GitHub's
+  official avatar origin. The authenticated Web loaded the persisted GitHub
+  avatar at 420x420 source resolution and rendered it at 28x28 with no browser
+  console errors; focused Go tests, vet, rebuilt service, and smoke passed.
 - Browser acceptance started registered HTTP Agent Scenario Run
   `scenariorun_0004MQPAovVIySBtXW4I213vhjPsW`. Trace
   `929e40cd8045ac94e07f01e5febb233d` retained nine spans, including the real

@@ -236,13 +236,14 @@ func TestGitHubAuthOwnerIsolationAndCommunityPublication(t *testing.T) {
 	server := httptest.NewUnstartedServer(nil)
 	serverURL := "http://" + server.Listener.Addr().String()
 	handler, err := NewHTTPHandlerWithConfig(store, runner, AuthConfig{
-		GitHubClientID:     "client-id",
-		GitHubClientSecret: "client-secret",
-		RedirectURL:        serverURL + "/v1/auth/github/callback",
-		AuthorizeURL:       identityProvider.URL + "/authorize",
-		TokenURL:           identityProvider.URL + "/token",
-		UserAPIURL:         identityProvider.URL + "/user",
-		SessionTTL:         time.Hour,
+		GitHubClientID:        "client-id",
+		GitHubClientSecret:    "client-secret",
+		APITokenEncryptionKey: testGatewaySecret,
+		RedirectURL:           serverURL + "/api/auth/callback/github",
+		AuthorizeURL:          identityProvider.URL + "/authorize",
+		TokenURL:              identityProvider.URL + "/token",
+		UserAPIURL:            identityProvider.URL + "/user",
+		SessionTTL:            time.Hour,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -293,7 +294,9 @@ func TestGitHubAuthOwnerIsolationAndCommunityPublication(t *testing.T) {
 		!strings.HasPrefix(tokenPayload.Token, "barena_pat_") {
 		t.Fatalf("unexpected API token response: %#v", tokenPayload)
 	}
-	var tokenList map[string]any
+	var tokenList struct {
+		APITokens []APIToken `json:"api_tokens"`
+	}
 	decodeTestJSON(
 		t,
 		client,
@@ -306,6 +309,49 @@ func TestGitHubAuthOwnerIsolationAndCommunityPublication(t *testing.T) {
 	if strings.Contains(string(tokenListBytes), tokenPayload.Token) ||
 		strings.Contains(string(tokenListBytes), "token_hash") {
 		t.Fatalf("API token listing exposed a secret: %s", tokenListBytes)
+	}
+	if len(tokenList.APITokens) != 1 ||
+		!tokenList.APITokens[0].Recoverable ||
+		!strings.HasSuffix(tokenList.APITokens[0].MaskedToken, tokenPayload.Token[len(tokenPayload.Token)-4:]) {
+		t.Fatalf("unexpected recoverable token row: %#v", tokenList.APITokens)
+	}
+	var revealPayload struct {
+		Token string `json:"token"`
+	}
+	decodeTestJSON(
+		t,
+		client,
+		http.MethodPost,
+		server.URL+"/v1/me/api-tokens/"+tokenPayload.APIToken.ID+"/reveal",
+		nil,
+		&revealPayload,
+	)
+	if revealPayload.Token != tokenPayload.Token {
+		t.Fatal("owner reveal did not recover the created API token")
+	}
+
+	legacyToken := "barena_pat_legacy_hash_only"
+	if err := store.CreateAPIToken(context.Background(), APIToken{
+		ID:        "pat-legacy",
+		TokenHash: sessionTokenHash(legacyToken),
+		UserID:    sessionPayload.User.ID,
+		Name:      "Legacy Runner",
+		CreatedAt: time.Now().UTC().Add(-time.Hour),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	legacyRevealRequest, _ := http.NewRequest(
+		http.MethodPost,
+		server.URL+"/v1/me/api-tokens/pat-legacy/reveal",
+		nil,
+	)
+	legacyRevealResponse, err := client.Do(legacyRevealRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacyRevealResponse.Body.Close()
+	if legacyRevealResponse.StatusCode != http.StatusConflict {
+		t.Fatalf("legacy reveal returned %d", legacyRevealResponse.StatusCode)
 	}
 
 	edgeCreateBody := bytes.NewBufferString(
@@ -432,6 +478,38 @@ func TestGitHubAuthOwnerIsolationAndCommunityPublication(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	foreignPlaintext := "barena_pat_foreign_owner_secret"
+	foreignEncrypted, err := encryptAPIToken(
+		foreignPlaintext,
+		"pat-foreign",
+		testGatewaySecret,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CreateAPIToken(context.Background(), APIToken{
+		ID:             "pat-foreign",
+		TokenHash:      sessionTokenHash(foreignPlaintext),
+		EncryptedToken: foreignEncrypted,
+		UserID:         foreignUser.ID,
+		Name:           "Foreign Runner",
+		CreatedAt:      time.Now().UTC(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	foreignRevealRequest, _ := http.NewRequest(
+		http.MethodPost,
+		server.URL+"/v1/me/api-tokens/pat-foreign/reveal",
+		nil,
+	)
+	foreignRevealResponse, err := client.Do(foreignRevealRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreignRevealResponse.Body.Close()
+	if foreignRevealResponse.StatusCode != http.StatusNotFound {
+		t.Fatalf("cross-owner token reveal returned %d", foreignRevealResponse.StatusCode)
 	}
 	foreignRun := Run{
 		ID:          "run-foreign",

@@ -1,21 +1,34 @@
 package control
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 )
 
 const (
-	evolutionJobSchema       = "spiral.evolution_job.v1"
-	evolutionCandidateStatus = "draft/unverified"
-	evolutionReviewScope     = "proposal_only"
-	evolutionTurnTimeout     = 2 * time.Minute
-	evolutionStageTimeout    = evolutionTurnTimeout + 10*time.Second
+	evolutionJobSchema             = "spiral.evolution_job.v1"
+	evolutionCandidateStatus       = "draft/unverified"
+	evolutionReviewScope           = "proposal_only"
+	evolutionEvidenceSchema        = "catena.evolution_evidence_pack.v1"
+	evolutionAgentEvidenceSchema   = "catena.agent_trace_set_evidence_pack.v1"
+	evolutionReleaseAuthority      = "local_barena"
+	evolutionTurnTimeout           = 2 * time.Minute
+	evolutionStageTimeout          = evolutionTurnTimeout + 10*time.Second
+	maxEvolutionEvidenceSpans      = 64
+	maxEvolutionEvidenceEvents     = 32
+	maxEvolutionEvidenceFieldBytes = 2 * 1024
+	maxEvolutionEvidencePackBytes  = 256 * 1024
+	maxAgentEvolutionTraceScan     = 100
+	maxAgentEvolutionTraces        = 12
+	maxAgentEvolutionEvidenceSpans = 64
 )
 
 var evolutionJobStages = []EvolutionStage{
@@ -25,8 +38,7 @@ var evolutionJobStages = []EvolutionStage{
 }
 
 type inspectorTurnOutput struct {
-	Finding      EvolutionFinding      `json:"finding"`
-	CaseProposal EvolutionCaseProposal `json:"case_proposal"`
+	Finding EvolutionFinding `json:"finding"`
 }
 
 type candidateTurnOutput struct {
@@ -76,28 +88,167 @@ func (s *HTTPServer) createEvolutionJob(w http.ResponseWriter, r *http.Request) 
 		writeProblem(w, http.StatusBadRequest, "trace_id is not retained by the source Run")
 		return
 	}
+	var trace *TraceDetail
+	if s.traces != nil {
+		stored, traceErr := s.traces.GetTrace(r.Context(), traceOwnerID(user), request.TraceID)
+		if traceErr != nil {
+			writeProblem(w, statusFor(traceErr), traceErr.Error())
+			return
+		}
+		trace = &stored
+	}
+	s.createEvolutionJobFromEvidence(
+		w,
+		r,
+		user,
+		EvolutionSourceRunTrace,
+		&run,
+		request.TraceID,
+		request.Objective,
+		trace,
+	)
+}
+
+func (s *HTTPServer) createTraceEvolutionJob(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	if s.traces == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Trace storage is not configured")
+		return
+	}
+	traceID, err := normalizedEvolutionTraceID(r.PathValue("trace_id"))
+	if err != nil {
+		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var request CreateTraceEvolutionJobRequest
+	if err := decodeJSON(w, r, &request); err != nil {
+		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	request.Objective = strings.TrimSpace(request.Objective)
+	if err := request.Validate(); err != nil {
+		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	trace, err := s.traces.GetTrace(r.Context(), traceOwnerID(user), traceID)
+	if err != nil {
+		writeProblem(w, statusFor(err), err.Error())
+		return
+	}
+	sourceKind := EvolutionSourceTrace
+	var run *Run
+	if associated, found, findErr := s.findTerminalRunForTrace(r.Context(), user, traceID); findErr != nil {
+		writeProblem(w, statusFor(findErr), findErr.Error())
+		return
+	} else if found {
+		sourceKind = EvolutionSourceRunTrace
+		run = &associated
+	}
+	s.createEvolutionJobFromEvidence(
+		w,
+		r,
+		user,
+		sourceKind,
+		run,
+		traceID,
+		request.Objective,
+		&trace,
+	)
+}
+
+func (s *HTTPServer) createAgentEvolutionJob(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	if s.traces == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Trace storage is not configured")
+		return
+	}
+	agentID, err := normalizedAgentID(r.PathValue("agent_id"))
+	if err != nil {
+		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var request CreateAgentEvolutionJobRequest
+	if err := decodeJSON(w, r, &request); err != nil {
+		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	request.WindowStart = request.WindowStart.UTC()
+	request.WindowEnd = request.WindowEnd.UTC()
+	request.Objective = strings.TrimSpace(request.Objective)
+	if err := request.Validate(time.Now().UTC()); err != nil {
+		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if err := validateReplayIdempotencyKey(idempotencyKey); err != nil {
 		writeProblem(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	fingerprint, err := evolutionRequestFingerprint(request)
+	summaries, err := s.traces.ListAgentTraces(
+		r.Context(), traceOwnerID(user), agentID,
+		request.WindowStart, request.WindowEnd, maxAgentEvolutionTraceScan,
+	)
+	if err != nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Agent Trace query failed")
+		return
+	}
+	if len(summaries) < 2 {
+		writeProblem(w, http.StatusUnprocessableEntity, "At least two Traces are required to evolve an Agent")
+		return
+	}
+	selected := selectAgentEvolutionTraces(summaries, maxAgentEvolutionTraces)
+	details := make([]TraceDetail, 0, len(selected))
+	for _, summary := range selected {
+		detail, traceErr := s.traces.GetTrace(r.Context(), traceOwnerID(user), summary.TraceID)
+		if traceErr != nil {
+			writeProblem(w, statusFor(traceErr), traceErr.Error())
+			return
+		}
+		if !serviceBelongsToAgent(detail.Summary.ServiceName, agentID) {
+			writeProblem(w, http.StatusConflict, "Agent Trace identity changed while evidence was being frozen")
+			return
+		}
+		details = append(details, detail)
+	}
+	pack, err := buildAgentTraceSetEvidencePack(
+		agentID, request.WindowStart, request.WindowEnd, details, len(summaries), time.Now().UTC(),
+	)
+	if err != nil {
+		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	fingerprint, err := agentEvolutionSourceRequestFingerprint(
+		agentID, request.WindowStart, request.WindowEnd, request.Objective,
+	)
 	if err != nil {
 		writeProblem(w, http.StatusInternalServerError, "Evolution request could not be fingerprinted")
 		return
 	}
 	now := time.Now().UTC()
+	windowStart := request.WindowStart
+	windowEnd := request.WindowEnd
 	job := EvolutionJob{
 		Schema:             evolutionJobSchema,
 		ID:                 newID("evolution-job"),
-		OwnerUserID:        run.OwnerUserID,
-		SourceRunID:        run.ID,
-		SourceTraceID:      request.TraceID,
+		OwnerUserID:        traceOwnerID(user),
+		SourceKind:         EvolutionSourceAgentTraceSet,
+		SourceTraceIDs:     append([]string(nil), pack.SourceTraceIDs...),
+		SourceAgentID:      agentID,
+		WindowStart:        &windowStart,
+		WindowEnd:          &windowEnd,
 		Objective:          request.Objective,
 		IdempotencyKey:     idempotencyKey,
 		RequestFingerprint: fingerprint,
 		State:              EvolutionJobQueued,
 		Stages:             cloneEvolutionStages(evolutionJobStages),
+		EvidencePack:       &pack,
+		Boundary:           pack.Boundary,
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}
@@ -112,6 +263,112 @@ func (s *HTTPServer) createEvolutionJob(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, stored)
+}
+
+func (s *HTTPServer) createEvolutionJobFromEvidence(
+	w http.ResponseWriter,
+	r *http.Request,
+	user *User,
+	sourceKind EvolutionSourceKind,
+	run *Run,
+	traceID string,
+	objective string,
+	trace *TraceDetail,
+) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if err := validateReplayIdempotencyKey(idempotencyKey); err != nil {
+		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	sourceRunID := ""
+	ownerUserID := ""
+	if user != nil {
+		ownerUserID = user.ID
+	}
+	if run != nil {
+		sourceRunID = run.ID
+		ownerUserID = run.OwnerUserID
+	}
+	events := []EngineEvent{}
+	if sourceRunID != "" {
+		var err error
+		events, err = s.store.ListEventsAfter(r.Context(), sourceRunID, 0, 1000)
+		if err != nil {
+			writeProblem(w, statusFor(err), err.Error())
+			return
+		}
+	}
+	pack, err := buildEvolutionEvidencePack(sourceKind, run, traceID, trace, events, time.Now().UTC())
+	if err != nil {
+		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	fingerprint, err := evolutionSourceRequestFingerprint(sourceKind, sourceRunID, traceID, objective)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "Evolution request could not be fingerprinted")
+		return
+	}
+	now := time.Now().UTC()
+	job := EvolutionJob{
+		Schema:             evolutionJobSchema,
+		ID:                 newID("evolution-job"),
+		OwnerUserID:        ownerUserID,
+		SourceKind:         sourceKind,
+		SourceRunID:        sourceRunID,
+		SourceTraceID:      traceID,
+		Objective:          objective,
+		IdempotencyKey:     idempotencyKey,
+		RequestFingerprint: fingerprint,
+		State:              EvolutionJobQueued,
+		Stages:             cloneEvolutionStages(evolutionJobStages),
+		EvidencePack:       &pack,
+		Boundary:           pack.Boundary,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+	stored, created, err := s.store.CreateEvolutionJob(r.Context(), job)
+	if err != nil {
+		writeProblem(w, statusFor(err), err.Error())
+		return
+	}
+	if created {
+		go s.executeEvolutionJob(stored.ID)
+		writeJSON(w, http.StatusAccepted, stored)
+		return
+	}
+	writeJSON(w, http.StatusOK, stored)
+}
+
+func (s *HTTPServer) findTerminalRunForTrace(
+	ctx context.Context,
+	user *User,
+	traceID string,
+) (Run, bool, error) {
+	var (
+		runs []Run
+		err  error
+	)
+	if user == nil {
+		runs, err = s.store.ListRuns(ctx, 1000)
+	} else {
+		runs, err = s.store.ListRunsByOwner(ctx, user.ID, 1000)
+	}
+	if err != nil {
+		return Run{}, false, err
+	}
+	for _, run := range runs {
+		if !run.State.Terminal() || !resourceOwnedBy(run.OwnerUserID, user) {
+			continue
+		}
+		retained, err := s.store.RunHasTrace(ctx, run.ID, traceID)
+		if err != nil {
+			return Run{}, false, err
+		}
+		if retained {
+			return run, true, nil
+		}
+	}
+	return Run{}, false, nil
 }
 
 func (s *HTTPServer) listEvolutionJobs(w http.ResponseWriter, r *http.Request) {
@@ -167,30 +424,23 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 			s.failEvolutionJob(&job, -1, "Evolution Job stopped unexpectedly")
 		}
 	}()
-	run, err := s.store.GetRun(context.Background(), job.SourceRunID)
-	if err != nil {
-		s.failEvolutionJob(&job, -1, "source Run is unavailable")
+	if job.EvidencePack == nil || !validEvolutionEvidencePack(*job.EvidencePack, job) {
+		s.failEvolutionJob(&job, -1, "stored Evolution Evidence Pack is unavailable")
 		return
 	}
-	events, err := s.store.ListEventsAfter(context.Background(), run.ID, 0, 1000)
+	evidence, err := json.Marshal(job.EvidencePack)
 	if err != nil {
-		s.failEvolutionJob(&job, -1, "source Run evidence is unavailable")
-		return
-	}
-	evidence, err := evolutionEvidenceJSON(run, events, job.SourceTraceID)
-	if err != nil {
-		s.failEvolutionJob(&job, -1, "source Run evidence could not be encoded")
+		s.failEvolutionJob(&job, -1, "Evolution Evidence Pack could not be encoded")
 		return
 	}
 
-	inspectorPrompt := buildInspectorPrompt(job, run, evidence)
+	inspectorPrompt := buildInspectorPrompt(job, evidence)
 	inspectorRaw, ok := s.runEvolutionStage(&job, 0, inspectorPrompt)
 	if !ok {
 		return
 	}
-	finding, proposal := inspectorOutput(inspectorRaw, run)
+	finding := inspectorOutput(inspectorRaw)
 	job.Finding = &finding
-	job.CaseProposal = &proposal
 	job.UpdatedAt = time.Now().UTC()
 	if err := s.store.UpdateEvolutionJob(context.Background(), job); err != nil {
 		return
@@ -201,7 +451,8 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 	if !ok {
 		return
 	}
-	candidate := candidateOutput(candidateRaw)
+	candidate := candidateOutput(candidateRaw, job.SourceAgentID)
+	enrichEvolutionCandidate(&candidate, job)
 	job.Candidate = &candidate
 	job.UpdatedAt = time.Now().UTC()
 	if err := s.store.UpdateEvolutionJob(context.Background(), job); err != nil {
@@ -250,7 +501,7 @@ func (s *HTTPServer) runEvolutionStage(
 	}
 	finishedAt := time.Now().UTC()
 	job.Stages[index].State = EvolutionStageCompleted
-	job.Stages[index].RawOutput = cloneJSON(raw)
+	job.Stages[index].RawOutput = sanitizeEvolutionJSON(raw, 128*1024)
 	job.Stages[index].FinishedAt = &finishedAt
 	job.UpdatedAt = finishedAt
 	if err := s.store.UpdateEvolutionJob(context.Background(), *job); err != nil {
@@ -273,8 +524,18 @@ func (s *HTTPServer) failEvolutionJob(job *EvolutionJob, stageIndex int, detail 
 	_ = s.store.UpdateEvolutionJob(context.Background(), *job)
 }
 
-func evolutionRequestFingerprint(request CreateEvolutionJobRequest) (string, error) {
-	encoded, err := json.Marshal(request)
+func evolutionSourceRequestFingerprint(
+	sourceKind EvolutionSourceKind,
+	sourceRunID string,
+	traceID string,
+	objective string,
+) (string, error) {
+	encoded, err := json.Marshal(map[string]any{
+		"source_kind":     sourceKind,
+		"source_run_id":   sourceRunID,
+		"source_trace_id": traceID,
+		"objective":       objective,
+	})
 	if err != nil {
 		return "", err
 	}
@@ -282,165 +543,627 @@ func evolutionRequestFingerprint(request CreateEvolutionJobRequest) (string, err
 	return fmt.Sprintf("%x", digest[:]), nil
 }
 
-func evolutionEvidenceJSON(
-	run Run,
-	events []EngineEvent,
+func agentEvolutionSourceRequestFingerprint(
+	agentID string,
+	windowStart time.Time,
+	windowEnd time.Time,
+	objective string,
+) (string, error) {
+	encoded, err := json.Marshal(map[string]any{
+		"source_kind":     EvolutionSourceAgentTraceSet,
+		"source_agent_id": agentID,
+		"window_start":    windowStart.UTC(),
+		"window_end":      windowEnd.UTC(),
+		"objective":       objective,
+	})
+	if err != nil {
+		return "", err
+	}
+	digest := sha256.Sum256(encoded)
+	return fmt.Sprintf("%x", digest[:]), nil
+}
+
+func selectAgentEvolutionTraces(values []TraceSummary, limit int) []TraceSummary {
+	selected := append([]TraceSummary(nil), values...)
+	sort.SliceStable(selected, func(i, j int) bool {
+		leftHasError := selected[i].ErrorCount > 0
+		rightHasError := selected[j].ErrorCount > 0
+		if leftHasError != rightHasError {
+			return leftHasError
+		}
+		if !selected[i].EndTime.Equal(selected[j].EndTime) {
+			return selected[i].EndTime.After(selected[j].EndTime)
+		}
+		return selected[i].TraceID < selected[j].TraceID
+	})
+	if limit > 0 && len(selected) > limit {
+		selected = selected[:limit]
+	}
+	return selected
+}
+
+func normalizedEvolutionTraceID(value string) (string, error) {
+	traceID := strings.ToLower(strings.TrimSpace(value))
+	if len(traceID) != 32 {
+		return "", fmt.Errorf("trace_id must be 32 hexadecimal characters")
+	}
+	if _, err := hex.DecodeString(traceID); err != nil {
+		return "", fmt.Errorf("trace_id must be 32 hexadecimal characters")
+	}
+	return traceID, nil
+}
+
+func buildEvolutionEvidencePack(
+	sourceKind EvolutionSourceKind,
+	run *Run,
 	traceID string,
-) (json.RawMessage, error) {
+	trace *TraceDetail,
+	events []EngineEvent,
+	createdAt time.Time,
+) (EvolutionEvidencePack, error) {
+	if !sourceKind.Valid() || strings.TrimSpace(traceID) == "" {
+		return EvolutionEvidencePack{}, fmt.Errorf("Evolution evidence source is invalid")
+	}
+	if sourceKind == EvolutionSourceTrace && run != nil {
+		return EvolutionEvidencePack{}, fmt.Errorf("Trace-only Evolution cannot include a synthetic Run")
+	}
+	if sourceKind == EvolutionSourceRunTrace && run == nil {
+		return EvolutionEvidencePack{}, fmt.Errorf("Run-backed Evolution requires a retained Run")
+	}
+	if trace == nil && sourceKind == EvolutionSourceTrace {
+		return EvolutionEvidencePack{}, fmt.Errorf("stored Trace evidence is required")
+	}
+	pack := EvolutionEvidencePack{
+		Schema:        evolutionEvidenceSchema,
+		SourceKind:    sourceKind,
+		SourceTraceID: traceID,
+		Spans:         []EvolutionEvidenceSpan{},
+		RunEvents:     []EngineEvent{},
+		Redacted:      true,
+		Boundary: EvolutionEvidenceBoundary{
+			TargetAgentExecutedByCatena: false,
+			CreatesRelease:              false,
+			ReleaseAuthority:            evolutionReleaseAuthority,
+			CandidateStatus:             evolutionCandidateStatus,
+			ReviewScope:                 evolutionReviewScope,
+		},
+		CreatedAt: createdAt.UTC(),
+	}
+	if run != nil {
+		if len(run.Input) > 24*1024 || len(run.Runtime) > 12*1024 {
+			pack.Truncated = true
+		}
+		pack.SourceRunID = run.ID
+		pack.Run = &EvolutionEvidenceRun{
+			RunID:     run.ID,
+			Origin:    run.Origin,
+			Operation: run.Operation,
+			State:     run.State,
+			Input:     sanitizeEvolutionJSON(run.Input, 24*1024),
+			Runtime:   sanitizeEvolutionJSON(run.Runtime, 12*1024),
+			Error:     bounded(redactMemoryText(run.Error), 2000),
+			CreatedAt: run.CreatedAt,
+			UpdatedAt: run.UpdatedAt,
+		}
+	}
+	if trace != nil {
+		if trace.Summary.TraceID != traceID {
+			return EvolutionEvidencePack{}, fmt.Errorf("stored Trace identity does not match the Evolution source")
+		}
+		if len(trace.Spans) == 0 {
+			return EvolutionEvidencePack{}, fmt.Errorf("stored Trace contains no spans")
+		}
+		pack.TraceSummary = trace.Summary
+		pack.TraceSummary.RootName = bounded(redactMemoryText(pack.TraceSummary.RootName), 1000)
+		pack.TraceSummary.ServiceName = bounded(redactMemoryText(pack.TraceSummary.ServiceName), 1000)
+		pack.TraceSummary.Model = bounded(redactMemoryText(pack.TraceSummary.Model), 1000)
+		pack.TotalSpanCount = trace.Summary.SpanCount
+		if pack.TotalSpanCount == 0 {
+			pack.TotalSpanCount = uint64(len(trace.Spans))
+		}
+		spans := append([]TraceSpan(nil), trace.Spans...)
+		sort.SliceStable(spans, func(i, j int) bool {
+			if spans[i].StartTime.Equal(spans[j].StartTime) {
+				return spans[i].SpanID < spans[j].SpanID
+			}
+			return spans[i].StartTime.Before(spans[j].StartTime)
+		})
+		if len(spans) > maxEvolutionEvidenceSpans {
+			spans = spans[:maxEvolutionEvidenceSpans]
+			pack.Truncated = true
+		}
+		for _, span := range spans {
+			if span.TraceID != traceID {
+				return EvolutionEvidencePack{}, fmt.Errorf("stored Trace contains a mismatched span")
+			}
+			eventNames := make([]string, 0, len(span.Events))
+			for _, event := range span.Events {
+				if name := bounded(redactMemoryText(event.Name), 256); name != "" {
+					eventNames = append(eventNames, name)
+				}
+				if len(eventNames) == 16 {
+					pack.Truncated = pack.Truncated || len(span.Events) > len(eventNames)
+					break
+				}
+			}
+			input := sanitizeEvolutionText(span.Input, maxEvolutionEvidenceFieldBytes)
+			output := sanitizeEvolutionText(span.Output, maxEvolutionEvidenceFieldBytes)
+			if len(span.Input) > len(input) || len(span.Output) > len(output) {
+				pack.Truncated = true
+			}
+			pack.Spans = append(pack.Spans, EvolutionEvidenceSpan{
+				SpanID:        span.SpanID,
+				ParentSpanID:  span.ParentSpanID,
+				Name:          bounded(redactMemoryText(span.Name), 1000),
+				ServiceName:   bounded(redactMemoryText(span.ServiceName), 1000),
+				StartTime:     span.StartTime,
+				EndTime:       span.EndTime,
+				StatusCode:    span.StatusCode,
+				StatusMessage: bounded(redactMemoryText(span.StatusMessage), 1000),
+				Model:         bounded(redactMemoryText(span.Model), 1000),
+				ToolName: bounded(redactMemoryText(firstAttributeString(
+					span.Attributes,
+					"tool.name",
+					"gen_ai.tool.name",
+					"tool.call.name",
+					"xiaoba.tool.name",
+				)), 256),
+				Input:      input,
+				Output:     output,
+				EventNames: eventNames,
+			})
+		}
+	}
+	pack.IncludedSpanCount = len(pack.Spans)
 	relevant := make([]EngineEvent, 0)
-	traceFound := false
 	for _, event := range events {
 		if event.TraceID == traceID || event.Kind == "terminal" {
-			if event.TraceID == traceID {
-				traceFound = true
-			}
 			copy := event
 			if len(copy.Payload) > 12*1024 {
-				digest := sha256.Sum256(copy.Payload)
-				copy.Payload = json.RawMessage(fmt.Sprintf(
-					`{"omitted":true,"reason":"payload exceeded evidence prompt limit","sha256":"%x"}`,
-					digest[:],
-				))
+				pack.Truncated = true
 			}
+			copy.Payload = sanitizeEvolutionJSON(copy.Payload, 12*1024)
 			relevant = append(relevant, copy)
 		}
 	}
-	if !traceFound {
-		return nil, fmt.Errorf("source Trace evidence was not loaded")
-	}
-	if len(relevant) > 32 {
+	if len(relevant) > maxEvolutionEvidenceEvents {
 		relevant = append(
 			append([]EngineEvent(nil), relevant[:16]...),
 			relevant[len(relevant)-16:]...,
 		)
+		pack.Truncated = true
 	}
-	return json.Marshal(map[string]any{
-		"run": map[string]any{
-			"run_id":     run.ID,
-			"origin":     run.Origin,
-			"operation":  run.Operation,
-			"state":      run.State,
-			"input":      run.Input,
-			"runtime":    run.Runtime,
-			"error":      run.Error,
-			"created_at": run.CreatedAt,
-			"updated_at": run.UpdatedAt,
-		},
-		"source_trace_id": traceID,
-		"events":          relevant,
-	})
+	pack.RunEvents = relevant
+	for {
+		encoded, err := evolutionEvidenceDigestInput(pack)
+		if err != nil {
+			return EvolutionEvidencePack{}, err
+		}
+		if len(encoded) <= maxEvolutionEvidencePackBytes {
+			digest := sha256.Sum256(encoded)
+			pack.SHA256 = hex.EncodeToString(digest[:])
+			return pack, nil
+		}
+		pack.Truncated = true
+		if len(pack.Spans) > 1 {
+			pack.Spans = pack.Spans[:len(pack.Spans)-1]
+			pack.IncludedSpanCount = len(pack.Spans)
+			continue
+		}
+		if len(pack.RunEvents) > 1 {
+			pack.RunEvents = pack.RunEvents[:len(pack.RunEvents)-1]
+			continue
+		}
+		return EvolutionEvidencePack{}, fmt.Errorf("Evolution Evidence Pack exceeds the safe prompt limit")
+	}
 }
 
-func buildInspectorPrompt(job EvolutionJob, run Run, evidence json.RawMessage) string {
+func buildAgentTraceSetEvidencePack(
+	agentID string,
+	windowStart time.Time,
+	windowEnd time.Time,
+	traces []TraceDetail,
+	totalTraceCount int,
+	createdAt time.Time,
+) (EvolutionEvidencePack, error) {
+	if strings.TrimSpace(agentID) == "" || len(traces) < 2 || !windowEnd.After(windowStart) {
+		return EvolutionEvidencePack{}, fmt.Errorf("Agent Trace Set evidence source is invalid")
+	}
+	windowStart = windowStart.UTC()
+	windowEnd = windowEnd.UTC()
+	pack := EvolutionEvidencePack{
+		Schema:          evolutionAgentEvidenceSchema,
+		SourceKind:      EvolutionSourceAgentTraceSet,
+		SourceAgentID:   agentID,
+		WindowStart:     &windowStart,
+		WindowEnd:       &windowEnd,
+		SourceTraceIDs:  []string{},
+		Spans:           []EvolutionEvidenceSpan{},
+		Traces:          []EvolutionEvidenceTrace{},
+		RunEvents:       []EngineEvent{},
+		TotalTraceCount: totalTraceCount,
+		Redacted:        true,
+		Boundary: EvolutionEvidenceBoundary{
+			TargetAgentExecutedByCatena: false,
+			CreatesRelease:              false,
+			ReleaseAuthority:            evolutionReleaseAuthority,
+			CandidateStatus:             evolutionCandidateStatus,
+			ReviewScope:                 evolutionReviewScope,
+		},
+		CreatedAt: createdAt.UTC(),
+	}
+	if pack.TotalTraceCount < len(traces) {
+		pack.TotalTraceCount = len(traces)
+	}
+	pack.Truncated = pack.TotalTraceCount > len(traces)
+	perTraceBudget := maxAgentEvolutionEvidenceSpans / len(traces)
+	if perTraceBudget < 1 {
+		perTraceBudget = 1
+	}
+	if perTraceBudget > 12 {
+		perTraceBudget = 12
+	}
+	for _, trace := range traces {
+		if trace.Summary.TraceID == "" || !serviceBelongsToAgent(trace.Summary.ServiceName, agentID) || len(trace.Spans) == 0 {
+			return EvolutionEvidencePack{}, fmt.Errorf("stored Trace does not belong to the selected Agent")
+		}
+		if trace.Summary.EndTime.Before(windowStart) || trace.Summary.StartTime.After(windowEnd) {
+			return EvolutionEvidencePack{}, fmt.Errorf("stored Trace is outside the selected Agent window")
+		}
+		legacy, err := buildEvolutionEvidencePack(
+			EvolutionSourceTrace, nil, trace.Summary.TraceID, &trace, nil, createdAt,
+		)
+		if err != nil {
+			return EvolutionEvidencePack{}, err
+		}
+		spans := selectAgentEvidenceSpans(legacy.Spans, perTraceBudget)
+		traceEvidence := EvolutionEvidenceTrace{
+			Summary:           legacy.TraceSummary,
+			Spans:             spans,
+			IncludedSpanCount: len(spans),
+			TotalSpanCount:    legacy.TotalSpanCount,
+			Truncated:         legacy.Truncated || len(spans) < len(legacy.Spans),
+		}
+		pack.SourceTraceIDs = append(pack.SourceTraceIDs, trace.Summary.TraceID)
+		pack.Traces = append(pack.Traces, traceEvidence)
+		pack.IncludedSpanCount += traceEvidence.IncludedSpanCount
+		pack.TotalSpanCount += traceEvidence.TotalSpanCount
+		pack.Truncated = pack.Truncated || traceEvidence.Truncated
+	}
+	pack.IncludedTraceCount = len(pack.Traces)
+	for {
+		encoded, err := evolutionEvidenceDigestInput(pack)
+		if err != nil {
+			return EvolutionEvidencePack{}, err
+		}
+		if len(encoded) <= maxEvolutionEvidencePackBytes {
+			digest := sha256.Sum256(encoded)
+			pack.SHA256 = hex.EncodeToString(digest[:])
+			return pack, nil
+		}
+		pack.Truncated = true
+		trimmed := false
+		for index := len(pack.Traces) - 1; index >= 0; index-- {
+			if len(pack.Traces[index].Spans) > 1 {
+				pack.Traces[index].Spans = pack.Traces[index].Spans[:len(pack.Traces[index].Spans)-1]
+				pack.Traces[index].IncludedSpanCount--
+				pack.Traces[index].Truncated = true
+				pack.IncludedSpanCount--
+				trimmed = true
+				break
+			}
+		}
+		if trimmed {
+			continue
+		}
+		if len(pack.Traces) > 1 {
+			last := len(pack.Traces) - 1
+			pack.IncludedSpanCount -= pack.Traces[last].IncludedSpanCount
+			pack.Traces = pack.Traces[:last]
+			pack.SourceTraceIDs = pack.SourceTraceIDs[:last]
+			pack.IncludedTraceCount = len(pack.Traces)
+			continue
+		}
+		return EvolutionEvidencePack{}, fmt.Errorf("Agent Trace Set Evidence Pack exceeds the safe prompt limit")
+	}
+}
+
+func selectAgentEvidenceSpans(values []EvolutionEvidenceSpan, limit int) []EvolutionEvidenceSpan {
+	selected := append([]EvolutionEvidenceSpan(nil), values...)
+	sort.SliceStable(selected, func(i, j int) bool {
+		leftPriority := agentEvidenceSpanPriority(selected[i])
+		rightPriority := agentEvidenceSpanPriority(selected[j])
+		if leftPriority != rightPriority {
+			return leftPriority < rightPriority
+		}
+		if !selected[i].StartTime.Equal(selected[j].StartTime) {
+			return selected[i].StartTime.Before(selected[j].StartTime)
+		}
+		return selected[i].SpanID < selected[j].SpanID
+	})
+	if limit > 0 && len(selected) > limit {
+		selected = selected[:limit]
+	}
+	sort.SliceStable(selected, func(i, j int) bool {
+		if !selected[i].StartTime.Equal(selected[j].StartTime) {
+			return selected[i].StartTime.Before(selected[j].StartTime)
+		}
+		return selected[i].SpanID < selected[j].SpanID
+	})
+	return selected
+}
+
+func agentEvidenceSpanPriority(span EvolutionEvidenceSpan) int {
+	if span.StatusCode == 2 {
+		return 0
+	}
+	if span.ToolName != "" {
+		return 1
+	}
+	if span.ParentSpanID == "" {
+		return 2
+	}
+	if span.Input != "" || span.Output != "" {
+		return 3
+	}
+	return 4
+}
+
+func evolutionEvidenceDigestInput(pack EvolutionEvidencePack) ([]byte, error) {
+	pack.SHA256 = ""
+	encoded, err := json.Marshal(pack)
+	if err != nil {
+		return nil, err
+	}
+	// PostgreSQL JSONB deliberately discards whitespace and object-key order,
+	// including inside json.RawMessage fields. Hash a canonical decoded value so
+	// an Evidence Pack keeps the same identity after a durable round trip.
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decoder.UseNumber()
+	var canonical any
+	if err := decoder.Decode(&canonical); err != nil {
+		return nil, err
+	}
+	return json.Marshal(canonical)
+}
+
+func validEvolutionEvidencePack(pack EvolutionEvidencePack, job EvolutionJob) bool {
+	if pack.SourceKind != job.SourceKind ||
+		pack.Boundary.TargetAgentExecutedByCatena || pack.Boundary.CreatesRelease ||
+		pack.Boundary.ReleaseAuthority != evolutionReleaseAuthority ||
+		pack.Boundary.CandidateStatus != evolutionCandidateStatus ||
+		pack.Boundary.ReviewScope != evolutionReviewScope {
+		return false
+	}
+	if job.SourceKind == EvolutionSourceAgentTraceSet {
+		if pack.Schema != evolutionAgentEvidenceSchema ||
+			pack.SourceAgentID == "" || pack.SourceAgentID != job.SourceAgentID ||
+			pack.WindowStart == nil || pack.WindowEnd == nil ||
+			job.WindowStart == nil || job.WindowEnd == nil ||
+			!pack.WindowStart.Equal(*job.WindowStart) || !pack.WindowEnd.Equal(*job.WindowEnd) ||
+			len(pack.SourceTraceIDs) < 2 ||
+			!equalStringSlices(pack.SourceTraceIDs, job.SourceTraceIDs) ||
+			pack.IncludedTraceCount != len(pack.Traces) || len(pack.Traces) < 2 {
+			return false
+		}
+	} else if pack.Schema != evolutionEvidenceSchema ||
+		pack.SourceRunID != job.SourceRunID || pack.SourceTraceID != job.SourceTraceID {
+		return false
+	}
+	encoded, err := evolutionEvidenceDigestInput(pack)
+	if err != nil {
+		return false
+	}
+	digest := sha256.Sum256(encoded)
+	return pack.SHA256 == hex.EncodeToString(digest[:])
+}
+
+func equalStringSlices(left []string, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
+}
+
+func sanitizeEvolutionJSON(value json.RawMessage, max int) json.RawMessage {
+	if len(value) == 0 {
+		return nil
+	}
+	var decoded any
+	if json.Unmarshal(value, &decoded) != nil {
+		return boundedEvolutionJSON(value, max, "invalid evidence JSON omitted")
+	}
+	encoded, err := json.Marshal(sanitizeEvolutionValue("", decoded))
+	if err != nil {
+		return json.RawMessage(`{"omitted":true,"reason":"evidence sanitization failed"}`)
+	}
+	return boundedEvolutionJSON(encoded, max, "evidence exceeded prompt limit")
+}
+
+func sanitizeEvolutionText(value string, max int) string {
+	if strings.TrimSpace(value) == "" {
+		return ""
+	}
+	var decoded any
+	if json.Unmarshal([]byte(value), &decoded) == nil {
+		if encoded, err := json.Marshal(sanitizeEvolutionValue("", decoded)); err == nil {
+			return bounded(string(encoded), max)
+		}
+	}
+	return bounded(redactMemoryText(value), max)
+}
+
+func sanitizeEvolutionValue(key string, value any) any {
+	normalized := strings.NewReplacer("-", "_", ".", "_").Replace(strings.ToLower(key))
+	for _, marker := range []string{
+		"authorization", "api_key", "access_token", "password", "secret",
+		"chain_of_thought", "hidden_reasoning", "reasoning_content", "reasoning",
+	} {
+		if strings.Contains(normalized, marker) {
+			return "[REDACTED]"
+		}
+	}
+	switch typed := value.(type) {
+	case map[string]any:
+		result := make(map[string]any, len(typed))
+		for childKey, childValue := range typed {
+			result[childKey] = sanitizeEvolutionValue(childKey, childValue)
+		}
+		return result
+	case []any:
+		result := make([]any, 0, len(typed))
+		for _, child := range typed {
+			result = append(result, sanitizeEvolutionValue(key, child))
+		}
+		return result
+	case string:
+		return redactMemoryText(typed)
+	default:
+		return value
+	}
+}
+
+func buildInspectorPrompt(job EvolutionJob, evidence json.RawMessage) string {
 	focus := job.Objective
 	if focus == "" {
-		focus = "Find one evidence-backed failure mode or behavioral boundary."
+		focus = "Find one repeated or high-impact evidence-backed failure mode or behavioral boundary across this Agent Trace Set."
 	}
 	return fmt.Sprintf(`You are InspectorCat in Catena. Analyze only the retained execution evidence below.
 Do not invent tool calls, artifacts, verification, or outcomes. Focus: %s
 Return one JSON object only with this exact shape:
-{"finding":{"title":"...","summary":"...","severity":"low|medium|high|critical|unknown","evidence":["specific retained fact"]},"case_proposal":{"title":"...","replay_prompt":"...","success_criteria":"...","verifier":{"kind":"artifact_assertions","artifacts":[{"path":"relative/path","exists":true}]}}}
-The Case is a proposal for human review, not an already-created or verified Case.
-Source Run: %s
-Evidence:
-%s`, focus, run.ID, evidence)
+{"finding":{"title":"...","summary":"...","severity":"low|medium|high|critical|unknown","evidence":["specific retained fact"]}}
+	Do not propose Memory, Case, or a Replay workflow. Conversation owns memory; EvolutionCat owns Agent assets.
+	Catena did not execute the target Agent and this workflow cannot create a Release decision.
+	Source Agent: %s
+	Source Traces: %s
+	Source Run (optional): %s
+	Evidence:
+	%s`, focus, job.SourceAgentID, strings.Join(evolutionJobTraceIDs(job), ","), job.SourceRunID, evidence)
 }
 
 func buildCandidatePrompt(job EvolutionJob) string {
 	inputs, _ := json.Marshal(map[string]any{
-		"finding":       job.Finding,
-		"case_proposal": job.CaseProposal,
+		"finding":         job.Finding,
+		"source_agent_id": job.SourceAgentID,
 	})
-	return fmt.Sprintf(`You are EvolutionCat in Barena. Produce the smallest draft improvement suggested by the accepted evidence analysis.
-Return one JSON object only with this exact shape:
-{"candidate":{"kind":"role|skill|memory|harness","title":"...","summary":"...","content":{}}}
-The candidate is a draft proposal. Do not claim it was installed, applied, replayed, or verified.
+	allowedKinds := "agent_md|skill|role"
+	if isXiaoBaAgentID(job.SourceAgentID) {
+		allowedKinds += "|harness"
+	}
+	return fmt.Sprintf(`You are EvolutionCat in Catena's XiaoBaOS Evolution Runtime. Produce the smallest reusable Agent asset suggested by the accepted evidence analysis.
+	Return one JSON object only with this exact shape:
+	{"candidate":{"kind":"%s","title":"...","summary":"...","content":{}}}
+	For agent_md, content must be {"path":"agent.md","markdown":"# ..."}. Skill and Role content must be portable structured JSON. Harness is permitted only for canonical XiaoBaOS and must describe a XiaoBaOS Runtime-level optimization.
+	Never emit Memory or Case: Conversation owns memory, and Trace Farm owns Agent assets. Do not claim the asset was installed, applied, replayed, verified, or released.
 Analysis:
-%s`, inputs)
+%s`, allowedKinds, inputs)
 }
 
 func buildReviewerPrompt(job EvolutionJob, evidence json.RawMessage) string {
 	inputs, _ := json.Marshal(map[string]any{
-		"finding":       job.Finding,
-		"case_proposal": job.CaseProposal,
-		"candidate":     job.Candidate,
+		"finding":   job.Finding,
+		"candidate": job.Candidate,
 	})
 	return fmt.Sprintf(`You are ReviewerCat in Catena. Review whether this proposal is coherent and grounded in the retained evidence.
 Return one JSON object only with this exact shape:
 {"review":{"verdict":"pass|fail|blocked","summary":"..."}}
-This is proposal review only. The candidate remains draft/unverified; do not claim execution or release verification.
+	This is grounding review only. Do not invent Replay, verification, adoption, or a Release decision.
 Proposal:
 %s
 Retained evidence:
 %s`, inputs, evidence)
 }
 
-func inspectorOutput(raw json.RawMessage, run Run) (EvolutionFinding, EvolutionCaseProposal) {
+func inspectorOutput(raw json.RawMessage) EvolutionFinding {
 	var parsed inspectorTurnOutput
-	if decodeRoleJSON(raw, &parsed) && validEvolutionFinding(parsed.Finding) &&
-		validEvolutionCaseProposal(parsed.CaseProposal) {
-		parsed.Finding = sanitizeEvolutionFinding(parsed.Finding)
-		parsed.CaseProposal.Title = bounded(strings.TrimSpace(parsed.CaseProposal.Title), 160)
-		parsed.CaseProposal.ReplayPrompt = bounded(strings.TrimSpace(parsed.CaseProposal.ReplayPrompt), 24000)
-		parsed.CaseProposal.SuccessCriteria = bounded(strings.TrimSpace(parsed.CaseProposal.SuccessCriteria), 4000)
-		parsed.CaseProposal.Verifier = boundedEvolutionJSON(
-			parsed.CaseProposal.Verifier,
-			64*1024,
-			"verifier exceeded proposal limit",
-		)
-		parsed.CaseProposal.RequiresHumanReview = true
-		return parsed.Finding, parsed.CaseProposal
-	}
-	replayPrompt, err := sourceExploreObjective(run.Input)
-	if err != nil {
-		replayPrompt = "Replay the source Run with its retained input."
+	if decodeRoleJSON(raw, &parsed) && validEvolutionFinding(parsed.Finding) {
+		return sanitizeEvolutionFinding(parsed.Finding)
 	}
 	return EvolutionFinding{
-			Title:    "Unstructured InspectorCat result",
-			Summary:  "InspectorCat returned output that requires human interpretation; its raw response is retained with the stage.",
-			Severity: "unknown",
-			Evidence: []string{"Raw InspectorCat output is retained in the inspector stage."},
-		}, EvolutionCaseProposal{
-			Title:               "Human review required before Case promotion",
-			ReplayPrompt:        replayPrompt,
-			SuccessCriteria:     "Define deterministic success criteria from the retained evidence before promotion.",
-			Verifier:            json.RawMessage(`{"kind":"manual_review_required"}`),
-			RequiresHumanReview: true,
-		}
+		Title:    "Unstructured InspectorCat result",
+		Summary:  "InspectorCat returned output that requires human interpretation; its raw response is retained with the stage.",
+		Severity: "unknown",
+		Evidence: []string{"Raw InspectorCat output is retained in the inspector stage."},
+	}
 }
 
-func candidateOutput(raw json.RawMessage) EvolutionCandidate {
+func enrichEvolutionCandidate(candidate *EvolutionCandidate, job EvolutionJob) {
+	candidate.Status = evolutionCandidateStatus
+	candidate.SourceRunID = job.SourceRunID
+	candidate.SourceTraceID = job.SourceTraceID
+	candidate.SourceTraceIDs = evolutionJobTraceIDs(job)
+	candidate.SourceAgentID = job.SourceAgentID
+	if job.EvidencePack != nil {
+		candidate.EvidencePackSHA256 = job.EvidencePack.SHA256
+	}
+}
+
+func evolutionJobTraceIDs(job EvolutionJob) []string {
+	if len(job.SourceTraceIDs) > 0 {
+		return append([]string(nil), job.SourceTraceIDs...)
+	}
+	if job.SourceTraceID != "" {
+		return []string{job.SourceTraceID}
+	}
+	return []string{}
+}
+
+func validEvolutionJobSource(job EvolutionJob) bool {
+	switch job.SourceKind {
+	case EvolutionSourceTrace:
+		return job.SourceTraceID != "" && job.SourceRunID == "" &&
+			job.SourceAgentID == "" && len(job.SourceTraceIDs) == 0
+	case EvolutionSourceRunTrace:
+		return job.SourceTraceID != "" && job.SourceRunID != "" &&
+			job.SourceAgentID == "" && len(job.SourceTraceIDs) == 0
+	case EvolutionSourceAgentTraceSet:
+		return job.SourceRunID == "" && job.SourceTraceID == "" &&
+			job.SourceAgentID != "" && len(job.SourceTraceIDs) >= 2 &&
+			job.WindowStart != nil && job.WindowEnd != nil && job.WindowEnd.After(*job.WindowStart)
+	default:
+		return false
+	}
+}
+
+func evolutionJobSourceKey(job EvolutionJob) string {
+	if job.SourceKind == EvolutionSourceAgentTraceSet {
+		return "agent:" + job.SourceAgentID
+	}
+	return "trace:" + job.SourceTraceID
+}
+
+func candidateOutput(raw json.RawMessage, sourceAgentID string) EvolutionCandidate {
 	var parsed candidateTurnOutput
-	if decodeRoleJSON(raw, &parsed) && validEvolutionCandidate(parsed.Candidate) {
+	if decodeRoleJSON(raw, &parsed) && validCurrentEvolutionCandidate(parsed.Candidate, sourceAgentID) {
 		parsed.Candidate.ID = newID("candidate")
-		parsed.Candidate.Title = bounded(strings.TrimSpace(parsed.Candidate.Title), 160)
-		parsed.Candidate.Summary = bounded(strings.TrimSpace(parsed.Candidate.Summary), 4000)
-		parsed.Candidate.Content = boundedEvolutionJSON(
+		parsed.Candidate.Title = bounded(redactMemoryText(strings.TrimSpace(parsed.Candidate.Title)), 160)
+		parsed.Candidate.Summary = bounded(redactMemoryText(strings.TrimSpace(parsed.Candidate.Summary)), 4000)
+		parsed.Candidate.Content = sanitizeEvolutionJSON(
 			parsed.Candidate.Content,
 			128*1024,
-			"candidate content exceeded prompt limit",
 		)
 		parsed.Candidate.Status = evolutionCandidateStatus
 		return parsed.Candidate
 	}
 	return EvolutionCandidate{
 		ID:      newID("candidate"),
-		Kind:    EvolutionCandidateHarness,
+		Kind:    EvolutionCandidateAgentMD,
 		Title:   "Unclassified EvolutionCat draft",
-		Summary: "EvolutionCat returned unstructured output. Human review must classify and edit this draft before use.",
-		Content: boundedEvolutionJSON(
-			raw,
-			128*1024,
-			"unstructured candidate output exceeded prompt limit",
-		),
-		Status: evolutionCandidateStatus,
+		Summary: "EvolutionCat returned an invalid Agent asset. Review the retained stage output before use.",
+		Content: json.RawMessage(`{"path":"agent.md","markdown":"# Human review required\n\nEvolutionCat returned an invalid Agent asset. Review the retained stage output before use."}`),
+		Status:  evolutionCandidateStatus,
 	}
 }
 
 func reviewOutput(raw json.RawMessage) EvolutionReview {
 	var parsed reviewTurnOutput
 	if decodeRoleJSON(raw, &parsed) && validEvolutionReview(parsed.Review) {
-		parsed.Review.Summary = bounded(strings.TrimSpace(parsed.Review.Summary), 4000)
+		parsed.Review.Summary = bounded(redactMemoryText(strings.TrimSpace(parsed.Review.Summary)), 4000)
 		parsed.Review.Scope = evolutionReviewScope
 		parsed.Review.CandidateStatus = evolutionCandidateStatus
 		return parsed.Review
@@ -484,12 +1207,12 @@ func validEvolutionFinding(value EvolutionFinding) bool {
 }
 
 func sanitizeEvolutionFinding(value EvolutionFinding) EvolutionFinding {
-	value.Title = bounded(strings.TrimSpace(value.Title), 160)
-	value.Summary = bounded(strings.TrimSpace(value.Summary), 4000)
+	value.Title = bounded(redactMemoryText(strings.TrimSpace(value.Title)), 160)
+	value.Summary = bounded(redactMemoryText(strings.TrimSpace(value.Summary)), 4000)
 	value.Severity = strings.ToLower(strings.TrimSpace(value.Severity))
 	evidence := make([]string, 0, len(value.Evidence))
 	for _, fact := range value.Evidence {
-		fact = bounded(strings.TrimSpace(fact), 1000)
+		fact = bounded(redactMemoryText(strings.TrimSpace(fact)), 1000)
 		if fact != "" {
 			evidence = append(evidence, fact)
 		}
@@ -501,18 +1224,36 @@ func sanitizeEvolutionFinding(value EvolutionFinding) EvolutionFinding {
 	return value
 }
 
-func validEvolutionCaseProposal(value EvolutionCaseProposal) bool {
-	return strings.TrimSpace(value.Title) != "" &&
-		strings.TrimSpace(value.ReplayPrompt) != "" &&
-		strings.TrimSpace(value.SuccessCriteria) != "" &&
-		jsonObject(value.Verifier)
-}
-
 func validEvolutionCandidate(value EvolutionCandidate) bool {
 	return value.Kind.Valid() &&
 		strings.TrimSpace(value.Title) != "" &&
 		strings.TrimSpace(value.Summary) != "" &&
 		len(value.Content) > 0 && json.Valid(value.Content)
+}
+
+func validCurrentEvolutionCandidate(value EvolutionCandidate, sourceAgentID string) bool {
+	if !validEvolutionCandidate(value) {
+		return false
+	}
+	switch value.Kind {
+	case EvolutionCandidateAgentMD:
+		var content struct {
+			Path     string `json:"path"`
+			Markdown string `json:"markdown"`
+		}
+		return json.Unmarshal(value.Content, &content) == nil &&
+			content.Path == "agent.md" && strings.TrimSpace(content.Markdown) != ""
+	case EvolutionCandidateSkill, EvolutionCandidateRole:
+		return jsonObject(value.Content)
+	case EvolutionCandidateHarness:
+		return isXiaoBaAgentID(sourceAgentID) && jsonObject(value.Content)
+	default:
+		return false
+	}
+}
+
+func isXiaoBaAgentID(value string) bool {
+	return strings.EqualFold(strings.TrimSpace(value), "xiaobaos")
 }
 
 func validEvolutionReview(value EvolutionReview) bool {

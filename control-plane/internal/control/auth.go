@@ -33,16 +33,17 @@ const (
 )
 
 type AuthConfig struct {
-	GitHubClientID     string
-	GitHubClientSecret string
-	RedirectURL        string
-	SecureCookies      bool
-	SessionTTL         time.Duration
-	AuthorizeURL       string
-	TokenURL           string
-	UserAPIURL         string
-	HTTPClient         *http.Client
-	GatewaySecret      string
+	GitHubClientID        string
+	GitHubClientSecret    string
+	RedirectURL           string
+	SecureCookies         bool
+	SessionTTL            time.Duration
+	AuthorizeURL          string
+	TokenURL              string
+	UserAPIURL            string
+	HTTPClient            *http.Client
+	GatewaySecret         string
+	APITokenEncryptionKey string
 }
 
 func (c AuthConfig) Enabled() bool {
@@ -54,6 +55,9 @@ func (c AuthConfig) Enabled() bool {
 func (c AuthConfig) Validate() error {
 	if c.GatewaySecret != "" && len(c.GatewaySecret) < 32 {
 		return errors.New("BARENA_GATEWAY_SECRET must contain at least 32 characters")
+	}
+	if c.APITokenEncryptionKey != "" && len(c.APITokenEncryptionKey) < 32 {
+		return errors.New("BARENA_API_TOKEN_ENCRYPTION_KEY must contain at least 32 characters")
 	}
 	configured := 0
 	for _, value := range []string{
@@ -69,6 +73,9 @@ func (c AuthConfig) Validate() error {
 		return errors.New(
 			"BARENA_GITHUB_CLIENT_ID, BARENA_GITHUB_CLIENT_SECRET, and BARENA_GITHUB_REDIRECT_URL must be configured together",
 		)
+	}
+	if configured == 3 && c.APITokenEncryptionKey == "" {
+		return errors.New("BARENA_API_TOKEN_ENCRYPTION_KEY is required when GitHub authentication is enabled")
 	}
 	if c.RedirectURL != "" {
 		parsed, err := url.Parse(c.RedirectURL)
@@ -132,6 +139,13 @@ func (s *HTTPServer) githubLogin(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, http.StatusNotFound, "GitHub authentication is not configured")
 		return
 	}
+	if canonical, redirect := s.canonicalOAuthRequestURL(r); redirect {
+		// OAuth flow cookies are host-only. Normalize localhost/127.0.0.1 (or
+		// any other alternate entry host) before issuing state and PKCE cookies
+		// so the configured callback can read the exact same flow state.
+		http.Redirect(w, r, canonical, http.StatusFound)
+		return
+	}
 	state, err := randomURLToken(32)
 	if err != nil {
 		writeProblem(w, http.StatusInternalServerError, "OAuth state generation failed")
@@ -157,6 +171,7 @@ func (s *HTTPServer) githubLogin(w http.ResponseWriter, r *http.Request) {
 	query.Set("redirect_uri", s.auth.RedirectURL)
 	query.Set("scope", "read:user")
 	query.Set("state", state)
+	query.Set("prompt", "select_account")
 	query.Set("code_challenge", challenge)
 	query.Set("code_challenge_method", "S256")
 	target.RawQuery = query.Encode()
@@ -170,7 +185,7 @@ func (s *HTTPServer) githubCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	s.clearFlowCookies(w)
 	if oauthError := strings.TrimSpace(r.URL.Query().Get("error")); oauthError != "" {
-		writeProblem(w, http.StatusUnauthorized, "GitHub authorization was not completed")
+		http.Redirect(w, r, s.oauthRecoveryURL("cancelled"), http.StatusSeeOther)
 		return
 	}
 	code := strings.TrimSpace(r.URL.Query().Get("code"))
@@ -185,7 +200,7 @@ func (s *HTTPServer) githubCallback(w http.ResponseWriter, r *http.Request) {
 			[]byte(returnedState),
 			[]byte(stateCookie.Value),
 		) != 1 {
-		writeProblem(w, http.StatusBadRequest, "OAuth state validation failed")
+		http.Redirect(w, r, s.oauthRecoveryURL("state"), http.StatusSeeOther)
 		return
 	}
 
@@ -254,6 +269,33 @@ func (s *HTTPServer) githubCallback(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (s *HTTPServer) canonicalOAuthRequestURL(r *http.Request) (string, bool) {
+	redirect, err := url.Parse(s.auth.RedirectURL)
+	if err != nil || redirect.Scheme == "" || redirect.Host == "" ||
+		strings.EqualFold(strings.TrimSuffix(r.Host, "."), strings.TrimSuffix(redirect.Host, ".")) {
+		return "", false
+	}
+	canonical := &url.URL{
+		Scheme:   redirect.Scheme,
+		Host:     redirect.Host,
+		Path:     r.URL.Path,
+		RawQuery: r.URL.RawQuery,
+	}
+	return canonical.String(), true
+}
+
+func (s *HTTPServer) oauthRecoveryURL(reason string) string {
+	redirect, err := url.Parse(s.auth.RedirectURL)
+	if err != nil || redirect.Scheme == "" || redirect.Host == "" {
+		return "/?auth_error=" + url.QueryEscape(reason)
+	}
+	redirect.Path = "/"
+	redirect.RawPath = ""
+	redirect.RawQuery = url.Values{"auth_error": []string{reason}}.Encode()
+	redirect.Fragment = ""
+	return redirect.String()
 }
 
 func (s *HTTPServer) logout(w http.ResponseWriter, r *http.Request) {
@@ -580,9 +622,12 @@ func (s *HTTPServer) fetchGitHubIdentity(
 
 func (s *HTTPServer) setFlowCookie(w http.ResponseWriter, name, value string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     name,
-		Value:    value,
-		Path:     "/v1/auth/github/callback",
+		Name:  name,
+		Value: value,
+		// The public cutover keeps both the native v1 callback and the
+		// callback path already registered by the former Web. A root path lets
+		// the same short-lived PKCE flow work with either route.
+		Path:     "/",
 		MaxAge:   10 * 60,
 		HttpOnly: true,
 		Secure:   s.auth.SecureCookies,
@@ -592,15 +637,17 @@ func (s *HTTPServer) setFlowCookie(w http.ResponseWriter, name, value string) {
 
 func (s *HTTPServer) clearFlowCookies(w http.ResponseWriter) {
 	for _, name := range []string{oauthStateCookieName, oauthVerifierCookieName} {
-		http.SetCookie(w, &http.Cookie{
-			Name:     name,
-			Value:    "",
-			Path:     "/v1/auth/github/callback",
-			MaxAge:   -1,
-			HttpOnly: true,
-			Secure:   s.auth.SecureCookies,
-			SameSite: http.SameSiteLaxMode,
-		})
+		for _, path := range []string{"/", "/v1/auth/github/callback", "/api/auth/callback/github"} {
+			http.SetCookie(w, &http.Cookie{
+				Name:     name,
+				Value:    "",
+				Path:     path,
+				MaxAge:   -1,
+				HttpOnly: true,
+				Secure:   s.auth.SecureCookies,
+				SameSite: http.SameSiteLaxMode,
+			})
+		}
 	}
 }
 

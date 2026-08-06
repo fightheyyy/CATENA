@@ -3,6 +3,8 @@ package control
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -94,15 +96,14 @@ func TestEvolutionJobRunsThreeEvidenceStagesAndIsIdempotent(t *testing.T) {
 			t.Fatalf("stage evidence is incomplete: %#v", stage)
 		}
 	}
-	if job.Finding == nil || job.CaseProposal == nil || job.Candidate == nil || job.Review == nil {
+	if job.Finding == nil || job.CaseProposal != nil || job.Candidate == nil || job.Review == nil {
 		t.Fatalf("structured outputs are incomplete: %#v", job)
 	}
 	if job.Candidate.Kind != EvolutionCandidateSkill ||
 		job.Candidate.Status != evolutionCandidateStatus ||
 		job.Review.Verdict != "pass" ||
 		job.Review.Scope != evolutionReviewScope ||
-		job.Review.CandidateStatus != evolutionCandidateStatus ||
-		!job.CaseProposal.RequiresHumanReview {
+		job.Review.CandidateStatus != evolutionCandidateStatus {
 		t.Fatalf("Job overclaimed Candidate verification: %#v", job)
 	}
 
@@ -129,6 +130,395 @@ func TestEvolutionJobRunsThreeEvidenceStagesAndIsIdempotent(t *testing.T) {
 	response.Body.Close()
 	if len(listed.Jobs) != 1 || listed.Jobs[0].ID != job.ID {
 		t.Fatalf("unexpected Job list: %#v", listed.Jobs)
+	}
+}
+
+func TestTraceEvolutionJobUsesStoredToolEvidenceWithoutSyntheticRun(t *testing.T) {
+	store := NewMemoryStore()
+	traceID := "00112233445566778899aabbccddeeff"
+	startedAt := time.Now().UTC().Add(-time.Second)
+	traces := &memoryTraceStore{trace: TraceDetail{
+		Summary: TraceSummary{
+			TraceID: traceID, RootName: "agent.turn", ServiceName: "arbitrary-agent",
+			Model: "model-a", StartTime: startedAt, EndTime: startedAt.Add(time.Second),
+			DurationMS: 1000, SpanCount: 1,
+		},
+		Spans: []TraceSpan{{
+			TraceID: traceID, SpanID: "0011223344556677", Name: "tool.read_file",
+			ServiceName: "arbitrary-agent", StartTime: startedAt,
+			EndTime: startedAt.Add(time.Second), StatusCode: 1, Model: "model-a",
+			Attributes: map[string]any{"xiaoba.tool.name": "read_file"},
+			Input:      `{"path":"README.md","api_key":"sk_private_value"}`,
+			Output:     "file contents",
+			Events:     []TraceEvent{{Name: "tool.result", Time: startedAt.Add(time.Second)}},
+		}},
+	}}
+	manager := newStructuredEvolutionRuntimeManager(t, "")
+	handler, err := NewHTTPHandlerWithServices(store, nil, AuthConfig{}, manager, traces)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	response := postEvolutionJob(
+		t,
+		server.URL+"/v1/traces/"+traceID+"/evolution-jobs",
+		"trace-only-evolution",
+		map[string]any{"objective": "Find one tool-use boundary."},
+	)
+	if response.StatusCode != http.StatusAccepted {
+		body, _ := io.ReadAll(response.Body)
+		response.Body.Close()
+		t.Fatalf("Trace Evolution start returned %d: %s", response.StatusCode, body)
+	}
+	var started EvolutionJob
+	if err := json.NewDecoder(response.Body).Decode(&started); err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	retry := postEvolutionJob(
+		t,
+		server.URL+"/v1/traces/"+traceID+"/evolution-jobs",
+		"trace-only-evolution",
+		map[string]any{"objective": "Find one tool-use boundary."},
+	)
+	if retry.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(retry.Body)
+		retry.Body.Close()
+		t.Fatalf("Trace Evolution retry returned %d: %s", retry.StatusCode, body)
+	}
+	var duplicate EvolutionJob
+	if err := json.NewDecoder(retry.Body).Decode(&duplicate); err != nil {
+		t.Fatal(err)
+	}
+	retry.Body.Close()
+	if duplicate.ID != started.ID {
+		t.Fatalf("Trace Evolution retry created another Job: %s != %s", duplicate.ID, started.ID)
+	}
+	job := waitEvolutionJobState(t, store, started.ID, EvolutionJobCompleted)
+	if job.SourceKind != EvolutionSourceTrace || job.SourceRunID != "" ||
+		job.SourceTraceID != traceID || job.EvidencePack == nil {
+		t.Fatalf("Trace-only source was not retained honestly: %#v", job)
+	}
+	pack := job.EvidencePack
+	if pack.Schema != evolutionEvidenceSchema || pack.TraceSummary.RootName != "agent.turn" ||
+		len(pack.Spans) != 1 || pack.Spans[0].ToolName != "read_file" ||
+		pack.Spans[0].Input == "" || pack.Spans[0].Output != "file contents" ||
+		pack.Boundary.TargetAgentExecutedByCatena || pack.Boundary.CreatesRelease ||
+		pack.Boundary.ReleaseAuthority != evolutionReleaseAuthority {
+		t.Fatalf("stored Trace Evidence Pack is incomplete or misleading: %#v", pack)
+	}
+	encoded, err := json.Marshal(pack)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "sk_private_value") || !strings.Contains(string(encoded), "[REDACTED]") {
+		t.Fatalf("Trace Evidence Pack did not redact credentials: %s", encoded)
+	}
+	digestInput, err := evolutionEvidenceDigestInput(*pack)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(digestInput)
+	if pack.SHA256 != hex.EncodeToString(digest[:]) {
+		t.Fatalf("Evidence Pack digest mismatch: %s", pack.SHA256)
+	}
+	if job.CaseProposal != nil || job.Candidate == nil || job.Candidate.SourceTraceID != traceID ||
+		job.Candidate.EvidencePackSHA256 != pack.SHA256 {
+		t.Fatalf("candidate provenance is incomplete: %#v", job)
+	}
+	runs, err := store.ListRuns(context.Background(), 100)
+	if err != nil || len(runs) != 0 {
+		t.Fatalf("Trace-only Evolution synthesized a Run: runs=%#v err=%v", runs, err)
+	}
+	releases, err := store.ListReleases(context.Background(), 100)
+	if err != nil || len(releases) != 0 {
+		t.Fatalf("Evolution proposal created a Release decision: releases=%#v err=%v", releases, err)
+	}
+}
+
+func TestAgentEvolutionJobFreezesMultipleTracesAndKeepsPluralProvenance(t *testing.T) {
+	store := NewMemoryStore()
+	now := time.Now().UTC()
+	agentID := "codex"
+	serviceNames := []string{"codex", "codex-app-server", "Codex Desktop"}
+	traceStore := &agentEvolutionTraceStore{ownerID: "local"}
+	for index, traceID := range []string{
+		"10112233445566778899aabbccddeeff",
+		"20112233445566778899aabbccddeeff",
+		"30112233445566778899aabbccddeeff",
+	} {
+		startedAt := now.Add(time.Duration(-index-1) * time.Hour)
+		statusCode := int32(1)
+		if index == 1 {
+			statusCode = 2
+		}
+		traceStore.traces = append(traceStore.traces, TraceDetail{
+			Summary: TraceSummary{
+				TraceID: traceID, RootName: "agent.turn", ServiceName: serviceNames[index],
+				StartTime: startedAt, EndTime: startedAt.Add(time.Second),
+				DurationMS: 1000, SpanCount: 2,
+				ErrorCount: uint64(map[bool]int{true: 1, false: 0}[statusCode == 2]),
+			},
+			Spans: []TraceSpan{
+				{
+					TraceID: traceID, SpanID: fmt.Sprintf("%016d", index+1), Name: "agent.turn",
+					ServiceName: serviceNames[index], StartTime: startedAt, EndTime: startedAt.Add(time.Second),
+					StatusCode: statusCode, Input: fmt.Sprintf(`{"task":"task-%d"}`, index+1),
+					Output: "result",
+				},
+			},
+		})
+	}
+	manager := newStructuredEvolutionRuntimeManager(t, "")
+	handler, err := NewHTTPHandlerWithServices(store, nil, AuthConfig{}, manager, traceStore)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	body := map[string]any{
+		"window_start": now.Add(-24 * time.Hour),
+		"window_end":   now,
+		"objective":    "Find one repeated failure boundary.",
+	}
+	response := postEvolutionJob(
+		t,
+		server.URL+"/v1/agents/"+agentID+"/evolution-jobs",
+		"agent-window-once",
+		body,
+	)
+	if response.StatusCode != http.StatusAccepted {
+		encoded, _ := io.ReadAll(response.Body)
+		response.Body.Close()
+		t.Fatalf("Agent Evolution start returned %d: %s", response.StatusCode, encoded)
+	}
+	var started EvolutionJob
+	if err := json.NewDecoder(response.Body).Decode(&started); err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	retry := postEvolutionJob(
+		t,
+		server.URL+"/v1/agents/"+agentID+"/evolution-jobs",
+		"agent-window-once",
+		body,
+	)
+	if retry.StatusCode != http.StatusOK {
+		encoded, _ := io.ReadAll(retry.Body)
+		retry.Body.Close()
+		t.Fatalf("Agent Evolution retry returned %d: %s", retry.StatusCode, encoded)
+	}
+	var duplicate EvolutionJob
+	if err := json.NewDecoder(retry.Body).Decode(&duplicate); err != nil {
+		t.Fatal(err)
+	}
+	retry.Body.Close()
+	if duplicate.ID != started.ID {
+		t.Fatalf("idempotent Agent Evolution created another Job: %s != %s", duplicate.ID, started.ID)
+	}
+
+	job := waitEvolutionJobState(t, store, started.ID, EvolutionJobCompleted)
+	if job.SourceKind != EvolutionSourceAgentTraceSet || job.SourceAgentID != agentID ||
+		job.SourceTraceID != "" || len(job.SourceTraceIDs) != 3 || job.EvidencePack == nil {
+		t.Fatalf("Agent Trace Set source was not frozen: %#v", job)
+	}
+	pack := job.EvidencePack
+	if pack.Schema != evolutionAgentEvidenceSchema || len(pack.Traces) != 3 ||
+		pack.IncludedTraceCount != 3 || pack.TotalTraceCount != 3 ||
+		!validEvolutionEvidencePack(*pack, job) {
+		t.Fatalf("Agent Trace Set Evidence Pack is invalid: %#v", pack)
+	}
+	if job.CaseProposal != nil || job.Candidate == nil ||
+		job.Candidate.SourceAgentID != agentID || len(job.Candidate.SourceTraceIDs) != 3 {
+		t.Fatalf("plural Candidate provenance is incomplete: %#v", job)
+	}
+}
+
+func TestAgentEvolutionJobUsesOnlyBarenaTargetEvidence(t *testing.T) {
+	store := NewMemoryStore()
+	now := time.Now().UTC()
+	serviceNames := []string{
+		"barena-explore-engine",
+		"barena-xiaoba-user_simulator",
+		"barena-xiaoba-target",
+		"barena-xiaoba-target",
+		"barena-xiaoba-inspector",
+		"barena-xiaoba-reviewer",
+	}
+	traceStore := &agentEvolutionTraceStore{ownerID: "local"}
+	for index, serviceName := range serviceNames {
+		traceID := fmt.Sprintf("%032x", index+400)
+		startedAt := now.Add(time.Duration(-index-1) * time.Minute)
+		traceStore.traces = append(traceStore.traces, TraceDetail{
+			Summary: TraceSummary{
+				TraceID: traceID, RootName: "xiaoba.session", ServiceName: serviceName,
+				StartTime: startedAt, EndTime: startedAt.Add(time.Second), DurationMS: 1000, SpanCount: 1,
+			},
+			Spans: []TraceSpan{{
+				TraceID: traceID, SpanID: fmt.Sprintf("%016x", index+400), Name: "xiaoba.session",
+				ServiceName: serviceName, StartTime: startedAt, EndTime: startedAt.Add(time.Second),
+				Input: fmt.Sprintf(`{"task":"barena-%d"}`, index), Output: "result",
+			}},
+		})
+	}
+	manager := newStructuredEvolutionRuntimeManager(t, "")
+	handler, err := NewHTTPHandlerWithServices(store, nil, AuthConfig{}, manager, traceStore)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	response := postEvolutionJob(
+		t,
+		server.URL+"/v1/agents/barena-xiaoba-target/evolution-jobs",
+		"barena-target-only",
+		map[string]any{"window_start": now.Add(-time.Hour), "window_end": now},
+	)
+	if response.StatusCode != http.StatusAccepted {
+		encoded, _ := io.ReadAll(response.Body)
+		response.Body.Close()
+		t.Fatalf("XiaoBaOS Evolution start returned %d: %s", response.StatusCode, encoded)
+	}
+	var started EvolutionJob
+	if err := json.NewDecoder(response.Body).Decode(&started); err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+
+	job := waitEvolutionJobState(t, store, started.ID, EvolutionJobCompleted)
+	if job.SourceAgentID != "xiaobaos" || len(job.SourceTraceIDs) != 2 || job.EvidencePack == nil ||
+		len(job.EvidencePack.Traces) != 2 || job.EvidencePack.IncludedTraceCount != 2 ||
+		job.EvidencePack.TotalTraceCount != 2 {
+		t.Fatalf("Barena internal evidence entered XiaoBaOS Trace Set: %#v", job)
+	}
+	for _, trace := range job.EvidencePack.Traces {
+		if trace.Summary.ServiceName != "barena-xiaoba-target" {
+			t.Fatalf("internal source %q entered XiaoBaOS Evidence Pack", trace.Summary.ServiceName)
+		}
+	}
+	if job.Candidate == nil || job.Candidate.SourceAgentID != "xiaobaos" || job.CaseProposal != nil {
+		t.Fatalf("canonical XiaoBaOS provenance was not propagated: %#v", job)
+	}
+}
+
+func TestAgentEvolutionJobRejectsWindowsWithFewerThanTwoTraces(t *testing.T) {
+	now := time.Now().UTC()
+	agentID := "codex-desktop"
+	oneTrace := TraceDetail{
+		Summary: TraceSummary{
+			TraceID:     "10112233445566778899aabbccddeeff",
+			RootName:    "agent.turn",
+			ServiceName: agentID,
+			StartTime:   now.Add(-time.Hour),
+			EndTime:     now.Add(-time.Hour + time.Second),
+			DurationMS:  1000,
+			SpanCount:   1,
+		},
+		Spans: []TraceSpan{{
+			TraceID:     "10112233445566778899aabbccddeeff",
+			SpanID:      "1011223344556677",
+			Name:        "agent.turn",
+			ServiceName: agentID,
+			StartTime:   now.Add(-time.Hour),
+			EndTime:     now.Add(-time.Hour + time.Second),
+		}},
+	}
+
+	for _, test := range []struct {
+		name   string
+		traces []TraceDetail
+	}{
+		{name: "no traces", traces: nil},
+		{name: "one trace", traces: []TraceDetail{oneTrace}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store := NewMemoryStore()
+			traceStore := &agentEvolutionTraceStore{ownerID: "local", traces: test.traces}
+			handler, err := NewHTTPHandlerWithServices(store, nil, AuthConfig{}, nil, traceStore)
+			if err != nil {
+				t.Fatal(err)
+			}
+			server := httptest.NewServer(handler)
+			defer server.Close()
+
+			response := postEvolutionJob(
+				t,
+				server.URL+"/v1/agents/"+agentID+"/evolution-jobs",
+				"insufficient-agent-traces",
+				map[string]any{
+					"window_start": now.Add(-24 * time.Hour),
+					"window_end":   now,
+				},
+			)
+			defer response.Body.Close()
+			if response.StatusCode != http.StatusUnprocessableEntity {
+				body, _ := io.ReadAll(response.Body)
+				t.Fatalf("Agent Evolution with %d Traces returned %d, want 422: %s", len(test.traces), response.StatusCode, body)
+			}
+			var problem struct {
+				Status int    `json:"status"`
+				Detail string `json:"detail"`
+			}
+			if err := json.NewDecoder(response.Body).Decode(&problem); err != nil {
+				t.Fatal(err)
+			}
+			if problem.Status != http.StatusUnprocessableEntity ||
+				problem.Detail != "At least two Traces are required to evolve an Agent" {
+				t.Fatalf("unexpected insufficient-Trace problem: %#v", problem)
+			}
+			jobs, err := store.ListEvolutionJobs(context.Background(), 100)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(jobs) != 0 {
+				t.Fatalf("insufficient Agent evidence persisted Evolution Jobs: %#v", jobs)
+			}
+		})
+	}
+}
+
+func TestEvolutionEvidenceDigestSurvivesJSONBObjectReordering(t *testing.T) {
+	base := EvolutionEvidencePack{
+		Schema:        evolutionEvidenceSchema,
+		SourceKind:    EvolutionSourceRunTrace,
+		SourceRunID:   "run-1",
+		SourceTraceID: "11111111111111111111111111111111",
+		Run: &EvolutionEvidenceRun{
+			RunID: "run-1",
+			Input: json.RawMessage(`{"z":1,"a":{"y":2,"x":1}}`),
+		},
+		Spans: []EvolutionEvidenceSpan{},
+		RunEvents: []EngineEvent{{
+			Payload: json.RawMessage(`{"status":"fail","detail":{"z":2,"a":1}}`),
+		}},
+		Boundary: EvolutionEvidenceBoundary{
+			ReleaseAuthority: evolutionReleaseAuthority,
+			CandidateStatus:  evolutionCandidateStatus,
+			ReviewScope:      evolutionReviewScope,
+		},
+	}
+	reordered := base
+	reordered.Run = &EvolutionEvidenceRun{
+		RunID: "run-1",
+		Input: json.RawMessage("{\n  \"a\": {\"x\": 1, \"y\": 2},\n  \"z\": 1\n}"),
+	}
+	reordered.RunEvents = []EngineEvent{{
+		Payload: json.RawMessage(`{"detail":{"a":1,"z":2},"status":"fail"}`),
+	}}
+	first, err := evolutionEvidenceDigestInput(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := evolutionEvidenceDigestInput(reordered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first, second) {
+		t.Fatal("Evidence Pack digest must survive PostgreSQL JSONB formatting")
 	}
 }
 
@@ -312,24 +702,115 @@ func TestEvolutionJobFailsTerminallyWhenRuntimeStageFails(t *testing.T) {
 
 func TestEvolutionJobUsesConservativeEnvelopeForUnstructuredRoleOutput(t *testing.T) {
 	raw := json.RawMessage(`{"status":"completed","assistant":{"role":"assistant","content":"plain text only"}}`)
-	run := Run{Input: json.RawMessage(`{"scenario":{"objective":"Replay this exact objective."}}`)}
-	finding, proposal := inspectorOutput(raw, run)
-	candidate := candidateOutput(raw)
+	finding := inspectorOutput(raw)
+	candidate := candidateOutput(raw, "codex")
 	review := reviewOutput(raw)
-	if finding.Severity != "unknown" || !proposal.RequiresHumanReview ||
-		candidate.Kind != EvolutionCandidateHarness ||
+	if finding.Severity != "unknown" ||
+		candidate.Kind != EvolutionCandidateAgentMD ||
 		candidate.Status != evolutionCandidateStatus ||
 		review.Verdict != "blocked" ||
 		review.Scope != evolutionReviewScope ||
 		review.CandidateStatus != evolutionCandidateStatus {
 		t.Fatalf(
-			"unstructured output must remain explicitly unverified: finding=%#v proposal=%#v candidate=%#v review=%#v",
+			"unstructured output must remain explicitly unverified: finding=%#v candidate=%#v review=%#v",
 			finding,
-			proposal,
 			candidate,
 			review,
 		)
 	}
+}
+
+func TestTraceFarmAcceptsPortableAssetsAndXiaoBaHarnessOnly(t *testing.T) {
+	agentMD := candidateOutput(json.RawMessage(`{"candidate":{"kind":"agent_md","title":"Operating rules","summary":"Portable instructions.","content":{"path":"agent.md","markdown":"# Rules\n\nCheck tool results."}}}`), "codex")
+	if agentMD.Kind != EvolutionCandidateAgentMD {
+		t.Fatalf("valid agent.md asset was rejected: %#v", agentMD)
+	}
+
+	for _, raw := range []json.RawMessage{
+		json.RawMessage(`{"candidate":{"kind":"memory","title":"Remember user","summary":"Wrong evidence path.","content":{"memory":"value"}}}`),
+		json.RawMessage(`{"candidate":{"kind":"case","title":"Replay task","summary":"Wrong product output.","content":{"prompt":"task"}}}`),
+		json.RawMessage(`{"candidate":{"kind":"harness","title":"Loop guard","summary":"Runtime change.","content":{"change":"limit loop"}}}`),
+	} {
+		if candidate := candidateOutput(raw, "codex"); candidate.Kind != EvolutionCandidateAgentMD || candidate.Title != "Unclassified EvolutionCat draft" {
+			t.Fatalf("non-portable Codex asset was accepted: %#v", candidate)
+		}
+	}
+
+	xiaobaHarness := candidateOutput(json.RawMessage(`{"candidate":{"kind":"harness","title":"Loop guard","summary":"XiaoBaOS Runtime change.","content":{"target":"xiaobaos","change":"limit loop"}}}`), "xiaobaos")
+	if xiaobaHarness.Kind != EvolutionCandidateHarness {
+		t.Fatalf("XiaoBaOS Harness asset was rejected: %#v", xiaobaHarness)
+	}
+}
+
+func TestEvolutionCandidateKindsCoverAllDraftArtifactTypes(t *testing.T) {
+	for _, kind := range []EvolutionCandidateKind{
+		EvolutionCandidateAgentMD,
+		EvolutionCandidateMemory,
+		EvolutionCandidateRole,
+		EvolutionCandidateSkill,
+		EvolutionCandidateHarness,
+		EvolutionCandidateCase,
+	} {
+		if !kind.Valid() {
+			t.Fatalf("Evolution candidate kind %q is not queryable", kind)
+		}
+	}
+}
+
+type agentEvolutionTraceStore struct {
+	ownerID string
+	traces  []TraceDetail
+}
+
+func (s *agentEvolutionTraceStore) Ping(context.Context) error { return nil }
+func (s *agentEvolutionTraceStore) Close() error               { return nil }
+func (s *agentEvolutionTraceStore) InsertSpans(context.Context, string, []TraceSpan) error {
+	return nil
+}
+func (s *agentEvolutionTraceStore) ListTraces(context.Context, string, int) ([]TraceSummary, error) {
+	result := make([]TraceSummary, 0, len(s.traces))
+	for _, trace := range s.traces {
+		result = append(result, trace.Summary)
+	}
+	return result, nil
+}
+func (s *agentEvolutionTraceStore) ListAgentTraces(
+	_ context.Context,
+	ownerID string,
+	agentID string,
+	windowStart time.Time,
+	windowEnd time.Time,
+	limit int,
+) ([]TraceSummary, error) {
+	if s.ownerID != "" && ownerID != s.ownerID {
+		return []TraceSummary{}, nil
+	}
+	result := make([]TraceSummary, 0, len(s.traces))
+	for _, trace := range s.traces {
+		if !serviceBelongsToAgent(trace.Summary.ServiceName, agentID) || trace.Summary.EndTime.Before(windowStart) ||
+			trace.Summary.StartTime.After(windowEnd) {
+			continue
+		}
+		result = append(result, trace.Summary)
+		if limit > 0 && len(result) == limit {
+			break
+		}
+	}
+	return result, nil
+}
+func (s *agentEvolutionTraceStore) GetTrace(_ context.Context, ownerID string, traceID string) (TraceDetail, error) {
+	if s.ownerID != "" && ownerID != s.ownerID {
+		return TraceDetail{}, ErrNotFound
+	}
+	for _, trace := range s.traces {
+		if trace.Summary.TraceID == traceID {
+			return trace, nil
+		}
+	}
+	return TraceDetail{}, ErrNotFound
+}
+func (s *agentEvolutionTraceStore) ListAgents(context.Context, string, int) ([]AgentSummary, error) {
+	return nil, nil
 }
 
 func seedEvolutionRun(

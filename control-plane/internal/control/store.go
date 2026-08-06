@@ -20,6 +20,11 @@ var (
 type Store interface {
 	CreateRun(context.Context, Run) error
 	AdoptScenarioRun(context.Context, Run, []EngineEvent) (Run, bool, error)
+	CreateRunBundle(context.Context, RunBundle) (RunBundle, bool, error)
+	GetRunBundle(context.Context, string) (RunBundle, error)
+	IngestConversationMessages(context.Context, string, []ConversationMessage, time.Time) (int, int, error)
+	ListConversationSummariesByOwner(context.Context, string, string, int) ([]ConversationSummary, error)
+	ListConversationMessagesByOwner(context.Context, string, string, string, int) ([]ConversationMessage, error)
 	GetRun(context.Context, string) (Run, error)
 	ListRuns(context.Context, int) ([]Run, error)
 	ListRunsByOwner(context.Context, string, int) ([]Run, error)
@@ -55,6 +60,7 @@ type Store interface {
 	DeleteSession(context.Context, string) error
 	CreateAPIToken(context.Context, APIToken) error
 	ListAPITokensByUser(context.Context, string) ([]APIToken, error)
+	GetAPITokenByUser(context.Context, string, string) (APIToken, error)
 	GetUserByAPITokenHash(context.Context, string) (User, error)
 	DeleteAPIToken(context.Context, string, string) error
 	EnsureAgentProfile(context.Context, AgentProfile) (AgentProfile, error)
@@ -68,37 +74,41 @@ type Store interface {
 }
 
 type MemoryStore struct {
-	mu              sync.RWMutex
-	runs            map[string]Run
-	events          map[string][]EngineEvent
-	users           map[string]User
-	userByGitHubID  map[int64]string
-	sessions        map[string]Session
-	apiTokens       map[string]APIToken
-	profiles        map[string]AgentProfile
-	issues          map[string]Issue
-	cases           map[string]Case
-	harnessVersions map[string]HarnessVersion
-	evaluations     map[string]Evaluation
-	releases        map[string]Release
-	evolutionJobs   map[string]EvolutionJob
+	mu                   sync.RWMutex
+	runs                 map[string]Run
+	events               map[string][]EngineEvent
+	users                map[string]User
+	userByGitHubID       map[int64]string
+	sessions             map[string]Session
+	apiTokens            map[string]APIToken
+	profiles             map[string]AgentProfile
+	issues               map[string]Issue
+	cases                map[string]Case
+	harnessVersions      map[string]HarnessVersion
+	evaluations          map[string]Evaluation
+	releases             map[string]Release
+	evolutionJobs        map[string]EvolutionJob
+	runBundles           map[string]RunBundle
+	conversationMessages map[string]ConversationMessage
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		runs:            make(map[string]Run),
-		events:          make(map[string][]EngineEvent),
-		users:           make(map[string]User),
-		userByGitHubID:  make(map[int64]string),
-		sessions:        make(map[string]Session),
-		apiTokens:       make(map[string]APIToken),
-		profiles:        make(map[string]AgentProfile),
-		issues:          make(map[string]Issue),
-		cases:           make(map[string]Case),
-		harnessVersions: make(map[string]HarnessVersion),
-		evaluations:     make(map[string]Evaluation),
-		releases:        make(map[string]Release),
-		evolutionJobs:   make(map[string]EvolutionJob),
+		runs:                 make(map[string]Run),
+		events:               make(map[string][]EngineEvent),
+		users:                make(map[string]User),
+		userByGitHubID:       make(map[int64]string),
+		sessions:             make(map[string]Session),
+		apiTokens:            make(map[string]APIToken),
+		profiles:             make(map[string]AgentProfile),
+		issues:               make(map[string]Issue),
+		cases:                make(map[string]Case),
+		harnessVersions:      make(map[string]HarnessVersion),
+		evaluations:          make(map[string]Evaluation),
+		releases:             make(map[string]Release),
+		evolutionJobs:        make(map[string]EvolutionJob),
+		runBundles:           make(map[string]RunBundle),
+		conversationMessages: make(map[string]ConversationMessage),
 	}
 }
 
@@ -139,6 +149,56 @@ func (s *MemoryStore) AdoptScenarioRun(
 	s.runs[run.ID] = run
 	s.events[run.ID] = append([]EngineEvent(nil), events...)
 	return run, true, nil
+}
+
+func (s *MemoryStore) CreateRunBundle(
+	_ context.Context,
+	bundle RunBundle,
+) (RunBundle, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := validateStoredRunBundle(bundle); err != nil {
+		return RunBundle{}, false, err
+	}
+	for _, existing := range s.runBundles {
+		if existing.OwnerUserID == bundle.OwnerUserID &&
+			existing.IdempotencyKey == bundle.IdempotencyKey {
+			if existing.RequestFingerprint != bundle.RequestFingerprint {
+				return RunBundle{}, false, ErrConflict
+			}
+			return cloneRunBundle(existing), false, nil
+		}
+	}
+	if _, exists := s.runBundles[bundle.ID]; exists {
+		return RunBundle{}, false, ErrConflict
+	}
+	if _, exists := s.runs[bundle.Run.ID]; exists {
+		return RunBundle{}, false, ErrConflict
+	}
+	for _, existing := range s.runs {
+		if existing.RequestID == bundle.Run.RequestID {
+			return RunBundle{}, false, ErrConflict
+		}
+	}
+	for index, event := range bundle.Events {
+		if event.Sequence != int64(index+1) || event.Validate(bundle.Run) != nil {
+			return RunBundle{}, false, ErrConflict
+		}
+	}
+	s.runs[bundle.Run.ID] = bundle.Run
+	s.events[bundle.Run.ID] = append([]EngineEvent(nil), bundle.Events...)
+	s.runBundles[bundle.ID] = cloneRunBundle(bundle)
+	return cloneRunBundle(bundle), true, nil
+}
+
+func (s *MemoryStore) GetRunBundle(_ context.Context, id string) (RunBundle, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	bundle, exists := s.runBundles[id]
+	if !exists {
+		return RunBundle{}, ErrNotFound
+	}
+	return cloneRunBundle(bundle), nil
 }
 
 func (s *MemoryStore) GetRun(_ context.Context, id string) (Run, error) {
@@ -235,7 +295,8 @@ func (s *MemoryStore) ListEventsAfter(_ context.Context, runID string, after int
 func (s *MemoryStore) RunHasTrace(_ context.Context, runID string, traceID string) (bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if _, exists := s.runs[runID]; !exists {
+	run, exists := s.runs[runID]
+	if !exists {
 		return false, ErrNotFound
 	}
 	for _, event := range s.events[runID] {
@@ -243,7 +304,7 @@ func (s *MemoryStore) RunHasTrace(_ context.Context, runID string, traceID strin
 			return true, nil
 		}
 	}
-	return false, nil
+	return runInputHasTrace(run.Input, traceID), nil
 }
 
 func (s *MemoryStore) CreateEvolutionJob(
@@ -252,26 +313,32 @@ func (s *MemoryStore) CreateEvolutionJob(
 ) (EvolutionJob, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	run, exists := s.runs[job.SourceRunID]
-	if !exists {
-		return EvolutionJob{}, false, ErrNotFound
-	}
-	if run.OwnerUserID != job.OwnerUserID || !run.State.Terminal() {
+	if !validEvolutionJobSource(job) {
 		return EvolutionJob{}, false, ErrConflict
 	}
-	traceFound := false
-	for _, event := range s.events[job.SourceRunID] {
-		if event.TraceID == job.SourceTraceID {
-			traceFound = true
-			break
+	if job.SourceRunID != "" {
+		run, exists := s.runs[job.SourceRunID]
+		if !exists {
+			return EvolutionJob{}, false, ErrNotFound
 		}
-	}
-	if !traceFound {
-		return EvolutionJob{}, false, ErrConflict
+		if run.OwnerUserID != job.OwnerUserID || !run.State.Terminal() {
+			return EvolutionJob{}, false, ErrConflict
+		}
+		traceFound := false
+		for _, event := range s.events[job.SourceRunID] {
+			if event.TraceID == job.SourceTraceID {
+				traceFound = true
+				break
+			}
+		}
+		traceFound = traceFound || runInputHasTrace(run.Input, job.SourceTraceID)
+		if !traceFound {
+			return EvolutionJob{}, false, ErrConflict
+		}
 	}
 	for _, existing := range s.evolutionJobs {
 		if existing.OwnerUserID == job.OwnerUserID &&
-			existing.SourceRunID == job.SourceRunID &&
+			evolutionJobSourceKey(existing) == evolutionJobSourceKey(job) &&
 			existing.IdempotencyKey == job.IdempotencyKey {
 			if existing.RequestFingerprint != job.RequestFingerprint {
 				return EvolutionJob{}, false, ErrConflict
@@ -296,6 +363,8 @@ func (s *MemoryStore) UpdateEvolutionJob(_ context.Context, job EvolutionJob) er
 	if existing.OwnerUserID != job.OwnerUserID ||
 		existing.SourceRunID != job.SourceRunID ||
 		existing.SourceTraceID != job.SourceTraceID ||
+		existing.SourceAgentID != job.SourceAgentID ||
+		!equalStringSlices(existing.SourceTraceIDs, job.SourceTraceIDs) ||
 		existing.IdempotencyKey != job.IdempotencyKey ||
 		existing.RequestFingerprint != job.RequestFingerprint {
 		return ErrConflict
@@ -869,6 +938,21 @@ func (s *MemoryStore) ListAPITokensByUser(
 		return result[i].CreatedAt.After(result[j].CreatedAt)
 	})
 	return result, nil
+}
+
+func (s *MemoryStore) GetAPITokenByUser(
+	_ context.Context,
+	userID string,
+	tokenID string,
+) (APIToken, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, token := range s.apiTokens {
+		if token.ID == tokenID && token.UserID == userID {
+			return token, nil
+		}
+	}
+	return APIToken{}, ErrNotFound
 }
 
 func (s *MemoryStore) GetUserByAPITokenHash(

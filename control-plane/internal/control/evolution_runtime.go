@@ -365,9 +365,9 @@ func baseEvolutionManifest() EvolutionRuntimeManifest {
 		Source:      "configured",
 		Roles: []EvolutionRuntimeRole{
 			{ID: "user-cat", DisplayName: "UserCat", Responsibility: "Simulate one natural, incomplete user turn without judging the Agent.", Output: "user turn"},
-			{ID: "inspector-cat", DisplayName: "InspectorCat", Responsibility: "Locate a failure mode in retained evidence and pair it with a replayable Case.", Output: "finding + case"},
+			{ID: "inspector-cat", DisplayName: "InspectorCat", Responsibility: "Locate a grounded failure pattern in retained Trace evidence.", Output: "finding"},
 			{ID: "reviewer-cat", DisplayName: "ReviewerCat", Responsibility: "Review verifier-backed evidence and emit a semantic pass, fail, or blocked verdict.", Output: "semantic review"},
-			{ID: "evolution-cat", DisplayName: "EvolutionCat", Responsibility: "Create a minimal Role, Skill, or Memory candidate from an accepted finding.", Output: "role / skill / memory candidate"},
+			{ID: "evolution-cat", DisplayName: "EvolutionCat", Responsibility: "Create one portable agent.md, Skill, or Role asset; XiaoBaOS may also receive a Harness optimization.", Output: "Agent asset"},
 		},
 		Capabilities: EvolutionRuntimeCapabilities{
 			Probe:               true,
