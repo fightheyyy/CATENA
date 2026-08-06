@@ -1,78 +1,54 @@
 # Catena Control Plane
 
-This directory contains Catena's Go evidence control plane and embedded Web
-compatibility client. The user's XiaoBaOS and other target Agent Runtimes
-execute at the endpoint; the Platform receives ordered Run Events and OTLP
-evidence, persists history, and makes evaluation results inspectable. A
-separate, restricted XiaoBaOS Runtime is managed by the Platform for UserCat,
-InspectorCat, ReviewerCat, and EvolutionCat role turns only.
+This directory contains Catena's public Go product backend. It serves the
+standalone React build, owns OAuth/session and personal API keys, accepts OTLP,
+XiaoBaOS user-visible Conversation batches, and immutable Barena Run Bundles,
+persists product state in PostgreSQL and
+Trace spans in ClickHouse, and orchestrates the embedded XiaoBaOS Evolution
+Runtime.
 
-The LangWatch-derived Scenario runtime owns browser-based Explore for a
-registered reachable HTTP Agent, including user simulation and its trace-aware
-Judge. The TypeScript Engine owns local/private Explore, deterministic Replay,
-artifact verification, scorecards, and Release Check. The Platform UI compares
-compatible terminal Explore facts without inventing a winner or release
-decision. The existing Go-managed Node worker remains a loopback development
-and compatibility path, not the target cloud deployment topology.
+The user's target Agent and Barena execute in the user environment or CI.
+Catena never hosts or impersonates that target Runtime. Its XiaoBaOS Runtime is
+restricted to InspectorCat, EvolutionCat, and ReviewerCat evidence-consumption
+stages and can emit only `draft/unverified` candidates.
 
 ## MVP1
 
-MVP1 closes one real, locally demonstrable evolution loop:
+MVP1 demonstrates this retained asset pipeline:
 
 ```text
-XiaoBaOS Explore
-  -> genuine OTLP Trace
-  -> evidence-backed Issue
-  -> reviewed immutable Case
-  -> TypeScript Engine Replay
-  -> Evaluation
-  -> cleared / held / rejected Release Gate
+local Barena Explore
+  -> genuine OTLP + immutable Run Bundle
+  -> Catena Evidence Pack
+  -> InspectorCat / EvolutionCat / ReviewerCat
+  -> agent.md / Skill / Role / XiaoBaOS Harness
 ```
 
-The product surface is the fork's **Evolution** page, not the embedded
-compatibility client. From a Trace, **Create Barena issue** opens a prefilled
-review. Promotion freezes the Case. **Replay Case** starts the existing Engine
-Worker, and the Evaluation/Release tabs retain Case, Run, Harness, source Trace,
-replay Trace, Engine result, and decision lineage.
+The standalone Web selects one Agent and bounded Trace window, starts an
+idempotent Evolution Job, shows all three role stages, and exposes the resulting
+Agent asset directly.
+Local Barena remains an independent E2E/release-CI engine. The retained live
+acceptance is documented in
+[`docs/acceptance/CATENA_MVP1_DEMO.md`](../docs/acceptance/CATENA_MVP1_DEMO.md).
 
-The current acceptance retained a nine-span Scenario Trace, including a
-W3C-parented `xiaoba.role.turn` span exported by the target fixture. Its
-reviewed Case then cleared two isolated Replay attempts in one 16-span Trace:
-each native `xiaoba.role.turn` is a direct child of its corresponding
-`barena.http_agent.replay` boundary, and both attempts belong to the same
-`barena.replay` root. The entire browser loop ran against PostgreSQL and the
-configured OpenAI-compatible `gpt-5.5` model. See [SPEC.md](./SPEC.md) for the
-exact boundary and [PLAN.md](./PLAN.md) for the verification record.
+## Product topology
 
-## Selected platform substrate
-
-The public Web, authentication/project boundary, OTLP ingestion, Trace storage,
-search, and waterfall UI now live in the Apache-2.0 downstream fork:
-
-[`fightheyyy/CATENA`](https://github.com/fightheyyy/CATENA)
-
-The fork keeps LangWatch's proven platform infrastructure and adds Barena's
-Explore/Replay/Compare and Release CI experience. This directory retains the Go
-Run Control + Evidence Ledger for ordered Runs, Events, Cases, immutable Run
-Packages, scorecards, and `cleared / held / rejected` decision records. The
-TypeScript Engine computes those facts and decisions; Go validates, persists,
-and audits them without implementing a second Judge or Release Check. The fork
-and Go API join data by `project_id`, `barena.run.id`, `trace_id`, and
-`attempt_id`.
+The default Compose deployment contains four services: `catena-core`, an
+evolution-only `catena-runner`, PostgreSQL, and ClickHouse. React is compiled
+into `catena-core`; it is not a second backend. LangWatch-derived code remains
+only as a migration source behind the optional `legacy` profile.
 
 The target request path is:
 
 ```text
-browser / Runner
-      -> Barena Platform fork (login, project, API key, gateway)
-      -> OTLP Trace store or internal Go Run Control / Evidence Ledger
+browser -> Catena Go (React, OAuth, API key, product APIs)
+Agent / Barena -> Catena Go (OTLP + XiaoBaOS Conversation + Run Bundle)
+Catena Go -> XiaoBaOS Evolution Runtime (Evidence Pack only)
+Catena Go -> PostgreSQL + ClickHouse
 ```
 
-Go is not the target public login surface and does not replace the Trace
-backend. It stores neither Platform OAuth credentials nor public project API
-keys. The custom embedded Web, personal tokens, and Go-managed Node worker below
-remain migration/compatibility paths until the forked gateway, endpoint-push
-execution, and Release Workbench reach feature parity.
+Go is the only public product backend. React calls it same-origin; the
+evolution worker and databases are not browser-accessible.
 
 ## Start the compatibility stack locally
 
@@ -107,18 +83,11 @@ unless the authenticated HTTPS deployment requirements below are satisfied.
 Open [http://127.0.0.1:8787](http://127.0.0.1:8787) for Explore, Traces,
 History, endpoint Settings, the live actor timeline, and cancellation.
 
-## Legacy standalone identity compatibility
+## Identity and endpoint authentication
 
-The six-container Catena deployment does **not** expose this Go server as the
-public auth surface. GitHub OAuth, sessions, projects, API-key issuance, and
-OTLP authentication belong to `catena-app`; the Go control plane accepts only
-its HMAC-signed project context. See `deploy/catena-mvp1/README.md` for the
-supported deployment flow.
-
-The direct Go OAuth and `barena_pat_*` path below remains available only for
-standalone control-plane development and compatibility with older clients. New
-Runner integrations must use `BARENA_PLATFORM_API_KEY=sk-lw-...` against the
-public Catena app instead of this path.
+GitHub OAuth, sessions, `barena_pat_*` personal API keys, OTLP authentication,
+and owner isolation are native Go product capabilities. HMAC project context
+remains accepted only for the optional legacy migration gateway.
 
 Local mode remains zero-login. To enable account isolation and accept evidence
 from endpoint Runners, create a GitHub OAuth App and configure:
@@ -127,15 +96,20 @@ from endpoint Runners, create a GitHub OAuth App and configure:
 export BARENA_GITHUB_CLIENT_ID='<oauth-client-id>'
 export BARENA_GITHUB_CLIENT_SECRET='<oauth-client-secret>'
 export BARENA_GITHUB_REDIRECT_URL='http://127.0.0.1:8787/v1/auth/github/callback'
+export BARENA_API_TOKEN_ENCRYPTION_KEY='<32-or-more-random-characters>'
 go run ./cmd/barena-server
 ```
 
 The OAuth App needs only `read:user`. Barena uses state + PKCE, discards the
 temporary GitHub access token after loading `/user`, and stores only opaque
-hashes for sessions and personal API tokens. Raw Runs, prompts, artifacts, and
-Trace evidence stay private.
+hashes for sessions and API-token authentication. Each personal token also has
+an AES-GCM recovery envelope so its authenticated owner can copy it again from
+its Settings row; list responses contain only a mask, and reveal responses are
+owner-scoped and non-cacheable. Pre-migration hash-only tokens remain valid but
+cannot be recovered. Raw Runs, prompts, artifacts, and Trace evidence stay
+private.
 
-After signing in, open **Settings**, create a legacy token for the endpoint,
+After signing in, open **Settings**, create a personal token for the endpoint,
 and configure an older local Barena Runner:
 
 ```bash
@@ -143,6 +117,14 @@ export BARENA_PLATFORM_URL='https://barena.example.com'
 export BARENA_PLATFORM_TOKEN='barena_pat_...'
 barena explore
 ```
+
+The same token accepts XiaoBaOS-only visible chat at
+`POST /v1/ingest/conversations`. XiaoBaOS configures it with
+`CATENA_BASE_URL` and `CATENA_API_KEY`; the browser reads the owner-scoped
+result from `GET /v1/conversations` and
+`GET /v1/conversations/{conversation_id}?agent_id=...`. Conversation does not
+contain system prompts, reasoning, failed deliveries, or Tool internals and is
+not reconstructed from OTLP spans.
 
 When both variables are present, `barena explore` asks the Platform for the Run
 identity, executes XiaoBaOS locally, uploads `barena.engine_event.v1` records,
@@ -231,6 +213,9 @@ The first continuous-evolution API slice turns retained evidence into reviewed
 regression assets:
 
 ```text
+POST /v1/traces/{trace_id}/evolution-jobs
+GET  /v1/evolution-jobs
+GET  /v1/evolution-jobs/{job_id}
 POST /v1/runs/{run_id}/issues
 GET  /v1/issues
 GET  /v1/issues/{issue_id}
@@ -243,6 +228,29 @@ GET  /v1/evaluations/{evaluation_id}
 GET  /v1/releases
 GET  /v1/releases/{release_id}
 ```
+
+The Trace endpoint accepts `{ "objective"?: string }` plus an
+`Idempotency-Key`. It reads the authenticated owner's stored OTLP Trace
+directly; a Barena Run is optional and is never synthesized. The persisted
+`catena.evolution_evidence_pack.v1` contains a bounded/redacted Trace summary,
+real spans and tool input/output evidence. InspectorCat, EvolutionCat, and
+ReviewerCat produce only evidence-linked `agent.md`, Skill, or Role assets;
+Harness is accepted only for canonical XiaoBaOS. They do not generate Memory or
+Case, run the target Agent, or create Release decisions.
+
+Local Barena may atomically synchronize terminal facts through:
+
+```text
+POST /v1/ingest/run-bundles
+GET  /v1/run-bundles/{run_bundle_id}
+```
+
+The canonical body schema is `barena.run_bundle.v1`; the last ordered Event
+must be terminal and `terminal_fact_sha256` must match its exact JSON payload
+bytes. The endpoint is owner-scoped and idempotent. Catena stores the opaque
+Barena result/scorecard/decision fact without recomputing it. Explore terminal
+facts intentionally contain no Release decision. The older create/Event/finish
+ingest lifecycle remains available for compatibility.
 
 An Issue may reference a retained `trace_id`; the API rejects a Trace that does
 not belong to the source Run. Promotion snapshots the source Run input and

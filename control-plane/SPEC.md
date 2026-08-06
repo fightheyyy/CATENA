@@ -1,173 +1,225 @@
 # Catena Control Plane Specification
 
-Updated 2026-08-01.
+Updated 2026-08-06.
 
 ## Purpose
 
-The Catena control plane is the durable workflow and evidence ledger for Agent
-Runtimes. Catena as a whole
-turns real usage evidence and active Explore findings into reviewed Issues,
-reproducible Cases, evaluations, and auditable releases. It is not a generic
-trace viewer or a second deterministic evaluation Engine. It embeds a
-restricted XiaoBaOS evaluator/evolution Runtime, but never hosts the user's
+The Catena server is the Go product backend and durable evidence control plane
+for Agent Runtimes. It receives cross-Agent OTLP and immutable Barena Run
+Bundles, turns retained evidence into versioned Evidence Packs, and coordinates
+a restricted XiaoBaOS Evolution Runtime. It is more than a Trace viewer, but it
+is not a second deterministic evaluation Engine and never hosts the user's
 target Agent Runtime.
 
-XiaoBaOS is the first-party reference integration; OpenClaw, Claude Code, Codex,
-Hermes, and other Runtimes use the same OTel, Runtime Adapter, and Case
-contracts. The target Agent Runtime always remains external; Barena's embedded
-XiaoBaOS is a separate cloud worker for UserCat, InspectorCat, ReviewerCat, and
-EvolutionCat only. Barena has two
-honest execution modes: the Platform runs Explore directly against a registered
-public HTTP Agent endpoint, while the CLI runs beside local or private Runtimes.
-Both modes feed the same multi-user evidence and evolution flywheel.
+For the first-party XiaoBaOS integration it also receives a separate versioned
+Conversation stream containing only messages actually visible to the user.
+Conversation is durable product data for memory evolution; OTLP remains
+execution evidence for portable Agent assets and XiaoBaOS Harness optimization.
+
+XiaoBaOS is the first-party reference integration; OpenClaw, Claude Code,
+Codex, Hermes, and other Runtimes use Barena's local Adapter and OTel contracts.
+The target Agent Runtime always remains external. Catena embeds a distinct
+XiaoBaOS Evolution Runtime for InspectorCat, EvolutionCat, and ReviewerCat
+evidence consumption; UserCat remains part of active Barena Explore beside the
+target. The historical Platform HTTP Explore path remains compatibility/demo
+code, not the target execution boundary.
 
 The first product loop is:
 
-`Session/Explore -> Trace -> Issue -> reviewed Case -> Replay -> Release`
+`local Agent/Barena -> Trace + Run Bundle -> Evidence Pack -> Agent asset`
 
-Replay and Compare remain Engine capabilities, but do not compete with Explore
-and observation in the primary Web navigation.
+Replay, Compare, verifier semantics, and Release remain local Barena
+capabilities. Catena stores their terminal facts but does not recompute them.
 
 ## MVP1 Product Contract
 
-MVP1 is a locally deployable, single-project proof that the complete evolution
-loop works. XiaoBaOS is the only first-party Runtime required for acceptance;
-the deterministic XiaoBaOS fixture is the repeatable test target and one
-installed local XiaoBaOS Role is the optional live smoke target.
+MVP1 is a locally deployable proof of the Trace-to-candidate portion of the
+evolution loop. XiaoBaOS is the first-party live acceptance target and the
+embedded evidence-consumption Runtime.
 
 One developer can:
 
-1. select a registered HTTP Agent, describe one behavior, and start a real
-   multi-turn Explore from the LangWatch-derived Web;
-2. watch XiaoBaOS UserCat, the target conversation, trace-aware ReviewerCat, and
-   correlated OTLP evidence reach a terminal state;
-3. adopt that completed run as canonical Barena evidence, create an
-   evidence-backed Issue, and explicitly promote it to one immutable
-   Case with a replay prompt and deterministic artifact verifier;
-4. start Replay for a replay-capable Case through the existing Engine Worker;
-5. compare two compatible completed Explore runs as factual, side-by-side
-   evidence without manufacturing a release verdict;
-6. see the persisted `cleared`, `held`, or `rejected` Release Gate decision
-   together with Case, Run, Harness, and source-Trace lineage.
+1. authenticate, create one API key, and connect an OTel-capable Agent or local
+   Barena;
+2. inspect the complete Trace waterfall, including tool input/output;
+3. select one observed Agent and a bounded time window, then start one
+   idempotent Evolution Job from the resulting immutable Trace Set;
+4. watch InspectorCat, EvolutionCat, and ReviewerCat consume a durable Evidence
+   Pack;
+5. inspect and copy an evidence-linked `agent.md`, Skill, or Role asset; a
+   XiaoBaOS source may also produce a Harness optimization.
 
-MVP1 may use loopback deployment and the existing local worker. It does not
-require a cloud scheduler, endpoint tunnel, Go Runner, community, automatic
-mutation, arbitrary authenticated HTTP replay, multi-Runtime parity, or
-production tenancy migration.
-The browser still enters through the LangWatch fork: its server proxies
-project-scoped Barena workflow calls to Go rather than exposing a second
-browser-to-Go product API.
+MVP1 may use loopback deployment. It does not require a cloud scheduler,
+endpoint tunnel, automatic mutation, multi-Runtime
+execution parity, or production tenancy hardening.
+The standalone React application is served by this Go server and calls only
+same-origin Go APIs. The LangWatch path remains runnable only to migrate its
+retained Traces and to preserve Scenario behavior until the Engine Runner has
+parity; it is not a second target product backend.
 
 ## Current Architecture
 
-The repository and the Apache-2.0
-[`fightheyyy/CATENA`](https://github.com/fightheyyy/CATENA)
-fork now form one working single-machine vertical slice. The LangWatch-derived
-browser owns Trace observation and the Evolution workflow. Its authenticated
-tRPC server proxies Barena business calls to Go. Go persists evolution state in
-PostgreSQL and starts the existing Node Engine Worker for compatibility-mode
-Replay. The Worker delegates all evaluation semantics to the TypeScript Engine.
+The repository now contains a runnable replacement slice: Go serves the React
+product, authenticates users and API tokens, accepts OTLP/HTTP protobuf or
+JSON, persists owner-scoped spans in ClickHouse, and exposes Trace, Agent, and
+Evolution APIs. Go persists product state in PostgreSQL and invokes independent
+engine workers. The original LangWatch slice remains a legacy-port migration
+and rollback source for retained Traces.
 
 ```mermaid
 flowchart LR
-    User["Developer"] --> Web["LangWatch-derived Web<br/>Trace + Evolution"]
-    Web --> Proxy["Authenticated tRPC proxy"]
-    Proxy --> Go["Go evolution control plane"]
-    Go --> DB["PostgreSQL<br/>Runs · Issues · Cases<br/>Harness · Eval · Release"]
-    Go --> EngineWorker["Node Engine Worker"]
-    EngineWorker --> Engine["TypeScript evaluation Engine<br/>Replay · verifier · Release Check"]
-    Go --> EvolutionWorker["XiaoBa evolution worker"]
-    EvolutionWorker --> EvolutionRuntime["Embedded XiaoBaOS<br/>four evaluator/evolution roles"]
-    Web --> Scenario["Scenario Explore<br/>UI · queue · multi-turn orchestration"]
-    Scenario --> EvolutionRuntime
-    Scenario --> Target["Registered HTTP Agent<br/>external target Runtime"]
-    Target -- "OTLP + W3C Trace Context" --> Trace["LangWatch Trace subsystem<br/>ClickHouse"]
-    Scenario --> Trace
-    EngineWorker --> Go
-    EvolutionWorker --> Go
-    Trace --> Web
+    User["Developer"] --> React["React Web"]
+    React --> Go["Catena Server · Go"]
+    Target["External Agent Runtime"] -- "API key + OTLP" --> Go
+    XiaoBaConversation["XiaoBaOS Conversation Journal"] -- "API key + HTTPS JSON" --> Go
+    Go --> PG["PostgreSQL<br/>product state"]
+    Go --> CH["ClickHouse<br/>Trace evidence"]
+    Go --> Identity["Canonical Agent read model<br/>target identity · internal evidence"]
+    Identity --> CH
+    XiaoBaConversation -. "explicit retention" .-> Memory["GauzMem"]
+    Go -. "owner-scoped memory gateway" .-> Memory
+    Memory --> MemorySQL["MySQL + local Qdrant"]
+    Memory --> Graph["Neo4j"]
+    Go --> Runner["XiaoBaOS Evolution Runtime<br/>Inspector · Evolution · Reviewer"]
+    Runner -- "Stage Event + Agent asset" --> Go
+    Legacy["LangWatch migration source"] -. "ID-stable Trace migration" .-> CH
 ```
 
-MVP1 proves the loop with a deterministic XiaoBaOS fixture and PostgreSQL:
-Explore evidence is ingested as genuine OTLP/protobuf, its Trace action creates
-an Issue prefilled with the correlated `barena.run.id`, human review freezes one
-immutable Case, Replay runs through the canonical Engine Worker, and the Web
-shows the persisted Evaluation and Release Gate with source/replay lineage.
-
-The custom embedded React client remains only as compatibility scaffolding. It
-is not the MVP1 product surface.
+The four-container release topology is authoritative. The legacy source is
+available only through an opt-in migration profile and is not on the product
+request path.
 
 ## Target Architecture
 
-Catena is a developer console with one restricted, embedded
-evaluator/evolution Agent Runtime. It is not a general-purpose hosted target
-Runtime. The
-LangWatch fork supplies authentication/projects, registered HTTP Agents, the
-Scenario execution runtime, OTLP/Trace storage, search, waterfall, and the Web
-shell. A Platform Explore reuses Scenario's UI, run data, multi-turn
-orchestration, HTTP target adapter, trace correlation, and result contract. In
-Catena mode the User Simulator and trace-aware Judge are thin adapters over the
-embedded XiaoBaOS `user-cat` and `reviewer-cat` roles; the Agent itself executes
-at the registered external endpoint. A completed Scenario run is adopted into
-Barena rather than executed a second time.
+```mermaid
+flowchart LR
+    subgraph Edge["User environment / CI"]
+        Barena["Barena<br/>Explore · Replay · Compare · Verifier"]
+        Agent["Target Agent Runtime"]
+        Evidence["Current Run evidence<br/>temporary OTLP + Artifact"]
+        Barena <--> |"Agent Adapter"| Agent
+        Agent --> Evidence
+        Barena --> Evidence
+    end
 
-The Go service owns continuous-evolution records and orchestration: adopted Run, Issue, immutable
-Case, Harness Version, Evaluation, and Release. The TypeScript Engine owns
-deterministic Replay, local/private Runtime adapters, artifact verification,
-scorecard facts, and Release Check. A dedicated XiaoBaOS worker reuses the
-ordinary XiaoBa agent loop and may invoke exactly four roles. The cloud never opens a persistent tunnel
-into a developer laptop: local/private execution remains a CLI responsibility.
+    React["React Web<br/>static assets"] --> Go["Catena Server · Go<br/>OAuth · API key · OTLP · product APIs"]
+    Evidence --> |"OTLP"| Go
+    Conversation["XiaoBaOS visible Conversation"] --> |"conversation batch v1"| Go
+    Barena --> |"immutable Run Bundle"| Go
+    Go --> PG[("PostgreSQL<br/>identity · Run · Job · Candidate")]
+    Go --> ConversationStore[("PostgreSQL<br/>Conversation Event")]
+    Go --> CH[("ClickHouse<br/>Trace · Span")]
+    CH --> Identity["Canonical Agent resolver<br/>target identity · internal evidence"]
+    Identity --> Group["Agent Trace Set<br/>Agent + time window"]
+    Group --> |"Evidence Pack"| XiaoBa["XiaoBaOS Evolution Runtime<br/>Inspector · Evolution · Reviewer"]
+    XiaoBa --> |"agent asset + stage evidence"| Go
+    Conversation --> |"visible user context"| Memory["GauzMem"]
+```
+
+Go owns every cloud management concern: identity, authorization, tenancy, API
+keys, public APIs, evolution-job state, audit, OTLP ingress, Trace queries, and
+Agent-asset lifecycle. Local Barena owns every target-execution and release
+concern independently; Catena does not create a Replay handoff. The embedded
+XiaoBaOS Runtime receives versioned Evidence Packs and returns stage Events plus
+Agent assets; it has no target Agent Adapter and no release authority.
+
+Conversation ingestion is a narrow first-party exception to framework-neutral
+OTLP observation. The request schema is `xiaoba.conversation_batch.v1`; every
+row is a `xiaoba.conversation_message.v1` with a stable message ID, conversation
+ID, sequence, surface, Agent identity, user-visible content, delivery status,
+timestamp, and optional Trace ID. Go accepts only `runtime=xiaobaos`, stores
+events idempotently per owner, and never derives hidden messages from spans.
+
+Evolution is scoped to one observed Agent, not one hand-picked Trace. Catena
+snapshots the Agent's owned Traces inside a bounded time window and records
+`source_kind=agent_trace_set`, `source_agent_id`, the exact immutable
+`source_trace_ids`, and the requested window. An individual Trace remains an
+observation/replay evidence unit and never starts cloud Evolution directly.
+The set must contain at least two owned Traces. Agent classification uses a
+deterministic source registry for known integrations. It first distinguishes
+target-Agent telemetry from internal workflow evidence, then resolves target
+aliases, beginning with
+Codex live OTLP (`codex`, `codex-app-server`) and Codex historical backfill
+(`Codex Desktop`). Agent-scoped queries expand the canonical ID to all exact
+aliases, while Trace rows retain the original `service.name`. Unknown sources
+fall back to their exported `service.name`. Responses include
+`identity_source` and source aliases so callers can disclose the grouping.
+Known Barena orchestration, User Simulator, Inspector, and Reviewer sources are
+internal evidence: they remain queryable in Trace Explorer but never become
+Agent Registry rows or Agent Trace Set inputs. A known Barena target source is
+classified as the observed target Agent. Unknown sources fail open into the
+Registry instead of being hidden.
+This is intentionally not a user-editable, heuristic cross-Runtime registry.
+When local Barena does have execution facts, it sends one
+authenticated, idempotent `barena.run_bundle.v1`; Catena verifies the opaque
+terminal-fact hash and atomically retains the Run and ordered Events without
+recomputing a scorecard or Release decision. Catena's separate
+versioned Evolution Evidence Pack is bounded and redacted but contains the real
+Trace summaries, spans, inputs, outputs, and tool evidence selected from
+ClickHouse.
+
+GauzMem is a separate stateful capability rather than an Engine Runner child
+process. Go retrieves the owned XiaoBaOS user-visible Conversation from its
+Conversation store, builds a bounded and redacted memory document, attaches
+stable provenance, and calls GauzMem on the private Compose network. GauzMem
+never receives a browser-provided tenant as authority and never writes Catena
+product tables. Go additionally exposes one owner-scoped Fact-neighborhood
+read contract: it derives the opaque GauzMem project from the authenticated
+owner and proxies a bounded Fact/Entity/Relation graph without exposing the
+project ID or provider errors. The older Trace-memory endpoint is
+compatibility-only.
+
+MVP1 proves the loop with retained OTLP evidence and PostgreSQL: the developer
+selects an observed Agent and bounded time window, Go freezes at least two exact
+Trace IDs into one immutable Agent Trace Set, and the XiaoBaOS Evolution Runtime
+runs InspectorCat, EvolutionCat, and ReviewerCat over that set. Every output is
+stored with its source Agent, frozen Trace IDs, and Evidence Pack digest.
+
+The standalone React client is the MVP1 product surface. The inherited
+LangWatch UI is compatibility scaffolding and must not receive new product
+features.
+
+## Product Workflow
+
+Catena is a Trace-to-evolution developer console with one restricted Evolution
+Runtime. It is not a general-purpose hosted target Runtime. Local Barena runs
+UserCat, the target conversation, Replay, Compare, artifact verification, and
+Release Check. Catena receives the resulting OTLP and immutable Run Bundle,
+then its dedicated XiaoBaOS worker runs InspectorCat, EvolutionCat, and
+ReviewerCat over an Evidence Pack. The current outputs are portable `agent.md`,
+Skill, and Role assets; only XiaoBaOS may receive a Harness optimization. Memory
+is derived from Conversation, not Trace Farm. The cloud never opens a persistent
+tunnel into a developer laptop.
 
 ```mermaid
 flowchart LR
-    Dev["Agent developer"] --> Explore["Explore<br/>describe one behavior"]
-    Explore --> Scenario["Scenario runtime<br/>UI · orchestration · result"]
-    Scenario --> Roles["XiaoBaOS evaluator roles<br/>UserCat · ReviewerCat"]
-    Scenario --> HTTP["Registered HTTP Agent<br/>external Runtime"]
-    HTTP -- "W3C context + OTLP" --> Trace["Evidence<br/>conversation · Trace · Judge facts"]
-    Scenario --> Trace
-    Trace --> EvolutionRuntime["Embedded XiaoBaOS<br/>evaluator/evolution Runtime"]
-    EvolutionRuntime --> Roles["UserCat · InspectorCat<br/>ReviewerCat · EvolutionCat"]
-    Trace --> Adopt["Adopt completed run<br/>Go control plane"]
-    Adopt --> Issue["Issue"]
-    Roles --> Issue
-    Issue --> Case["Immutable Case"]
-    Case --> Replay["Deterministic Replay<br/>TypeScript Engine"]
-    Replay --> Gate["Release Gate"]
-    Roles --> Gate
-    Adopt --> Compare["Compare<br/>compatible run facts"]
-
-    CLI["Barena CLI<br/>local / private Runtime"] --> Adapter["AgentRuntimeAdapter"]
-    Adapter --> Local["XiaoBaOS · OpenClaw · Claude Code<br/>Codex · Hermes"]
-    Local -- "OTLP + Run events" --> Trace
-
-    classDef source fill:#eff6ff,stroke:#2563eb,color:#172554;
-    classDef observe fill:#ecfdf5,stroke:#16a34a,color:#064e3b;
-    classDef control fill:#fff7ed,stroke:#ea580c,color:#7c2d12;
-    classDef evaluate fill:#f5f3ff,stroke:#7c3aed,color:#4c1d95;
-    classDef release fill:#fdf2f8,stroke:#db2777,color:#831843;
-    class Explore,Session source;
-    class Trace observe;
-    class Issue,Case control;
-    class Verify evaluate;
-    class Gate,Version release;
+    Runtime["External Agent Runtime"] --> |"OTLP"| Trace["Retained Trace evidence"]
+    XiaoBa["XiaoBaOS"] --> |"visible Conversation JSON"| Conversation["Conversation history<br/>Memory fuel"]
+    Trace --> Observe["Single Trace detail<br/>observe · Replay evidence"]
+    Trace --> Classify["Canonical Agent classification<br/>target · internal · service.name fallback"]
+    Classify --> Select["Agent + bounded time window"]
+    Select --> Set["Immutable Agent Trace Set<br/>at least 2 frozen Trace IDs"]
+    Set --> Inspector["InspectorCat<br/>find grounded patterns"]
+    Inspector --> Evolution["EvolutionCat<br/>propose changes"]
+    Evolution --> Reviewer["ReviewerCat<br/>review grounding"]
+    Reviewer --> Candidate["Agent asset<br/>agent.md · Skill · Role<br/>XiaoBaOS Harness"]
+    Conversation --> Memory["GauzMem memory"]
 ```
 
-The fork authenticates both browser and Runner requests, then forwards
-project-scoped Run/Event calls to Go over an internal signed contract. The
-existing local worker path and custom React client remain migration scaffolds
-until the Release Workbench reaches feature parity; neither is a second target
-product.
+Go authenticates browser and Runner requests and keeps project-scoped product
+state. Local/private execution remains a CLI or endpoint-runner responsibility;
+neither path becomes a second product backend.
 
 ## Final Source of Truth
 
 | Component | Owns | Must not own |
 | --- | --- | --- |
-| TypeScript Evaluation Engine | Local/private Runtime adapters and execution; deterministic Replay; artifact verifier; scorecard facts; Release Check algorithm; immutable Run Package; embedded XiaoBaOS worker contract | Public auth, multi-user persistence, cloud Trace store, public HTTP Agent secrets |
-| LangWatch-derived Catena Web + Scenario runtime | Product navigation; login, organization/project membership and keys; registered HTTP Agent Explore; Scenario CRUD, orchestration, HTTP target calls, live run and Trace views | Evaluator model execution, running local/private Runtimes, deterministic Replay verifier, release computation |
-| LangWatch Trace subsystem | OTLP ingest, raw Trace storage/index/query, spans/events/tool-call presentation | Issue/Case lineage, artifacts, Harness Versions, scorecards, releases |
-| Embedded XiaoBaOS evaluator/evolution Runtime | Execute only UserCat, InspectorCat, ReviewerCat, and EvolutionCat through the shared XiaoBa agent loop; UserCat and ReviewerCat serve Scenario Explore, while InspectorCat, EvolutionCat, and ReviewerCat serve post-Trace evolution | Scenario UI/orchestration, target Agent serving, deterministic verifier, release authority, code/runtime/tool mutation |
-| Go continuous-evolution control plane | Project-scoped adopted Run/Event state, Issues, Case review/promotion, Harness Versions, Run Package integrity, evaluation/release records, audit, Run-to-Trace index, and embedded Runtime lifecycle | Raw OTLP/Trace storage, model reasoning, Judge/verifier semantics, Compare or Release Check computation |
+| React Web | Product interaction and evidence visualization | Authentication truth, job state, direct engine or database access |
+| Go Catena Server | OAuth/session, tenancy, API keys, public APIs, OTLP, Trace queries, durable state, lineage, audit, and orchestration | Model reasoning, verifier semantics, or engine implementation |
+| Local Barena | Target Explore/Replay/Compare, current-Run evidence, verifier facts, Release Check, immutable Run Bundle | Tenancy, durable Trace storage, cross-Run evolution |
+| XiaoBaOS Evolution Runtime | Inspector/Evolution/Reviewer stages and draft candidates over Evidence Packs | Target execution, release authority, direct database access |
+| GauzMem | Memory compilation and semantic, graph, and temporal recall | OAuth, Catena tenancy, raw Trace query, Candidate approval, or release state |
+| External Agent Runtime | Actual target behavior, tools, artifacts, and native telemetry | Catena evaluation or release authority |
 
 This division is normative. “Go owns decision records” means it validates,
 persists, and audits the decision produced by the TypeScript Engine; it does not
@@ -175,27 +227,30 @@ re-run the decision policy.
 
 ## V1 Flywheel
 
-1. Platform Scenario executes a registered HTTP Agent Explore, or the CLI
-   executes a local/private Runtime; the target exports OTLP and both paths
-   retain Harness context.
-2. The Platform adopts a completed Scenario run without re-executing it. A
-   human or Inspector creates an Issue candidate from the retained Run/Trace.
-3. Go rejects source Trace IDs that are not correlated to that Run.
-4. Human review promotes the Issue into immutable Case revision 1 with replay
-   input, Runtime/Harness context, success criteria, and verifier requirements.
-5. The TypeScript Engine executes the Case through Replay and emits ordered
-   Events plus `barena.run_package.v1`.
-6. Go validates and persists the Engine result against the Case and Harness
-   Version; LangWatch retains raw Trace evidence.
-7. A Release references those immutable evaluation records and an explicit
-   `cleared`, `held`, or `rejected` Engine decision.
+1. A target Runtime executes locally and exports OTLP; local Barena optionally
+   adds boundary Trace, artifacts, evaluator evidence, and a terminal Run
+   Bundle.
+2. Catena retains Trace/Run facts without re-executing the target Agent.
+3. The developer chooses an Agent and time window. Catena freezes the matching
+   Trace IDs as one integrity-protected Agent Trace Set Evidence Pack.
+4. InspectorCat identifies a grounded failure mode; EvolutionCat emits one
+   `agent.md`, Skill, or Role asset, or a XiaoBaOS-only Harness optimization;
+   ReviewerCat checks grounding and coherence.
+5. Catena stores the asset with its immutable Trace provenance and exposes the
+   deployable content directly. Conversation-derived memory follows the separate
+   GauzMem path.
 
 The fork's identity/configuration PostgreSQL data and ClickHouse Trace data are
 separate from the Barena evolution-domain schema. They may share physical
 infrastructure, but no service may use cross-service joins, foreign keys, or
 direct table reads.
 
-### Issue and Case contract
+### Legacy Run/Issue/Case compatibility contract
+
+The following contract remains for completed historical workflows and local
+Barena synchronization. It is not the cloud Evolution creation unit, and the
+current product UI does not expose it as an alternative to Agent Trace Set
+analysis.
 
 An Issue is mutable review state over immutable evidence references:
 
@@ -231,23 +286,49 @@ Engine Events.
 
 ## Product Surfaces
 
-- **Explore** selects or connects an HTTP Agent, describes one behavior, starts
-  a Scenario run, and shows the simulated conversation, Judge, and live Trace.
-- **Evidence** searches retained OTLP Traces and opens their span waterfall.
-- **Evolution / Issues** is the evidence-backed review inbox for discovered
-  failures and boundaries.
-- **Evolution / Cases** contains reviewed immutable regression assets.
-- **Evolution / Replay** runs supported Cases through the deterministic Engine.
-- **Evolution / Compare** shows compatible completed-run facts side by side; it
-  is explicitly not a Release Gate.
-- **Evolution / Release Gates** answers whether a verified Harness Version may
-  ship.
-- **Integrations** configures HTTP Agents, endpoint Runner, OTLP, and CI.
+- **Agents** classifies retained OTLP by canonical target-Agent identity,
+  discloses `identity_source` and original source aliases, omits known internal
+  workflow sources, and exposes the primary Agent Trace Set analysis entry.
+- **Traces** searches retained OTLP and opens a span waterfall. A single Trace
+  supports observation and Replay provenance only.
+- **Conversations** lists XiaoBaOS user-visible chats and their messages. It
+  never displays system prompts, thinking, hidden final text, or tool internals;
+  it owns the explicit Conversation-to-memory action.
+- **Memory** recalls and navigates one real owner-scoped Fact neighborhood at a
+  time. `GET /v1/memories/facts/{fact_id}/graph` accepts only a positive Fact
+  ID, derives tenancy server-side, and returns Fact, Entity, and typed Relation
+  evidence from the private GauzMem graph path.
+- **Trace Farm** selects an Agent and bounded time window, previews the matching
+  count, and opens the idempotent Agent Trace Set Evolution Job.
+- **Evolution Job** renders Inspector/Evolution/Reviewer stages, exact plural
+  Trace provenance, and `draft/unverified` candidates.
+- **Settings** manages project connection and API tokens.
+
+Historical Issue, Case, Replay, Compare, and Release records remain API/data
+compatibility surfaces for local Barena facts; they are not parallel cloud
+Evolution launchers in the current Web journey.
 
 Community profiles and public capability cards are retained as experimental
 code, but are not part of the v1 primary journey.
 
 ## Contracts and Boundaries
+
+Agent summaries use this additive read contract:
+
+```text
+agent_id
+display_name
+identity_source = catena.alias | service.name
+sources[] = { service_name, kind = native_live | history_backfill | otel }
+trace_count / span_count / error_count / last_seen_at
+```
+
+The canonical ID is accepted by both Agent Trace and Agent Evolution routes.
+Alias expansion is server-owned and deterministic; callers never rewrite a
+Trace's original emitter identity.
+Internal workflow sources are excluded only from Agent summaries and
+Agent-scoped evolution. Their raw Traces and spans are retained unchanged and
+remain available through the global Trace API.
 
 - Platform HTTP Explore uses the existing Apache-2.0 Scenario runtime. Its
   User Simulator and Judge result are source execution facts, not a Barena
@@ -264,10 +345,22 @@ code, but are not part of the v1 primary journey.
   existing project identity and forwards signed project context to Go; Go is
   not directly exposed as a second public authentication surface. Go stores
   neither OAuth credentials nor public project API keys.
+- In the standalone Go product slice, the configured GitHub redirect origin is
+  the canonical browser authentication origin. `/v1/auth/github` redirects an
+  alternate loopback host to that origin before issuing state and PKCE cookies;
+  callback validation itself remains strict.
+- A signed project maps to a stable compatibility principal. Concurrent first
+  requests for the same project take a transaction-scoped PostgreSQL advisory
+  lock keyed by that identity before upsert; unrelated projects do not block
+  each other and a browser batch cannot fail on competing identity indexes.
 - Run Events use the existing ordered `barena.engine_event.v1` contract.
   Duplicate Events are idempotent and sequence gaps fail closed.
 - Agent-native telemetry uses OTLP and W3C Trace Context. Barena does not
   invent another span protocol.
+- XiaoBaOS user-visible chat uses the vendor JSON Conversation contract because
+  OTLP content is optional, sampled, truncatable execution telemetry rather
+  than an authoritative message history. A Conversation event may carry the
+  related `trace_id` for drill-down.
 - The Web reads owner-scoped REST/SSE contracts. Raw Trace, prompts, events,
   artifacts, and workspace paths remain private.
 - The fork preserves LangWatch's authentication security contract and
@@ -303,7 +396,28 @@ code, but are not part of the v1 primary journey.
 - Automatic prompt/code mutation or autonomous release. The v1 flywheel
   discovers, curates, verifies, and gates; a human accepts Cases and releases.
 
-## MVP1 Acceptance
+## Current Agent Trace Set Acceptance
+
+- [x] An authenticated owner selects one observed Agent and a bounded window
+      containing at least two owned Traces.
+- [x] Go freezes the exact included Trace IDs before invoking the Evolution
+      Runtime and persists plural provenance on the Job and candidates.
+- [x] Agent classification returns `identity_source` and source records; known
+      Codex live/history aliases resolve to one canonical Agent while unknown
+      emitters retain the disclosed `service.name` fallback.
+- [x] Exact Barena target telemetry resolves to `xiaobaos / XiaoBaOS`; its
+      orchestrator, User Simulator, Inspector, and Reviewer remain Trace-only
+      evidence and cannot be selected through Agent or Evolution routes.
+- [x] Single-Trace detail contains no cloud Evolution action, while legacy
+      single-Trace APIs and completed Jobs remain readable for compatibility.
+- [x] InspectorCat → EvolutionCat → ReviewerCat emits only
+      `draft/unverified` candidates and never invokes the target Agent.
+
+Verification evidence is recorded in the root, control-plane, and Web PLAN
+logs, including focused/race tests and the live 29-match/12-frozen Agent Trace
+Set Job.
+
+## Historical Platform Explore/Release Acceptance
 
 - [x] A genuine XiaoBaOS Explore Trace is searchable and renders nine
       correlated spans across User Simulator, registered HTTP Agent, native
@@ -356,13 +470,18 @@ local demo:
 
 ## Catena Evolution Station Amendment (2026-08-02)
 
-This amendment supersedes the earlier deferral of a Runner service and passive
-post-Trace role workflow. The product is now named Catena; Barena remains its
-evaluation/release engine.
+Historical compatibility note: this amendment describes the original
+single-Trace/terminal-Run Job contract. The current normative creation contract
+is the Agent Trace Set flow above; the old API and completed Jobs remain only
+for compatibility and are not exposed by the product UI.
 
-MVP1 adds exactly one new aggregate: a project-isolated `EvolutionJob` sourced
-from a terminal Run and retained Trace. Go orchestrates but does not implement
-role reasoning. The restricted XiaoBaOS runtime runs InspectorCat,
+At that time, this amendment superseded the earlier deferral of a Runner
+service and passive post-Trace role workflow. The product is now named Catena;
+Barena remains its evaluation/release engine.
+
+The original slice added a project-isolated `EvolutionJob` sourced from a
+terminal Run and retained Trace. Go orchestrates but does not implement role
+reasoning. The restricted XiaoBaOS runtime runs InspectorCat,
 EvolutionCat, and ReviewerCat in order; raw stage evidence and terminal failure
 are retained. Display-ready output is a Finding, Case proposal,
 `draft/unverified` Role/Skill/Memory/Harness Candidate, and proposal-only
@@ -400,3 +519,11 @@ Go accepts that signed project principal for edge ingestion but never receives
 or stores the public key. The historical Go `barena_pat_*` surface remains a
 local compatibility path with an explicit removal target; it is not the
 canonical Catena connection flow.
+
+The standalone Go compatibility path represents every personal token as one
+owner-scoped object: name, masked value, creation time, copy capability, and
+revocation. Authentication continues to use `SHA-256(token)`. A separate
+AES-GCM envelope permits the authenticated owner to copy an existing token
+without storing plaintext. Listing never returns the full token, reveal is a
+non-cacheable owner-only action, and pre-migration hash-only rows remain valid
+but explicitly non-recoverable.

@@ -82,11 +82,14 @@ type Session struct {
 }
 
 type APIToken struct {
-	ID        string    `json:"id"`
-	TokenHash string    `json:"-"`
-	UserID    string    `json:"-"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
+	ID             string    `json:"id"`
+	TokenHash      string    `json:"-"`
+	EncryptedToken string    `json:"-"`
+	UserID         string    `json:"-"`
+	Name           string    `json:"name"`
+	MaskedToken    string    `json:"masked_token"`
+	Recoverable    bool      `json:"recoverable"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type AgentProfile struct {
@@ -444,6 +447,19 @@ func (s EvolutionJobState) Terminal() bool {
 	return s == EvolutionJobCompleted || s == EvolutionJobFailed
 }
 
+type EvolutionSourceKind string
+
+const (
+	EvolutionSourceTrace         EvolutionSourceKind = "trace"
+	EvolutionSourceRunTrace      EvolutionSourceKind = "run_trace"
+	EvolutionSourceAgentTraceSet EvolutionSourceKind = "agent_trace_set"
+)
+
+func (k EvolutionSourceKind) Valid() bool {
+	return k == EvolutionSourceTrace || k == EvolutionSourceRunTrace ||
+		k == EvolutionSourceAgentTraceSet
+}
+
 type EvolutionStageState string
 
 const (
@@ -471,36 +487,54 @@ type EvolutionFinding struct {
 }
 
 type EvolutionCaseProposal struct {
-	Title               string          `json:"title"`
-	ReplayPrompt        string          `json:"replay_prompt"`
-	SuccessCriteria     string          `json:"success_criteria"`
-	Verifier            json.RawMessage `json:"verifier"`
-	RequiresHumanReview bool            `json:"requires_human_review"`
+	CandidateID         string                 `json:"candidate_id"`
+	Kind                EvolutionCandidateKind `json:"kind"`
+	Title               string                 `json:"title"`
+	ReplayPrompt        string                 `json:"replay_prompt"`
+	SuccessCriteria     string                 `json:"success_criteria"`
+	Verifier            json.RawMessage        `json:"verifier"`
+	Status              string                 `json:"status"`
+	SourceRunID         string                 `json:"source_run_id,omitempty"`
+	SourceTraceID       string                 `json:"source_trace_id,omitempty"`
+	SourceTraceIDs      []string               `json:"source_trace_ids,omitempty"`
+	SourceAgentID       string                 `json:"source_agent_id,omitempty"`
+	EvidencePackSHA256  string                 `json:"evidence_pack_sha256"`
+	RequiresHumanReview bool                   `json:"requires_human_review"`
 }
 
 type EvolutionCandidateKind string
 
 const (
+	EvolutionCandidateAgentMD EvolutionCandidateKind = "agent_md"
 	EvolutionCandidateRole    EvolutionCandidateKind = "role"
 	EvolutionCandidateSkill   EvolutionCandidateKind = "skill"
+	// Memory and Case remain readable for historical Evolution Jobs only.
 	EvolutionCandidateMemory  EvolutionCandidateKind = "memory"
 	EvolutionCandidateHarness EvolutionCandidateKind = "harness"
+	EvolutionCandidateCase    EvolutionCandidateKind = "case"
 )
 
 func (k EvolutionCandidateKind) Valid() bool {
-	return k == EvolutionCandidateRole ||
+	return k == EvolutionCandidateAgentMD ||
+		k == EvolutionCandidateRole ||
 		k == EvolutionCandidateSkill ||
 		k == EvolutionCandidateMemory ||
-		k == EvolutionCandidateHarness
+		k == EvolutionCandidateHarness ||
+		k == EvolutionCandidateCase
 }
 
 type EvolutionCandidate struct {
-	ID      string                 `json:"candidate_id"`
-	Kind    EvolutionCandidateKind `json:"kind"`
-	Title   string                 `json:"title"`
-	Summary string                 `json:"summary"`
-	Content json.RawMessage        `json:"content"`
-	Status  string                 `json:"status"`
+	ID                 string                 `json:"candidate_id"`
+	Kind               EvolutionCandidateKind `json:"kind"`
+	Title              string                 `json:"title"`
+	Summary            string                 `json:"summary"`
+	Content            json.RawMessage        `json:"content"`
+	Status             string                 `json:"status"`
+	SourceRunID        string                 `json:"source_run_id,omitempty"`
+	SourceTraceID      string                 `json:"source_trace_id,omitempty"`
+	SourceTraceIDs     []string               `json:"source_trace_ids,omitempty"`
+	SourceAgentID      string                 `json:"source_agent_id,omitempty"`
+	EvidencePackSHA256 string                 `json:"evidence_pack_sha256"`
 }
 
 type EvolutionReview struct {
@@ -510,30 +544,139 @@ type EvolutionReview struct {
 	CandidateStatus string `json:"candidate_status"`
 }
 
+type EvolutionEvidenceBoundary struct {
+	TargetAgentExecutedByCatena bool   `json:"target_agent_executed_by_catena"`
+	CreatesRelease              bool   `json:"creates_release"`
+	ReleaseAuthority            string `json:"release_authority"`
+	CandidateStatus             string `json:"candidate_status"`
+	ReviewScope                 string `json:"review_scope"`
+}
+
+type EvolutionEvidenceSpan struct {
+	SpanID        string    `json:"span_id"`
+	ParentSpanID  string    `json:"parent_span_id,omitempty"`
+	Name          string    `json:"name"`
+	ServiceName   string    `json:"service_name"`
+	StartTime     time.Time `json:"start_time"`
+	EndTime       time.Time `json:"end_time"`
+	StatusCode    int32     `json:"status_code"`
+	StatusMessage string    `json:"status_message,omitempty"`
+	Model         string    `json:"model,omitempty"`
+	ToolName      string    `json:"tool_name,omitempty"`
+	Input         string    `json:"input,omitempty"`
+	Output        string    `json:"output,omitempty"`
+	EventNames    []string  `json:"event_names,omitempty"`
+}
+
+type EvolutionEvidenceRun struct {
+	RunID     string          `json:"run_id"`
+	Origin    RunOrigin       `json:"origin"`
+	Operation Operation       `json:"operation"`
+	State     RunState        `json:"state"`
+	Input     json.RawMessage `json:"input"`
+	Runtime   json.RawMessage `json:"runtime,omitempty"`
+	Error     string          `json:"error,omitempty"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
+}
+
+type EvolutionEvidenceTrace struct {
+	Summary           TraceSummary            `json:"summary"`
+	Spans             []EvolutionEvidenceSpan `json:"spans"`
+	IncludedSpanCount int                     `json:"included_span_count"`
+	TotalSpanCount    uint64                  `json:"total_span_count"`
+	Truncated         bool                    `json:"truncated"`
+}
+
+type EvolutionEvidencePack struct {
+	Schema             string                    `json:"schema"`
+	SourceKind         EvolutionSourceKind       `json:"source_kind"`
+	SourceRunID        string                    `json:"source_run_id,omitempty"`
+	SourceTraceID      string                    `json:"source_trace_id,omitempty"`
+	SourceTraceIDs     []string                  `json:"source_trace_ids,omitempty"`
+	SourceAgentID      string                    `json:"source_agent_id,omitempty"`
+	WindowStart        *time.Time                `json:"window_start,omitempty"`
+	WindowEnd          *time.Time                `json:"window_end,omitempty"`
+	Run                *EvolutionEvidenceRun     `json:"run,omitempty"`
+	TraceSummary       TraceSummary              `json:"trace_summary"`
+	Spans              []EvolutionEvidenceSpan   `json:"spans"`
+	Traces             []EvolutionEvidenceTrace  `json:"traces,omitempty"`
+	IncludedTraceCount int                       `json:"included_trace_count,omitempty"`
+	TotalTraceCount    int                       `json:"total_trace_count,omitempty"`
+	RunEvents          []EngineEvent             `json:"run_events"`
+	IncludedSpanCount  int                       `json:"included_span_count"`
+	TotalSpanCount     uint64                    `json:"total_span_count"`
+	Truncated          bool                      `json:"truncated"`
+	Redacted           bool                      `json:"redacted"`
+	Boundary           EvolutionEvidenceBoundary `json:"boundary"`
+	SHA256             string                    `json:"sha256"`
+	CreatedAt          time.Time                 `json:"created_at"`
+}
+
 type EvolutionJob struct {
-	Schema             string                 `json:"schema"`
-	ID                 string                 `json:"job_id"`
-	OwnerUserID        string                 `json:"-"`
-	SourceRunID        string                 `json:"source_run_id"`
-	SourceTraceID      string                 `json:"source_trace_id"`
-	Objective          string                 `json:"objective,omitempty"`
-	IdempotencyKey     string                 `json:"-"`
-	RequestFingerprint string                 `json:"-"`
-	State              EvolutionJobState      `json:"state"`
-	CurrentStage       string                 `json:"current_stage,omitempty"`
-	Stages             []EvolutionStage       `json:"stages"`
-	Finding            *EvolutionFinding      `json:"finding,omitempty"`
-	CaseProposal       *EvolutionCaseProposal `json:"case_proposal,omitempty"`
-	Candidate          *EvolutionCandidate    `json:"candidate,omitempty"`
-	Review             *EvolutionReview       `json:"review,omitempty"`
-	Error              string                 `json:"error,omitempty"`
-	CreatedAt          time.Time              `json:"created_at"`
-	UpdatedAt          time.Time              `json:"updated_at"`
+	Schema             string                    `json:"schema"`
+	ID                 string                    `json:"job_id"`
+	OwnerUserID        string                    `json:"-"`
+	SourceKind         EvolutionSourceKind       `json:"source_kind"`
+	SourceRunID        string                    `json:"source_run_id,omitempty"`
+	SourceTraceID      string                    `json:"source_trace_id,omitempty"`
+	SourceTraceIDs     []string                  `json:"source_trace_ids,omitempty"`
+	SourceAgentID      string                    `json:"source_agent_id,omitempty"`
+	WindowStart        *time.Time                `json:"window_start,omitempty"`
+	WindowEnd          *time.Time                `json:"window_end,omitempty"`
+	Objective          string                    `json:"objective,omitempty"`
+	IdempotencyKey     string                    `json:"-"`
+	RequestFingerprint string                    `json:"-"`
+	State              EvolutionJobState         `json:"state"`
+	CurrentStage       string                    `json:"current_stage,omitempty"`
+	Stages             []EvolutionStage          `json:"stages"`
+	Finding            *EvolutionFinding         `json:"finding,omitempty"`
+	CaseProposal       *EvolutionCaseProposal    `json:"case_proposal,omitempty"`
+	Candidate          *EvolutionCandidate       `json:"candidate,omitempty"`
+	Review             *EvolutionReview          `json:"review,omitempty"`
+	EvidencePack       *EvolutionEvidencePack    `json:"evidence_pack,omitempty"`
+	Boundary           EvolutionEvidenceBoundary `json:"boundary"`
+	Error              string                    `json:"error,omitempty"`
+	CreatedAt          time.Time                 `json:"created_at"`
+	UpdatedAt          time.Time                 `json:"updated_at"`
 }
 
 type CreateEvolutionJobRequest struct {
 	TraceID   string `json:"trace_id"`
 	Objective string `json:"objective,omitempty"`
+}
+
+type CreateTraceEvolutionJobRequest struct {
+	Objective string `json:"objective,omitempty"`
+}
+
+type CreateAgentEvolutionJobRequest struct {
+	WindowStart time.Time `json:"window_start"`
+	WindowEnd   time.Time `json:"window_end"`
+	Objective   string    `json:"objective,omitempty"`
+}
+
+func (r CreateAgentEvolutionJobRequest) Validate(now time.Time) error {
+	if r.WindowStart.IsZero() || r.WindowEnd.IsZero() || !r.WindowEnd.After(r.WindowStart) {
+		return errors.New("window_start and window_end must define a valid time window")
+	}
+	if r.WindowEnd.Sub(r.WindowStart) > 31*24*time.Hour {
+		return errors.New("Agent Trace window must not exceed 31 days")
+	}
+	if r.WindowEnd.After(now.Add(5 * time.Minute)) {
+		return errors.New("window_end must not be in the future")
+	}
+	if len(r.Objective) > 4000 {
+		return errors.New("objective must not exceed 4000 characters")
+	}
+	return nil
+}
+
+func (r CreateTraceEvolutionJobRequest) Validate() error {
+	if len(r.Objective) > 4000 {
+		return errors.New("objective must not exceed 4000 characters")
+	}
+	return nil
 }
 
 func (r CreateEvolutionJobRequest) Validate() error {

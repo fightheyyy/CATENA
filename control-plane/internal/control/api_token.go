@@ -20,6 +20,10 @@ func (s *HTTPServer) listAPITokens(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, statusFor(err), err.Error())
 		return
 	}
+	for index := range tokens {
+		tokens[index] = s.presentAPIToken(tokens[index])
+	}
+	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, map[string]any{"api_tokens": tokens})
 }
 
@@ -44,21 +48,79 @@ func (s *HTTPServer) createAPIToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	plaintext := "barena_pat_" + secret
+	tokenID := newID("pat")
+	encrypted, err := encryptAPIToken(plaintext, tokenID, s.auth.APITokenEncryptionKey)
+	if err != nil {
+		writeProblem(w, http.StatusServiceUnavailable, "API token recovery is not configured")
+		return
+	}
 	token := APIToken{
-		ID:        newID("pat"),
-		TokenHash: sessionTokenHash(plaintext),
-		UserID:    user.ID,
-		Name:      request.Name,
-		CreatedAt: time.Now().UTC(),
+		ID:             tokenID,
+		TokenHash:      sessionTokenHash(plaintext),
+		EncryptedToken: encrypted,
+		UserID:         user.ID,
+		Name:           request.Name,
+		CreatedAt:      time.Now().UTC(),
 	}
 	if err := s.store.CreateAPIToken(r.Context(), token); err != nil {
 		writeProblem(w, statusFor(err), err.Error())
 		return
 	}
+	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusCreated, map[string]any{
-		"api_token": token,
+		"api_token": s.presentAPIToken(token),
 		"token":     plaintext,
 	})
+}
+
+func (s *HTTPServer) revealAPIToken(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireSessionUser(w, r)
+	if !ok {
+		return
+	}
+	token, err := s.store.GetAPITokenByUser(
+		r.Context(),
+		user.ID,
+		r.PathValue("token_id"),
+	)
+	if err != nil {
+		writeProblem(w, statusFor(err), err.Error())
+		return
+	}
+	if token.EncryptedToken == "" {
+		writeProblem(w, http.StatusConflict, "this legacy API token cannot be recovered; create a replacement")
+		return
+	}
+	plaintext, err := decryptAPIToken(
+		token.EncryptedToken,
+		token.ID,
+		s.auth.APITokenEncryptionKey,
+	)
+	if err != nil {
+		writeProblem(w, http.StatusInternalServerError, "API token recovery failed")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]string{"token": plaintext})
+}
+
+func (s *HTTPServer) presentAPIToken(token APIToken) APIToken {
+	token.MaskedToken = maskAPIToken("")
+	token.Recoverable = false
+	if token.EncryptedToken == "" {
+		return token
+	}
+	plaintext, err := decryptAPIToken(
+		token.EncryptedToken,
+		token.ID,
+		s.auth.APITokenEncryptionKey,
+	)
+	if err != nil {
+		return token
+	}
+	token.MaskedToken = maskAPIToken(plaintext)
+	token.Recoverable = true
+	return token
 }
 
 func (s *HTTPServer) deleteAPIToken(w http.ResponseWriter, r *http.Request) {

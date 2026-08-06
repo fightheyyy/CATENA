@@ -281,6 +281,19 @@ func TestGatewaySecretValidation(t *testing.T) {
 	}
 }
 
+func TestAPITokenEncryptionConfigurationValidation(t *testing.T) {
+	if err := (AuthConfig{APITokenEncryptionKey: "too-short"}).Validate(); err == nil {
+		t.Fatal("short API token encryption key should be rejected")
+	}
+	if err := (AuthConfig{
+		GitHubClientID:     "client",
+		GitHubClientSecret: "secret",
+		RedirectURL:        "https://catena.example/callback",
+	}).Validate(); err == nil {
+		t.Fatal("GitHub authentication without token encryption should fail closed")
+	}
+}
+
 func signedPlatformRequest(
 	t *testing.T,
 	method string,

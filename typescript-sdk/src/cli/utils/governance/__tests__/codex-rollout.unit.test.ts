@@ -26,10 +26,25 @@ const agentMessage = (message: string) =>
   ({ type: "event_msg", payload: { type: "agent_message", message, phase: "final_answer" } });
 const taskComplete = (turnId: string, completedAt: number) =>
   ({ type: "event_msg", payload: { type: "task_complete", turn_id: turnId, completed_at: completedAt } });
-const functionCall = (name: string, args: string, callId: string) =>
-  ({ type: "response_item", payload: { type: "function_call", name, arguments: args, call_id: callId } });
-const functionCallOutput = (callId: string, output: string) =>
-  ({ type: "response_item", payload: { type: "function_call_output", call_id: callId, output } });
+const functionCall = (
+  name: string,
+  args: string,
+  callId: string,
+  timestamp?: string,
+) => ({
+  type: "response_item",
+  ...(timestamp ? { timestamp } : {}),
+  payload: { type: "function_call", name, arguments: args, call_id: callId },
+});
+const functionCallOutput = (
+  callId: string,
+  output: string,
+  timestamp?: string,
+) => ({
+  type: "response_item",
+  ...(timestamp ? { timestamp } : {}),
+  payload: { type: "function_call_output", call_id: callId, output },
+});
 
 const lastUser = (messages: CodexChatMessage[]) =>
   [...messages].reverse().find((m) => m.role === "user")?.content;
@@ -166,8 +181,17 @@ describe("parseCodexRollout", () => {
             taskStarted("abc123", "t1"),
             userMsg("run ls"),
             assistantMsg("I'll list the files."),
-            functionCall("exec_command", '{"cmd":"ls"}', "call_1"),
-            functionCallOutput("call_1", "a.txt\nb.txt"),
+            functionCall(
+              "exec_command",
+              '{"cmd":"ls"}',
+              "call_1",
+              "2026-08-04T10:00:01.000Z",
+            ),
+            functionCallOutput(
+              "call_1",
+              "a.txt\nb.txt",
+              "2026-08-04T10:00:02.250Z",
+            ),
             agentMessage("Here are the files: a.txt, b.txt"),
           ),
         );
@@ -187,6 +211,16 @@ describe("parseCodexRollout", () => {
             ],
           },
           { role: "tool", tool_call_id: "call_1", content: "a.txt\nb.txt" },
+        ]);
+        expect(turns[0]!.toolCalls).toEqual([
+          {
+            callId: "call_1",
+            name: "exec_command",
+            arguments: '{"cmd":"ls"}',
+            output: "a.txt\nb.txt",
+            startedAtMs: Date.parse("2026-08-04T10:00:01.000Z"),
+            completedAtMs: Date.parse("2026-08-04T10:00:02.250Z"),
+          },
         ]);
         expect(turns[0]!.output).toBe("Here are the files: a.txt, b.txt");
       });
@@ -227,6 +261,28 @@ describe("parseCodexRollout", () => {
         // apart as the running history grows.
         expect(result?.tool_call_id).toBe(callId);
       });
+    });
+  });
+
+  describe("given parallel tool calls whose results complete out of order", () => {
+    /** @scenario "Tool result spans pair by call_id instead of completion order" */
+    it("keeps each result on the correct reconstructed tool execution", () => {
+      const turns = parseCodexRollout(
+        rollout(
+          taskStarted("abc123", "t1"),
+          userMsg("inspect both files"),
+          functionCall("read_file", '{"path":"a.txt"}', "call_a"),
+          functionCall("read_file", '{"path":"b.txt"}', "call_b"),
+          functionCallOutput("call_b", "B"),
+          functionCallOutput("call_a", "A"),
+          agentMessage("done"),
+        ),
+      );
+
+      expect(turns[0]!.toolCalls).toMatchObject([
+        { callId: "call_a", name: "read_file", output: "A" },
+        { callId: "call_b", name: "read_file", output: "B" },
+      ]);
     });
   });
 
@@ -380,10 +436,12 @@ describe("buildCodexIOExportRequest", () => {
     describe("when the I/O spans are built", () => {
       /** @scenario "Parsed turns become OTLP spans carrying a chat_messages request body on the codex trace_id" */
       it("emits a span on the codex trace_id with a chat_messages langwatch.input and llm type", () => {
+        const traceId = "00112233445566778899aabbccddeeff";
+        const otlpTraceId = Buffer.from(traceId, "hex").toString("base64");
         const req = buildCodexIOExportRequest(
           [
             {
-              traceId: "abc123",
+              traceId,
               turnId: "t1",
               model: "gpt-5.5",
               inputMessages: [
@@ -391,7 +449,17 @@ describe("buildCodexIOExportRequest", () => {
                 { role: "user", content: "hi" },
               ],
               output: "hello",
-              startedAtMs: null,
+              toolCalls: [
+                {
+                  callId: "call_1",
+                  name: "exec_command",
+                  arguments: '{"cmd":"ls"}',
+                  output: "a.txt",
+                  startedAtMs: 1_780_000_010_000,
+                  completedAtMs: 1_780_000_012_500,
+                },
+              ],
+              startedAtMs: 1_780_000_000_000,
               completedAtMs: 1_780_000_100_000,
               traceIdSource: "synthetic",
               sessionId: "session-1",
@@ -401,7 +469,9 @@ describe("buildCodexIOExportRequest", () => {
         );
 
         const span = (req.resourceSpans as any[])[0].scopeSpans[0].spans[0];
-        expect(span.traceId).toBe("abc123");
+        expect(span.traceId).toBe(otlpTraceId);
+        expect(Buffer.from(span.traceId, "base64")).toHaveLength(16);
+        expect(Buffer.from(span.spanId, "base64")).toHaveLength(8);
         expect((req.resourceSpans as any[])[0].scopeSpans[0].scope.name).toBe(
           "langwatch.codex.rollout",
         );
@@ -421,6 +491,56 @@ describe("buildCodexIOExportRequest", () => {
         expect(attrs["gen_ai.conversation.id"]).toBe("session-1");
         expect(attrs["codex.trace_id.source"]).toBe("synthetic");
         expect(span.endTimeUnixNano).toBe("1780000100000000000");
+
+        const toolSpan = (req.resourceSpans as any[])[0].scopeSpans[0]
+          .spans[1];
+        expect(toolSpan).toMatchObject({
+          traceId: otlpTraceId,
+          parentSpanId: span.spanId,
+          name: "codex.tool.exec_command",
+          startTimeUnixNano: "1780000010000000000",
+          endTimeUnixNano: "1780000012500000000",
+        });
+        const toolAttrs = Object.fromEntries(
+          toolSpan.attributes.map((a: any) => [a.key, a.value.stringValue]),
+        );
+        expect(toolAttrs).toMatchObject({
+          "langwatch.span.type": "tool",
+          "gen_ai.tool.name": "exec_command",
+          "gen_ai.tool.call.id": "call_1",
+          "gen_ai.tool.call.arguments": '{"cmd":"ls"}',
+          "gen_ai.tool.call.result": "a.txt",
+          "codex.history.reconstructed": "true",
+        });
+
+        const secondBuild = buildCodexIOExportRequest(
+          [
+            {
+              traceId,
+              turnId: "t1",
+              model: "gpt-5.5",
+              inputMessages: [],
+              output: "hello",
+              toolCalls: [
+                {
+                  callId: "call_1",
+                  name: "exec_command",
+                  arguments: '{"cmd":"ls"}',
+                  output: "a.txt",
+                  startedAtMs: 1_780_000_010_000,
+                  completedAtMs: 1_780_000_012_500,
+                },
+              ],
+              startedAtMs: 1_780_000_000_000,
+              completedAtMs: 1_780_000_100_000,
+            },
+          ],
+          1_780_000_500_000,
+        );
+        expect(
+          (secondBuild.resourceSpans as any[])[0].scopeSpans[0].spans[1]
+            .spanId,
+        ).toBe(toolSpan.spanId);
       });
     });
   });

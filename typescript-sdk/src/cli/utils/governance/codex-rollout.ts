@@ -56,6 +56,19 @@ export interface CodexChatMessage {
   tool_call_id?: string;
 }
 
+/** One tool execution reconstructed from a rollout call/result pair. */
+export interface CodexToolCall {
+  /** Stable join key persisted by Codex, or a deterministic parser fallback. */
+  callId: string;
+  name: string;
+  arguments: string;
+  /** Null when the rollout ended before Codex persisted a result. */
+  output: string | null;
+  /** Call and result envelope timestamps, when present in the rollout. */
+  startedAtMs: number | null;
+  completedAtMs: number | null;
+}
+
 export interface CodexTurnIO {
   /** Hex OTLP trace_id codex used for this turn's spans (the join key). */
   traceId: string;
@@ -70,6 +83,8 @@ export interface CodexTurnIO {
    * tool calls/results — everything except the turn's final assistant answer.
    */
   inputMessages: CodexChatMessage[];
+  /** Tool executions from this turn only, in call order. */
+  toolCalls?: CodexToolCall[];
   /** The assistant's final reply for the turn (plain text). */
   output: string;
   /** Turn start in unix ms, for a sane span start time (best-effort). */
@@ -180,6 +195,7 @@ function capInputMessages(messages: CodexChatMessage[]): CodexChatMessage[] {
 /** One parsed rollout JSONL line: a tagged envelope with an opaque payload. */
 interface RolloutLine {
   type?: string;
+  timestamp?: unknown;
   payload?: Record<string, unknown>;
 }
 
@@ -224,6 +240,10 @@ class CodexTurnAccumulator {
    * instead of drifting as the running history grows.
    */
   private readonly pendingToolCallIds: string[] = [];
+  /** Tool evidence belongs to the current turn, never accumulated history. */
+  private readonly currentToolCalls: CodexToolCall[] = [];
+  /** Unresolved calls by id; arrays preserve parallel/repeated call ordering. */
+  private readonly unresolvedToolCallIndexes = new Map<string, number[]>();
   private autoToolCallSeq = 0;
 
   constructor(private readonly options: ParseCodexRolloutOptions) {}
@@ -231,15 +251,16 @@ class CodexTurnAccumulator {
   /** Route one parsed rollout line to the handler for its event type. */
   handle(obj: RolloutLine): void {
     const payload = obj.payload ?? {};
+    const eventAtMs = epochMs(obj.timestamp);
     switch (obj.type) {
       case "session_meta":
         return this.onSessionMeta(payload);
       case "turn_context":
         return this.onTurnContext(payload);
       case "event_msg":
-        return this.onEventMsg(payload);
+        return this.onEventMsg(payload, eventAtMs);
       case "response_item":
-        return this.onResponseItem(payload);
+        return this.onResponseItem(payload, eventAtMs);
     }
   }
 
@@ -271,20 +292,28 @@ class CodexTurnAccumulator {
     }
   }
 
-  private onEventMsg(payload: Record<string, unknown>): void {
-    if (payload.type === "task_started") return this.onTaskStarted(payload);
+  private onEventMsg(
+    payload: Record<string, unknown>,
+    eventAtMs: number | null,
+  ): void {
+    if (payload.type === "task_started") {
+      return this.onTaskStarted(payload, eventAtMs);
+    }
     if (payload.type === "task_complete") {
-      return this.closeTurn(epochMs(payload.completed_at));
+      return this.closeTurn(epochMs(payload.completed_at) ?? eventAtMs);
     }
     if (payload.type === "turn_aborted") {
-      return this.closeTurn(epochMs(payload.completed_at));
+      return this.closeTurn(epochMs(payload.completed_at) ?? eventAtMs);
     }
     // Everything below belongs to the open turn; ignore it outside one.
     if (!this.cur) return;
     if (payload.type === "agent_message") this.onAgentMessage(payload);
   }
 
-  private onTaskStarted(payload: Record<string, unknown>): void {
+  private onTaskStarted(
+    payload: Record<string, unknown>,
+    eventAtMs: number | null,
+  ): void {
     this.closeTurn();
     if (this.options.includePriorHistory === false) {
       this.history.length = 0;
@@ -309,7 +338,7 @@ class CodexTurnAccumulator {
       traceIdSource: nativeTraceId ? "native" : "synthetic",
       turnId,
       model: this.sessionModel,
-      startedAtMs: epochMs(payload.started_at),
+      startedAtMs: epochMs(payload.started_at) ?? eventAtMs,
     };
   }
 
@@ -326,16 +355,19 @@ class CodexTurnAccumulator {
     }
   }
 
-  private onResponseItem(payload: Record<string, unknown>): void {
+  private onResponseItem(
+    payload: Record<string, unknown>,
+    eventAtMs: number | null,
+  ): void {
     // response_items belong to the open turn; ignore them outside one.
     if (!this.cur) return;
     switch (payload.type) {
       case "message":
         return this.onMessage(payload);
       case "function_call":
-        return this.onFunctionCall(payload);
+        return this.onFunctionCall(payload, eventAtMs);
       case "function_call_output":
-        return this.onFunctionCallOutput(payload);
+        return this.onFunctionCallOutput(payload, eventAtMs);
     }
   }
 
@@ -357,7 +389,10 @@ class CodexTurnAccumulator {
     }
   }
 
-  private onFunctionCall(payload: Record<string, unknown>): void {
+  private onFunctionCall(
+    payload: Record<string, unknown>,
+    eventAtMs: number | null,
+  ): void {
     this.flushPendingAssistant();
     let callId = explicitToolCallId(payload);
     if (!callId) {
@@ -382,20 +417,59 @@ class CodexTurnAccumulator {
         },
       ],
     });
+    const index = this.currentToolCalls.length;
+    this.currentToolCalls.push({
+      callId,
+      name,
+      arguments: truncate(args, MAX_CONTENT_CHARS),
+      output: null,
+      startedAtMs: eventAtMs,
+      completedAtMs: null,
+    });
+    const unresolved = this.unresolvedToolCallIndexes.get(callId) ?? [];
+    unresolved.push(index);
+    this.unresolvedToolCallIndexes.set(callId, unresolved);
   }
 
-  private onFunctionCallOutput(payload: Record<string, unknown>): void {
+  private onFunctionCallOutput(
+    payload: Record<string, unknown>,
+    eventAtMs: number | null,
+  ): void {
     this.flushPendingAssistant();
     // Reuse the id codex gave; else pair FIFO with the matching id-less call.
     const callId =
       explicitToolCallId(payload) ??
       this.pendingToolCallIds.shift() ??
       `call_auto_${this.autoToolCallSeq++}`;
+    const output = truncate(outputToText(payload.output), MAX_CONTENT_CHARS);
     this.history.push({
       role: "tool",
       tool_call_id: callId,
-      content: truncate(outputToText(payload.output), MAX_CONTENT_CHARS),
+      content: output,
     });
+    const unresolved = this.unresolvedToolCallIndexes.get(callId);
+    const index = unresolved?.shift();
+    if (unresolved?.length === 0) {
+      this.unresolvedToolCallIndexes.delete(callId);
+    }
+    if (index !== undefined) {
+      const call = this.currentToolCalls[index];
+      if (call) {
+        call.output = output;
+        call.completedAtMs = eventAtMs;
+      }
+    } else {
+      // Keep an orphaned result observable instead of silently dropping the
+      // only persisted evidence for a tool execution.
+      this.currentToolCalls.push({
+        callId,
+        name: "tool",
+        arguments: "",
+        output,
+        startedAtMs: eventAtMs,
+        completedAtMs: eventAtMs,
+      });
+    }
   }
 
   private flushPendingAssistant(): void {
@@ -416,6 +490,7 @@ class CodexTurnAccumulator {
           sessionId: this.sessionId,
           model: this.cur.model ?? this.sessionModel,
           inputMessages: capInputMessages([...this.history]),
+          toolCalls: this.currentToolCalls.map((call) => ({ ...call })),
           output: truncate(finalAnswer.trim(), MAX_OUTPUT_CHARS),
           startedAtMs: this.cur.startedAtMs,
           completedAtMs,
@@ -431,6 +506,8 @@ class CodexTurnAccumulator {
     // output would pair to the wrong call. `autoToolCallSeq` stays monotonic
     // so the ids themselves remain unique across the session.
     this.pendingToolCallIds.length = 0;
+    this.currentToolCalls.length = 0;
+    this.unresolvedToolCallIndexes.clear();
     this.cur = null;
     this.pendingAssistant = null;
     this.agentFinal = null;

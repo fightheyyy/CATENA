@@ -1,0 +1,79 @@
+name: Catena MVP1 CI
+
+on:
+  pull_request:
+    paths:
+      - "catena-web/**"
+      - "control-plane/**"
+      - "deploy/catena-mvp1/**"
+      - ".github/workflows/catena-mvp1-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "catena-web/**"
+      - "control-plane/**"
+      - "deploy/catena-mvp1/**"
+      - ".github/workflows/catena-mvp1-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: catena-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: catena-web/pnpm-lock.yaml
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile --ignore-workspace
+      - run: pnpm test
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  control-plane:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: control-plane
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache-dependency-path: control-plane/go.sum
+      - run: go test ./...
+      - run: go vet ./...
+      - run: go test -race ./internal/control
+
+  compose-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate local Compose
+        run: docker compose -f deploy/catena-mvp1/compose.yml config >/dev/null
+      - name: Validate public Compose
+        env:
+          CATENA_DOMAIN: catena.example.com
+          CATENA_GATEWAY_SECRET: 0123456789abcdef0123456789abcdef
+          CATENA_API_TOKEN_SECRET: 1123456789abcdef0123456789abcdef
+          CATENA_GITHUB_CLIENT_ID: test-client-id
+          CATENA_GITHUB_CLIENT_SECRET: test-client-secret
+          CATENA_POSTGRES_ADMIN_PASSWORD: 2123456789abcdef0123456789abcdef
+          CATENA_CORE_DB_PASSWORD: 3123456789abcdef0123456789abcdef
+          CATENA_LANGWATCH_DB_PASSWORD: 4123456789abcdef0123456789abcdef
+          CATENA_CLICKHOUSE_PASSWORD: 5123456789abcdef0123456789abcdef
+          XIAOBA_LLM_API_BASE: https://api.example.com/v1
+          XIAOBA_LLM_API_KEY: test-model-key
+          XIAOBA_LLM_MODEL: test-model
+        run: docker compose -f deploy/catena-mvp1/compose.yml -f deploy/catena-mvp1/compose.public.yml config >/dev/null
+      - name: Verify pinned worker sources
+        run: |
+          grep -Eq 'CATENA_BARENA_CONTEXT.*#' deploy/catena-mvp1/compose.yml
+          grep -Eq 'CATENA_XIAOBA_CONTEXT.*#' deploy/catena-mvp1/compose.yml

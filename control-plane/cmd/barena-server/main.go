@@ -37,6 +37,7 @@ func run() error {
 	githubClientID := os.Getenv("BARENA_GITHUB_CLIENT_ID")
 	githubClientSecret := os.Getenv("BARENA_GITHUB_CLIENT_SECRET")
 	gatewaySecret := os.Getenv("BARENA_GATEWAY_SECRET")
+	apiTokenEncryptionKey := os.Getenv("BARENA_API_TOKEN_ENCRYPTION_KEY")
 	if err := validateBinding(
 		ip,
 		os.Getenv("BARENA_ALLOW_REMOTE") == "1",
@@ -59,6 +60,23 @@ func run() error {
 		return err
 	}
 	defer store.Close()
+	var traceStore control.TraceStore
+	if clickHouseDSN := os.Getenv("CATENA_CLICKHOUSE_DSN"); clickHouseDSN != "" {
+		clickHouse, err := control.OpenClickHouseTraceStore(ctx, clickHouseDSN)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = clickHouse.Close() }()
+		traceStore = clickHouse
+	}
+	var memoryStore control.MemoryBackend
+	if memoryURL := os.Getenv("CATENA_MEMORY_URL"); memoryURL != "" {
+		memoryClient, err := control.NewGauzMemoryClient(memoryURL, os.Getenv("CATENA_MEMORY_API_KEY"))
+		if err != nil {
+			return err
+		}
+		memoryStore = memoryClient
+	}
 	if interrupted, err := store.InterruptActiveRuns(ctx); err != nil {
 		return err
 	} else if interrupted > 0 {
@@ -93,13 +111,14 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler, err := control.NewHTTPHandlerWithRuntime(store, runner, control.AuthConfig{
-		GitHubClientID:     githubClientID,
-		GitHubClientSecret: githubClientSecret,
-		RedirectURL:        redirectURL,
-		SecureCookies:      strings.HasPrefix(redirectURL, "https://"),
-		GatewaySecret:      gatewaySecret,
-	}, evolutionRuntime)
+	handler, err := control.NewHTTPHandlerWithMemory(store, runner, control.AuthConfig{
+		GitHubClientID:        githubClientID,
+		GitHubClientSecret:    githubClientSecret,
+		RedirectURL:           redirectURL,
+		SecureCookies:         strings.HasPrefix(redirectURL, "https://"),
+		GatewaySecret:         gatewaySecret,
+		APITokenEncryptionKey: apiTokenEncryptionKey,
+	}, evolutionRuntime, traceStore, memoryStore)
 	if err != nil {
 		return err
 	}

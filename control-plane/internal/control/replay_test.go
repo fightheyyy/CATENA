@@ -433,9 +433,10 @@ func TestReplayOwnerIsolation(t *testing.T) {
 		}
 	}
 	handler, err := NewHTTPHandlerWithConfig(store, runner, AuthConfig{
-		GitHubClientID:     "test-client",
-		GitHubClientSecret: "test-secret",
-		RedirectURL:        "http://127.0.0.1/callback",
+		GitHubClientID:        "test-client",
+		GitHubClientSecret:    "test-secret",
+		APITokenEncryptionKey: testGatewaySecret,
+		RedirectURL:           "http://127.0.0.1/callback",
 	})
 	if err != nil {
 		t.Fatal(err)

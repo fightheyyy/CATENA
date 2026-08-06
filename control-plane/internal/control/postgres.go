@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS barena_api_tokens (
   name TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL
 );
+ALTER TABLE barena_api_tokens
+  ADD COLUMN IF NOT EXISTS encrypted_token TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS barena_api_tokens_user_created_at_idx
   ON barena_api_tokens (user_id, created_at DESC);
 CREATE TABLE IF NOT EXISTS barena_agent_profiles (
@@ -105,11 +107,51 @@ CREATE TABLE IF NOT EXISTS barena_engine_events (
   payload JSONB NOT NULL,
   PRIMARY KEY (run_id, sequence)
 );
+CREATE TABLE IF NOT EXISTS barena_run_bundles (
+  run_bundle_id TEXT PRIMARY KEY,
+  owner_user_id TEXT REFERENCES barena_users(user_id) ON DELETE SET NULL,
+  run_id TEXT NOT NULL UNIQUE REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
+  idempotency_key TEXT NOT NULL,
+  request_fingerprint TEXT NOT NULL,
+  terminal_fact_sha256 TEXT NOT NULL,
+  terminal_fact BYTEA NOT NULL,
+  document JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS barena_run_bundles_owner_key_idx
+  ON barena_run_bundles (COALESCE(owner_user_id,''), idempotency_key);
+CREATE TABLE IF NOT EXISTS catena_conversation_messages (
+  owner_user_id TEXT NOT NULL,
+  message_id TEXT NOT NULL,
+  conversation_id TEXT NOT NULL,
+  sequence BIGINT NOT NULL CHECK (sequence > 0),
+  occurred_at TIMESTAMPTZ NOT NULL,
+  received_at TIMESTAMPTZ NOT NULL,
+  runtime TEXT NOT NULL,
+  agent_id TEXT NOT NULL,
+  agent_name TEXT NOT NULL DEFAULT '',
+  surface TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('user','assistant')),
+  role_name TEXT NOT NULL DEFAULT '',
+  content JSONB NOT NULL,
+  delivery JSONB NOT NULL,
+  trace_id TEXT NOT NULL DEFAULT '',
+  fingerprint TEXT NOT NULL,
+  PRIMARY KEY (owner_user_id, message_id),
+  UNIQUE (owner_user_id, agent_id, conversation_id, sequence)
+);
+CREATE INDEX IF NOT EXISTS catena_conversation_messages_owner_updated_idx
+  ON catena_conversation_messages
+  (owner_user_id, occurred_at DESC, conversation_id);
+CREATE INDEX IF NOT EXISTS catena_conversation_messages_owner_agent_idx
+  ON catena_conversation_messages
+  (owner_user_id, agent_id, occurred_at DESC);
 CREATE TABLE IF NOT EXISTS spiral_evolution_jobs (
   job_id TEXT PRIMARY KEY,
   owner_user_id TEXT REFERENCES barena_users(user_id) ON DELETE SET NULL,
-  source_run_id TEXT NOT NULL REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
+  source_run_id TEXT REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
   source_trace_id TEXT NOT NULL,
+  source_agent_id TEXT NOT NULL DEFAULT '',
   idempotency_key TEXT NOT NULL,
   request_fingerprint TEXT NOT NULL,
   state TEXT NOT NULL CHECK (state IN ('queued','running','completed','failed')),
@@ -118,9 +160,14 @@ CREATE TABLE IF NOT EXISTS spiral_evolution_jobs (
   created_at TIMESTAMPTZ NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL
 );
+ALTER TABLE spiral_evolution_jobs
+  ALTER COLUMN source_run_id DROP NOT NULL;
+ALTER TABLE spiral_evolution_jobs
+  ADD COLUMN IF NOT EXISTS source_agent_id TEXT NOT NULL DEFAULT '';
+DROP INDEX IF EXISTS spiral_evolution_jobs_request_key_idx;
 CREATE UNIQUE INDEX IF NOT EXISTS spiral_evolution_jobs_request_key_idx
   ON spiral_evolution_jobs
-  (COALESCE(owner_user_id,''), source_run_id, idempotency_key);
+  (COALESCE(owner_user_id,''), source_trace_id, source_agent_id, idempotency_key);
 CREATE INDEX IF NOT EXISTS spiral_evolution_jobs_owner_created_at_idx
   ON spiral_evolution_jobs (owner_user_id, created_at DESC);
 CREATE TABLE IF NOT EXISTS barena_issues (
@@ -299,6 +346,95 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
 	return run, true, nil
 }
 
+func (s *PostgresStore) CreateRunBundle(
+	ctx context.Context,
+	bundle RunBundle,
+) (RunBundle, bool, error) {
+	if err := validateStoredRunBundle(bundle); err != nil {
+		return RunBundle{}, false, err
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return RunBundle{}, false, err
+	}
+	defer tx.Rollback()
+	// PostgreSQL text values cannot contain NUL bytes. The Bundle ID is already
+	// a deterministic SHA-256-derived identity for owner + idempotency key, so
+	// it is both collision-resistant and safe to pass through the text protocol.
+	lockKey := runBundleAdvisoryLockKey(bundle)
+	if _, err := tx.ExecContext(
+		ctx,
+		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+		lockKey,
+	); err != nil {
+		return RunBundle{}, false, err
+	}
+	existing, err := scanRunBundle(tx.QueryRowContext(ctx, `
+SELECT COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,
+       terminal_fact,document
+FROM barena_run_bundles
+WHERE COALESCE(owner_user_id,'')=$1 AND idempotency_key=$2`,
+		bundle.OwnerUserID, bundle.IdempotencyKey))
+	if err == nil {
+		if existing.RequestFingerprint != bundle.RequestFingerprint {
+			return RunBundle{}, false, ErrConflict
+		}
+		return existing, false, nil
+	}
+	if !errors.Is(err, ErrNotFound) {
+		return RunBundle{}, false, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO barena_runs
+  (run_id,request_id,owner_user_id,execution_origin,operation,state,current_phase,
+   current_actor,input,runtime,cancel_requested,error,created_at,updated_at)
+VALUES ($1,$2,NULLIF($3,''),$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+		bundle.Run.ID, bundle.Run.RequestID, bundle.Run.OwnerUserID, bundle.Run.Origin,
+		bundle.Run.Operation, bundle.Run.State, bundle.Run.CurrentPhase,
+		bundle.Run.CurrentActor, bundle.Run.Input, nullableJSON(bundle.Run.Runtime),
+		bundle.Run.CancelRequested, bundle.Run.Error, bundle.Run.CreatedAt,
+		bundle.Run.UpdatedAt); err != nil {
+		return RunBundle{}, false, mapStoreError(err)
+	}
+	for _, event := range bundle.Events {
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO barena_engine_events
+  (run_id,sequence,event_id,timestamp,operation,kind,phase,actor,attempt_id,trace_id,payload)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+			event.RunID, event.Sequence, event.EventID, event.Timestamp,
+			event.Operation, event.Kind, event.Phase, event.Actor,
+			event.AttemptID, event.TraceID, event.Payload); err != nil {
+			return RunBundle{}, false, mapStoreError(err)
+		}
+	}
+	document, err := json.Marshal(bundle)
+	if err != nil {
+		return RunBundle{}, false, err
+	}
+	terminalFact := bundle.Events[len(bundle.Events)-1].Payload
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO barena_run_bundles
+  (run_bundle_id,owner_user_id,run_id,idempotency_key,request_fingerprint,
+   terminal_fact_sha256,terminal_fact,document,created_at)
+VALUES ($1,NULLIF($2,''),$3,$4,$5,$6,$7,$8,$9)`,
+		bundle.ID, bundle.OwnerUserID, bundle.Run.ID, bundle.IdempotencyKey,
+		bundle.RequestFingerprint, bundle.TerminalFactSHA256, []byte(terminalFact),
+		document, bundle.CreatedAt); err != nil {
+		return RunBundle{}, false, mapStoreError(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return RunBundle{}, false, err
+	}
+	return bundle, true, nil
+}
+
+func (s *PostgresStore) GetRunBundle(ctx context.Context, id string) (RunBundle, error) {
+	return scanRunBundle(s.db.QueryRowContext(ctx, `
+SELECT COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,
+       terminal_fact,document
+FROM barena_run_bundles WHERE run_bundle_id=$1`, id))
+}
+
 func (s *PostgresStore) GetRun(ctx context.Context, id string) (Run, error) {
 	row := s.db.QueryRowContext(ctx, `
 SELECT run_id, request_id, COALESCE(owner_user_id,''), execution_origin,
@@ -469,16 +605,16 @@ func (s *PostgresStore) RunHasTrace(
 	runID string,
 	traceID string,
 ) (bool, error) {
-	var runExists bool
+	var input json.RawMessage
 	if err := s.db.QueryRowContext(
 		ctx,
-		`SELECT EXISTS(SELECT 1 FROM barena_runs WHERE run_id=$1)`,
+		`SELECT input FROM barena_runs WHERE run_id=$1`,
 		runID,
-	).Scan(&runExists); err != nil {
+	).Scan(&input); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, ErrNotFound
+		}
 		return false, err
-	}
-	if !runExists {
-		return false, ErrNotFound
 	}
 	var exists bool
 	if err := s.db.QueryRowContext(ctx, `
@@ -488,35 +624,53 @@ SELECT EXISTS(
 )`, runID, traceID).Scan(&exists); err != nil {
 		return false, err
 	}
-	return exists, nil
+	return exists || runInputHasTrace(input, traceID), nil
 }
 
 func (s *PostgresStore) CreateEvolutionJob(
 	ctx context.Context,
 	job EvolutionJob,
 ) (EvolutionJob, bool, error) {
+	if !validEvolutionJobSource(job) {
+		return EvolutionJob{}, false, ErrConflict
+	}
+	if job.SourceRunID != "" {
+		run, err := s.GetRun(ctx, job.SourceRunID)
+		if err != nil {
+			return EvolutionJob{}, false, err
+		}
+		if run.OwnerUserID != job.OwnerUserID || !run.State.Terminal() {
+			return EvolutionJob{}, false, ErrConflict
+		}
+		retained, err := s.RunHasTrace(ctx, job.SourceRunID, job.SourceTraceID)
+		if err != nil {
+			return EvolutionJob{}, false, err
+		}
+		if !retained {
+			return EvolutionJob{}, false, ErrConflict
+		}
+	}
 	document, err := json.Marshal(job)
 	if err != nil {
 		return EvolutionJob{}, false, err
 	}
 	created, err := scanEvolutionJob(s.db.QueryRowContext(ctx, `
 INSERT INTO spiral_evolution_jobs
-  (job_id,owner_user_id,source_run_id,source_trace_id,idempotency_key,
+  (job_id,owner_user_id,source_run_id,source_trace_id,source_agent_id,idempotency_key,
    request_fingerprint,state,current_stage,document,created_at,updated_at)
-SELECT $1,NULLIF($2,''),$3,$4,$5,$6,$7,$8,$9,$10,$11
-FROM barena_runs source
-WHERE source.run_id=$3
-  AND COALESCE(source.owner_user_id,'')=$2
-  AND source.state IN ('completed','interrupted','cancelled','failed')
-  AND EXISTS (
-    SELECT 1 FROM barena_engine_events event
-    WHERE event.run_id=source.run_id AND event.trace_id=$4
-  )
+SELECT $1,NULLIF($2,''),NULLIF($3,''),$4,$5,$6,$7,$8,$9,$10,$11,$12
+WHERE ($3='' AND $4<>'' AND $5='' AND $13='trace') OR EXISTS (
+  SELECT 1 FROM barena_runs source
+  WHERE source.run_id=$3
+    AND $13='run_trace'
+    AND COALESCE(source.owner_user_id,'')=$2
+    AND source.state IN ('completed','interrupted','cancelled','failed')
+) OR ($3='' AND $4='' AND $5<>'' AND $13='agent_trace_set')
 ON CONFLICT DO NOTHING
 RETURNING COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,document`,
-		job.ID, job.OwnerUserID, job.SourceRunID, job.SourceTraceID,
+		job.ID, job.OwnerUserID, job.SourceRunID, job.SourceTraceID, job.SourceAgentID,
 		job.IdempotencyKey, job.RequestFingerprint, job.State,
-		job.CurrentStage, document, job.CreatedAt, job.UpdatedAt))
+		job.CurrentStage, document, job.CreatedAt, job.UpdatedAt, job.SourceKind))
 	if err == nil {
 		return created, true, nil
 	}
@@ -526,8 +680,8 @@ RETURNING COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,documen
 	existing, lookupErr := scanEvolutionJob(s.db.QueryRowContext(ctx, `
 SELECT COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,document
 FROM spiral_evolution_jobs
-WHERE COALESCE(owner_user_id,'')=$1 AND source_run_id=$2 AND idempotency_key=$3`,
-		job.OwnerUserID, job.SourceRunID, job.IdempotencyKey))
+WHERE COALESCE(owner_user_id,'')=$1 AND source_trace_id=$2 AND source_agent_id=$3 AND idempotency_key=$4`,
+		job.OwnerUserID, job.SourceTraceID, job.SourceAgentID, job.IdempotencyKey))
 	if lookupErr == nil {
 		if existing.RequestFingerprint != job.RequestFingerprint {
 			return EvolutionJob{}, false, ErrConflict
@@ -537,8 +691,10 @@ WHERE COALESCE(owner_user_id,'')=$1 AND source_run_id=$2 AND idempotency_key=$3`
 	if !errors.Is(lookupErr, ErrNotFound) {
 		return EvolutionJob{}, false, lookupErr
 	}
-	if _, runErr := s.GetRun(ctx, job.SourceRunID); runErr != nil {
-		return EvolutionJob{}, false, runErr
+	if job.SourceRunID != "" {
+		if _, runErr := s.GetRun(ctx, job.SourceRunID); runErr != nil {
+			return EvolutionJob{}, false, runErr
+		}
 	}
 	return EvolutionJob{}, false, ErrConflict
 }
@@ -550,14 +706,15 @@ func (s *PostgresStore) UpdateEvolutionJob(ctx context.Context, job EvolutionJob
 	}
 	result, err := s.db.ExecContext(ctx, `
 UPDATE spiral_evolution_jobs
-SET state=$7,current_stage=$8,document=$9,updated_at=$10
+SET state=$8,current_stage=$9,document=$10,updated_at=$11
 WHERE job_id=$1
   AND COALESCE(owner_user_id,'')=$2
-  AND source_run_id=$3
+	  AND COALESCE(source_run_id,'')=$3
   AND source_trace_id=$4
-  AND idempotency_key=$5
-  AND request_fingerprint=$6`,
-		job.ID, job.OwnerUserID, job.SourceRunID, job.SourceTraceID,
+  AND source_agent_id=$5
+  AND idempotency_key=$6
+  AND request_fingerprint=$7`,
+		job.ID, job.OwnerUserID, job.SourceRunID, job.SourceTraceID, job.SourceAgentID,
 		job.IdempotencyKey, job.RequestFingerprint, job.State,
 		job.CurrentStage, document, job.UpdatedAt)
 	if err != nil {
@@ -1080,7 +1237,29 @@ WHERE owner_user_id=$1 ORDER BY created_at DESC LIMIT $2`, ownerUserID, limit)
 }
 
 func (s *PostgresStore) UpsertUser(ctx context.Context, user User) (User, error) {
-	row := s.db.QueryRowContext(ctx, `
+	// A fresh Platform project fans one browser batch out into several signed
+	// control-plane requests. Every request resolves the same deterministic
+	// project principal, so the first requests can race on both unique indexes
+	// (user_id and github_id). PostgreSQL's ON CONFLICT target only arbitrates
+	// github_id; without serialization, a concurrent insert can still lose on
+	// the primary key and make one otherwise valid list call fail.
+	//
+	// Serialize only this external identity. The transaction-scoped advisory
+	// lock is released automatically on commit/rollback and does not block
+	// unrelated users or projects.
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return User{}, err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(
+		ctx,
+		`SELECT pg_advisory_xact_lock($1)`,
+		user.GitHubID,
+	); err != nil {
+		return User{}, err
+	}
+	row := tx.QueryRowContext(ctx, `
 INSERT INTO barena_users
   (user_id,github_id,github_login,display_name,avatar_url,created_at,updated_at)
 VALUES ($1,$2,$3,$4,$5,$6,$7)
@@ -1092,7 +1271,14 @@ ON CONFLICT (github_id) DO UPDATE SET
 RETURNING user_id,github_id,github_login,display_name,avatar_url,created_at,updated_at`,
 		user.ID, user.GitHubID, user.Login, user.DisplayName, user.AvatarURL,
 		user.CreatedAt, user.UpdatedAt)
-	return scanUser(row)
+	persisted, err := scanUser(row)
+	if err != nil {
+		return User{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return User{}, err
+	}
+	return persisted, nil
 }
 
 func (s *PostgresStore) GetUserBySessionHash(
@@ -1124,9 +1310,9 @@ DELETE FROM barena_sessions WHERE token_hash=$1`, tokenHash)
 
 func (s *PostgresStore) CreateAPIToken(ctx context.Context, token APIToken) error {
 	_, err := s.db.ExecContext(ctx, `
-INSERT INTO barena_api_tokens (token_id,token_hash,user_id,name,created_at)
-VALUES ($1,$2,$3,$4,$5)`,
-		token.ID, token.TokenHash, token.UserID, token.Name, token.CreatedAt)
+INSERT INTO barena_api_tokens (token_id,token_hash,encrypted_token,user_id,name,created_at)
+VALUES ($1,$2,$3,$4,$5,$6)`,
+		token.ID, token.TokenHash, token.EncryptedToken, token.UserID, token.Name, token.CreatedAt)
 	return mapStoreError(err)
 }
 
@@ -1135,7 +1321,7 @@ func (s *PostgresStore) ListAPITokensByUser(
 	userID string,
 ) ([]APIToken, error) {
 	rows, err := s.db.QueryContext(ctx, `
-SELECT token_id,token_hash,user_id,name,created_at
+SELECT token_id,token_hash,encrypted_token,user_id,name,created_at
 FROM barena_api_tokens
 WHERE user_id=$1
 ORDER BY created_at DESC`, userID)
@@ -1149,6 +1335,7 @@ ORDER BY created_at DESC`, userID)
 		if err := rows.Scan(
 			&token.ID,
 			&token.TokenHash,
+			&token.EncryptedToken,
 			&token.UserID,
 			&token.Name,
 			&token.CreatedAt,
@@ -1158,6 +1345,29 @@ ORDER BY created_at DESC`, userID)
 		result = append(result, token)
 	}
 	return result, rows.Err()
+}
+
+func (s *PostgresStore) GetAPITokenByUser(
+	ctx context.Context,
+	userID string,
+	tokenID string,
+) (APIToken, error) {
+	var token APIToken
+	err := s.db.QueryRowContext(ctx, `
+SELECT token_id,token_hash,encrypted_token,user_id,name,created_at
+FROM barena_api_tokens
+WHERE token_id=$1 AND user_id=$2`, tokenID, userID).Scan(
+		&token.ID,
+		&token.TokenHash,
+		&token.EncryptedToken,
+		&token.UserID,
+		&token.Name,
+		&token.CreatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return APIToken{}, ErrNotFound
+	}
+	return token, err
 }
 
 func (s *PostgresStore) GetUserByAPITokenHash(
@@ -1387,6 +1597,42 @@ func scanEvolutionJob(row rowScanner) (EvolutionJob, error) {
 	job.IdempotencyKey = idempotencyKey
 	job.RequestFingerprint = requestFingerprint
 	return job, nil
+}
+
+func scanRunBundle(row rowScanner) (RunBundle, error) {
+	var ownerUserID string
+	var idempotencyKey string
+	var requestFingerprint string
+	var terminalFact []byte
+	var document json.RawMessage
+	if err := row.Scan(
+		&ownerUserID,
+		&idempotencyKey,
+		&requestFingerprint,
+		&terminalFact,
+		&document,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return RunBundle{}, ErrNotFound
+		}
+		return RunBundle{}, err
+	}
+	var bundle RunBundle
+	if err := json.Unmarshal(document, &bundle); err != nil {
+		return RunBundle{}, err
+	}
+	bundle.OwnerUserID = ownerUserID
+	bundle.IdempotencyKey = idempotencyKey
+	bundle.RequestFingerprint = requestFingerprint
+	if len(bundle.Events) == 0 {
+		return RunBundle{}, ErrConflict
+	}
+	bundle.Run.OwnerUserID = ownerUserID
+	bundle.Events[len(bundle.Events)-1].Payload = cloneJSON(terminalFact)
+	if err := validateStoredRunBundle(bundle); err != nil {
+		return RunBundle{}, err
+	}
+	return bundle, nil
 }
 
 func scanEvolutionJobs(rows *sql.Rows) ([]EvolutionJob, error) {

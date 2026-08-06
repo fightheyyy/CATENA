@@ -1,6 +1,7 @@
 package control
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -15,8 +16,10 @@ import (
 
 type HTTPServer struct {
 	store            Store
+	traces           TraceStore
 	runner           *RunnerManager
 	evolutionRuntime *EvolutionRuntimeManager
+	memory           MemoryBackend
 	auth             AuthConfig
 }
 
@@ -45,13 +48,36 @@ func NewHTTPHandlerWithRuntime(
 	auth AuthConfig,
 	evolutionRuntime *EvolutionRuntimeManager,
 ) (http.Handler, error) {
+	return NewHTTPHandlerWithServices(store, runner, auth, evolutionRuntime, nil)
+}
+
+func NewHTTPHandlerWithServices(
+	store Store,
+	runner *RunnerManager,
+	auth AuthConfig,
+	evolutionRuntime *EvolutionRuntimeManager,
+	traces TraceStore,
+) (http.Handler, error) {
+	return NewHTTPHandlerWithMemory(store, runner, auth, evolutionRuntime, traces, nil)
+}
+
+func NewHTTPHandlerWithMemory(
+	store Store,
+	runner *RunnerManager,
+	auth AuthConfig,
+	evolutionRuntime *EvolutionRuntimeManager,
+	traces TraceStore,
+	memory MemoryBackend,
+) (http.Handler, error) {
 	if err := auth.Validate(); err != nil {
 		return nil, err
 	}
 	server := &HTTPServer{
 		store:            store,
+		traces:           traces,
 		runner:           runner,
 		evolutionRuntime: evolutionRuntime,
+		memory:           memory,
 		auth:             auth.normalized(),
 	}
 	mux := http.NewServeMux()
@@ -61,15 +87,35 @@ func NewHTTPHandlerWithRuntime(
 	mux.HandleFunc("GET /v1/auth/session", server.authSession)
 	mux.HandleFunc("GET /v1/auth/github", server.githubLogin)
 	mux.HandleFunc("GET /v1/auth/github/callback", server.githubCallback)
+	// Keep the callback already registered by existing Catena GitHub OAuth Apps
+	// while the public Web moves from the LangWatch downstream to this server.
+	mux.HandleFunc("GET /api/auth/callback/github", server.githubCallback)
 	mux.HandleFunc("POST /v1/auth/logout", server.logout)
 	mux.HandleFunc("GET /v1/me/api-tokens", server.listAPITokens)
 	mux.HandleFunc("POST /v1/me/api-tokens", server.createAPIToken)
+	mux.HandleFunc("POST /v1/me/api-tokens/{token_id}/reveal", server.revealAPIToken)
 	mux.HandleFunc("DELETE /v1/me/api-tokens/{token_id}", server.deleteAPIToken)
 	mux.HandleFunc("GET /v1/me/profile", server.myAgentProfile)
 	mux.HandleFunc("PUT /v1/me/profile", server.updateMyAgentProfile)
 	mux.HandleFunc("GET /v1/community/profiles", server.communityProfiles)
 	mux.HandleFunc("GET /v1/community/profiles/{slug}", server.communityProfile)
 	mux.HandleFunc("GET /v1/runtimes", server.runtimes)
+	mux.HandleFunc("GET /v1/agents", server.listAgents)
+	mux.HandleFunc("GET /v1/agents/{agent_id}/traces", server.listAgentTraces)
+	mux.HandleFunc("POST /v1/agents/{agent_id}/evolution-jobs", server.createAgentEvolutionJob)
+	mux.HandleFunc("GET /v1/traces", server.listTraces)
+	mux.HandleFunc("GET /v1/traces/{trace_id}", server.getTrace)
+	mux.HandleFunc("POST /v1/traces/{trace_id}/evolution-jobs", server.createTraceEvolutionJob)
+	mux.HandleFunc("POST /v1/traces/{trace_id}/memories", server.rememberTrace)
+	mux.HandleFunc("GET /v1/memories/status", server.memoryStatus)
+	mux.HandleFunc("GET /v1/memories", server.listMemories)
+	mux.HandleFunc("POST /v1/memories/search", server.searchMemories)
+	mux.HandleFunc("GET /v1/memories/facts/{fact_id}/graph", server.memoryFactGraph)
+	mux.HandleFunc("POST /v1/otlp/v1/traces", server.ingestOTLPTraces)
+	mux.HandleFunc("POST /v1/ingest/conversations", server.ingestConversations)
+	mux.HandleFunc("GET /v1/conversations", server.listConversations)
+	mux.HandleFunc("GET /v1/conversations/{conversation_id}", server.getConversation)
+	mux.HandleFunc("POST /v1/conversations/{conversation_id}/memories", server.rememberConversation)
 	mux.HandleFunc("POST /v1/runs", server.createRun)
 	mux.HandleFunc("GET /v1/runs", server.listRuns)
 	mux.HandleFunc("GET /v1/runs/{run_id}", server.getRun)
@@ -90,15 +136,56 @@ func NewHTTPHandlerWithRuntime(
 	mux.HandleFunc("GET /v1/releases", server.listReleases)
 	mux.HandleFunc("GET /v1/releases/{release_id}", server.getRelease)
 	mux.HandleFunc("POST /v1/platform/scenario-runs/adopt", server.adoptScenarioRun)
+	mux.HandleFunc("POST /v1/ingest/run-bundles", server.createRunBundle)
+	mux.HandleFunc("GET /v1/run-bundles/{bundle_id}", server.getRunBundle)
 	mux.HandleFunc("POST /v1/ingest/runs", server.createEdgeRun)
 	mux.HandleFunc("POST /v1/ingest/runs/{run_id}/events", server.appendEdgeRunEvent)
 	mux.HandleFunc("POST /v1/ingest/runs/{run_id}/finish", server.finishEdgeRun)
+	apiNotFound := func(w http.ResponseWriter, _ *http.Request) {
+		writeProblem(w, http.StatusNotFound, "API endpoint not found")
+	}
+	for _, method := range []string{"GET", "POST", "PUT", "PATCH", "DELETE"} {
+		mux.HandleFunc(method+" /v1/", apiNotFound)
+	}
 	webRoot, err := fs.Sub(webAssets, "web")
 	if err != nil {
 		panic(err)
 	}
-	mux.Handle("GET /", http.FileServer(http.FS(webRoot)))
+	mux.Handle("GET /", newSPAHandler(webRoot))
 	return requestMiddleware(mux), nil
+}
+
+type spaHandler struct {
+	root   fs.FS
+	assets http.Handler
+}
+
+func newSPAHandler(root fs.FS) http.Handler {
+	return &spaHandler{
+		root:   root,
+		assets: http.FileServer(http.FS(root)),
+	}
+}
+
+func (h *spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requested := strings.TrimPrefix(r.URL.Path, "/")
+	if requested == "" {
+		requested = "index.html"
+	}
+	if fs.ValidPath(requested) {
+		if info, err := fs.Stat(h.root, requested); err == nil && !info.IsDir() {
+			h.assets.ServeHTTP(w, r)
+			return
+		}
+	}
+	index, err := fs.ReadFile(h.root, "index.html")
+	if err != nil {
+		http.Error(w, "Catena Web is unavailable", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(index)
 }
 
 func (s *HTTPServer) health(w http.ResponseWriter, _ *http.Request) {
@@ -119,14 +206,29 @@ func (s *HTTPServer) systemStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	evolutionRuntime := s.evolutionRuntime.Probe(r.Context())
+	traceStore := "unavailable"
+	if s.traces != nil {
+		if err := s.traces.Ping(r.Context()); err == nil {
+			traceStore = "available"
+		}
+	}
+	memoryStore := "unavailable"
+	if s.memory != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer cancel()
+		if err := s.memory.Ping(ctx); err == nil {
+			memoryStore = "available"
+		}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":            "ready",
-		"auth_mode":         map[bool]string{true: "github", false: "local"}[s.auth.Enabled()],
-		"engine_protocol":   "barena.engine_request.v1",
-		"event_protocol":    "barena.engine_event.v1",
-		"run_package":       "barena.run_package.v1",
-		"edge_ingest":       "available",
-		"evolution_runtime": evolutionRuntime.Status,
+		"status":             "ready",
+		"auth_mode":          map[bool]string{true: "github", false: "local"}[s.auth.Enabled()],
+		"edge_ingest":        "available",
+		"run_bundle":         runBundleSchema,
+		"evolution_protocol": "barena.xiaoba_evolution_request.v1",
+		"evolution_runtime":  evolutionRuntime.Status,
+		"trace_store":        traceStore,
+		"memory_store":       memoryStore,
 	})
 }
 
@@ -316,7 +418,7 @@ func requestMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set(
 			"Content-Security-Policy",
-			"default-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'",
+			"default-src 'self'; connect-src 'self'; img-src 'self' https://avatars.githubusercontent.com; style-src 'self' 'unsafe-inline'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'",
 		)
 		next.ServeHTTP(w, r)
 	})

@@ -1,0 +1,158 @@
+# syntax=docker/dockerfile:1.7
+
+FROM ghcr.io/astral-sh/uv:0.11.21 AS uv
+
+FROM python:3.11.15-slim-bookworm AS builder
+COPY --from=uv /uv /uvx /bin/
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+WORKDIR /app
+COPY --from=gauzmem-source /pyproject.toml /uv.lock /README.md ./
+COPY --from=gauzmem-source /GauzRag ./GauzRag
+COPY --from=gauzmem-source /run_api.py ./
+RUN uv sync --locked --no-dev --no-editable
+# GauzMem 2.0.1 opens a second Qdrant Local client in pipeline Step 8 while
+# EmbeddingService still owns the first client. Qdrant Local correctly rejects
+# that concurrent file lock. Reuse the already initialized project-scoped
+# client; remove this compatibility patch when the pinned upstream includes it.
+RUN python - <<'PY'
+from pathlib import Path
+
+old = '''            # 更新Qdrant
+            with GauzRagVectorStore(
+                persist_directory=self.config.output_dir / "qdrant_db",
+                project_id=project_id,
+                use_server=(self.config.qdrant_mode == "server"),
+                server_url=self.config.qdrant_url
+            ) as vector_store:
+                vector_store.update_chunk_indexed(conversation_id, indexed=True)
+'''
+new = '''            # 更新Qdrant。复用 EmbeddingService 已持有的客户端；
+            # Qdrant Local 不允许同一目录被第二个客户端并发打开。
+            self.embedding_service.vector_store.update_chunk_indexed(
+                conversation_id, indexed=True
+            )
+'''
+paths = [
+    Path("GauzRag/pipeline.py"),
+    Path(".venv/lib/python3.11/site-packages/GauzRag/pipeline.py"),
+]
+for path in paths:
+    source = path.read_text()
+    if old not in source:
+        raise SystemExit(f"pinned GauzMem Qdrant lock patch no longer applies: {path}")
+    path.write_text(source.replace(old, new, 1))
+
+# GauzMem's bundle-search route awaits
+# Neo4jGraphStore.expand_facts_by_semantic_relations(), but the pinned
+# infrastructure store does not implement that compatibility method. Add the
+# bounded async adapter used by the public route. Remove this together with the
+# Qdrant patch once the upstream pin contains both fixes.
+marker = "\n\n# ========== 便捷函数 ==========\n"
+graph_expansion = r'''
+
+    async def expand_facts_by_semantic_relations(
+        self,
+        seed_fact_ids: List[int],
+        max_hops: int = 2,
+        relation_types: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Expand seed Facts through project-scoped semantic relations."""
+        import asyncio
+
+        if not seed_fact_ids:
+            return []
+
+        bounded_hops = max(1, min(int(max_hops), 5))
+        allowed_relations = {
+            "CAUSE", "TEMPORAL", "SUPPORT", "ELABORATE", "CONTRADICT",
+            "ANALOGY", "CONDITIONAL", "PARALLEL",
+        }
+        filtered_relations = None
+        if relation_types:
+            filtered_relations = [
+                relation.upper()
+                for relation in relation_types
+                if relation.upper() in allowed_relations
+            ] or None
+
+        def _expand():
+            query = f"""
+                MATCH path = (seed:Fact)-[r*1..{bounded_hops}]-(expanded:Fact)
+                WHERE seed.fact_id IN $seed_ids
+                  AND seed.project_id = $project_id
+                  AND expanded.project_id = $project_id
+                  AND NOT (expanded.fact_id IN $seed_ids)
+                  AND ($relation_types IS NULL OR ALL(
+                    rel IN relationships(path)
+                    WHERE COALESCE(rel.relation_type, type(rel)) IN $relation_types
+                  ))
+                WITH DISTINCT expanded,
+                     length(path) AS hop_distance,
+                     [n IN nodes(path) | n.fact_id] AS reasoning_path,
+                     [rel IN relationships(path) |
+                       COALESCE(rel.relation_type, type(rel))] AS relation_types
+                RETURN expanded.fact_id AS fact_id,
+                       expanded.content AS content,
+                       expanded.entities AS entities,
+                       hop_distance,
+                       reasoning_path,
+                       relation_types
+                ORDER BY hop_distance, expanded.fact_id
+            """
+            with self.driver.session(database=self.database) as session:
+                result = session.run(
+                    query,
+                    seed_ids=seed_fact_ids,
+                    project_id=self.project_id,
+                    relation_types=filtered_relations,
+                )
+                return [
+                    {
+                        "fact_id": record["fact_id"],
+                        "content": record["content"],
+                        "entities": record["entities"] or [],
+                        "hop_distance": record["hop_distance"],
+                        "reasoning_path": record["reasoning_path"],
+                        "relation_path": record["relation_types"],
+                        "relations": record["relation_types"],
+                    }
+                    for record in result
+                ]
+
+        return await asyncio.to_thread(_expand)
+'''
+graph_paths = [
+    Path("GauzRag/services/infrastructure/neo4j_storage.py"),
+    Path(".venv/lib/python3.11/site-packages/GauzRag/services/infrastructure/neo4j_storage.py"),
+]
+for path in graph_paths:
+    source = path.read_text()
+    if marker not in source:
+        raise SystemExit(f"pinned GauzMem graph expansion patch no longer applies: {path}")
+    if "async def expand_facts_by_semantic_relations(" in source:
+        raise SystemExit(f"pinned GauzMem already implements graph expansion: {path}")
+    path.write_text(source.replace(marker, graph_expansion + marker, 1))
+PY
+
+FROM python:3.11.15-slim-bookworm AS runtime
+RUN groupadd --system --gid 1100 gauzmem \
+    && useradd --system --uid 1100 --gid gauzmem --home-dir /app gauzmem
+WORKDIR /app
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    GAUZRAG_PROJECT_ROOT=/app \
+    GAUZ_HOST=0.0.0.0 \
+    GAUZ_PORT=1235
+COPY --from=builder --chown=gauzmem:gauzmem /app/.venv /app/.venv
+COPY --from=builder --chown=gauzmem:gauzmem /app/GauzRag ./GauzRag
+COPY --from=gauzmem-source --chown=gauzmem:gauzmem /static ./static
+COPY --from=gauzmem-source --chown=gauzmem:gauzmem /run_api.py /README.md ./
+RUN mkdir -p /app/input /app/logs /app/cache /app/output \
+    && chown -R gauzmem:gauzmem /app
+USER gauzmem
+EXPOSE 1235
+HEALTHCHECK --interval=15s --timeout=5s --start-period=45s --retries=10 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:1235/health', timeout=3)"
+ENTRYPOINT ["gauzrag"]

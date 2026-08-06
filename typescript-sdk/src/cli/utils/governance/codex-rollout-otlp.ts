@@ -17,6 +17,25 @@ function ioSpanId(traceId: string): string {
   return createHash("sha256").update(`${traceId}:langwatch.io`).digest("hex").slice(0, 16);
 }
 
+/** Stable child span id; the call index disambiguates repeated call ids. */
+function toolSpanId(traceId: string, callId: string, index: number): string {
+  return createHash("sha256")
+    .update(`${traceId}:codex.tool:${index}:${callId}`)
+    .digest("hex")
+    .slice(0, 16);
+}
+
+/** OTLP/JSON represents protobuf `bytes` fields as Base64, not hex. */
+function otlpBytes(hex: string, byteLength: number, field: string): string {
+  if (
+    hex.length !== byteLength * 2 ||
+    !/^[0-9a-f]+$/i.test(hex)
+  ) {
+    throw new Error(`${field} must be ${byteLength * 2} hexadecimal characters`);
+  }
+  return Buffer.from(hex, "hex").toString("base64");
+}
+
 function attr(key: string, value: string) {
   return { key, value: { stringValue: value } };
 }
@@ -32,7 +51,8 @@ export interface CodexIOExportOptions {
 }
 
 /**
- * Build an OTLP/JSON ExportTraceServiceRequest with one span per turn. Each
+ * Build an OTLP/JSON ExportTraceServiceRequest with one root span per turn and
+ * one deterministic child span per reconstructed tool execution. The root
  * span rides codex's real trace_id and carries `langwatch.input` /
  * `langwatch.output` (read directly by the trace-summary IO accumulation) plus
  * `langwatch.span.type=llm` so the drawer renders it as the model response.
@@ -57,10 +77,13 @@ export function buildCodexIOExportRequest(
       attr("deployment.environment.name", options.environment),
     );
   }
-  const spans = turns.map((turn) => {
+  const spans = turns.flatMap((turn) => {
     const endCandidateMs = turn.completedAtMs ?? nowMs;
     const startMs = turn.startedAtMs ?? endCandidateMs;
     const endMs = Math.max(startMs, endCandidateMs);
+    const rootSpanId = ioSpanId(turn.traceId);
+    const otlpTraceId = otlpBytes(turn.traceId, 16, "trace_id");
+    const otlpRootSpanId = otlpBytes(rootSpanId, 8, "span_id");
     const attributes = [
       attr("langwatch.span.type", "llm"),
       attr(
@@ -80,9 +103,9 @@ export function buildCodexIOExportRequest(
       attributes.push(attr("gen_ai.request.model", turn.model));
       attributes.push(attr("gen_ai.response.model", turn.model));
     }
-    return {
-      traceId: turn.traceId,
-      spanId: ioSpanId(turn.traceId),
+    const rootSpan = {
+      traceId: otlpTraceId,
+      spanId: otlpRootSpanId,
       name: "codex.turn.response",
       kind: 1,
       startTimeUnixNano: `${startMs}000000`,
@@ -90,6 +113,45 @@ export function buildCodexIOExportRequest(
       attributes,
       status: {},
     };
+    const toolSpans = (turn.toolCalls ?? []).map((call, index) => {
+      const toolStartMs = Math.max(
+        startMs,
+        Math.min(call.startedAtMs ?? startMs, endMs),
+      );
+      const toolEndMs = Math.max(
+        toolStartMs,
+        Math.min(call.completedAtMs ?? toolStartMs, endMs),
+      );
+      const toolAttributes = [
+        attr("langwatch.span.type", "tool"),
+        attr("gen_ai.tool.name", call.name),
+        attr("gen_ai.tool.call.id", call.callId),
+        attr("gen_ai.tool.call.arguments", call.arguments),
+        attr("langwatch.input", call.arguments),
+        attr("codex.trace_id.source", turn.traceIdSource ?? "native"),
+        attr("codex.history.reconstructed", "true"),
+      ];
+      if (call.output !== null) {
+        toolAttributes.push(attr("gen_ai.tool.call.result", call.output));
+        toolAttributes.push(attr("langwatch.output", call.output));
+      }
+      return {
+        traceId: otlpTraceId,
+        spanId: otlpBytes(
+          toolSpanId(turn.traceId, call.callId, index),
+          8,
+          "span_id",
+        ),
+        parentSpanId: otlpRootSpanId,
+        name: `codex.tool.${call.name}`.slice(0, 256),
+        kind: 1,
+        startTimeUnixNano: `${toolStartMs}000000`,
+        endTimeUnixNano: `${toolEndMs}000000`,
+        attributes: toolAttributes,
+        status: {},
+      };
+    });
+    return [rootSpan, ...toolSpans];
   });
 
   return {
