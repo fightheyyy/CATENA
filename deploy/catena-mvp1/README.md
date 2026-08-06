@@ -80,6 +80,16 @@ cp deploy/catena-mvp1/.env.public.example deploy/catena-mvp1/.env
 ./deploy/catena-mvp1/public.sh up
 ```
 
+If the target host cannot reach Docker Hub, preload the exact release images
+and use the registry-independent start path:
+
+```bash
+./deploy/catena-mvp1/public.sh start
+```
+
+`start` refuses to build or pull. It only starts images already present on the
+host and then runs the same public smoke test as `up`.
+
 Only ports 80 and 443 are public. Go, the Evolution Runtime, PostgreSQL, and
 ClickHouse remain private or loopback-bound. Caddy obtains and renews the TLS
 certificate, redirects HTTP to HTTPS, and applies the deployment security

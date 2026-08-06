@@ -65,6 +65,13 @@ case "$action" in
     "${compose[@]}" up -d --build --wait --wait-timeout 1200
     "$deploy_dir/smoke-public.sh"
     ;;
+  start)
+    # Start from preloaded, architecture-matched images. This is useful on
+    # hosts that cannot reach Docker Hub and deliberately performs no pull or
+    # build, so an incomplete registry response cannot alter the release.
+    "${compose[@]}" up -d --no-build --pull never --wait --wait-timeout 1200
+    "$deploy_dir/smoke-public.sh"
+    ;;
   smoke)
     "$deploy_dir/smoke-public.sh"
     ;;
@@ -75,7 +82,7 @@ case "$action" in
     "${compose[@]}" down --remove-orphans
     ;;
   *)
-    echo "usage: $0 {config|build|up|smoke|logs|down}" >&2
+    echo "usage: $0 {config|build|up|start|smoke|logs|down}" >&2
     exit 2
     ;;
 esac
