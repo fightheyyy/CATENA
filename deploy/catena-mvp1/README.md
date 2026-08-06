@@ -74,7 +74,8 @@ and demo deployment, not multi-node high availability.
 
 ```bash
 cp deploy/catena-mvp1/.env.public.example deploy/catena-mvp1/.env
-# Fill the HTTPS domain, GitHub OAuth credentials, independent random secrets,
+# Fill the HTTPS domain or public IPv4 address, GitHub OAuth credentials,
+# independent random secrets,
 # and the XiaoBaOS-compatible model provider.
 ./deploy/catena-mvp1/public.sh config
 ./deploy/catena-mvp1/public.sh up
@@ -94,6 +95,11 @@ Only ports 80 and 443 are public. Go, the Evolution Runtime, PostgreSQL, and
 ClickHouse remain private or loopback-bound. Caddy obtains and renews the TLS
 certificate, redirects HTTP to HTTPS, and applies the deployment security
 headers. Verify an existing deployment with:
+
+When `CATENA_DOMAIN` is an IPv4 address, `public.sh` automatically uses the
+Let's Encrypt `shortlived` profile and HTTP-01 validation. The certificate is
+publicly trusted and renewed automatically; update the GitHub OAuth App callback
+to `https://<IP>/api/auth/callback/github` before signing in.
 
 ```bash
 ./deploy/catena-mvp1/public.sh smoke

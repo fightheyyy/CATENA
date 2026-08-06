@@ -29,6 +29,16 @@ set -a
 source "$env_file"
 set +a
 
+# Public IPv4 certificates use Let's Encrypt's short-lived profile. Caddy
+# 2.10.x completes IPv4 issuance through HTTP-01; the IP-specific Caddyfile
+# disables the TLS-ALPN challenge because that path predates the relevant
+# IP-address fixes in this pinned release.
+if [[ "${CATENA_DOMAIN:-}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+  export CATENA_CADDYFILE="${CATENA_CADDYFILE:-./Caddyfile.ip}"
+else
+  export CATENA_CADDYFILE="${CATENA_CADDYFILE:-./Caddyfile}"
+fi
+
 for name in "${required[@]}"; do
   value="${!name:-}"
   if [[ -z "$value" || "$value" == *"change-me"* || "$value" == replace-with-* ]]; then
