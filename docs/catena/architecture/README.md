@@ -4,13 +4,20 @@ Catena is the cloud evidence and evolution platform; Barena is the local Agent E
 
 ```mermaid
 flowchart LR
+    GitHub["GitHub OAuth"] --> Core
+
     subgraph Edge["User environment / CI"]
         Agent["Target Agent"]
+        XiaoBa["XiaoBaOS<br/>anthropomorphic Agent"]
         Barena["Barena"]
-        Buffer["OTLP · Artifact · Conversation"]
+        Trace["OTLP Trace · Artifact"]
+        Conversation["User-visible Conversation"]
         Barena <--> Agent
-        Agent --> Buffer
-        Barena --> Buffer
+        Barena <--> XiaoBa
+        Agent --> Trace
+        XiaoBa --> Trace
+        XiaoBa --> Conversation
+        Barena --> Trace
     end
 
     subgraph Cloud["Catena"]
@@ -19,10 +26,12 @@ flowchart LR
         Core --> CH[("ClickHouse")]
         Core --> Runner["XiaoBaOS Evolution Runtime"]
         Runner --> Assets["agent.md · Skill · Role · Harness"]
-        Core -.-> Memory["GauzMem"]
+        Core -->|"Conversation"| GauzMem["GauzMem"]
+        GauzMem --> Memory["semantic · graph · temporal memory"]
     end
 
-    Buffer --> Core
+    Trace --> Core
+    Conversation --> Core
 ```
 
 ## Boundaries
@@ -43,6 +52,8 @@ flowchart LR
 4. Catena freezes the matching Trace IDs into an Evidence Pack.
 5. Inspector, Evolution and Reviewer produce a provenance-linked Candidate.
 6. The user may apply it and use local Barena Replay to verify behavior.
+
+XiaoBaOS is designed as a persistent, anthropomorphic coworker. Its memory path therefore consumes only user-visible messages and successfully delivered replies. Internal prompts, reasoning and Tool activity remain Trace evidence for engineering analysis instead of being written into the user's remembered history.
 
 Evolution output remains a proposal. Catena does not apply it automatically or turn a Reviewer opinion into a release decision.
 

@@ -16,6 +16,7 @@ Catena is a standalone Go + React product. Go owns OAuth, API keys, OTLP/Convers
 - [x] Inspector → Evolution → Reviewer stage execution and persistence.
 - [x] Evidence-linked `agent.md`, Skill, Role and XiaoBaOS Harness candidates.
 - [x] Optional Conversation-derived GauzMem recall and graph view.
+- [x] Document GitHub identity and the separate Trace-to-asset / Conversation-to-memory paths.
 - [x] React product UI served by Go.
 - [x] Local and public single-node Compose deployment.
 - [x] Repository reduced to Catena-owned product modules and deployment code.

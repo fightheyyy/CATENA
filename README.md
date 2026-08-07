@@ -33,25 +33,40 @@ Catena 不托管或冒充用户的目标 Agent。平台内置的 XiaoBaOS Runtim
 
 ```mermaid
 flowchart LR
+    GitHub["GitHub<br/>OAuth · 开发者身份"] -->|"登录"| Core
+
     subgraph Edge["用户环境 / CI"]
-        Agent["目标 Agent<br/>XiaoBaOS · Codex · Claude Code · Claw"]
+        Agent["目标 Agent<br/>Codex · Claude Code · Claw"]
+        XiaoBa["XiaoBaOS<br/>拟人化 Agent"]
         Barena["Barena<br/>Explore · Replay · Compare · Verifier"]
-        Evidence["当前 Run Evidence<br/>OTLP · Artifact · Conversation"]
+        Trace["运行证据<br/>OTLP Trace · Artifact"]
+        Conversation["用户可见对话<br/>user · delivered assistant"]
+
         Barena <--> Agent
-        Agent --> Evidence
-        Barena --> Evidence
+        Barena <--> XiaoBa
+        Agent --> Trace
+        XiaoBa --> Trace
+        XiaoBa --> Conversation
+        Barena --> Trace
     end
 
     subgraph Cloud["Catena"]
-        Core["Go + React<br/>身份 · Agent · API Key · Trace"]
-        Facts["长期事实<br/>Conversation · Run · Case"]
+        Core["Go + React 控制面<br/>身份 · Agent · API Key"]
+        Facts["Evidence Store<br/>Trace · Conversation · Run"]
+        Farm["Trace Farm<br/>跨 Run 问题发现"]
         Runtime["XiaoBaOS Evolution Runtime<br/>Inspector · Evolution · Reviewer"]
         Assets["候选产物<br/>agent.md · Skill · Role · Harness"]
-        Core --> Facts --> Runtime --> Assets
+        GauzMem["GauzMem<br/>记忆编译 · 召回 · 图谱"]
+        Memories["长期记忆<br/>语义 · 关系 · 时间"]
+
+        Core --> Facts
+        Facts --> Farm --> Runtime --> Assets
+        Facts -->|"用户可见对话"| GauzMem --> Memories
         Assets --> Facts
     end
 
-    Evidence -->|"OTLP / HTTPS"| Core
+    Trace -->|"OTLP / Run Bundle"| Core
+    Conversation -->|"Conversation API"| Core
 ```
 
 [Barena](https://github.com/fightheyyy/barena) 是端侧 Agent E2E 与发布 CI 引擎，负责 Explore、Replay、Compare 和确定性验证；Catena 负责长期证据、跨 Run 分析与进化候选。
@@ -114,6 +129,19 @@ xiaoba chat
 ```
 
 Conversation 是记忆与角色知识的燃料；Trace 是 Tool、Runtime 与 Harness 分析的燃料。
+
+### 为什么 XiaoBaOS 单独同步用户可见对话
+
+XiaoBaOS 走的是“拟人化工作同事”路线：用户关心的不只是一次任务是否完成，还包括它是否记得长期偏好、人物关系、共同经历和沟通习惯。因此，形成记忆的事实源应该是用户真正参与并看到的对话——用户发出的消息，以及已经成功送达的 Agent 文本或文件回复。
+
+系统 Prompt、隐藏推理、Tool 调用和失败重试仍然进入 Trace，用来诊断 Runtime 与 Harness；它们不应被当成用户经历直接写入长期记忆。Catena 因而保留两条独立的数据路径：
+
+```text
+OTLP Trace          → Trace Farm → agent.md / Skill / Role / Harness
+XiaoBaOS Conversation → GauzMem   → semantic / graph / temporal memory
+```
+
+MVP1 先为 XiaoBaOS 提供第一方 Conversation 协议，因为它具备稳定的用户可见消息日志；其他 Agent 若能提供同等语义的对话事件，后续也可以通过 Conversation Adapter 接入。
 
 ## 公开单机 Beta
 
