@@ -11,8 +11,18 @@ import (
 
 func TestGitHubHTTPClientAllowsPublicNetworkLatency(t *testing.T) {
 	auth := (AuthConfig{}).normalized()
-	if auth.HTTPClient.Timeout != 30*time.Second {
+	if auth.HTTPClient.Timeout != 60*time.Second {
 		t.Fatalf("unexpected GitHub HTTP timeout: %s", auth.HTTPClient.Timeout)
+	}
+	transport, ok := auth.HTTPClient.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("unexpected GitHub transport: %T", auth.HTTPClient.Transport)
+	}
+	if transport.TLSHandshakeTimeout != 30*time.Second {
+		t.Fatalf("unexpected GitHub TLS handshake timeout: %s", transport.TLSHandshakeTimeout)
+	}
+	if transport.ResponseHeaderTimeout != 30*time.Second {
+		t.Fatalf("unexpected GitHub response header timeout: %s", transport.ResponseHeaderTimeout)
 	}
 }
 

@@ -31,7 +31,8 @@ const (
 	gatewayProjectHeader    = "X-Barena-Project-ID"
 	gatewayActorHeader      = "X-Barena-Actor-ID"
 	maxGatewayBodyBytes     = 2 * 1024 * 1024
-	githubHTTPTimeout       = 30 * time.Second
+	githubHTTPTimeout       = 60 * time.Second
+	githubTLSHandshakeLimit = 30 * time.Second
 )
 
 type AuthConfig struct {
@@ -102,7 +103,13 @@ func (c AuthConfig) normalized() AuthConfig {
 		c.UserAPIURL = "https://api.github.com/user"
 	}
 	if c.HTTPClient == nil {
-		c.HTTPClient = &http.Client{Timeout: githubHTTPTimeout}
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.TLSHandshakeTimeout = githubTLSHandshakeLimit
+		transport.ResponseHeaderTimeout = githubTLSHandshakeLimit
+		c.HTTPClient = &http.Client{
+			Timeout:   githubHTTPTimeout,
+			Transport: transport,
+		}
 	}
 	return c
 }
