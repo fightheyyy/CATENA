@@ -22,6 +22,30 @@ Updated: 2026-08-07
 - [x] Infer Runtime from accepted evidence without a user-selectable field.
 - [x] Merge registered Agents with Trace and Conversation counts.
 - [x] Keep legacy unbound credentials compatible but hidden from onboarding.
+- [x] Expose cheap Registered Agent connection polling without a ClickHouse scan.
+
+## Active milestone — owner-provided Evolution model
+
+- [x] Persist one encrypted Provider/Base URL/Model/API Key config per owner.
+- [x] Expose safe authenticated GET/PUT/DELETE APIs without secret recovery.
+- [x] Decrypt only while dispatching the owner's Evolution Job.
+- [x] Pass model values per request to the private Runner without global env mutation.
+- [x] Remove deployment-managed model defaults and fail clearly when unconfigured.
+- [x] Prove cross-owner isolation and secret non-disclosure.
+
+## Verification log
+
+- 2026-08-07: LLM configuration lifecycle and two-owner isolation tests passed;
+  persisted secrets are AES-GCM envelopes and GET responses expose only
+  `api_key_configured`.
+- 2026-08-07: Go tests and vet passed. Local PostgreSQL acceptance confirmed
+  the API key is not stored as plaintext, and public deployment created the
+  owner-scoped configuration table without shared model environment variables.
+
+- 2026-08-07: Former deployment-model visibility and Base URL sanitization
+  passed; this design is superseded by owner-provided LLM configuration.
+- 2026-08-07: Public Core deployment remained healthy with the existing
+  DashScope-compatible model configuration and a tagged rollback image.
 
 ## Active milestone — durable worker queue
 

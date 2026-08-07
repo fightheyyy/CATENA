@@ -10,6 +10,36 @@ type createRegisteredAgentRequest struct {
 	DisplayName string `json:"display_name"`
 }
 
+func (s *HTTPServer) getRegisteredAgent(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireSessionUser(w, r)
+	if !ok {
+		return
+	}
+	agent, err := s.store.GetRegisteredAgentByOwner(r.Context(), user.ID, r.PathValue("agent_id"))
+	if err != nil {
+		writeProblem(w, statusFor(err), err.Error())
+		return
+	}
+	tokens, err := s.store.ListAPITokensByUser(r.Context(), user.ID)
+	if err != nil {
+		writeProblem(w, statusFor(err), err.Error())
+		return
+	}
+	var credential *APIToken
+	for _, token := range tokens {
+		if token.AgentID != agent.ID {
+			continue
+		}
+		presented := s.presentAPIToken(token)
+		credential = &presented
+		break
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]any{
+		"agent": agent, "connected": !agent.LastSeenAt.IsZero(), "credential": credential,
+	})
+}
+
 func (s *HTTPServer) createAgentConnectionKey(w http.ResponseWriter, r *http.Request) {
 	user, ok := s.requireSessionUser(w, r)
 	if !ok {

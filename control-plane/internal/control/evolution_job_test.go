@@ -19,10 +19,11 @@ import (
 
 func TestEvolutionJobRunsThreeEvidenceStagesAndIsIdempotent(t *testing.T) {
 	store := NewMemoryStore()
+	seedTestEvolutionModelConfig(t, store, "local")
 	traceID := "11111111111111111111111111111111"
 	run := seedEvolutionRun(t, store, "", StateCompleted, traceID)
 	manager := newStructuredEvolutionRuntimeManager(t, "")
-	handler, err := NewHTTPHandlerWithRuntime(store, nil, AuthConfig{}, manager)
+	handler, err := NewHTTPHandlerWithRuntime(store, nil, testEvolutionAuthConfig(), manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,6 +136,7 @@ func TestEvolutionJobRunsThreeEvidenceStagesAndIsIdempotent(t *testing.T) {
 
 func TestTraceEvolutionJobUsesStoredToolEvidenceWithoutSyntheticRun(t *testing.T) {
 	store := NewMemoryStore()
+	seedTestEvolutionModelConfig(t, store, "local")
 	traceID := "00112233445566778899aabbccddeeff"
 	startedAt := time.Now().UTC().Add(-time.Second)
 	traces := &memoryTraceStore{trace: TraceDetail{
@@ -154,7 +156,7 @@ func TestTraceEvolutionJobUsesStoredToolEvidenceWithoutSyntheticRun(t *testing.T
 		}},
 	}}
 	manager := newStructuredEvolutionRuntimeManager(t, "")
-	handler, err := NewHTTPHandlerWithServices(store, nil, AuthConfig{}, manager, traces)
+	handler, err := NewHTTPHandlerWithServices(store, nil, testEvolutionAuthConfig(), manager, traces)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,6 +242,7 @@ func TestTraceEvolutionJobUsesStoredToolEvidenceWithoutSyntheticRun(t *testing.T
 
 func TestAgentEvolutionJobFreezesMultipleTracesAndKeepsPluralProvenance(t *testing.T) {
 	store := NewMemoryStore()
+	seedTestEvolutionModelConfig(t, store, "local")
 	now := time.Now().UTC()
 	agentID := "codex"
 	serviceNames := []string{"codex", "codex-app-server", "Codex Desktop"}
@@ -272,7 +275,7 @@ func TestAgentEvolutionJobFreezesMultipleTracesAndKeepsPluralProvenance(t *testi
 		})
 	}
 	manager := newStructuredEvolutionRuntimeManager(t, "")
-	handler, err := NewHTTPHandlerWithServices(store, nil, AuthConfig{}, manager, traceStore)
+	handler, err := NewHTTPHandlerWithServices(store, nil, testEvolutionAuthConfig(), manager, traceStore)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,6 +342,7 @@ func TestAgentEvolutionJobFreezesMultipleTracesAndKeepsPluralProvenance(t *testi
 
 func TestAgentEvolutionJobUsesOnlyBarenaTargetEvidence(t *testing.T) {
 	store := NewMemoryStore()
+	seedTestEvolutionModelConfig(t, store, "local")
 	now := time.Now().UTC()
 	serviceNames := []string{
 		"barena-explore-engine",
@@ -365,7 +369,7 @@ func TestAgentEvolutionJobUsesOnlyBarenaTargetEvidence(t *testing.T) {
 		})
 	}
 	manager := newStructuredEvolutionRuntimeManager(t, "")
-	handler, err := NewHTTPHandlerWithServices(store, nil, AuthConfig{}, manager, traceStore)
+	handler, err := NewHTTPHandlerWithServices(store, nil, testEvolutionAuthConfig(), manager, traceStore)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -589,11 +593,13 @@ func TestEvolutionJobPlatformTenantIsolation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	seedTestEvolutionModelConfig(t, store, projectA.ID)
 	traceID := "44444444444444444444444444444444"
 	run := seedEvolutionRun(t, store, projectA.ID, StateCompleted, traceID)
 	manager := newStructuredEvolutionRuntimeManager(t, "")
 	handler, err := NewHTTPHandlerWithRuntime(store, nil, AuthConfig{
-		GatewaySecret: testGatewaySecret,
+		GatewaySecret:         testGatewaySecret,
+		APITokenEncryptionKey: testEvolutionEncryptionKey,
 	}, manager)
 	if err != nil {
 		t.Fatal(err)
@@ -664,10 +670,11 @@ func TestEvolutionJobPlatformTenantIsolation(t *testing.T) {
 
 func TestEvolutionJobFailsTerminallyWhenRuntimeStageFails(t *testing.T) {
 	store := NewMemoryStore()
+	seedTestEvolutionModelConfig(t, store, "local")
 	traceID := "55555555555555555555555555555555"
 	run := seedEvolutionRun(t, store, "", StateCompleted, traceID)
 	manager := newStructuredEvolutionRuntimeManager(t, "evolution-cat")
-	handler, err := NewHTTPHandlerWithRuntime(store, nil, AuthConfig{}, manager)
+	handler, err := NewHTTPHandlerWithRuntime(store, nil, testEvolutionAuthConfig(), manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -950,4 +957,36 @@ console.log(JSON.stringify({
 		t.Fatal(err)
 	}
 	return manager
+}
+
+const testEvolutionEncryptionKey = "catena-test-evolution-encryption-key-0001"
+
+func testEvolutionAuthConfig() AuthConfig {
+	return AuthConfig{APITokenEncryptionKey: testEvolutionEncryptionKey}
+}
+
+func seedTestEvolutionModelConfig(t *testing.T, store *MemoryStore, ownerUserID string) {
+	t.Helper()
+	if strings.TrimSpace(ownerUserID) == "" {
+		ownerUserID = "local"
+	}
+	encrypted, err := encryptAPIToken(
+		"test-model-api-key",
+		evolutionModelEnvelopePrefix+ownerUserID,
+		testEvolutionEncryptionKey,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = store.UpsertEvolutionModelConfig(context.Background(), EvolutionModelConfig{
+		OwnerUserID:     ownerUserID,
+		Provider:        "openai",
+		BaseURL:         "https://llm.example.test/v1",
+		Model:           "test-model",
+		EncryptedAPIKey: encrypted,
+		UpdatedAt:       time.Now().UTC(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }

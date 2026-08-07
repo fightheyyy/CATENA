@@ -23,6 +23,15 @@ export type SystemStatus = {
   memory_store: string;
 };
 
+export type EvolutionModelSettings = {
+  provider: string;
+  base_url: string;
+  model: string;
+  api_key_configured: boolean;
+  configured: boolean;
+  updated_at?: string;
+};
+
 export type RuntimeRole = {
   id: string;
   display_name: string;
@@ -317,6 +326,12 @@ export type RegisteredAgent = {
   last_seen_at?: string;
   created_at: string;
   updated_at: string;
+};
+
+export type RegisteredAgentConnection = {
+  agent: RegisteredAgent;
+  connected: boolean;
+  credential?: ApiToken;
 };
 
 export type AgentTraceWindow = {

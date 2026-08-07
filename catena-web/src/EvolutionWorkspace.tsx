@@ -21,6 +21,8 @@ const workspaceCopy = {
     title: "Trace Farm",
     body: "选择一个 Agent，找出近期反复出现的问题，并生成可以直接使用的改进资产。",
     jobs: "分析记录",
+    recentJobs: "最近分析",
+    recentJobsBody: "选择一条结果后，再查看生成的资产和来源证据。",
     newAnalysis: "新建分析",
     close: "关闭",
     noJobs: "还没有分析结果。选择一个 Agent，让 Catena 从近期 Trace 中提炼第一项资产。",
@@ -110,6 +112,8 @@ const workspaceCopy = {
     title: "Trace Farm",
     body: "Choose an Agent, find recurring problems in recent behavior, and generate improvements you can use directly.",
     jobs: "Analysis history",
+    recentJobs: "Recent analyses",
+    recentJobsBody: "Select a result to inspect its generated assets and source evidence.",
     newAnalysis: "New analysis",
     close: "Close",
     noJobs: "No result yet. Choose an Agent and let Catena distill the first asset from recent Traces.",
@@ -266,6 +270,7 @@ export function EvolutionWorkspace({
   initialJobID,
   initialAgentID,
   onJobStarted,
+  onJobSelected,
 }: {
   locale: Locale;
   jobs: EvolutionJob[];
@@ -273,24 +278,21 @@ export function EvolutionWorkspace({
   initialJobID?: string;
   initialAgentID?: string;
   onJobStarted: (job: EvolutionJob) => void;
+  onJobSelected: (jobID: string) => void;
 }) {
   const t = workspaceCopy[locale];
-  const [selectedID, setSelectedID] = useState(initialJobID || jobs[0]?.job_id || "");
+  const [selectedID, setSelectedID] = useState(initialJobID || "");
   const [job, setJob] = useState<EvolutionJob | null>(
-    jobs.find((item) => item.job_id === (initialJobID || jobs[0]?.job_id)) ?? null,
+    jobs.find((item) => item.job_id === initialJobID) ?? null,
   );
   const [loading, setLoading] = useState(Boolean(selectedID));
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
-  const [drawer, setDrawer] = useState<"history" | "new" | "">("");
+  const [drawer, setDrawer] = useState<"new" | "">("");
 
   useEffect(() => {
-    if (initialJobID) setSelectedID(initialJobID);
+    setSelectedID(initialJobID || "");
   }, [initialJobID]);
-
-  useEffect(() => {
-    if (!selectedID && jobs[0]) setSelectedID(jobs[0].job_id);
-  }, [jobs, selectedID]);
 
   useEffect(() => {
     if (!selectedID) {
@@ -345,16 +347,46 @@ export function EvolutionWorkspace({
           <p>{t.body}</p>
         </div>
         <div className="evolution-page-actions">
-          {jobs.length > 0 ? <button className="secondary-button" type="button" onClick={() => setDrawer("history")}>{t.jobs}</button> : null}
+          {jobs.length > 0 && selectedID ? <button className="secondary-button" type="button" onClick={() => {
+            setSelectedID("");
+            onJobSelected("");
+          }}>{t.jobs}</button> : null}
           <button className="primary-button compact" type="button" onClick={() => setDrawer("new")}>{t.newAnalysis}</button>
         </div>
       </header>
-      {jobs.length === 0 && !selectedID ? (
+      {!selectedID && jobs.length === 0 ? (
         <div className="evolution-empty">
           <h2>{t.noJobsTitle}</h2>
           <p>{t.noJobs}</p>
           <button className="primary-button compact" type="button" onClick={() => setDrawer("new")}>{t.newAnalysis}</button>
         </div>
+      ) : !selectedID ? (
+        <section className="farm-overview" aria-labelledby="farm-recent-title">
+          <header>
+            <div>
+              <h2 id="farm-recent-title">{t.recentJobs}</h2>
+              <p>{t.recentJobsBody}</p>
+            </div>
+            <span>{jobs.length}</span>
+          </header>
+          <div className="farm-overview-list">
+            {jobs.map((item) => {
+              const traceCount = evolutionTraceCounts(item).frozen;
+              const windowLabel = formattedWindow(item, locale);
+              return (
+                <button className="job-row" type="button" key={item.job_id} onClick={() => {
+                  setSelectedID(item.job_id);
+                  onJobSelected(item.job_id);
+                }}>
+                  <span className={`job-state state-${safeState(item.state)}`}>{stateLabel(t, item.state)}</span>
+                  <strong>{agentName(item.source_agent_id) || item.finding?.title || item.objective || t.analysis}</strong>
+                  <small>{item.source_agent_id ? `${traceCount} ${t.trace} · ${windowLabel || t.agentTraceSet}` : t.legacyTrace}</small>
+                  <time dateTime={item.updated_at}>{formattedTime(item.updated_at, locale)}</time>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       ) : (
         <div className="job-detail-column" aria-live="polite">
           {loading && !job ? <JobSkeleton label={t.loading} /> : null}
@@ -376,34 +408,6 @@ export function EvolutionWorkspace({
           onStarted={handleJobStarted}
           embedded
         />
-      </FarmDrawer>
-      <FarmDrawer open={drawer === "history"} title={t.jobs} closeLabel={t.close} onClose={() => setDrawer("")}>
-        <div className="drawer-job-list">
-          {jobs.map((item) => {
-            const visible = item.job_id === job?.job_id ? job : item;
-            const traceCount = evolutionTraceCounts(visible).frozen;
-            const windowLabel = formattedWindow(visible, locale);
-            return (
-              <button
-                className={item.job_id === selectedID ? "job-row selected" : "job-row"}
-                type="button"
-                key={item.job_id}
-                onClick={() => {
-                  setSelectedID(item.job_id);
-                  setDrawer("");
-                }}
-                aria-pressed={item.job_id === selectedID}
-              >
-                <span className={`job-state state-${safeState(visible.state)}`}>{stateLabel(t, visible.state)}</span>
-                <strong>{agentName(visible.source_agent_id) || visible.finding?.title || visible.objective || t.analysis}</strong>
-                <small>{visible.source_agent_id
-                  ? `${traceCount} ${t.trace} · ${windowLabel || t.agentTraceSet}`
-                  : t.legacyTrace}</small>
-                <time dateTime={visible.updated_at}>{formattedTime(visible.updated_at, locale)}</time>
-              </button>
-            );
-          })}
-        </div>
       </FarmDrawer>
     </section>
   );

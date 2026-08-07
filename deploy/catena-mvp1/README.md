@@ -25,7 +25,7 @@ Open <http://127.0.0.1:5570>.
 ./deploy/catena-mvp1/demo.sh down
 ```
 
-The first build downloads pinned Barena and XiaoBaOS sources for the Runner image. Copy `.env.example` to `.env` to override ports, OAuth or the model endpoint.
+The first build downloads pinned Barena and XiaoBaOS sources for the Runner image. Copy `.env.example` to `.env` to override ports or OAuth. Catena has no deployment-wide model credential; each signed-in owner configures LLM access in **API Management**.
 
 ## Public single-node Beta
 
@@ -62,13 +62,21 @@ docker compose --profile memory -f deploy/catena-mvp1/compose.yml up -d --build
 
 The browser continues to call Catena only. Go derives tenant scope and calls GauzMem on the private network.
 
+## Trace Farm LLM
+
+Open **API Management → LLM configuration** and save the Provider, Base URL,
+Model and API Key owned by the current user. The API Key is encrypted in
+PostgreSQL, never returned after saving, and passed only to that owner's
+private Runner request. Language and theme are personal browser preferences
+under **Settings**.
+
 ## Agent connection
 
-Create an API Key in Settings and use it for both OTLP and Barena Run Bundles:
+Open **Agents → Connect Agent**, name the Agent, and copy the generated configuration. The key is bound to that Agent and is used for OTLP and Barena Run Bundles:
 
 ```bash
 export CATENA_URL='http://127.0.0.1:5570'
-export CATENA_API_KEY='barena_pat_...'
+export CATENA_API_KEY='catena_agent_...'
 export OTEL_EXPORTER_OTLP_ENDPOINT="${CATENA_URL}/v1/otlp"
 export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer ${CATENA_API_KEY}"
 ```

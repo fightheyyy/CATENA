@@ -27,7 +27,7 @@ Barena Run ──┘
 - **Trace Farm**：按 Agent 与时间窗口分析多条 Trace，展示 Inspector、Evolution、Reviewer 三个阶段。
 - **进化产物**：输出标准 `agent.md`、Skill、Role，以及 XiaoBaOS 专属 Harness 建议。
 
-Catena 不托管或冒充用户的目标 Agent。平台内置的 XiaoBaOS Runtime 只消费 Evidence，不执行被测 Agent。
+Catena 不托管或冒充用户的目标 Agent。平台内置的 XiaoBaOS Runtime 只消费 Evidence，不执行被测 Agent。Catena 也不提供公共 LLM；每位用户在 **API 管理** 中配置自己的 Provider、Base URL、Model 与 API Key。密钥加密保存，只在该用户的 Trace Farm 任务执行时临时解密。
 
 ## 产品边界
 
@@ -52,6 +52,7 @@ flowchart LR
 
     subgraph Cloud["Catena"]
         Core["Go + React 控制面<br/>身份 · Agent · API Key"]
+        OwnerModel["用户 LLM 配置<br/>Provider · Base URL · Model · API Key"]
         Facts["Evidence Store<br/>Trace · Conversation · Run"]
         Farm["Trace Farm<br/>跨 Run 问题发现"]
         Runtime["XiaoBaOS Evolution Runtime<br/>Inspector · Evolution · Reviewer"]
@@ -61,6 +62,7 @@ flowchart LR
 
         Core --> Facts
         Facts --> Farm --> Runtime --> Assets
+        OwnerModel -->|"每个 Job 临时注入"| Runtime
         Facts -->|"用户可见对话"| GauzMem --> Memories
         Assets --> Facts
     end
@@ -103,18 +105,18 @@ cd CATENA
 
 ## 接入任意 OTel Agent
 
-在 **Agent → 接入新 Agent** 输入显示名称。Catena 会原子创建固定
+在 **API 管理 → 创建 Agent 密钥** 输入显示名称。Catena 会原子创建固定
 `agent_id` 和绑定该 Agent 的接入密钥；用户不需要选择 Runtime：
 
 ```text
 Agent connection key → agent_id → display name
 ```
 
-随后使用这把密钥配置 OTLP/HTTP exporter：
+创建后，接入面板会直接生成下面这段可复制配置，并自动等待第一条数据：
 
 ```bash
 export CATENA_URL='http://127.0.0.1:5570'
-export CATENA_API_KEY='barena_pat_...'
+export CATENA_API_KEY='catena_agent_...'
 export OTEL_SERVICE_NAME='my-agent'
 export OTEL_TRACES_EXPORTER='otlp'
 export OTEL_EXPORTER_OTLP_PROTOCOL='http/protobuf'
@@ -156,7 +158,7 @@ MVP1 先为 XiaoBaOS 提供第一方 Conversation 协议，因为它具备稳定
 
 ```bash
 cp deploy/catena-mvp1/.env.public.example deploy/catena-mvp1/.env
-# 配置域名、GitHub OAuth、随机密钥和模型 Provider
+# 配置域名、GitHub OAuth 与随机密钥
 ./deploy/catena-mvp1/public.sh config
 ./deploy/catena-mvp1/public.sh up
 ```
@@ -165,7 +167,7 @@ cp deploy/catena-mvp1/.env.public.example deploy/catena-mvp1/.env
 
 ## 状态与开发
 
-MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、OTLP 导入、Runtime 自动识别、Agent 聚合、Span 瀑布、XiaoBaOS Conversation、Trace Farm、进化候选与中英文 UI。当前定位是 single-node Beta；多 Worker lease、备份恢复、配额与完整 RBAC 尚未完成。
+MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、用户自带 LLM、OTLP 导入、Runtime 自动识别、Agent 聚合、Span 瀑布、XiaoBaOS Conversation、Trace Farm、进化候选与中英文 UI。当前定位是 single-node Beta；多 Worker lease、备份恢复、配额与完整 RBAC 尚未完成。
 
 ```bash
 cd catena-web && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm typecheck && pnpm build

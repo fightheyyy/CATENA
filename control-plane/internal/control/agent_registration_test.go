@@ -58,6 +58,41 @@ func TestCreateRegisteredAgentCreatesStableIdentityAndBoundKey(t *testing.T) {
 	}
 }
 
+func TestGetRegisteredAgentReturnsCheapConnectionStatus(t *testing.T) {
+	store, user, agent, _ := registeredAgentFixture(t, "大狗")
+	now := time.Now().UTC()
+	sessionPlaintext := "session-agent-status"
+	if err := store.CreateSession(context.Background(), Session{
+		TokenHash: sessionTokenHash(sessionPlaintext), UserID: user.ID,
+		ExpiresAt: now.Add(time.Hour), CreatedAt: now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	server := &HTTPServer{store: store, auth: testAgentAuthConfig()}
+	request := httptest.NewRequest(http.MethodGet, "/v1/agents/"+agent.ID, nil)
+	request.SetPathValue("agent_id", agent.ID)
+	request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionPlaintext})
+	recorder := httptest.NewRecorder()
+
+	server.getRegisteredAgent(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	var response struct {
+		Agent      RegisteredAgent `json:"agent"`
+		Connected  bool            `json:"connected"`
+		Credential *APIToken       `json:"credential"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.Agent.ID != agent.ID || response.Connected || response.Credential == nil ||
+		response.Credential.AgentID != agent.ID {
+		t.Fatalf("unexpected connection status: %#v", response)
+	}
+}
+
 func TestBoundAgentKeyOwnsOTLPIdentityAndDetectsRuntime(t *testing.T) {
 	store, user, agent, plaintext := registeredAgentFixture(t, "大狗")
 	traces := &recordingTraceStore{}

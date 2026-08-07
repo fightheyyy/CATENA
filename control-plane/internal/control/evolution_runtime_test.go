@@ -39,6 +39,7 @@ func TestEvolutionRuntimeManagerRunsOnlyAllowlistedRoles(t *testing.T) {
 		Role:      "inspector-cat",
 		Prompt:    "Return one Finding and replayable Case.",
 		Timeout:   2 * time.Second,
+		Model:     testEvolutionModelCredentials(),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -53,6 +54,7 @@ func TestEvolutionRuntimeManagerRunsOnlyAllowlistedRoles(t *testing.T) {
 		Role:      "engineer-cat",
 		Prompt:    "Write source code.",
 		Timeout:   2 * time.Second,
+		Model:     testEvolutionModelCredentials(),
 	}); err == nil || !strings.Contains(err.Error(), "not allowed") {
 		t.Fatalf("functional Role should be rejected before Worker execution, got %v", err)
 	}
@@ -96,6 +98,7 @@ console.log(JSON.stringify({
 		Role:      "inspector-cat",
 		Prompt:    "Inspect retained evidence.",
 		Timeout:   2 * time.Second,
+		Model:     testEvolutionModelCredentials(),
 	})
 	if err == nil || !strings.Contains(err.Error(), "turn_timeout") ||
 		!strings.Contains(err.Error(), "hard deadline") {
@@ -143,6 +146,7 @@ func TestRuntimeAPIExposesEmbeddedRuntimeAndExternalTargetBoundary(t *testing.T)
 		strings.Contains(string(body), `"run_package"`) {
 		t.Fatalf("system status does not include Runtime readiness: %s", body)
 	}
+
 }
 
 func TestRuntimeAPIReportsBlockedWhenEvolutionRuntimeIsNotConfigured(t *testing.T) {
@@ -182,4 +186,13 @@ func newFakeEvolutionRuntimeManager(t *testing.T) *EvolutionRuntimeManager {
 		t.Fatal(err)
 	}
 	return manager
+}
+
+func testEvolutionModelCredentials() EvolutionModelCredentials {
+	return EvolutionModelCredentials{
+		Provider: "openai",
+		BaseURL:  "https://llm.example.test/v1",
+		Model:    "test-model",
+		APIKey:   "secret-model-key",
+	}
 }

@@ -30,7 +30,6 @@ services:
       BARENA_XIAOBA_PROJECT_ROOT: /opt/xiaoba
       BARENA_XIAOBA_ROLES_ROOT: /opt/xiaoba/roles
       BARENA_XIAOBA_SKILLS_ROOT: /opt/xiaoba/skills
-      BARENA_XIAOBA_ENV_ALLOWLIST: XIAOBA_LLM_PROVIDER,XIAOBA_LLM_API_BASE,XIAOBA_LLM_API_KEY,XIAOBA_LLM_MODEL,XIAOBA_LLM_MAX_TOKENS,XIAOBA_OBSERVABILITY_ENABLED,XIAOBA_OBSERVABILITY_TRACES_EXPORTER,OTEL_SERVICE_NAME,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_HEADERS
       SPIRAL_RUNNER_URL: http://catena-runner:8790
     ports:
       - "127.0.0.1:${CATENA_APP_PORT:-5570}:8787"
@@ -56,7 +55,7 @@ services:
       context: ../..
       dockerfile: deploy/catena-mvp1/Dockerfile.runner
       additional_contexts:
-        barena-source: "${CATENA_BARENA_CONTEXT:-https://github.com/fightheyyy/barena.git#catena-mvp1-engine-20260803}"
+        barena-source: "${CATENA_BARENA_CONTEXT:-https://github.com/fightheyyy/barena.git#catena-mvp1-engine-20260807}"
         xiaoba-source: "${CATENA_XIAOBA_CONTEXT:-https://github.com/fightheyyy/xiaobaOS.git#b4d5af58a0fa171c372a875618c5f46ab15ddb36}"
     image: catena/runner:mvp1
     environment:
@@ -69,22 +68,12 @@ services:
       SPIRAL_XIAOBA_PROJECT_ROOT: /opt/xiaoba
       SPIRAL_XIAOBA_ROLES_ROOT: /opt/xiaoba/roles
       SPIRAL_XIAOBA_SKILLS_ROOT: /opt/xiaoba/skills
-      SPIRAL_XIAOBA_ENV_ALLOWLIST: XIAOBA_LLM_PROVIDER,XIAOBA_LLM_API_BASE,XIAOBA_LLM_API_KEY,XIAOBA_LLM_MODEL,XIAOBA_LLM_MAX_TOKENS,XIAOBA_OBSERVABILITY_ENABLED,XIAOBA_OBSERVABILITY_TRACES_EXPORTER,OTEL_SERVICE_NAME,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_HEADERS
-      XIAOBA_LLM_PROVIDER: ${XIAOBA_LLM_PROVIDER:-openai}
-      XIAOBA_LLM_API_BASE: ${XIAOBA_LLM_API_BASE:-http://host.docker.internal:8317/v1}
-      # Local CLIProxy accepts this non-secret development token by default.
-      # Override XIAOBA_LLM_API_KEY for any shared or production deployment.
-      XIAOBA_LLM_API_KEY: ${XIAOBA_LLM_API_KEY:-xiaoba-local}
-      XIAOBA_LLM_MODEL: ${XIAOBA_LLM_MODEL:-gpt-5.6-sol}
-      XIAOBA_LLM_MAX_TOKENS: ${XIAOBA_LLM_MAX_TOKENS:-4096}
       XIAOBA_OBSERVABILITY_ENABLED: ${XIAOBA_OBSERVABILITY_ENABLED:-false}
       XIAOBA_OBSERVABILITY_TRACES_EXPORTER: otlp
       OTEL_SERVICE_NAME: catena-evolution-runtime
       # Disabled by default. When enabled, the embedded Evolution Runtime emits
       # through the same canonical OTLP receiver as every external Agent.
       OTEL_EXPORTER_OTLP_ENDPOINT: http://catena-core:8787/v1/otlp
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:${CATENA_RUNNER_PORT:-8790}:8790"
     volumes:

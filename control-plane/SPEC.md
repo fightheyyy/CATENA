@@ -31,7 +31,11 @@ flowchart LR
     Domain --> PG[("PostgreSQL")]
     HTTP --> CH[("ClickHouse")]
     Domain --> Worker["Evolution Runner"]
+    LLM["Owner LLM config<br/>encrypted at rest"] --> Domain
+    Domain -->|"per-job ephemeral config"| Worker
     Domain -.-> Memory["GauzMem"]
+    HTTP --> Status["Registered Agent connection status"]
+    HTTP --> ModelStatus["Owner-safe LLM settings"]
 ```
 
 ## Target Architecture
@@ -46,6 +50,10 @@ flowchart LR
     Normalize --> Detect["infer Runtime"]
     Normalize --> Evidence[("Trace · Conversation")]
     Detect --> Registry
+    Web["API management"] --> ModelAPI["GET · PUT · DELETE /v1/me/llm-config"]
+    ModelAPI --> Encrypted["owner-scoped encrypted credential"]
+    Encrypted --> Job["Evolution Job dispatch"]
+    Job -->|"ephemeral only"| Runner["XiaoBaOS Evolution Runner"]
 ```
 
 Existing tokens with no `agent_id` remain a bounded compatibility path. Every
@@ -55,6 +63,7 @@ The durable worker queue remains the next control-plane reliability milestone.
 ## Data ownership
 
 - PostgreSQL: identity, credentials, Conversations, Runs, Jobs, Candidates and audit.
+- PostgreSQL: owner LLM metadata and an authenticated-encrypted API Key envelope.
 - PostgreSQL Registered Agent owns display name, inferred Runtime and key
   binding; payload metadata cannot mutate its stable identity.
 - ClickHouse: raw Trace, Span and event evidence.
@@ -71,16 +80,23 @@ The durable worker queue remains the next control-plane reliability milestone.
 - Stage events move state forward only; terminal state cannot be overwritten by stale events.
 - Candidate provenance contains the exact Evidence Pack and Trace IDs.
 - OAuth state/PKCE, API-key hashing and token recovery remain fail-closed.
+- Owner LLM APIs may expose Provider, Base URL, Model and key presence, but
+  never return the Evolution model API Key.
+- Evolution execution fails clearly when the owner has no complete LLM config;
+  model secrets exist in memory and the private Runner request only.
 - Cloud synchronization failure never changes a local Barena decision.
 
 ## Public contracts
 
 - `POST /v1/agents`: atomically create Registered Agent and its initial key.
+- `GET /v1/agents/{agent_id}`: cheap PostgreSQL-backed connection polling.
 - `GET /v1/agents`: registered Agents merged with evidence metrics.
 - `/v1/otlp/v1/traces`: Agent-key-authenticated OTLP/HTTP ingestion.
 - `/v1/ingest/conversations`: `xiaoba.conversation_batch.v1`.
 - `/v1/ingest/run-bundles`: idempotent `barena.run_bundle.v1`.
 - `/v1/evolution-jobs`: Agent Trace Set creation, listing and detail.
 - `/v1/memories`: private-backend memory operations through owner-derived scope.
+- `GET/PUT/DELETE /v1/me/llm-config`: authenticated owner-provided Evolution
+  model configuration; GET never returns the API Key.
 
 Compatibility attribute aliases may be accepted during OTLP normalization, but they do not define Catena's architecture.

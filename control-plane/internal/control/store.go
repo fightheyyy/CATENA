@@ -68,6 +68,9 @@ type Store interface {
 	GetAPITokenByHash(context.Context, string) (APIToken, error)
 	GetUserByAPITokenHash(context.Context, string) (User, error)
 	DeleteAPIToken(context.Context, string, string) error
+	UpsertEvolutionModelConfig(context.Context, EvolutionModelConfig) (EvolutionModelConfig, error)
+	GetEvolutionModelConfigByOwner(context.Context, string) (EvolutionModelConfig, error)
+	DeleteEvolutionModelConfigByOwner(context.Context, string) error
 	EnsureAgentProfile(context.Context, AgentProfile) (AgentProfile, error)
 	GetAgentProfileByOwner(context.Context, string) (AgentProfile, error)
 	UpdateAgentProfile(context.Context, AgentProfile) (AgentProfile, error)
@@ -79,44 +82,85 @@ type Store interface {
 }
 
 type MemoryStore struct {
-	mu                   sync.RWMutex
-	runs                 map[string]Run
-	events               map[string][]EngineEvent
-	users                map[string]User
-	userByGitHubID       map[int64]string
-	sessions             map[string]Session
-	apiTokens            map[string]APIToken
-	registeredAgents     map[string]RegisteredAgent
-	profiles             map[string]AgentProfile
-	issues               map[string]Issue
-	cases                map[string]Case
-	harnessVersions      map[string]HarnessVersion
-	evaluations          map[string]Evaluation
-	releases             map[string]Release
-	evolutionJobs        map[string]EvolutionJob
-	runBundles           map[string]RunBundle
-	conversationMessages map[string]ConversationMessage
+	mu                    sync.RWMutex
+	runs                  map[string]Run
+	events                map[string][]EngineEvent
+	users                 map[string]User
+	userByGitHubID        map[int64]string
+	sessions              map[string]Session
+	apiTokens             map[string]APIToken
+	registeredAgents      map[string]RegisteredAgent
+	profiles              map[string]AgentProfile
+	issues                map[string]Issue
+	cases                 map[string]Case
+	harnessVersions       map[string]HarnessVersion
+	evaluations           map[string]Evaluation
+	releases              map[string]Release
+	evolutionJobs         map[string]EvolutionJob
+	runBundles            map[string]RunBundle
+	conversationMessages  map[string]ConversationMessage
+	evolutionModelConfigs map[string]EvolutionModelConfig
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		runs:                 make(map[string]Run),
-		events:               make(map[string][]EngineEvent),
-		users:                make(map[string]User),
-		userByGitHubID:       make(map[int64]string),
-		sessions:             make(map[string]Session),
-		apiTokens:            make(map[string]APIToken),
-		registeredAgents:     make(map[string]RegisteredAgent),
-		profiles:             make(map[string]AgentProfile),
-		issues:               make(map[string]Issue),
-		cases:                make(map[string]Case),
-		harnessVersions:      make(map[string]HarnessVersion),
-		evaluations:          make(map[string]Evaluation),
-		releases:             make(map[string]Release),
-		evolutionJobs:        make(map[string]EvolutionJob),
-		runBundles:           make(map[string]RunBundle),
-		conversationMessages: make(map[string]ConversationMessage),
+		runs:                  make(map[string]Run),
+		events:                make(map[string][]EngineEvent),
+		users:                 make(map[string]User),
+		userByGitHubID:        make(map[int64]string),
+		sessions:              make(map[string]Session),
+		apiTokens:             make(map[string]APIToken),
+		registeredAgents:      make(map[string]RegisteredAgent),
+		profiles:              make(map[string]AgentProfile),
+		issues:                make(map[string]Issue),
+		cases:                 make(map[string]Case),
+		harnessVersions:       make(map[string]HarnessVersion),
+		evaluations:           make(map[string]Evaluation),
+		releases:              make(map[string]Release),
+		evolutionJobs:         make(map[string]EvolutionJob),
+		runBundles:            make(map[string]RunBundle),
+		conversationMessages:  make(map[string]ConversationMessage),
+		evolutionModelConfigs: make(map[string]EvolutionModelConfig),
 	}
+}
+
+func (s *MemoryStore) UpsertEvolutionModelConfig(
+	_ context.Context,
+	config EvolutionModelConfig,
+) (EvolutionModelConfig, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if strings.TrimSpace(config.OwnerUserID) == "" || config.EncryptedAPIKey == "" {
+		return EvolutionModelConfig{}, ErrConflict
+	}
+	s.evolutionModelConfigs[config.OwnerUserID] = config
+	return config, nil
+}
+
+func (s *MemoryStore) GetEvolutionModelConfigByOwner(
+	_ context.Context,
+	ownerUserID string,
+) (EvolutionModelConfig, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	config, ok := s.evolutionModelConfigs[ownerUserID]
+	if !ok {
+		return EvolutionModelConfig{}, ErrNotFound
+	}
+	return config, nil
+}
+
+func (s *MemoryStore) DeleteEvolutionModelConfigByOwner(
+	_ context.Context,
+	ownerUserID string,
+) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.evolutionModelConfigs[ownerUserID]; !ok {
+		return ErrNotFound
+	}
+	delete(s.evolutionModelConfigs, ownerUserID)
+	return nil
 }
 
 func (s *MemoryStore) CreateRun(_ context.Context, run Run) error {

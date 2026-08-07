@@ -33,11 +33,17 @@ flowchart LR
     Conversation -->|"API key + HTTPS"| Go
     Barena["Local Barena"] -->|"Run Bundle"| Go
     Go --> Runner["XiaoBaOS Evolution Runtime"]
+    OwnerModel["Owner LLM config<br/>encrypted API Key"] --> Go
+    Go -->|"per-job ephemeral model config"| Runner
     Runner --> Asset["agent.md · Skill · Role · Harness"]
     Go --> PG[("PostgreSQL")]
     Go --> CH[("ClickHouse")]
     Go -->|"Conversation"| Memory["GauzMem · optional"]
     Memory --> Recall["semantic · graph · temporal memory"]
+    Browser --> Keys["API management"]
+    Browser --> ModelSettings["API management · LLM config"]
+    ModelSettings --> Go
+    Keys --> Go
 ```
 
 React calls only same-origin Go APIs. Go is the sole public backend. The Runner and databases are private services.
@@ -48,16 +54,22 @@ XiaoBaOS follows an anthropomorphic coworker model, so its durable memory is gro
 
 ```mermaid
 flowchart LR
-    Developer["Developer"] -->|"Agent name"| Registry["Agent Registry"]
-    Registry --> Binding["agent_id + Agent API key"]
+    Developer["Developer"] -->|"Agent name"| Keys["API management"]
+    Keys --> Binding["agent_id + Agent API key"]
+    Binding --> Manage["Reveal · copy · revoke"]
     Trace["OTLP Trace + Barena Run Bundle"] -->|"Agent API key"| Core["Catena Go control plane"]
     Conversation["XiaoBaOS Conversation"] -->|"Agent API key"| Core
     Binding --> Core
+    Core --> Status["First evidence detected"]
+    Status --> Workspace["Agent-scoped workspace"]
     Core --> Detect["Runtime auto-detection"]
     Core --> Evidence[("Evidence Store")]
     Evidence --> Queue["durable Evolution queue"]
+    Owner["Owner BYOK<br/>Provider · Base URL · Model · API Key"] --> Core
+    Core -->|"decrypt only for job"| Runtime
     Queue --> Runtime["XiaoBaOS Evolution Runtime"]
     Runtime --> Assets["agent.md · Skill · Role · Harness"]
+    Core --> ModelStatus["Authenticated LLM settings<br/>never returns API Key"]
     Evidence -->|"Conversation only"| GauzMem["GauzMem"]
     GauzMem --> Memory["semantic · graph · temporal memory"]
 ```
@@ -68,12 +80,24 @@ is inferred from accepted Conversation or OTLP evidence and remains display
 metadata. Existing unbound personal keys are ingestion-compatible during
 migration but are no longer a product creation path.
 
+API management owns Agent credential creation, reveal, copy and revocation.
+Agent pages only present observed evidence and evidence-dependent actions.
+Internal IDs and source aliases remain secondary details.
+
+Catena does not provide a shared Evolution model. Every owner configures a
+Provider, Base URL, Model and API Key in API management. The credential is
+encrypted at rest, decrypted only while dispatching that owner's Evolution
+Job, and never returned to the browser. Language and theme are personal Web
+preferences and live only in Settings.
+
 ## Core contracts
 
 - **Registered Agent:** stable owner-scoped `agent_id`, user-chosen display name,
   inferred Runtime and connection timestamps.
 - **Agent API key:** one recoverable/revocable credential bound to exactly one
   Registered Agent; it determines Agent identity for every upload.
+- **Owner LLM config:** one encrypted owner-scoped Provider/Base URL/Model/API
+  Key tuple used only for that owner's Evolution Jobs.
 - **Trace:** OTLP/HTTP protobuf or JSON authenticated by Agent API key.
 - **Conversation:** `xiaoba.conversation_batch.v1`, append-only XiaoBaOS
   user-visible messages whose Agent identity is overwritten from the key.
@@ -92,6 +116,8 @@ migration but are no longer a product creation path.
   payload contains a different `agent_id` or `service.name`.
 - OAuth state and PKCE validation fail closed.
 - Target credentials and arbitrary request templates are not persisted.
+- Evolution model credentials are encrypted at rest, never rendered after
+  creation and never projected into Job records, logs or Candidate assets.
 - GauzMem is private and receives an owner scope derived by Catena.
 - Evolution output is always a proposal and never mutates a target Agent automatically.
 

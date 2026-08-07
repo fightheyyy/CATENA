@@ -46,7 +46,7 @@ const traceCopy = {
     traceUnavailable: "Trace 存储尚未配置",
     traceUnavailableBody: "为 Catena Server 配置 ClickHouse 后，即可直接接收和查询 OTLP Trace。",
     noTraces: "等待第一条 Trace",
-    noTracesBody: "使用个人 API 密钥作为 Bearer Token，把 OTLP/HTTP exporter 指向这个地址。",
+    noTracesBody: "从 Agent 页复制专属接入配置，把 OTLP/HTTP exporter 指向这个地址。",
     endpoint: "OTLP Endpoint",
     execution: "Agent 执行链",
     selectSpan: "默认折叠 Runtime 内部噪声，选择一步查看证据",
@@ -99,7 +99,7 @@ const traceCopy = {
     traceUnavailable: "Trace storage is not configured",
     traceUnavailableBody: "Configure ClickHouse for Catena Server to receive and query OTLP Traces directly.",
     noTraces: "Waiting for the first Trace",
-    noTracesBody: "Use a personal API key as the Bearer Token and point the OTLP/HTTP exporter to this endpoint.",
+    noTracesBody: "Copy the dedicated connection configuration from Agents and point the OTLP/HTTP exporter to this endpoint.",
     endpoint: "OTLP Endpoint",
     execution: "Agent execution chain",
     selectSpan: "Runtime internals are folded by default. Select a step to inspect evidence.",
@@ -133,14 +133,16 @@ const traceCopy = {
 export function TraceExplorer({
   locale,
   workspace,
+  initialAgentID,
 }: {
   locale: Locale;
   workspace: WorkspaceData;
+  initialAgentID?: string;
 }) {
   const t = traceCopy[locale];
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<TraceFilter>("all");
-  const [agentID, setAgentID] = useState("");
+  const [agentID, setAgentID] = useState(initialAgentID ?? "");
   const [selectedTraceID, setSelectedTraceID] = useState(workspace.traces[0]?.trace_id ?? "");
   const [detail, setDetail] = useState<TraceDetail | null>(null);
   const [detailError, setDetailError] = useState("");
@@ -152,6 +154,12 @@ export function TraceExplorer({
     () => tracesForAgentSelection(workspace.traces, agentID, agentWindow.traces),
     [agentID, agentWindow.traces, workspace.traces],
   );
+
+  useEffect(() => {
+    if (initialAgentID && workspace.agents.some((agent) => agent.agent_id === initialAgentID)) {
+      setAgentID(initialAgentID);
+    }
+  }, [initialAgentID, workspace.agents]);
 
   const filteredTraces = useMemo(
     () => filterTraceSummaries(sourceTraces, query, filter),

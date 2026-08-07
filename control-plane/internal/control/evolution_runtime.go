@@ -72,6 +72,7 @@ type EvolutionRoleTurnInput struct {
 	Prompt    string
 	Timeout   time.Duration
 	Telemetry json.RawMessage
+	Model     EvolutionModelCredentials
 }
 
 type EvolutionRuntimeManager struct {
@@ -82,12 +83,13 @@ type EvolutionRuntimeManager struct {
 }
 
 type evolutionWorkerRuntimeConfig struct {
-	Command        string   `json:"command,omitempty"`
-	ProjectRoot    string   `json:"project_root,omitempty"`
-	RolesRoot      string   `json:"roles_root,omitempty"`
-	SkillsRoot     string   `json:"skills_root,omitempty"`
-	EnvAllowlist   []string `json:"env_allowlist,omitempty"`
-	ProbeTimeoutMS int64    `json:"probe_timeout_ms,omitempty"`
+	Command        string            `json:"command,omitempty"`
+	ProjectRoot    string            `json:"project_root,omitempty"`
+	RolesRoot      string            `json:"roles_root,omitempty"`
+	SkillsRoot     string            `json:"skills_root,omitempty"`
+	EnvAllowlist   []string          `json:"env_allowlist,omitempty"`
+	EnvOverrides   map[string]string `json:"env_overrides,omitempty"`
+	ProbeTimeoutMS int64             `json:"probe_timeout_ms,omitempty"`
 }
 
 type evolutionWorkerResponse struct {
@@ -168,7 +170,7 @@ func (m *EvolutionRuntimeManager) Probe(ctx context.Context) EvolutionRuntimeMan
 		"schema":     evolutionRequestSchema,
 		"request_id": requestID,
 		"operation":  "probe",
-		"runtime":    m.workerRuntimeConfig(),
+		"runtime":    m.workerRuntimeConfig(nil),
 	})
 	manifest := blockedEvolutionManifest("runtime_error")
 	if err == nil && response.RequestID == requestID && response.Operation == "probe" &&
@@ -202,6 +204,9 @@ func (m *EvolutionRuntimeManager) RunRoleTurn(
 	if input.Timeout <= 0 || input.Timeout > 15*time.Minute {
 		return nil, errors.New("turn timeout must be from 1ms to 15m")
 	}
+	if !input.Model.Valid() {
+		return nil, errors.New("owner LLM configuration is incomplete")
+	}
 	workspace := filepath.Join(m.config.WorkspaceRoot, input.RunID, input.RequestID)
 	if err := os.MkdirAll(workspace, 0o700); err != nil {
 		return nil, err
@@ -215,7 +220,7 @@ func (m *EvolutionRuntimeManager) RunRoleTurn(
 		"prompt":     input.Prompt,
 		"workspace":  workspace,
 		"timeout_ms": input.Timeout.Milliseconds(),
-		"runtime":    m.workerRuntimeConfig(),
+		"runtime":    m.workerRuntimeConfig(&input.Model),
 	}
 	if len(input.Telemetry) > 0 {
 		var telemetry any
@@ -255,12 +260,12 @@ func (m *EvolutionRuntimeManager) RunRoleTurn(
 	return append(json.RawMessage(nil), response.Result...), nil
 }
 
-func (m *EvolutionRuntimeManager) workerRuntimeConfig() evolutionWorkerRuntimeConfig {
+func (m *EvolutionRuntimeManager) workerRuntimeConfig(model *EvolutionModelCredentials) evolutionWorkerRuntimeConfig {
 	probeTimeout := m.config.ProbeTimeout - 500*time.Millisecond
 	if probeTimeout < time.Millisecond {
 		probeTimeout = m.config.ProbeTimeout
 	}
-	return evolutionWorkerRuntimeConfig{
+	config := evolutionWorkerRuntimeConfig{
 		Command:        m.config.XiaoBaCommand,
 		ProjectRoot:    m.config.ProjectRoot,
 		RolesRoot:      m.config.RolesRoot,
@@ -268,6 +273,15 @@ func (m *EvolutionRuntimeManager) workerRuntimeConfig() evolutionWorkerRuntimeCo
 		EnvAllowlist:   append([]string(nil), m.config.EnvAllowlist...),
 		ProbeTimeoutMS: probeTimeout.Milliseconds(),
 	}
+	if model != nil {
+		config.EnvOverrides = map[string]string{
+			"XIAOBA_LLM_PROVIDER": model.Provider,
+			"XIAOBA_LLM_API_BASE": model.BaseURL,
+			"XIAOBA_LLM_API_KEY":  model.APIKey,
+			"XIAOBA_LLM_MODEL":    model.Model,
+		}
+	}
+	return config
 }
 
 func (m *EvolutionRuntimeManager) execute(

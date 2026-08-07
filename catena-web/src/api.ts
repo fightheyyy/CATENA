@@ -3,9 +3,11 @@ import type {
   AgentTraceWindow,
   AgentSummary,
   RegisteredAgent,
+  RegisteredAgentConnection,
   ConversationDocument,
   ConversationSummary,
   EvolutionJob,
+  EvolutionModelSettings,
   Issue,
   RegressionCase,
   Release,
@@ -106,6 +108,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ display_name: displayName }),
     }),
+  registeredAgent: (agentID: string) =>
+    request<RegisteredAgentConnection>(`/v1/agents/${encodeURIComponent(agentID)}`),
   createAgentConnectionKey: (agentID: string) =>
     request<{ api_token: ApiToken; token: string }>(
       `/v1/agents/${encodeURIComponent(agentID)}/api-key`,
@@ -159,4 +163,11 @@ export const api = {
     }),
   deleteApiToken: (id: string) =>
     request<void>(`/v1/me/api-tokens/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  llmConfig: () => request<EvolutionModelSettings>("/v1/me/llm-config"),
+  saveLLMConfig: (input: { provider: string; base_url: string; model: string; api_key: string }) =>
+    request<EvolutionModelSettings>("/v1/me/llm-config", {
+      method: "PUT",
+      body: JSON.stringify(input),
+    }),
+  deleteLLMConfig: () => request<void>("/v1/me/llm-config", { method: "DELETE" }),
 };

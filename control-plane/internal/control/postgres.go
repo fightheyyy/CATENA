@@ -76,6 +76,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS barena_api_tokens_agent_id_idx
   ON barena_api_tokens (agent_id) WHERE agent_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS barena_api_tokens_user_created_at_idx
   ON barena_api_tokens (user_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS catena_evolution_model_configs (
+  owner_user_id TEXT PRIMARY KEY REFERENCES barena_users(user_id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,
+  base_url TEXT NOT NULL,
+  model TEXT NOT NULL,
+  encrypted_api_key TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
 CREATE TABLE IF NOT EXISTS barena_agent_profiles (
   owner_user_id TEXT PRIMARY KEY REFERENCES barena_users(user_id) ON DELETE CASCADE,
   slug TEXT NOT NULL UNIQUE,
@@ -1329,6 +1337,67 @@ INSERT INTO barena_api_tokens (token_id,token_hash,encrypted_token,user_id,agent
 VALUES ($1,$2,$3,$4,NULLIF($5,''),$6,$7)`,
 		token.ID, token.TokenHash, token.EncryptedToken, token.UserID, token.AgentID, token.Name, token.CreatedAt)
 	return mapStoreError(err)
+}
+
+func (s *PostgresStore) UpsertEvolutionModelConfig(
+	ctx context.Context,
+	config EvolutionModelConfig,
+) (EvolutionModelConfig, error) {
+	row := s.db.QueryRowContext(ctx, `
+INSERT INTO catena_evolution_model_configs
+  (owner_user_id,provider,base_url,model,encrypted_api_key,updated_at)
+VALUES ($1,$2,$3,$4,$5,$6)
+ON CONFLICT (owner_user_id) DO UPDATE SET
+  provider=EXCLUDED.provider,
+  base_url=EXCLUDED.base_url,
+  model=EXCLUDED.model,
+  encrypted_api_key=EXCLUDED.encrypted_api_key,
+  updated_at=EXCLUDED.updated_at
+RETURNING owner_user_id,provider,base_url,model,encrypted_api_key,updated_at`,
+		config.OwnerUserID, config.Provider, config.BaseURL, config.Model,
+		config.EncryptedAPIKey, config.UpdatedAt)
+	return scanEvolutionModelConfig(row)
+}
+
+func (s *PostgresStore) GetEvolutionModelConfigByOwner(
+	ctx context.Context,
+	ownerUserID string,
+) (EvolutionModelConfig, error) {
+	return scanEvolutionModelConfig(s.db.QueryRowContext(ctx, `
+SELECT owner_user_id,provider,base_url,model,encrypted_api_key,updated_at
+FROM catena_evolution_model_configs WHERE owner_user_id=$1`, ownerUserID))
+}
+
+func (s *PostgresStore) DeleteEvolutionModelConfigByOwner(
+	ctx context.Context,
+	ownerUserID string,
+) error {
+	result, err := s.db.ExecContext(ctx, `
+DELETE FROM catena_evolution_model_configs WHERE owner_user_id=$1`, ownerUserID)
+	if err != nil {
+		return err
+	}
+	affected, _ := result.RowsAffected()
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func scanEvolutionModelConfig(row rowScanner) (EvolutionModelConfig, error) {
+	var config EvolutionModelConfig
+	err := row.Scan(
+		&config.OwnerUserID,
+		&config.Provider,
+		&config.BaseURL,
+		&config.Model,
+		&config.EncryptedAPIKey,
+		&config.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return EvolutionModelConfig{}, ErrNotFound
+	}
+	return config, err
 }
 
 func (s *PostgresStore) CreateAgentWithAPIToken(

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AgentWorkspace } from "./AgentWorkspace";
+import { ApiManagementPage } from "./ApiManagementPage";
 import { api } from "./api";
 import { ConversationWorkspace } from "./ConversationWorkspace";
 import { EvolutionWorkspace } from "./EvolutionWorkspace";
@@ -9,12 +10,14 @@ import { primaryNavigationRoutes } from "./navigation";
 import { TraceExplorer } from "./TraceExplorer";
 import type { EvolutionJob, MemoryFactGraph, MemoryRecallBundle, MemoryRecallItem, MemoryRecord, Session, WorkspaceData } from "./types";
 
-type Route = "home" | "agents" | "conversations" | "traces" | "evolution" | "memory" | "settings";
+type Route = "home" | "agents" | "apiKeys" | "conversations" | "traces" | "evolution" | "memory" | "settings";
 type Locale = "zh" | "en";
+type Theme = "system" | "light" | "dark";
 
 const routePaths: Record<Route, string> = {
   home: "/",
   agents: "/agents",
+  apiKeys: "/api-keys",
   conversations: "/conversations",
   traces: "/traces",
   evolution: "/evolution",
@@ -24,7 +27,7 @@ const routePaths: Record<Route, string> = {
 
 const copy = {
   zh: {
-    nav: { home: "首页", agents: "Agent", conversations: "对话", traces: "Trace", evolution: "Trace Farm", memory: "记忆", settings: "设置" },
+    nav: { home: "首页", agents: "Agent", apiKeys: "API 管理", conversations: "对话", traces: "Trace", evolution: "Trace Farm", memory: "记忆", settings: "设置" },
     signIn: "使用 GitHub 登录",
     oauthFlowExpired: "登录流程已过期或从另一个地址发起。请重新登录，Catena 会自动使用正确的回调地址。",
     oauthUpstreamUnavailable: "GitHub 连接暂时超时，请重新登录。Catena 不会保留失败的授权流程。",
@@ -84,7 +87,14 @@ const copy = {
     recallConversation: "原始对话",
     recallTopic: "Topic",
     settingsTitle: "设置",
-    settingsBody: "管理当前登录会话；Agent 接入凭证回到对应 Agent 下管理。",
+    settingsBody: "管理界面语言、显示主题与当前登录会话。Agent 和 LLM 接入统一在 API 管理中维护。",
+    language: "语言",
+    languageBody: "选择 Catena 的界面语言。",
+    theme: "主题",
+    themeBody: "跟随系统，或固定使用浅色与深色外观。",
+    themeSystem: "跟随系统",
+    themeLight: "浅色",
+    themeDark: "深色",
     refresh: "刷新",
     retry: "重试",
     signOut: "退出登录",
@@ -123,7 +133,7 @@ const copy = {
     latest: "最近更新",
   },
   en: {
-    nav: { home: "Home", agents: "Agents", conversations: "Conversations", traces: "Traces", evolution: "Trace Farm", memory: "Memory", settings: "Settings" },
+    nav: { home: "Home", agents: "Agents", apiKeys: "API Management", conversations: "Conversations", traces: "Traces", evolution: "Trace Farm", memory: "Memory", settings: "Settings" },
     signIn: "Continue with GitHub",
     oauthFlowExpired: "This sign-in flow expired or started on another address. Restart it and Catena will use the canonical callback origin.",
     oauthUpstreamUnavailable: "GitHub temporarily timed out. Restart sign-in; Catena does not retain the failed authorization flow.",
@@ -183,7 +193,14 @@ const copy = {
     recallConversation: "Conversation",
     recallTopic: "Topic",
     settingsTitle: "Settings",
-    settingsBody: "Manage the current session. Each Agent now owns its connection credential.",
+    settingsBody: "Manage language, appearance, and the current session. Agent and LLM connections live in API Management.",
+    language: "Language",
+    languageBody: "Choose the language used by Catena.",
+    theme: "Theme",
+    themeBody: "Follow the system or keep a fixed light or dark appearance.",
+    themeSystem: "System",
+    themeLight: "Light",
+    themeDark: "Dark",
     refresh: "Refresh",
     retry: "Retry",
     signOut: "Sign out",
@@ -245,10 +262,15 @@ function useRoute() {
 
 export function App() {
   const [locale, setLocale] = useState<Locale>(() => (localStorage.getItem("catena.locale") === "en" ? "en" : "zh"));
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem("catena.theme");
+    return saved === "light" || saved === "dark" ? saved : "system";
+  });
   const [session, setSession] = useState<Session | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceData | null>(null);
   const [selectedEvolutionJobID, setSelectedEvolutionJobID] = useState("");
   const [selectedEvolutionAgentID, setSelectedEvolutionAgentID] = useState("");
+  const [selectedTraceAgentID, setSelectedTraceAgentID] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const { route, navigate } = useRoute();
@@ -259,6 +281,20 @@ export function App() {
     localStorage.setItem("catena.locale", next);
     setLocale(next);
   };
+
+  const selectLocale = (next: Locale) => {
+    localStorage.setItem("catena.locale", next);
+    setLocale(next);
+  };
+
+  const selectTheme = (next: Theme) => {
+    localStorage.setItem("catena.theme", next);
+    setTheme(next);
+  };
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -298,6 +334,23 @@ export function App() {
     navigate("evolution");
   }, [navigate]);
 
+  const selectEvolutionJob = useCallback((jobID: string) => {
+    setSelectedEvolutionJobID(jobID);
+  }, []);
+
+  const openAgentTraces = useCallback((agentID: string) => {
+    setSelectedTraceAgentID(agentID);
+    navigate("traces");
+  }, [navigate]);
+
+  const navigateFromSidebar = useCallback((next: Route) => {
+    if (next === "evolution") {
+      setSelectedEvolutionJobID("");
+      setSelectedEvolutionAgentID("");
+    }
+    navigate(next);
+  }, [navigate]);
+
   if (loading && session === null) {
     return <LoadingPage label={t.loading} />;
   }
@@ -319,7 +372,7 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar route={route} locale={locale} onNavigate={navigate} onLocale={changeLocale} />
+      <Sidebar route={route} locale={locale} onNavigate={navigateFromSidebar} />
       <main className="main-canvas">
         <Topbar
           session={session}
@@ -340,9 +393,15 @@ export function App() {
             session={session}
             selectedEvolutionJobID={selectedEvolutionJobID}
             selectedEvolutionAgentID={selectedEvolutionAgentID}
+            selectedTraceAgentID={selectedTraceAgentID}
             onOpenEvolutionJob={openEvolutionJob}
+            onSelectEvolutionJob={selectEvolutionJob}
             onAnalyzeAgent={analyzeAgent}
+            onOpenAgentTraces={openAgentTraces}
             onRefresh={load}
+            theme={theme}
+            onLocale={selectLocale}
+            onTheme={selectTheme}
           />
         ) : (
           <LoadingPanel label={t.loading} />
@@ -401,12 +460,10 @@ function Sidebar({
   route,
   locale,
   onNavigate,
-  onLocale,
 }: {
   route: Route;
   locale: Locale;
   onNavigate: (route: Route) => void;
-  onLocale: () => void;
 }) {
   const t = copy[locale];
   return (
@@ -425,10 +482,8 @@ function Sidebar({
         ))}
       </nav>
       <div className="sidebar-utilities">
+        <button className={route === "apiKeys" ? "nav-item active" : "nav-item"} type="button" onClick={() => onNavigate("apiKeys")}>{t.nav.apiKeys}</button>
         <button className={route === "settings" ? "nav-item active" : "nav-item"} type="button" onClick={() => onNavigate("settings")}>{t.nav.settings}</button>
-        <button className="locale-button" type="button" onClick={onLocale}>
-          {locale === "zh" ? "English" : "中文"}
-        </button>
       </div>
     </aside>
   );
@@ -468,9 +523,15 @@ function RouteView({
   session,
   selectedEvolutionJobID,
   selectedEvolutionAgentID,
+  selectedTraceAgentID,
   onOpenEvolutionJob,
+  onSelectEvolutionJob,
   onAnalyzeAgent,
+  onOpenAgentTraces,
   onRefresh,
+  theme,
+  onLocale,
+  onTheme,
 }: {
   route: Route;
   locale: Locale;
@@ -478,13 +539,20 @@ function RouteView({
   session: Session;
   selectedEvolutionJobID: string;
   selectedEvolutionAgentID: string;
+  selectedTraceAgentID: string;
   onOpenEvolutionJob: (job: EvolutionJob) => void;
+  onSelectEvolutionJob: (jobID: string) => void;
   onAnalyzeAgent: (agentID: string) => void;
+  onOpenAgentTraces: (agentID: string) => void;
   onRefresh: () => Promise<void>;
+  theme: Theme;
+  onLocale: (locale: Locale) => void;
+  onTheme: (theme: Theme) => void;
 }) {
-  if (route === "agents") return <AgentWorkspace locale={locale} workspace={workspace} onAnalyze={onAnalyzeAgent} onRefresh={onRefresh} />;
+  if (route === "agents") return <AgentWorkspace locale={locale} workspace={workspace} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} />;
+  if (route === "apiKeys") return <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} />;
   if (route === "conversations") return <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} />;
-  if (route === "traces") return <TraceExplorer locale={locale} workspace={workspace} />;
+  if (route === "traces") return <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} />;
   if (route === "evolution") return (
     <EvolutionWorkspace
       locale={locale}
@@ -493,10 +561,11 @@ function RouteView({
       initialJobID={selectedEvolutionJobID}
       initialAgentID={selectedEvolutionAgentID}
       onJobStarted={onOpenEvolutionJob}
+      onJobSelected={onSelectEvolutionJob}
     />
   );
   if (route === "memory") return <Memory locale={locale} workspace={workspace} />;
-  if (route === "settings") return <Settings locale={locale} session={session} />;
+  if (route === "settings") return <Settings locale={locale} session={session} theme={theme} onLocale={onLocale} onTheme={onTheme} />;
   return <Home locale={locale} workspace={workspace} />;
 }
 
@@ -754,14 +823,29 @@ function Status({ value, locale }: { value: string; locale: Locale }) {
   return <span className={ready ? "status ready" : "status blocked"}>{ready ? copy[locale].statusReady : copy[locale].statusUnavailable}</span>;
 }
 
-function Settings({ locale, session }: { locale: Locale; session: Session }) {
+function Settings({ locale, session, theme, onLocale, onTheme }: { locale: Locale; session: Session; theme: Theme; onLocale: (locale: Locale) => void; onTheme: (theme: Theme) => void }) {
   const t = copy[locale];
   return (
     <section className="page settings-page">
       <PageHeader title={t.settingsTitle} body={t.settingsBody} />
+      <section className="settings-section preference-section">
+        <div><h2>{t.language}</h2><p>{t.languageBody}</p></div>
+        <div className="segmented-control" role="group" aria-label={t.language}>
+          <button className={locale === "zh" ? "active" : ""} type="button" onClick={() => onLocale("zh")}>中文</button>
+          <button className={locale === "en" ? "active" : ""} type="button" onClick={() => onLocale("en")}>English</button>
+        </div>
+      </section>
+      <section className="settings-section preference-section">
+        <div><h2>{t.theme}</h2><p>{t.themeBody}</p></div>
+        <div className="segmented-control" role="group" aria-label={t.theme}>
+          <button className={theme === "system" ? "active" : ""} type="button" onClick={() => onTheme("system")}>{t.themeSystem}</button>
+          <button className={theme === "light" ? "active" : ""} type="button" onClick={() => onTheme("light")}>{t.themeLight}</button>
+          <button className={theme === "dark" ? "active" : ""} type="button" onClick={() => onTheme("dark")}>{t.themeDark}</button>
+        </div>
+      </section>
       <section className="settings-section">
-        <h2>{locale === "zh" ? "Agent 接入" : "Agent connections"}</h2>
-        <p>{locale === "zh" ? "接入凭证已经归到具体 Agent，不再作为一组独立的个人密钥管理。请在 Agent 页面接入、复制或撤销凭证。" : "Connection credentials now belong to individual Agents instead of a separate personal-key list. Connect, copy, or revoke them from the Agents page."}</p>
+        <h2>{locale === "zh" ? "账户" : "Account"}</h2>
+        <p>{locale === "zh" ? "这里显示当前登录身份。Agent 接入密钥和 LLM 配置统一在 API 管理页面维护。" : "This is your current identity. Agent credentials and LLM configuration live in API Management."}</p>
         {session.user ? <InlineNote>{session.user.display_name}</InlineNote> : null}
       </section>
     </section>

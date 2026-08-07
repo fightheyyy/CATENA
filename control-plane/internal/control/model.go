@@ -93,6 +93,18 @@ type APIToken struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
+// EvolutionModelConfig is owner-scoped configuration for Catena's embedded
+// Evolution Runtime. EncryptedAPIKey is storage-only and must never be
+// serialized into a response, Job, Candidate, log or Evidence Pack.
+type EvolutionModelConfig struct {
+	OwnerUserID     string    `json:"-"`
+	Provider        string    `json:"provider"`
+	BaseURL         string    `json:"base_url"`
+	Model           string    `json:"model"`
+	EncryptedAPIKey string    `json:"-"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
 // RegisteredAgent is the stable product identity chosen by a user. RuntimeKind
 // is observed from accepted evidence; it is never supplied during onboarding.
 type RegisteredAgent struct {

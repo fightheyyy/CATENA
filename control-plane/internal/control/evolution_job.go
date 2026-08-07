@@ -428,6 +428,11 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 		s.failEvolutionJob(&job, -1, "stored Evolution Evidence Pack is unavailable")
 		return
 	}
+	model, err := s.evolutionModelCredentials(context.Background(), job.OwnerUserID)
+	if err != nil {
+		s.failEvolutionJob(&job, -1, bounded(err.Error(), 1000))
+		return
+	}
 	evidence, err := json.Marshal(job.EvidencePack)
 	if err != nil {
 		s.failEvolutionJob(&job, -1, "Evolution Evidence Pack could not be encoded")
@@ -435,7 +440,7 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 	}
 
 	inspectorPrompt := buildInspectorPrompt(job, evidence)
-	inspectorRaw, ok := s.runEvolutionStage(&job, 0, inspectorPrompt)
+	inspectorRaw, ok := s.runEvolutionStage(&job, 0, inspectorPrompt, model)
 	if !ok {
 		return
 	}
@@ -447,7 +452,7 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 	}
 
 	evolutionPrompt := buildCandidatePrompt(job)
-	candidateRaw, ok := s.runEvolutionStage(&job, 1, evolutionPrompt)
+	candidateRaw, ok := s.runEvolutionStage(&job, 1, evolutionPrompt, model)
 	if !ok {
 		return
 	}
@@ -460,7 +465,7 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 	}
 
 	reviewerPrompt := buildReviewerPrompt(job, evidence)
-	reviewerRaw, ok := s.runEvolutionStage(&job, 2, reviewerPrompt)
+	reviewerRaw, ok := s.runEvolutionStage(&job, 2, reviewerPrompt, model)
 	if !ok {
 		return
 	}
@@ -476,6 +481,7 @@ func (s *HTTPServer) runEvolutionStage(
 	job *EvolutionJob,
 	index int,
 	prompt string,
+	model EvolutionModelCredentials,
 ) (json.RawMessage, bool) {
 	now := time.Now().UTC()
 	job.State = EvolutionJobRunning
@@ -494,6 +500,7 @@ func (s *HTTPServer) runEvolutionStage(
 		Role:      job.Stages[index].Role,
 		Prompt:    prompt,
 		Timeout:   evolutionTurnTimeout,
+		Model:     model,
 	})
 	if err != nil {
 		s.failEvolutionJob(job, index, bounded(err.Error(), 1000))
