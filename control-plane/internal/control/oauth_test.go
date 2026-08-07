@@ -1,6 +1,7 @@
 package control
 
 import (
+	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -23,6 +24,11 @@ func TestGitHubHTTPClientAllowsPublicNetworkLatency(t *testing.T) {
 	}
 	if transport.ResponseHeaderTimeout != 30*time.Second {
 		t.Fatalf("unexpected GitHub response header timeout: %s", transport.ResponseHeaderTimeout)
+	}
+	if transport.TLSClientConfig == nil ||
+		transport.TLSClientConfig.MinVersion != tls.VersionTLS12 ||
+		transport.TLSClientConfig.MaxVersion != tls.VersionTLS12 {
+		t.Fatalf("unexpected GitHub TLS policy: %#v", transport.TLSClientConfig)
 	}
 }
 

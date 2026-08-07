@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -106,6 +107,13 @@ func (c AuthConfig) normalized() AuthConfig {
 		transport := http.DefaultTransport.(*http.Transport).Clone()
 		transport.TLSHandshakeTimeout = githubTLSHandshakeLimit
 		transport.ResponseHeaderTimeout = githubTLSHandshakeLimit
+		// Some mainland-China egress paths blackhole Go's TLS 1.3 ClientHello
+		// while GitHub's TLS 1.2 endpoint remains healthy. Keep OAuth reliable on
+		// those paths without changing the public HTTPS policy of Catena itself.
+		transport.TLSClientConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS12,
+		}
 		c.HTTPClient = &http.Client{
 			Timeout:   githubHTTPTimeout,
 			Transport: transport,
