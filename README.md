@@ -22,10 +22,10 @@ Barena Run ──┘
 
 - **Agent**：把同一 Runtime 的多个 telemetry source 聚合为一个可理解的 Agent。
 - **对话**：保存 XiaoBaOS 用户真正看到的消息，用于提炼记忆与角色知识。
+- **记忆**：从对话生成可追溯记忆，并支持语义、关系与时间召回。
 - **Trace**：用极简瀑布查看模型、Tool、Artifact、耗时和错误。
 - **Trace Farm**：按 Agent 与时间窗口分析多条 Trace，展示 Inspector、Evolution、Reviewer 三个阶段。
 - **进化产物**：输出标准 `agent.md`、Skill、Role，以及 XiaoBaOS 专属 Harness 建议。
-- **记忆**：从对话生成可追溯记忆，并支持语义、关系与时间召回。
 
 Catena 不托管或冒充用户的目标 Agent。平台内置的 XiaoBaOS Runtime 只消费 Evidence，不执行被测 Agent。
 
