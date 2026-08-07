@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -32,8 +33,9 @@ const (
 	gatewayProjectHeader    = "X-Barena-Project-ID"
 	gatewayActorHeader      = "X-Barena-Actor-ID"
 	maxGatewayBodyBytes     = 2 * 1024 * 1024
-	githubHTTPTimeout       = 60 * time.Second
-	githubTLSHandshakeLimit = 30 * time.Second
+	githubHTTPTimeout       = 25 * time.Second
+	githubNetworkLimit      = 15 * time.Second
+	githubNetworkAttempts   = 3
 )
 
 type AuthConfig struct {
@@ -105,8 +107,15 @@ func (c AuthConfig) normalized() AuthConfig {
 	}
 	if c.HTTPClient == nil {
 		transport := http.DefaultTransport.(*http.Transport).Clone()
-		transport.TLSHandshakeTimeout = githubTLSHandshakeLimit
-		transport.ResponseHeaderTimeout = githubTLSHandshakeLimit
+		dialer := &net.Dialer{
+			Timeout:   githubNetworkLimit,
+			KeepAlive: 30 * time.Second,
+		}
+		transport.DialContext = func(ctx context.Context, _ string, address string) (net.Conn, error) {
+			return dialer.DialContext(ctx, "tcp4", address)
+		}
+		transport.TLSHandshakeTimeout = githubNetworkLimit
+		transport.ResponseHeaderTimeout = githubNetworkLimit
 		// Some mainland-China egress paths blackhole Go's TLS 1.3 ClientHello
 		// while GitHub's TLS 1.2 endpoint remains healthy. Keep OAuth reliable on
 		// those paths without changing the public HTTPS policy of Catena itself.
@@ -570,7 +579,7 @@ func (s *HTTPServer) exchangeGitHubCode(
 	request.Header.Set("Accept", "application/json")
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Set("User-Agent", "barena")
-	response, err := s.auth.HTTPClient.Do(request)
+	response, err := s.doGitHubRequest(request)
 	if err != nil {
 		return "", fmt.Errorf("GitHub token exchange failed: %w", err)
 	}
@@ -618,7 +627,7 @@ func (s *HTTPServer) fetchGitHubIdentity(
 	request.Header.Set("Authorization", "Bearer "+accessToken)
 	request.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	request.Header.Set("User-Agent", "barena")
-	response, err := s.auth.HTTPClient.Do(request)
+	response, err := s.doGitHubRequest(request)
 	if err != nil {
 		return githubIdentity{}, fmt.Errorf("GitHub identity request failed: %w", err)
 	}
@@ -637,6 +646,40 @@ func (s *HTTPServer) fetchGitHubIdentity(
 		return githubIdentity{}, errors.New("GitHub identity request was rejected")
 	}
 	return identity, nil
+}
+
+func (s *HTTPServer) doGitHubRequest(request *http.Request) (*http.Response, error) {
+	var lastErr error
+	for attempt := 0; attempt < githubNetworkAttempts; attempt++ {
+		current := request
+		if attempt > 0 {
+			current = request.Clone(request.Context())
+			if request.GetBody != nil {
+				body, err := request.GetBody()
+				if err != nil {
+					return nil, err
+				}
+				current.Body = body
+			}
+		}
+		response, err := s.auth.HTTPClient.Do(current)
+		if err == nil {
+			return response, nil
+		}
+		lastErr = err
+		if request.Context().Err() != nil || !retryableGitHubNetworkError(err) {
+			break
+		}
+		if attempt+1 < githubNetworkAttempts {
+			time.Sleep(time.Duration(attempt+1) * 250 * time.Millisecond)
+		}
+	}
+	return nil, lastErr
+}
+
+func retryableGitHubNetworkError(err error) bool {
+	var networkErr net.Error
+	return errors.As(err, &networkErr) && (networkErr.Timeout() || networkErr.Temporary())
 }
 
 func (s *HTTPServer) setFlowCookie(w http.ResponseWriter, name, value string) {
