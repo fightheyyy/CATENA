@@ -48,7 +48,8 @@ field; the UI only displays the server's inferred result after evidence arrives.
   independent settings object.
 - Agent statistics never creates, reveals or revokes credentials.
 - API management keeps one visible row per Agent with status, masked key and
-  explicit reveal, copy and revoke actions.
+  copy/revoke actions. Copy recovers the secret only for the clipboard and
+  never renders a second plaintext credential card.
 - Evidence-dependent actions such as Trace Farm are disabled until the Agent
   has enough retained evidence.
 - Agent lists prioritize registered product identities. Historical unbound

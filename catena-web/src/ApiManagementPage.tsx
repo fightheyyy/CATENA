@@ -34,7 +34,7 @@ const apiCopy = {
     placeholder: "例如：大狗",
     create: "生成密钥",
     creating: "正在生成",
-    created: "密钥已生成。请复制保存。",
+    created: "密钥已生成，可从对应行复制。",
     endpoints: "接收地址",
     otlp: "OTLP Trace",
     conversation: "XiaoBaOS 对话",
@@ -43,8 +43,6 @@ const apiCopy = {
     connected: "已连接",
     waiting: "等待数据",
     noKey: "没有密钥",
-    show: "显示",
-    hide: "收起",
     copy: "复制",
     copied: "已复制",
     copyOtlp: "复制 OTLP Trace 接收地址",
@@ -52,7 +50,6 @@ const apiCopy = {
     revoke: "删除",
     confirmRevoke: "确认删除",
     recreate: "生成密钥",
-    keyLabel: "API Key",
   },
   en: {
     title: "API Management",
@@ -81,7 +78,7 @@ const apiCopy = {
     placeholder: "For example: Big Dog",
     create: "Generate key",
     creating: "Generating",
-    created: "Key generated. Copy and store it now.",
+    created: "Key generated. Copy it from the corresponding row.",
     endpoints: "Ingest endpoints",
     otlp: "OTLP Trace",
     conversation: "XiaoBaOS conversation",
@@ -90,8 +87,6 @@ const apiCopy = {
     connected: "Connected",
     waiting: "Waiting for data",
     noKey: "No key",
-    show: "Reveal",
-    hide: "Hide",
     copy: "Copy",
     copied: "Copied",
     copyOtlp: "Copy OTLP Trace ingest endpoint",
@@ -99,7 +94,6 @@ const apiCopy = {
     revoke: "Delete",
     confirmRevoke: "Confirm delete",
     recreate: "Generate key",
-    keyLabel: "API Key",
   },
 } as const;
 
@@ -117,7 +111,6 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
   const [error, setError] = useState("");
   const [localAgent, setLocalAgent] = useState<LocalAgent | null>(null);
   const [localCredentials, setLocalCredentials] = useState<Record<string, ApiToken>>({});
-  const [revealed, setRevealed] = useState<Record<string, string>>({});
   const [copiedID, setCopiedID] = useState("");
   const [copiedEndpoint, setCopiedEndpoint] = useState<"otlp" | "conversation" | "">("");
   const [confirmID, setConfirmID] = useState("");
@@ -231,7 +224,6 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
         last_seen_at: "",
       };
       setLocalAgent({ summary, credential: result.api_token });
-      setRevealed((current) => ({ ...current, [summary.agent_id]: result.token }));
       setName("");
       setMessage(t.created);
       void onRefresh();
@@ -243,15 +235,12 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
     }
   };
 
-  const revealKey = async (agent: AgentSummary, credential: ApiToken) => {
-    if (revealed[agent.agent_id]) {
-      setRevealed((current) => { const next = { ...current }; delete next[agent.agent_id]; return next; });
-      return;
-    }
+  const copyKey = async (agent: AgentSummary, credential: ApiToken) => {
     setError("");
     try {
       const result = await api.revealApiToken(credential.id);
-      setRevealed((current) => ({ ...current, [agent.agent_id]: result.token }));
+      const copied = await copyText(result.token);
+      setCopiedID(copied ? agent.agent_id : "");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Request failed");
     }
@@ -263,7 +252,6 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
       const result = await api.createAgentConnectionKey(agent.agent_id);
       setLocalCredentials((current) => ({ ...current, [agent.agent_id]: result.api_token }));
       setRevokedAgentIDs((current) => { const next = new Set(current); next.delete(agent.agent_id); return next; });
-      setRevealed((current) => ({ ...current, [agent.agent_id]: result.token }));
       void onRefresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Request failed");
@@ -280,7 +268,7 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
       await api.deleteApiToken(credential.id);
       setConfirmID("");
       setRevokedAgentIDs((current) => new Set(current).add(agent.agent_id));
-      setRevealed((current) => { const next = { ...current }; delete next[agent.agent_id]; return next; });
+      setCopiedID((current) => current === agent.agent_id ? "" : current);
       void onRefresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Request failed");
@@ -348,7 +336,6 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
         {agents.length === 0 ? <div className="empty-state"><span>{t.empty}</span></div> : <div className="token-list">
           {agents.map((agent) => {
             const credential = credentialFor(agent);
-            const token = revealed[agent.agent_id] ?? "";
             return <article className="token-row" key={agent.agent_id}>
               <div className="token-identity">
                 <strong>{agent.display_name}</strong>
@@ -357,18 +344,10 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
               </div>
               <div className="token-actions">
                 {credential ? <>
-                  <button className="text-button" type="button" onClick={() => void revealKey(agent, credential)}>{token ? t.hide : t.show}</button>
+                  <button className="text-button" type="button" onClick={() => void copyKey(agent, credential)}>{copiedID === agent.agent_id ? t.copied : t.copy}</button>
                   <button className="text-button danger" type="button" onClick={() => void revokeKey(agent, credential)}>{confirmID === credential.id ? t.confirmRevoke : t.revoke}</button>
                 </> : <button className="text-button" type="button" onClick={() => void createKey(agent)}>{t.recreate}</button>}
               </div>
-              {token ? <div className="token-reveal">
-                <div><strong>{t.keyLabel}</strong><span>{agent.display_name}</span></div>
-                <input aria-label={`${agent.display_name} ${t.keyLabel}`} readOnly value={token} onFocus={(event) => event.currentTarget.select()} />
-                <button className="text-button" type="button" onClick={async () => {
-                  const ok = await copyText(token);
-                  setCopiedID(ok ? agent.agent_id : "");
-                }}>{copiedID === agent.agent_id ? t.copied : t.copy}</button>
-              </div> : null}
             </article>;
           })}
         </div>}

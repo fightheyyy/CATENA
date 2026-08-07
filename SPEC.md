@@ -56,7 +56,7 @@ XiaoBaOS follows an anthropomorphic coworker model, so its durable memory is gro
 flowchart LR
     Developer["Developer"] -->|"Agent name"| Keys["API management"]
     Keys --> Binding["agent_id + Agent API key"]
-    Binding --> Manage["Reveal · copy · revoke"]
+    Binding --> Manage["Copy · revoke"]
     Trace["OTLP Trace + Barena Run Bundle"] -->|"Agent API key"| Core["Catena Go control plane"]
     Conversation["XiaoBaOS Conversation"] -->|"Agent API key"| Core
     Binding --> Core
@@ -80,7 +80,8 @@ is inferred from accepted Conversation or OTLP evidence and remains display
 metadata. Existing unbound personal keys are ingestion-compatible during
 migration but are no longer a product creation path.
 
-API management owns Agent credential creation, reveal, copy and revocation.
+API management owns Agent credential creation, clipboard-only recovery and
+revocation. Plaintext credentials are never rendered as a second UI object.
 Agent pages only present observed evidence and evidence-dependent actions.
 Internal IDs and source aliases remain secondary details.
 

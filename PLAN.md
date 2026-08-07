@@ -31,6 +31,8 @@ local.
 - [x] Verify create → upload → automatic attribution → revoke end to end.
 - [x] Replace raw-key creation with the guided name → configure → verify flow.
 - [x] Separate Agent statistics from API-key management and remove the guided route.
+- [x] Present one credential row per Agent; copy without a duplicate plaintext
+      reveal panel.
 - [x] Hide unregistered telemetry aliases from the primary Agent registry.
 - [x] Gate Trace Farm and other evidence actions on real connection state.
 - [x] Verify the complete journey in the browser at desktop and mobile widths.

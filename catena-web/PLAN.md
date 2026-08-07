@@ -25,6 +25,8 @@ Updated: 2026-08-07
 - [x] Added former deployment model visibility to Settings (superseded).
 - [x] Move editable owner LLM configuration to API management.
 - [x] Move language and theme controls exclusively to Settings.
+- [x] Collapse each Agent credential into one row; copy recovers directly to
+      the clipboard without rendering a duplicate plaintext key card.
 - [ ] Add responsive browser acceptance to CI.
 - [ ] Improve accessibility and keyboard navigation.
 - [ ] Add durable optimistic/retry states for long-running jobs.
@@ -34,6 +36,11 @@ Updated: 2026-08-07
 `pnpm test`, `pnpm typecheck` and `pnpm build` pass; desktop and mobile journeys expose no console errors.
 
 ## Verification log
+
+- 2026-08-07: Removed the duplicate expanded API-key presentation. Each Agent
+  now renders exactly one credential row with masked value, copy and delete.
+  Authenticated Playwright acceptance passed create, clipboard copy, revoke,
+  zero console errors and 390px layout with no horizontal overflow.
 
 - 2026-08-07: API Management now edits the owner's Provider, Base URL, Model
   and API Key while rendering only key-present state after save. Browser
