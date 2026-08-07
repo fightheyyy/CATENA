@@ -11,7 +11,7 @@ Agent behavior changes when its model, Prompt, Role, Skill, Tool, memory or Runt
 
 Catena owns:
 
-- GitHub OAuth, sessions, project identity and API keys;
+- GitHub OAuth, sessions, first-class Agent identity and Agent-bound API keys;
 - OTLP ingestion, Trace indexing and Span query;
 - XiaoBaOS user-visible Conversation ingestion;
 - canonical Agent grouping and Agent-scoped Trace windows;
@@ -48,9 +48,12 @@ XiaoBaOS follows an anthropomorphic coworker model, so its durable memory is gro
 
 ```mermaid
 flowchart LR
-    Identity["GitHub identity"] --> Core["Catena Go control plane"]
-    Trace["OTLP Trace + Barena Run Bundle"] --> Core
-    Conversation["XiaoBaOS user-visible Conversation"] --> Core
+    Developer["Developer"] -->|"Agent name"| Registry["Agent Registry"]
+    Registry --> Binding["agent_id + Agent API key"]
+    Trace["OTLP Trace + Barena Run Bundle"] -->|"Agent API key"| Core["Catena Go control plane"]
+    Conversation["XiaoBaOS Conversation"] -->|"Agent API key"| Core
+    Binding --> Core
+    Core --> Detect["Runtime auto-detection"]
     Core --> Evidence[("Evidence Store")]
     Evidence --> Queue["durable Evolution queue"]
     Queue --> Runtime["XiaoBaOS Evolution Runtime"]
@@ -59,12 +62,21 @@ flowchart LR
     GauzMem --> Memory["semantic · graph · temporal memory"]
 ```
 
-The target preserves the two fuel paths while adding durable worker lease and recovery. It does not merge user-visible Conversation with Runtime Trace.
+The target makes Agent identity explicit before any data arrives. The API key,
+not payload-supplied names or Runtime selection, determines ownership. Runtime
+is inferred from accepted Conversation or OTLP evidence and remains display
+metadata. Existing unbound personal keys are ingestion-compatible during
+migration but are no longer a product creation path.
 
 ## Core contracts
 
-- **Trace:** OTLP/HTTP protobuf or JSON authenticated by project API key.
-- **Conversation:** `xiaoba.conversation_batch.v1`, append-only XiaoBaOS user-visible messages.
+- **Registered Agent:** stable owner-scoped `agent_id`, user-chosen display name,
+  inferred Runtime and connection timestamps.
+- **Agent API key:** one recoverable/revocable credential bound to exactly one
+  Registered Agent; it determines Agent identity for every upload.
+- **Trace:** OTLP/HTTP protobuf or JSON authenticated by Agent API key.
+- **Conversation:** `xiaoba.conversation_batch.v1`, append-only XiaoBaOS
+  user-visible messages whose Agent identity is overwritten from the key.
 - **Memory source:** user-visible Conversation only; Trace is engineering and evolution evidence.
 - **Agent Trace Set:** immutable Agent + time-window snapshot containing at least two server-frozen Trace IDs.
 - **Evolution Job:** Inspector → Evolution → Reviewer analysis over one Agent Trace Set.
@@ -76,6 +88,8 @@ The target preserves the two fuel paths while adding durable worker lease and re
 
 - Cross-owner reads and writes fail closed.
 - Personal API keys are hash-authenticated; owner-only recovery uses an encrypted envelope.
+- An Agent API key cannot upload evidence as another Agent, even when the
+  payload contains a different `agent_id` or `service.name`.
 - OAuth state and PKCE validation fail closed.
 - Target credentials and arbitrary request templates are not persisted.
 - GauzMem is private and receives an owner scope derived by Catena.

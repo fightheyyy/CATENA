@@ -50,6 +50,17 @@ CREATE TABLE IF NOT EXISTS barena_sessions (
 );
 CREATE INDEX IF NOT EXISTS barena_sessions_expires_at_idx
   ON barena_sessions (expires_at);
+CREATE TABLE IF NOT EXISTS catena_agents (
+  agent_id TEXT PRIMARY KEY,
+  owner_user_id TEXT NOT NULL REFERENCES barena_users(user_id) ON DELETE CASCADE,
+  display_name TEXT NOT NULL,
+  runtime_kind TEXT NOT NULL DEFAULT '',
+  last_seen_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX IF NOT EXISTS catena_agents_owner_created_at_idx
+  ON catena_agents (owner_user_id, created_at DESC);
 CREATE TABLE IF NOT EXISTS barena_api_tokens (
   token_id TEXT PRIMARY KEY,
   token_hash TEXT NOT NULL UNIQUE,
@@ -59,6 +70,10 @@ CREATE TABLE IF NOT EXISTS barena_api_tokens (
 );
 ALTER TABLE barena_api_tokens
   ADD COLUMN IF NOT EXISTS encrypted_token TEXT NOT NULL DEFAULT '';
+ALTER TABLE barena_api_tokens
+  ADD COLUMN IF NOT EXISTS agent_id TEXT REFERENCES catena_agents(agent_id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX IF NOT EXISTS barena_api_tokens_agent_id_idx
+  ON barena_api_tokens (agent_id) WHERE agent_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS barena_api_tokens_user_created_at_idx
   ON barena_api_tokens (user_id, created_at DESC);
 CREATE TABLE IF NOT EXISTS barena_agent_profiles (
@@ -1310,10 +1325,115 @@ DELETE FROM barena_sessions WHERE token_hash=$1`, tokenHash)
 
 func (s *PostgresStore) CreateAPIToken(ctx context.Context, token APIToken) error {
 	_, err := s.db.ExecContext(ctx, `
-INSERT INTO barena_api_tokens (token_id,token_hash,encrypted_token,user_id,name,created_at)
-VALUES ($1,$2,$3,$4,$5,$6)`,
-		token.ID, token.TokenHash, token.EncryptedToken, token.UserID, token.Name, token.CreatedAt)
+INSERT INTO barena_api_tokens (token_id,token_hash,encrypted_token,user_id,agent_id,name,created_at)
+VALUES ($1,$2,$3,$4,NULLIF($5,''),$6,$7)`,
+		token.ID, token.TokenHash, token.EncryptedToken, token.UserID, token.AgentID, token.Name, token.CreatedAt)
 	return mapStoreError(err)
+}
+
+func (s *PostgresStore) CreateAgentWithAPIToken(
+	ctx context.Context,
+	agent RegisteredAgent,
+	token APIToken,
+) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err = tx.ExecContext(ctx, `
+INSERT INTO catena_agents
+  (agent_id,owner_user_id,display_name,runtime_kind,last_seen_at,created_at,updated_at)
+VALUES ($1,$2,$3,$4,NULL,$5,$6)`,
+		agent.ID, agent.OwnerUserID, agent.DisplayName, agent.RuntimeKind,
+		agent.CreatedAt, agent.UpdatedAt); err != nil {
+		return mapStoreError(err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+INSERT INTO barena_api_tokens
+  (token_id,token_hash,encrypted_token,user_id,agent_id,name,created_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+		token.ID, token.TokenHash, token.EncryptedToken, token.UserID,
+		token.AgentID, token.Name, token.CreatedAt); err != nil {
+		return mapStoreError(err)
+	}
+	return tx.Commit()
+}
+
+func (s *PostgresStore) ListRegisteredAgentsByOwner(
+	ctx context.Context,
+	ownerUserID string,
+) ([]RegisteredAgent, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT agent_id,owner_user_id,display_name,runtime_kind,last_seen_at,created_at,updated_at
+FROM catena_agents WHERE owner_user_id=$1 ORDER BY created_at DESC`, ownerUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make([]RegisteredAgent, 0)
+	for rows.Next() {
+		var agent RegisteredAgent
+		var lastSeen sql.NullTime
+		if err := rows.Scan(&agent.ID, &agent.OwnerUserID, &agent.DisplayName,
+			&agent.RuntimeKind, &lastSeen, &agent.CreatedAt, &agent.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if lastSeen.Valid {
+			agent.LastSeenAt = lastSeen.Time
+		}
+		result = append(result, agent)
+	}
+	return result, rows.Err()
+}
+
+func (s *PostgresStore) GetRegisteredAgentByOwner(
+	ctx context.Context,
+	ownerUserID string,
+	agentID string,
+) (RegisteredAgent, error) {
+	var agent RegisteredAgent
+	var lastSeen sql.NullTime
+	err := s.db.QueryRowContext(ctx, `
+SELECT agent_id,owner_user_id,display_name,runtime_kind,last_seen_at,created_at,updated_at
+FROM catena_agents WHERE owner_user_id=$1 AND agent_id=$2`, ownerUserID, agentID).Scan(
+		&agent.ID, &agent.OwnerUserID, &agent.DisplayName, &agent.RuntimeKind,
+		&lastSeen, &agent.CreatedAt, &agent.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return RegisteredAgent{}, ErrNotFound
+	}
+	if lastSeen.Valid {
+		agent.LastSeenAt = lastSeen.Time
+	}
+	return agent, err
+}
+
+func (s *PostgresStore) ObserveRegisteredAgent(
+	ctx context.Context,
+	ownerUserID string,
+	agentID string,
+	runtimeKind string,
+	seenAt time.Time,
+) error {
+	result, err := s.db.ExecContext(ctx, `
+UPDATE catena_agents SET
+  runtime_kind = CASE
+    WHEN $3 = '' THEN runtime_kind
+    WHEN runtime_kind = '' OR runtime_kind = 'otel' OR $3 <> 'otel' THEN $3
+    ELSE runtime_kind
+  END,
+  last_seen_at = CASE WHEN last_seen_at IS NULL OR last_seen_at < $4 THEN $4 ELSE last_seen_at END,
+  updated_at = $4
+WHERE owner_user_id=$1 AND agent_id=$2`, ownerUserID, agentID, runtimeKind, seenAt)
+	if err != nil {
+		return err
+	}
+	affected, _ := result.RowsAffected()
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (s *PostgresStore) ListAPITokensByUser(
@@ -1321,7 +1441,7 @@ func (s *PostgresStore) ListAPITokensByUser(
 	userID string,
 ) ([]APIToken, error) {
 	rows, err := s.db.QueryContext(ctx, `
-SELECT token_id,token_hash,encrypted_token,user_id,name,created_at
+SELECT token_id,token_hash,encrypted_token,user_id,COALESCE(agent_id,''),name,created_at
 FROM barena_api_tokens
 WHERE user_id=$1
 ORDER BY created_at DESC`, userID)
@@ -1337,6 +1457,7 @@ ORDER BY created_at DESC`, userID)
 			&token.TokenHash,
 			&token.EncryptedToken,
 			&token.UserID,
+			&token.AgentID,
 			&token.Name,
 			&token.CreatedAt,
 		); err != nil {
@@ -1354,15 +1475,33 @@ func (s *PostgresStore) GetAPITokenByUser(
 ) (APIToken, error) {
 	var token APIToken
 	err := s.db.QueryRowContext(ctx, `
-SELECT token_id,token_hash,encrypted_token,user_id,name,created_at
+SELECT token_id,token_hash,encrypted_token,user_id,COALESCE(agent_id,''),name,created_at
 FROM barena_api_tokens
 WHERE token_id=$1 AND user_id=$2`, tokenID, userID).Scan(
 		&token.ID,
 		&token.TokenHash,
 		&token.EncryptedToken,
 		&token.UserID,
+		&token.AgentID,
 		&token.Name,
 		&token.CreatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return APIToken{}, ErrNotFound
+	}
+	return token, err
+}
+
+func (s *PostgresStore) GetAPITokenByHash(
+	ctx context.Context,
+	tokenHash string,
+) (APIToken, error) {
+	var token APIToken
+	err := s.db.QueryRowContext(ctx, `
+SELECT token_id,token_hash,encrypted_token,user_id,COALESCE(agent_id,''),name,created_at
+FROM barena_api_tokens WHERE token_hash=$1`, tokenHash).Scan(
+		&token.ID, &token.TokenHash, &token.EncryptedToken, &token.UserID,
+		&token.AgentID, &token.Name, &token.CreatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return APIToken{}, ErrNotFound

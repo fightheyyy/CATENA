@@ -27,6 +27,7 @@ export function agentSourceSummary(agent: AgentSummary, locale: Locale) {
 }
 
 export function agentIdentitySourceLabel(source: string, locale: Locale) {
+  if (source === "api_key") return locale === "zh" ? "Agent 接入密钥" : "Agent connection key";
   if (source === "catena.alias") return locale === "zh" ? "Catena Agent 归并" : "Catena Agent mapping";
   if (source === "service.name") return "OTel service.name";
   return source;

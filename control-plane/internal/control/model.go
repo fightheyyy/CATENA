@@ -86,10 +86,23 @@ type APIToken struct {
 	TokenHash      string    `json:"-"`
 	EncryptedToken string    `json:"-"`
 	UserID         string    `json:"-"`
+	AgentID        string    `json:"agent_id,omitempty"`
 	Name           string    `json:"name"`
 	MaskedToken    string    `json:"masked_token"`
 	Recoverable    bool      `json:"recoverable"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+// RegisteredAgent is the stable product identity chosen by a user. RuntimeKind
+// is observed from accepted evidence; it is never supplied during onboarding.
+type RegisteredAgent struct {
+	ID          string    `json:"agent_id"`
+	OwnerUserID string    `json:"-"`
+	DisplayName string    `json:"display_name"`
+	RuntimeKind string    `json:"runtime_kind,omitempty"`
+	LastSeenAt  time.Time `json:"last_seen_at,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type AgentProfile struct {

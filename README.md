@@ -103,7 +103,14 @@ cd CATENA
 
 ## 接入任意 OTel Agent
 
-在设置页创建 API Key，然后配置 OTLP/HTTP exporter：
+在 **Agent → 接入新 Agent** 输入显示名称。Catena 会原子创建固定
+`agent_id` 和绑定该 Agent 的接入密钥；用户不需要选择 Runtime：
+
+```text
+Agent connection key → agent_id → display name
+```
+
+随后使用这把密钥配置 OTLP/HTTP exporter：
 
 ```bash
 export CATENA_URL='http://127.0.0.1:5570'
@@ -115,11 +122,13 @@ export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="${CATENA_URL}/v1/otlp/v1/traces"
 export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer ${CATENA_API_KEY}"
 ```
 
-普通 OTLP Trace 足以进行观测与跨 Run 分析；Barena Run Bundle 可补充 Artifact、Verifier 与发布结论。
+Catena 会从证据自动识别 XiaoBaOS、Codex、Claude Code；无法识别时显示为
+通用 OTel Agent。客户端提交的 Agent 身份不能覆盖密钥绑定。普通 OTLP Trace
+足以进行观测与跨 Run 分析；Barena Run Bundle 可补充 Artifact、Verifier 与发布结论。
 
 ## 接入 XiaoBaOS 对话
 
-XiaoBaOS 使用同一个 API Key 增量同步用户可见的 Conversation Journal：
+XiaoBaOS 使用同一个 Agent 接入密钥增量同步用户可见的 Conversation Journal：
 
 ```bash
 export CATENA_BASE_URL="${CATENA_URL}"
@@ -156,7 +165,7 @@ cp deploy/catena-mvp1/.env.public.example deploy/catena-mvp1/.env
 
 ## 状态与开发
 
-MVP1 已覆盖 GitHub 登录、个人 API Key、OTLP 导入、Agent 聚合、Span 瀑布、XiaoBaOS Conversation、Trace Farm、进化候选与中英文 UI。当前定位是 single-node Beta；多 Worker lease、备份恢复、配额与完整 RBAC 尚未完成。
+MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、OTLP 导入、Runtime 自动识别、Agent 聚合、Span 瀑布、XiaoBaOS Conversation、Trace Farm、进化候选与中英文 UI。当前定位是 single-node Beta；多 Worker lease、备份恢复、配额与完整 RBAC 尚未完成。
 
 ```bash
 cd catena-web && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm typecheck && pnpm build

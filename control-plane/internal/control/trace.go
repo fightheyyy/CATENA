@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -34,6 +35,7 @@ type TraceStore interface {
 }
 
 type TraceSpan struct {
+	AgentID                   string         `json:"agent_id,omitempty"`
 	TraceID                   string         `json:"trace_id"`
 	SpanID                    string         `json:"span_id"`
 	ParentSpanID              string         `json:"parent_span_id,omitempty"`
@@ -98,14 +100,19 @@ type TraceDetail struct {
 }
 
 type AgentSummary struct {
-	AgentID        string        `json:"agent_id"`
-	DisplayName    string        `json:"display_name"`
-	IdentitySource string        `json:"identity_source"`
-	TraceCount     uint64        `json:"trace_count"`
-	SpanCount      uint64        `json:"span_count"`
-	ErrorCount     uint64        `json:"error_count"`
-	LastSeenAt     time.Time     `json:"last_seen_at"`
-	Sources        []AgentSource `json:"sources"`
+	AgentID           string        `json:"agent_id"`
+	DisplayName       string        `json:"display_name"`
+	IdentitySource    string        `json:"identity_source"`
+	RuntimeKind       string        `json:"runtime_kind,omitempty"`
+	Registered        bool          `json:"registered"`
+	Connected         bool          `json:"connected"`
+	ConversationCount uint64        `json:"conversation_count"`
+	Credential        *APIToken     `json:"credential,omitempty"`
+	TraceCount        uint64        `json:"trace_count"`
+	SpanCount         uint64        `json:"span_count"`
+	ErrorCount        uint64        `json:"error_count"`
+	LastSeenAt        time.Time     `json:"last_seen_at"`
+	Sources           []AgentSource `json:"sources"`
 }
 
 type decodedOTLP struct {
@@ -119,7 +126,7 @@ func (s *HTTPServer) ingestOTLPTraces(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, http.StatusServiceUnavailable, "Trace storage is not configured")
 		return
 	}
-	user, ok := s.requireAPITokenUser(w, r)
+	principal, ok := s.requireAgentAPITokenPrincipal(w, r)
 	if !ok {
 		return
 	}
@@ -135,9 +142,25 @@ func (s *HTTPServer) ingestOTLPTraces(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(decoded.Spans) > 0 {
-		if err := s.traces.InsertSpans(r.Context(), user.ID, decoded.Spans); err != nil {
+		if principal.Agent != nil {
+			for index := range decoded.Spans {
+				decoded.Spans[index].AgentID = principal.Agent.ID
+				if decoded.Spans[index].ResourceAttributes == nil {
+					decoded.Spans[index].ResourceAttributes = make(map[string]any)
+				}
+				decoded.Spans[index].ResourceAttributes["catena.agent.id"] = principal.Agent.ID
+				decoded.Spans[index].ResourceAttributes["catena.agent.name"] = principal.Agent.DisplayName
+			}
+		}
+		if err := s.traces.InsertSpans(r.Context(), principal.User.ID, decoded.Spans); err != nil {
 			writeProblem(w, http.StatusServiceUnavailable, "Trace storage failed")
 			return
+		}
+		if principal.Agent != nil {
+			_ = s.store.ObserveRegisteredAgent(
+				r.Context(), principal.User.ID, principal.Agent.ID,
+				detectOTLPRuntime(decoded.Spans), time.Now().UTC(),
+			)
 		}
 	}
 	response := &collectortracev1.ExportTraceServiceResponse{}
@@ -206,24 +229,111 @@ func (s *HTTPServer) listAgents(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if s.traces == nil {
-		writeJSON(w, http.StatusOK, map[string]any{"available": false, "agents": []AgentSummary{}})
-		return
-	}
 	limit, err := traceListLimit(r)
 	if err != nil {
 		writeProblem(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	values, err := s.traces.ListAgents(r.Context(), traceOwnerID(user), limit)
+	values := make([]AgentSummary, 0)
+	if s.traces != nil {
+		values, err = s.traces.ListAgents(r.Context(), traceOwnerID(user), limit)
+		if err != nil {
+			writeProblem(w, http.StatusServiceUnavailable, "Agent query failed")
+			return
+		}
+	}
+	registered, err := s.store.ListRegisteredAgentsByOwner(r.Context(), traceOwnerID(user))
 	if err != nil {
-		writeProblem(w, http.StatusServiceUnavailable, "Agent query failed")
+		writeProblem(w, statusFor(err), err.Error())
 		return
 	}
-	if values == nil {
-		values = []AgentSummary{}
+	tokens, err := s.store.ListAPITokensByUser(r.Context(), traceOwnerID(user))
+	if err != nil {
+		writeProblem(w, statusFor(err), err.Error())
+		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"available": true, "agents": values})
+	values = s.mergeRegisteredAgentSummaries(r, registered, tokens, values, limit)
+	writeJSON(w, http.StatusOK, map[string]any{"available": s.traces != nil, "agents": values})
+}
+
+func (s *HTTPServer) mergeRegisteredAgentSummaries(
+	r *http.Request,
+	registered []RegisteredAgent,
+	tokens []APIToken,
+	observed []AgentSummary,
+	limit int,
+) []AgentSummary {
+	byID := make(map[string]AgentSummary, len(registered)+len(observed))
+	for _, summary := range observed {
+		summary.Connected = !summary.LastSeenAt.IsZero()
+		if summary.RuntimeKind == "" {
+			summary.RuntimeKind = inferObservedAgentRuntime(summary)
+		}
+		byID[summary.AgentID] = summary
+	}
+	credentialByAgent := make(map[string]APIToken)
+	for _, token := range tokens {
+		if token.AgentID != "" {
+			credentialByAgent[token.AgentID] = s.presentAPIToken(token)
+		}
+	}
+	for _, agent := range registered {
+		summary := byID[agent.ID]
+		summary.AgentID = agent.ID
+		summary.DisplayName = agent.DisplayName
+		summary.IdentitySource = agentIdentitySourceCredential
+		summary.RuntimeKind = agent.RuntimeKind
+		summary.Registered = true
+		summary.Connected = !agent.LastSeenAt.IsZero()
+		if agent.LastSeenAt.After(summary.LastSeenAt) {
+			summary.LastSeenAt = agent.LastSeenAt
+		}
+		if token, ok := credentialByAgent[agent.ID]; ok {
+			tokenCopy := token
+			summary.Credential = &tokenCopy
+		}
+		if conversations, err := s.store.ListConversationSummariesByOwner(
+			r.Context(), agent.OwnerUserID, agent.ID, 200,
+		); err == nil {
+			summary.ConversationCount = uint64(len(conversations))
+		}
+		byID[agent.ID] = summary
+	}
+	result := make([]AgentSummary, 0, len(byID))
+	for _, summary := range byID {
+		result = append(result, summary)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Registered != result[j].Registered {
+			return result[i].Registered
+		}
+		if !result[i].LastSeenAt.Equal(result[j].LastSeenAt) {
+			return result[i].LastSeenAt.After(result[j].LastSeenAt)
+		}
+		return result[i].DisplayName < result[j].DisplayName
+	})
+	if limit > 0 && len(result) > limit {
+		result = result[:limit]
+	}
+	return result
+}
+
+func inferObservedAgentRuntime(summary AgentSummary) string {
+	values := []string{summary.AgentID, summary.DisplayName}
+	for _, source := range summary.Sources {
+		values = append(values, source.ServiceName)
+	}
+	joined := strings.ToLower(strings.Join(values, " "))
+	switch {
+	case strings.Contains(joined, "xiaoba"):
+		return "xiaobaos"
+	case strings.Contains(joined, "codex"):
+		return "codex"
+	case strings.Contains(joined, "claude") || strings.Contains(joined, "anthropic"):
+		return "claude_code"
+	default:
+		return "otel"
+	}
 }
 
 func (s *HTTPServer) listAgentTraces(w http.ResponseWriter, r *http.Request) {

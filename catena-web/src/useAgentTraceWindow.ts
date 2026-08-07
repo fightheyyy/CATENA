@@ -17,7 +17,7 @@ const emptyState: AgentTraceState = {
   error: "",
 };
 
-export function useAgentTraceWindow(agentID: string, limit: number) {
+export function useAgentTraceWindow(agentID: string, limit: number, evidenceVersion = 0) {
   const [state, setState] = useState<AgentTraceState>(emptyState);
   const [requestVersion, setRequestVersion] = useState(0);
   const retry = useCallback(() => setRequestVersion((value) => value + 1), []);
@@ -47,7 +47,7 @@ export function useAgentTraceWindow(agentID: string, limit: number) {
       });
     });
     return () => { active = false; };
-  }, [agentID, limit, requestVersion]);
+  }, [agentID, limit, requestVersion, evidenceVersion]);
 
   if (!agentID) return { ...emptyState, retry };
   if (state.agentID !== agentID) {

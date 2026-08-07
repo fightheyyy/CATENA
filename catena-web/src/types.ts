@@ -184,6 +184,7 @@ export type Release = {
 
 export type ApiToken = {
   id: string;
+  agent_id?: string;
   name: string;
   masked_token: string;
   recoverable: boolean;
@@ -294,6 +295,11 @@ export type AgentSummary = {
   agent_id: string;
   display_name: string;
   identity_source: string;
+  runtime_kind?: "xiaobaos" | "codex" | "claude_code" | "otel" | string;
+  registered: boolean;
+  connected: boolean;
+  conversation_count: number;
+  credential?: ApiToken;
   sources?: Array<{
     service_name: string;
     kind: "native_live" | "history_backfill" | "otel";
@@ -302,6 +308,15 @@ export type AgentSummary = {
   span_count: number;
   error_count: number;
   last_seen_at: string;
+};
+
+export type RegisteredAgent = {
+  agent_id: string;
+  display_name: string;
+  runtime_kind?: string;
+  last_seen_at?: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type AgentTraceWindow = {

@@ -2,6 +2,7 @@ import type {
   ApiToken,
   AgentTraceWindow,
   AgentSummary,
+  RegisteredAgent,
   ConversationDocument,
   ConversationSummary,
   EvolutionJob,
@@ -100,6 +101,16 @@ export const api = {
     });
     return request<AgentTraceWindow>(`/v1/agents/${encodeURIComponent(agentID)}/traces?${query}`);
   },
+  createAgent: (displayName: string) =>
+    request<{ agent: RegisteredAgent; api_token: ApiToken; token: string }>("/v1/agents", {
+      method: "POST",
+      body: JSON.stringify({ display_name: displayName }),
+    }),
+  createAgentConnectionKey: (agentID: string) =>
+    request<{ api_token: ApiToken; token: string }>(
+      `/v1/agents/${encodeURIComponent(agentID)}/api-key`,
+      { method: "POST" },
+    ),
   evolutionJob: async (jobID: string) => normalizeEvolutionJob(
     await request<unknown>(`/v1/evolution-jobs/${encodeURIComponent(jobID)}`),
   ),

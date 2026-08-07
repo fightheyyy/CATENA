@@ -237,7 +237,7 @@ func cloneConversationMessage(message ConversationMessage) ConversationMessage {
 }
 
 func (s *HTTPServer) ingestConversations(w http.ResponseWriter, r *http.Request) {
-	user, ok := s.requireIngestUser(w, r)
+	principal, ok := s.requireConversationIngestPrincipal(w, r)
 	if !ok {
 		return
 	}
@@ -246,13 +246,21 @@ func (s *HTTPServer) ingestConversations(w http.ResponseWriter, r *http.Request)
 		writeProblem(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	// A bound connection key is authoritative. Override client-controlled
+	// identity before validation so new clients do not need to send agent_id.
+	if principal.Agent != nil {
+		for index := range request.Messages {
+			request.Messages[index].AgentID = principal.Agent.ID
+			request.Messages[index].AgentName = principal.Agent.DisplayName
+		}
+	}
 	if err := request.Validate(); err != nil {
 		writeProblem(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	ownerUserID := ""
-	if user != nil {
-		ownerUserID = user.ID
+	if principal.User != nil {
+		ownerUserID = principal.User.ID
 	}
 	created, duplicates, err := s.store.IngestConversationMessages(
 		r.Context(), ownerUserID, request.Messages, time.Now().UTC(),
@@ -260,6 +268,11 @@ func (s *HTTPServer) ingestConversations(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		writeProblem(w, statusFor(err), err.Error())
 		return
+	}
+	if principal.Agent != nil {
+		_ = s.store.ObserveRegisteredAgent(
+			r.Context(), ownerUserID, principal.Agent.ID, "xiaobaos", time.Now().UTC(),
+		)
 	}
 	status := http.StatusCreated
 	if created == 0 {

@@ -241,4 +241,36 @@ func TestClickHouseTraceRoundTrip(t *testing.T) {
 			t.Fatalf("global Trace read lost Barena source %q: %+v", serviceName, allTraces)
 		}
 	}
+
+	boundAgentID := "agent_integration_stable"
+	boundTraceID := "aaaa2233445566778899aabbccddeeff"
+	if err := store.InsertSpans(ctx, ownerID, []TraceSpan{{
+		AgentID: boundAgentID, TraceID: boundTraceID, SpanID: "aaaaaaaaaaaaaaaa",
+		Name: "claude.turn", ServiceName: "claude-code",
+		StartTime: start.Add(40 * time.Minute), EndTime: start.Add(40*time.Minute + time.Second),
+		Attributes: map[string]any{}, ResourceAttributes: map[string]any{"service.name": "claude-code"},
+		Events: []TraceEvent{}, Links: []TraceLink{},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	agents, err = store.ListAgents(ctx, ownerID, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundBoundAgent := false
+	for _, agent := range agents {
+		if agent.AgentID == boundAgentID && agent.IdentitySource == agentIdentitySourceCredential &&
+			agent.TraceCount == 1 {
+			foundBoundAgent = true
+		}
+	}
+	if !foundBoundAgent {
+		t.Fatalf("bound Agent identity was not retained: %+v", agents)
+	}
+	boundTraces, err := store.ListAgentTraces(
+		ctx, ownerID, boundAgentID, start, start.Add(time.Hour), 10,
+	)
+	if err != nil || len(boundTraces) != 1 || boundTraces[0].TraceID != boundTraceID {
+		t.Fatalf("bound Agent Trace filter = %+v, %v", boundTraces, err)
+	}
 }

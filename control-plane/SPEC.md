@@ -7,7 +7,7 @@ Updated: 2026-08-07
 
 The Go server owns public product state and transport:
 
-- OAuth/session and API-key authentication;
+- OAuth/session, Agent registration and Agent-bound API-key authentication;
 - owner-scoped projects and requests;
 - OTLP/HTTP ingestion and ClickHouse Trace reads;
 - XiaoBaOS Conversation ingestion and PostgreSQL reads;
@@ -38,19 +38,25 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    API["Go API"] --> Queue["PostgreSQL durable queue"]
-    Queue --> Lease["lease · heartbeat · retry · cancel"]
-    Lease --> Worker["Versioned worker protocol"]
-    Worker --> Events["idempotent stage events"]
-    Events --> Queue
-    API --> Telemetry["Control-plane OTel metrics + traces"]
+    Create["POST /v1/agents<br/>display_name"] --> Registry[("Registered Agent")]
+    Registry --> Key["Agent-bound API key"]
+    OTLP["OTLP"] --> Auth["Key → owner + agent_id"]
+    Conversation["Conversation"] --> Auth
+    Auth --> Normalize["force Agent identity"]
+    Normalize --> Detect["infer Runtime"]
+    Normalize --> Evidence[("Trace · Conversation")]
+    Detect --> Registry
 ```
 
-The target adds recovery and horizontal-worker safety without changing public product contracts.
+Existing tokens with no `agent_id` remain a bounded compatibility path. Every
+new token is created atomically with an Agent and cannot change its binding.
+The durable worker queue remains the next control-plane reliability milestone.
 
 ## Data ownership
 
 - PostgreSQL: identity, credentials, Conversations, Runs, Jobs, Candidates and audit.
+- PostgreSQL Registered Agent owns display name, inferred Runtime and key
+  binding; payload metadata cannot mutate its stable identity.
 - ClickHouse: raw Trace, Span and event evidence.
 - Runner filesystem: temporary workspaces only.
 - GauzMem stores: optional memory facts and indexes behind the private gateway.
@@ -58,6 +64,8 @@ The target adds recovery and horizontal-worker safety without changing public pr
 ## Invariants
 
 - Every mutation is owner-scoped and validates source ownership.
+- New API keys are bound to one Agent; direct ingestion overwrites incoming
+  Agent identity from that binding.
 - Idempotency keys return the original logical result.
 - Agent Trace Set membership is frozen before worker execution.
 - Stage events move state forward only; terminal state cannot be overwritten by stale events.
@@ -67,8 +75,9 @@ The target adds recovery and horizontal-worker safety without changing public pr
 
 ## Public contracts
 
-- `/v1/otlp/v1/traces`: authenticated OTLP/HTTP ingestion.
-- `/v1/agents`, `/v1/traces`: owner-scoped Agent and evidence reads.
+- `POST /v1/agents`: atomically create Registered Agent and its initial key.
+- `GET /v1/agents`: registered Agents merged with evidence metrics.
+- `/v1/otlp/v1/traces`: Agent-key-authenticated OTLP/HTTP ingestion.
 - `/v1/ingest/conversations`: `xiaoba.conversation_batch.v1`.
 - `/v1/ingest/run-bundles`: idempotent `barena.run_bundle.v1`.
 - `/v1/evolution-jobs`: Agent Trace Set creation, listing and detail.

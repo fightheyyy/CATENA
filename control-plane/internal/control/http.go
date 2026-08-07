@@ -101,6 +101,8 @@ func NewHTTPHandlerWithMemory(
 	mux.HandleFunc("GET /v1/community/profiles/{slug}", server.communityProfile)
 	mux.HandleFunc("GET /v1/runtimes", server.runtimes)
 	mux.HandleFunc("GET /v1/agents", server.listAgents)
+	mux.HandleFunc("POST /v1/agents", server.createRegisteredAgent)
+	mux.HandleFunc("POST /v1/agents/{agent_id}/api-key", server.createAgentConnectionKey)
 	mux.HandleFunc("GET /v1/agents/{agent_id}/traces", server.listAgentTraces)
 	mux.HandleFunc("POST /v1/agents/{agent_id}/evolution-jobs", server.createAgentEvolutionJob)
 	mux.HandleFunc("GET /v1/traces", server.listTraces)

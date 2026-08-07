@@ -59,8 +59,13 @@ type Store interface {
 	CreateSession(context.Context, Session) error
 	DeleteSession(context.Context, string) error
 	CreateAPIToken(context.Context, APIToken) error
+	CreateAgentWithAPIToken(context.Context, RegisteredAgent, APIToken) error
+	ListRegisteredAgentsByOwner(context.Context, string) ([]RegisteredAgent, error)
+	GetRegisteredAgentByOwner(context.Context, string, string) (RegisteredAgent, error)
+	ObserveRegisteredAgent(context.Context, string, string, string, time.Time) error
 	ListAPITokensByUser(context.Context, string) ([]APIToken, error)
 	GetAPITokenByUser(context.Context, string, string) (APIToken, error)
+	GetAPITokenByHash(context.Context, string) (APIToken, error)
 	GetUserByAPITokenHash(context.Context, string) (User, error)
 	DeleteAPIToken(context.Context, string, string) error
 	EnsureAgentProfile(context.Context, AgentProfile) (AgentProfile, error)
@@ -81,6 +86,7 @@ type MemoryStore struct {
 	userByGitHubID       map[int64]string
 	sessions             map[string]Session
 	apiTokens            map[string]APIToken
+	registeredAgents     map[string]RegisteredAgent
 	profiles             map[string]AgentProfile
 	issues               map[string]Issue
 	cases                map[string]Case
@@ -100,6 +106,7 @@ func NewMemoryStore() *MemoryStore {
 		userByGitHubID:       make(map[int64]string),
 		sessions:             make(map[string]Session),
 		apiTokens:            make(map[string]APIToken),
+		registeredAgents:     make(map[string]RegisteredAgent),
 		profiles:             make(map[string]AgentProfile),
 		issues:               make(map[string]Issue),
 		cases:                make(map[string]Case),
@@ -914,11 +921,97 @@ func (s *MemoryStore) CreateAPIToken(_ context.Context, token APIToken) error {
 		return ErrConflict
 	}
 	for _, existing := range s.apiTokens {
-		if existing.ID == token.ID || existing.TokenHash == token.TokenHash {
+		if existing.ID == token.ID || existing.TokenHash == token.TokenHash ||
+			(token.AgentID != "" && existing.AgentID == token.AgentID) {
 			return ErrConflict
 		}
 	}
+	if token.AgentID != "" {
+		agent, exists := s.registeredAgents[token.AgentID]
+		if !exists || agent.OwnerUserID != token.UserID {
+			return ErrNotFound
+		}
+	}
 	s.apiTokens[token.TokenHash] = token
+	return nil
+}
+
+func (s *MemoryStore) CreateAgentWithAPIToken(
+	_ context.Context,
+	agent RegisteredAgent,
+	token APIToken,
+) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, exists := s.users[agent.OwnerUserID]; !exists || agent.ID == "" ||
+		token.AgentID != agent.ID || token.UserID != agent.OwnerUserID || token.TokenHash == "" {
+		return ErrConflict
+	}
+	if _, exists := s.registeredAgents[agent.ID]; exists {
+		return ErrConflict
+	}
+	for _, existing := range s.apiTokens {
+		if existing.ID == token.ID || existing.TokenHash == token.TokenHash ||
+			(existing.AgentID != "" && existing.AgentID == agent.ID) {
+			return ErrConflict
+		}
+	}
+	s.registeredAgents[agent.ID] = agent
+	s.apiTokens[token.TokenHash] = token
+	return nil
+}
+
+func (s *MemoryStore) ListRegisteredAgentsByOwner(
+	_ context.Context,
+	ownerUserID string,
+) ([]RegisteredAgent, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]RegisteredAgent, 0)
+	for _, agent := range s.registeredAgents {
+		if agent.OwnerUserID == ownerUserID {
+			result = append(result, agent)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].CreatedAt.After(result[j].CreatedAt) })
+	return result, nil
+}
+
+func (s *MemoryStore) GetRegisteredAgentByOwner(
+	_ context.Context,
+	ownerUserID string,
+	agentID string,
+) (RegisteredAgent, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	agent, exists := s.registeredAgents[agentID]
+	if !exists || agent.OwnerUserID != ownerUserID {
+		return RegisteredAgent{}, ErrNotFound
+	}
+	return agent, nil
+}
+
+func (s *MemoryStore) ObserveRegisteredAgent(
+	_ context.Context,
+	ownerUserID string,
+	agentID string,
+	runtimeKind string,
+	seenAt time.Time,
+) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	agent, exists := s.registeredAgents[agentID]
+	if !exists || agent.OwnerUserID != ownerUserID {
+		return ErrNotFound
+	}
+	if shouldReplaceRuntimeKind(agent.RuntimeKind, runtimeKind) {
+		agent.RuntimeKind = runtimeKind
+	}
+	if seenAt.After(agent.LastSeenAt) {
+		agent.LastSeenAt = seenAt
+	}
+	agent.UpdatedAt = seenAt
+	s.registeredAgents[agentID] = agent
 	return nil
 }
 
@@ -953,6 +1046,19 @@ func (s *MemoryStore) GetAPITokenByUser(
 		}
 	}
 	return APIToken{}, ErrNotFound
+}
+
+func (s *MemoryStore) GetAPITokenByHash(
+	_ context.Context,
+	tokenHash string,
+) (APIToken, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	token, exists := s.apiTokens[tokenHash]
+	if !exists {
+		return APIToken{}, ErrNotFound
+	}
+	return token, nil
 }
 
 func (s *MemoryStore) GetUserByAPITokenHash(

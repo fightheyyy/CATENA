@@ -9,6 +9,7 @@ import (
 const (
 	agentIdentitySourceServiceName = "service.name"
 	agentIdentitySourceAlias       = "catena.alias"
+	agentIdentitySourceCredential  = "api_key"
 
 	agentSourceKindNativeLive      = "native_live"
 	agentSourceKindHistoryBackfill = "history_backfill"
@@ -41,6 +42,7 @@ type classifiedAgentSource struct {
 }
 
 type agentSourceAggregate struct {
+	AgentID     string
 	ServiceName string
 	TraceCount  uint64
 	SpanCount   uint64
@@ -147,6 +149,29 @@ func mergeAgentSourceAggregates(values []agentSourceAggregate, limit int) []Agen
 	}
 	merged := make(map[string]*mergedAgent)
 	for _, value := range values {
+		if value.AgentID != "" {
+			entry := merged[value.AgentID]
+			if entry == nil {
+				entry = &mergedAgent{
+					summary: AgentSummary{AgentID: value.AgentID, IdentitySource: agentIdentitySourceCredential},
+					sources: make(map[string]AgentSource),
+				}
+				merged[value.AgentID] = entry
+			}
+			entry.summary.TraceCount += value.TraceCount
+			entry.summary.SpanCount += value.SpanCount
+			entry.summary.ErrorCount += value.ErrorCount
+			if value.LastSeenAt.After(entry.summary.LastSeenAt) {
+				entry.summary.LastSeenAt = value.LastSeenAt
+			}
+			serviceName := strings.TrimSpace(value.ServiceName)
+			if serviceName != "" {
+				entry.sources[normalizedAgentSource(serviceName)] = AgentSource{
+					ServiceName: agentSourceDisplayName(serviceName), Kind: agentSourceKind(serviceName),
+				}
+			}
+			continue
+		}
 		classified := classifyAgentSource(value.ServiceName)
 		if classified.Classification != agentSourceClassificationTarget || classified.Identity.AgentID == "" {
 			continue

@@ -4,7 +4,7 @@ Updated: 2026-08-07
 
 ## Current state
 
-- [x] Go owns public auth, API keys and project isolation.
+- [x] Go owns public auth, Registered Agents, bound credentials and project isolation.
 - [x] Go ingests OTLP and queries Catena-owned ClickHouse tables.
 - [x] Go stores user-visible Conversations and immutable Barena Run Bundles.
 - [x] Go resolves canonical Agent identities while preserving source names.
@@ -13,6 +13,15 @@ Updated: 2026-08-07
 - [x] Candidate assets retain exact evidence provenance.
 - [x] React is built into and served by the Go binary.
 - [x] GauzMem is private and tenant scope is derived by Go.
+
+## Active milestone — Agent-bound ingestion
+
+- [x] Add owner-scoped Registered Agent persistence.
+- [x] Bind every newly created credential to one stable `agent_id`.
+- [x] Override Conversation and OTLP Agent identity from the credential.
+- [x] Infer Runtime from accepted evidence without a user-selectable field.
+- [x] Merge registered Agents with Trace and Conversation counts.
+- [x] Keep legacy unbound credentials compatible but hidden from onboarding.
 
 ## Active milestone — durable worker queue
 

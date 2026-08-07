@@ -6,8 +6,8 @@ Updated: 2026-08-07
 ## Demonstrated journey
 
 1. GitHub OAuth creates an authenticated Catena session.
-2. A personal API Key accepts OTLP/HTTP from Codex and XiaoBaOS.
-3. Source aliases are grouped into one canonical Agent while raw `service.name` remains visible.
+2. `接入新 Agent` atomically creates a stable `agent_id` and a bound connection key.
+3. The key owns incoming OTLP/Conversation evidence while Runtime is inferred and raw `service.name` remains visible.
 4. Trace detail renders Span hierarchy, duration, tool input/output and error evidence.
 5. XiaoBaOS sends user-visible Conversation records through the separate Conversation API.
 6. An Agent plus bounded time window freezes a multi-Trace Evidence Pack.

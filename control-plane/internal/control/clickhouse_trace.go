@@ -38,9 +38,10 @@ func OpenClickHouseTraceStore(ctx context.Context, dsn string) (*ClickHouseTrace
 }
 
 func (s *ClickHouseTraceStore) migrate(ctx context.Context) error {
-	return s.conn.Exec(ctx, `
+	if err := s.conn.Exec(ctx, `
 CREATE TABLE IF NOT EXISTS catena_spans (
   owner_id String,
+	  agent_id String,
   trace_id String,
   span_id String,
   parent_span_id String,
@@ -71,7 +72,10 @@ CREATE TABLE IF NOT EXISTS catena_spans (
   inserted_at DateTime64(9, 'UTC')
 ) ENGINE = ReplacingMergeTree(inserted_at)
 ORDER BY (owner_id, trace_id, span_id)
-`)
+`); err != nil {
+		return err
+	}
+	return s.conn.Exec(ctx, `ALTER TABLE catena_spans ADD COLUMN IF NOT EXISTS agent_id String AFTER owner_id`)
 }
 
 func (s *ClickHouseTraceStore) Ping(ctx context.Context) error {
@@ -91,7 +95,7 @@ func (s *ClickHouseTraceStore) InsertSpans(ctx context.Context, ownerID string, 
 	}
 	batch, err := s.conn.PrepareBatch(ctx, `
 INSERT INTO catena_spans (
-  owner_id, trace_id, span_id, parent_span_id, trace_state, name, kind,
+  owner_id, agent_id, trace_id, span_id, parent_span_id, trace_state, name, kind,
   service_name, scope_name, scope_version, resource_schema_url,
   scope_schema_url, start_time, end_time, status_code, status_message,
   attributes_json, resource_attributes_json, events_json, links_json, flags,
@@ -122,6 +126,7 @@ INSERT INTO catena_spans (
 		}
 		if err := batch.Append(
 			ownerID,
+			span.AgentID,
 			span.TraceID,
 			span.SpanID,
 			span.ParentSpanID,
@@ -213,7 +218,7 @@ func (s *ClickHouseTraceStore) ListAgentTraces(
 	windowEnd time.Time,
 	limit int,
 ) ([]TraceSummary, error) {
-	filter, filterArgs := agentServiceNameFilter(agentID)
+	legacyFilter, legacyFilterArgs := agentServiceNameFilter(agentID)
 	query := fmt.Sprintf(`
 SELECT
   trace_id, root_name, service_name, model, started_at, ended_at,
@@ -221,6 +226,7 @@ SELECT
 FROM (
   SELECT
     trace_id,
+	    anyIf(agent_id, agent_id != '') AS agent_id,
     argMin(name, tuple(parent_span_id != '', start_time)) AS root_name,
     argMin(service_name, tuple(parent_span_id != '', start_time)) AS service_name,
     anyIf(model, model != '') AS model,
@@ -234,11 +240,12 @@ FROM (
   WHERE owner_id = ? AND end_time >= ? AND start_time <= ?
   GROUP BY trace_id
 )
-WHERE %s
+WHERE agent_id = ? OR (agent_id = '' AND %s)
 ORDER BY ended_at DESC
-LIMIT ?`, filter)
+LIMIT ?`, legacyFilter)
 	args := []any{ownerID, windowStart, windowEnd}
-	args = append(args, filterArgs...)
+	args = append(args, agentID)
+	args = append(args, legacyFilterArgs...)
 	args = append(args, limit)
 	rows, err := s.conn.Query(ctx, query, args...)
 	if err != nil {
@@ -274,7 +281,7 @@ func (s *ClickHouseTraceStore) GetTrace(
 ) (TraceDetail, error) {
 	rows, err := s.conn.Query(ctx, `
 SELECT
-  trace_id, span_id, parent_span_id, trace_state, name, kind, service_name,
+  agent_id, trace_id, span_id, parent_span_id, trace_state, name, kind, service_name,
   scope_name, scope_version, resource_schema_url, scope_schema_url, start_time,
   end_time, status_code, status_message, attributes_json,
   resource_attributes_json, events_json, links_json, flags,
@@ -301,6 +308,7 @@ ORDER BY start_time, span_id`, ownerID, traceID)
 			insertedAt         time.Time
 		)
 		if err := rows.Scan(
+			&span.AgentID,
 			&span.TraceID,
 			&span.SpanID,
 			&span.ParentSpanID,
@@ -367,6 +375,7 @@ func (s *ClickHouseTraceStore) ListAgents(
 ) ([]AgentSummary, error) {
 	rows, err := s.conn.Query(ctx, `
 SELECT
+  agent_id,
   service_name,
   count() AS trace_count,
   sum(span_count) AS span_count,
@@ -375,6 +384,7 @@ SELECT
 FROM (
   SELECT
     trace_id,
+	    anyIf(agent_id, agent_id != '') AS agent_id,
     argMin(service_name, tuple(parent_span_id != '', start_time)) AS service_name,
     count() AS span_count,
     countIf(status_code = 2) AS error_count,
@@ -384,7 +394,7 @@ FROM (
   GROUP BY trace_id
 )
 WHERE service_name != ''
-GROUP BY service_name
+GROUP BY agent_id, service_name
 ORDER BY last_seen_at DESC`, ownerID)
 	if err != nil {
 		return nil, err
@@ -394,6 +404,7 @@ ORDER BY last_seen_at DESC`, ownerID)
 	for rows.Next() {
 		var value agentSourceAggregate
 		if err := rows.Scan(
+			&value.AgentID,
 			&value.ServiceName,
 			&value.TraceCount,
 			&value.SpanCount,

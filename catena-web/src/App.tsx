@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AgentWorkspace } from "./AgentWorkspace";
 import { api } from "./api";
-import { copyText } from "./clipboard";
 import { ConversationWorkspace } from "./ConversationWorkspace";
 import { EvolutionWorkspace } from "./EvolutionWorkspace";
 import { MemoryGraphCanvas } from "./MemoryGraphCanvas";
 import type { MemoryVisualNode } from "./memoryGraph";
 import { primaryNavigationRoutes } from "./navigation";
 import { TraceExplorer } from "./TraceExplorer";
-import type { ApiToken, EvolutionJob, MemoryFactGraph, MemoryRecallBundle, MemoryRecallItem, MemoryRecord, Session, WorkspaceData } from "./types";
+import type { EvolutionJob, MemoryFactGraph, MemoryRecallBundle, MemoryRecallItem, MemoryRecord, Session, WorkspaceData } from "./types";
 
 type Route = "home" | "agents" | "conversations" | "traces" | "evolution" | "memory" | "settings";
 type Locale = "zh" | "en";
@@ -85,7 +84,7 @@ const copy = {
     recallConversation: "原始对话",
     recallTopic: "Topic",
     settingsTitle: "设置",
-    settingsBody: "管理接入密钥与当前登录会话。",
+    settingsBody: "管理当前登录会话；Agent 接入凭证回到对应 Agent 下管理。",
     refresh: "刷新",
     retry: "重试",
     signOut: "退出登录",
@@ -104,11 +103,11 @@ const copy = {
     noRuntime: "XiaoBaOS 进化大脑尚未就绪。",
     observedAgents: "已观测 Agent",
     cloudRuntime: "XiaoBaOS 进化大脑",
-    noAgents: "还没有收到 Agent Trace。创建 API 密钥并配置 OTLP 后，Agent 会自动出现。",
+    noAgents: "还没有接入 Agent。先到 Agent 页面输入名称并生成专属接入密钥。",
     traceUnavailable: "Trace 存储尚未配置",
     traceUnavailableBody: "为 Catena Server 配置 ClickHouse 后，Go 会直接接收和查询 OTLP Trace。",
     noTraces: "等待第一条 Trace",
-    noTracesBody: "使用个人 API 密钥作为 Bearer Token，把 OTLP/HTTP exporter 指向这个地址。",
+    noTracesBody: "使用 Agent 的专属接入密钥作为 Bearer Token，把 OTLP/HTTP exporter 指向这个地址。",
     traceEndpoint: "OTLP Endpoint",
     spans: "Span",
     errors: "错误",
@@ -119,22 +118,6 @@ const copy = {
     output: "输出",
     noEvidence: "这个 Span 没有导出输入或输出证据。",
     metadataOnly: "这个 Runtime 只导出了工具名与状态，没有输入或输出正文。",
-    apiKeys: "个人 API 密钥",
-    apiKeysBody: "供本地 Agent 和 CLI 上传 Trace；XiaoBaOS 也用它同步用户可见对话。每个名称对应一个独立、可复制和删除的密钥。",
-    keyName: "密钥名称",
-    keyPlaceholder: "例如：MacBook Codex",
-    createKey: "创建密钥",
-    deleteKey: "删除",
-    confirmDeleteKey: "确认删除",
-    legacyKey: "旧密钥仅保存了哈希，请新建替代密钥后删除",
-    copied: "已复制",
-    copy: "复制",
-    keyCreated: "密钥已创建，请复制并保存。",
-    copyUnavailable: "浏览器未允许自动复制。密钥已显示，请手动选择复制。",
-    tokenVisible: "可复制的明文密钥",
-    tokenVisibleHint: "仅在需要时显示；点击输入框可全选。",
-    hideToken: "隐藏明文",
-    authRequired: "配置 GitHub 登录后才能创建个人 API 密钥。",
     statusReady: "可用",
     statusUnavailable: "不可用",
     latest: "最近更新",
@@ -200,7 +183,7 @@ const copy = {
     recallConversation: "Conversation",
     recallTopic: "Topic",
     settingsTitle: "Settings",
-    settingsBody: "Manage ingestion keys and the current session.",
+    settingsBody: "Manage the current session. Each Agent now owns its connection credential.",
     refresh: "Refresh",
     retry: "Retry",
     signOut: "Sign out",
@@ -219,11 +202,11 @@ const copy = {
     noRuntime: "The XiaoBaOS evolution brain is not ready.",
     observedAgents: "Observed Agents",
     cloudRuntime: "XiaoBaOS evolution brain",
-    noAgents: "No Agent Trace yet. Create an API key and configure OTLP to register one automatically.",
+    noAgents: "No Agent yet. Open Agents, name it, and generate its dedicated connection key.",
     traceUnavailable: "Trace storage is not configured",
     traceUnavailableBody: "Configure ClickHouse for Catena Server. Go then receives and queries OTLP Trace directly.",
     noTraces: "Waiting for the first Trace",
-    noTracesBody: "Use a personal API key as the Bearer Token and point the OTLP/HTTP exporter to this endpoint.",
+    noTracesBody: "Use the Agent's connection key as the Bearer Token and point the OTLP/HTTP exporter to this endpoint.",
     traceEndpoint: "OTLP Endpoint",
     spans: "Spans",
     errors: "Errors",
@@ -234,22 +217,6 @@ const copy = {
     output: "Output",
     noEvidence: "This Span exported no input or output evidence.",
     metadataOnly: "This Runtime exported the tool name and status, but no input or output content.",
-    apiKeys: "Personal API keys",
-    apiKeysBody: "Use these from local Agents and CLIs to upload Traces; XiaoBaOS also uses one to sync user-visible Conversations. Every name owns one independently copyable and revocable key.",
-    keyName: "Key name",
-    keyPlaceholder: "Example: MacBook Codex",
-    createKey: "Create key",
-    deleteKey: "Delete",
-    confirmDeleteKey: "Confirm delete",
-    legacyKey: "This legacy key only retained a hash. Create its replacement before deleting it.",
-    copied: "Copied",
-    copy: "Copy",
-    keyCreated: "Key created. Copy and save it now.",
-    copyUnavailable: "The browser denied automatic copy. The key is visible so you can select it manually.",
-    tokenVisible: "Copyable plaintext key",
-    tokenVisibleHint: "Shown only when needed; click the field to select all.",
-    hideToken: "Hide plaintext",
-    authRequired: "Configure GitHub login before creating personal API keys.",
     statusReady: "Ready",
     statusUnavailable: "Unavailable",
     latest: "Latest update",
@@ -375,6 +342,7 @@ export function App() {
             selectedEvolutionAgentID={selectedEvolutionAgentID}
             onOpenEvolutionJob={openEvolutionJob}
             onAnalyzeAgent={analyzeAgent}
+            onRefresh={load}
           />
         ) : (
           <LoadingPanel label={t.loading} />
@@ -502,6 +470,7 @@ function RouteView({
   selectedEvolutionAgentID,
   onOpenEvolutionJob,
   onAnalyzeAgent,
+  onRefresh,
 }: {
   route: Route;
   locale: Locale;
@@ -511,8 +480,9 @@ function RouteView({
   selectedEvolutionAgentID: string;
   onOpenEvolutionJob: (job: EvolutionJob) => void;
   onAnalyzeAgent: (agentID: string) => void;
+  onRefresh: () => Promise<void>;
 }) {
-  if (route === "agents") return <AgentWorkspace locale={locale} workspace={workspace} onAnalyze={onAnalyzeAgent} />;
+  if (route === "agents") return <AgentWorkspace locale={locale} workspace={workspace} onAnalyze={onAnalyzeAgent} onRefresh={onRefresh} />;
   if (route === "conversations") return <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} />;
   if (route === "traces") return <TraceExplorer locale={locale} workspace={workspace} />;
   if (route === "evolution") return (
@@ -786,150 +756,13 @@ function Status({ value, locale }: { value: string; locale: Locale }) {
 
 function Settings({ locale, session }: { locale: Locale; session: Session }) {
   const t = copy[locale];
-  const [tokens, setTokens] = useState<ApiToken[]>([]);
-  const [name, setName] = useState("");
-  const [message, setMessage] = useState("");
-  const [messageTone, setMessageTone] = useState<"neutral" | "error">("neutral");
-  const [busy, setBusy] = useState(false);
-  const [busyTokenID, setBusyTokenID] = useState("");
-  const [copiedTokenID, setCopiedTokenID] = useState("");
-  const [confirmDeleteID, setConfirmDeleteID] = useState("");
-  const [revealedToken, setRevealedToken] = useState<{ id: string; token: string } | null>(null);
-
-  const loadTokens = useCallback(async () => {
-    if (session.mode !== "github") return;
-    try {
-      const result = await api.apiTokens();
-      setTokens(result.api_tokens);
-    } catch (cause) {
-      setMessageTone("error");
-      setMessage(cause instanceof Error ? cause.message : "Request failed");
-    }
-  }, [session.mode]);
-
-  useEffect(() => { void loadTokens(); }, [loadTokens]);
-
   return (
     <section className="page settings-page">
       <PageHeader title={t.settingsTitle} body={t.settingsBody} />
       <section className="settings-section">
-        <h2>{t.apiKeys}</h2>
-        <p>{t.apiKeysBody}</p>
-        {session.mode !== "github" ? <InlineNote>{t.authRequired}</InlineNote> : (
-          <>
-            <form className="key-form" onSubmit={async (event) => {
-              event.preventDefault();
-              if (!name.trim()) return;
-              setBusy(true);
-              setMessage("");
-              try {
-                const result = await api.createApiToken(name.trim());
-                setRevealedToken({ id: result.api_token.id, token: result.token });
-                setName("");
-                await loadTokens();
-                setMessageTone("neutral");
-                setMessage(t.keyCreated);
-              } catch (cause) {
-                setMessageTone("error");
-                setMessage(cause instanceof Error ? cause.message : "Request failed");
-              } finally {
-                setBusy(false);
-              }
-            }}>
-              <label><span>{t.keyName}</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder={t.keyPlaceholder} maxLength={80} /></label>
-              <button className="primary-button compact" type="submit" disabled={busy || !name.trim()}>{t.createKey}</button>
-              <p
-                className={`key-feedback ${messageTone === "error" ? "error" : ""}`}
-                role={messageTone === "error" ? "alert" : "status"}
-                title={message}
-              >{message || "\u00a0"}</p>
-            </form>
-            <div className="token-list">
-              {tokens.map((token) => (
-                <article className="token-row" key={token.id}>
-                  <div className="token-identity">
-                    <strong>{token.name}</strong>
-                    <code>{token.masked_token}</code>
-                    <span><Time value={token.created_at} locale={locale} />{token.recoverable ? null : <> · {t.legacyKey}</>}</span>
-                  </div>
-                  <div className="token-actions">
-                    <button
-                      className="text-button"
-                      type="button"
-                      disabled={!token.recoverable || busyTokenID === token.id}
-                      title={token.recoverable ? t.copy : t.legacyKey}
-                      onClick={async () => {
-                        setBusyTokenID(token.id);
-                        setMessage("");
-                        try {
-                          const result = await api.revealApiToken(token.id);
-                          setRevealedToken({ id: token.id, token: result.token });
-                          if (await copyText(result.token)) {
-                            setCopiedTokenID(token.id);
-                            setMessageTone("neutral");
-                            setMessage(t.copied);
-                          } else {
-                            setCopiedTokenID("");
-                            setMessageTone("neutral");
-                            setMessage(t.copyUnavailable);
-                          }
-                        } catch (cause) {
-                          setMessageTone("error");
-                          setMessage(cause instanceof Error ? cause.message : "Request failed");
-                        } finally {
-                          setBusyTokenID("");
-                        }
-                      }}
-                    >{copiedTokenID === token.id ? t.copied : t.copy}</button>
-                    <button
-                      className="text-button danger"
-                      type="button"
-                      disabled={busyTokenID === token.id}
-                      onClick={async () => {
-                        if (confirmDeleteID !== token.id) {
-                          setConfirmDeleteID(token.id);
-                          return;
-                        }
-                        setBusyTokenID(token.id);
-                        setMessage("");
-                        try {
-                          await api.deleteApiToken(token.id);
-                          setConfirmDeleteID("");
-                          setCopiedTokenID("");
-                          if (revealedToken?.id === token.id) setRevealedToken(null);
-                          await loadTokens();
-                        } catch (cause) {
-                          setMessageTone("error");
-                          setMessage(cause instanceof Error ? cause.message : "Request failed");
-                        } finally {
-                          setBusyTokenID("");
-                        }
-                      }}
-                    >{confirmDeleteID === token.id ? t.confirmDeleteKey : t.deleteKey}</button>
-                  </div>
-                  {revealedToken?.id === token.id ? (
-                    <div className="token-reveal" role="status">
-                      <div>
-                        <strong>{t.tokenVisible}</strong>
-                        <span>{t.tokenVisibleHint}</span>
-                      </div>
-                      <input
-                        aria-label={t.tokenVisible}
-                        autoComplete="off"
-                        readOnly
-                        spellCheck={false}
-                        value={revealedToken.token}
-                        onClick={(event) => event.currentTarget.select()}
-                        onFocus={(event) => event.currentTarget.select()}
-                      />
-                      <button className="text-button" type="button" onClick={() => setRevealedToken(null)}>{t.hideToken}</button>
-                    </div>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-          </>
-        )}
+        <h2>{locale === "zh" ? "Agent 接入" : "Agent connections"}</h2>
+        <p>{locale === "zh" ? "接入凭证已经归到具体 Agent，不再作为一组独立的个人密钥管理。请在 Agent 页面接入、复制或撤销凭证。" : "Connection credentials now belong to individual Agents instead of a separate personal-key list. Connect, copy, or revoke them from the Agents page."}</p>
+        {session.user ? <InlineNote>{session.user.display_name}</InlineNote> : null}
       </section>
     </section>
   );

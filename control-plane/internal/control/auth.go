@@ -528,6 +528,58 @@ func (s *HTTPServer) requireAPITokenUser(
 	return &user, true
 }
 
+type agentIngestPrincipal struct {
+	User  *User
+	Agent *RegisteredAgent
+}
+
+func (s *HTTPServer) requireAgentAPITokenPrincipal(
+	w http.ResponseWriter,
+	r *http.Request,
+) (agentIngestPrincipal, bool) {
+	if !s.auth.Enabled() {
+		writeProblem(w, http.StatusNotFound, "edge ingestion requires configured authentication")
+		return agentIngestPrincipal{}, false
+	}
+	plaintext, ok := bearerAPIToken(r)
+	if !ok {
+		writeProblem(w, http.StatusUnauthorized, "an Agent connection key is required")
+		return agentIngestPrincipal{}, false
+	}
+	hash := sessionTokenHash(plaintext)
+	token, err := s.store.GetAPITokenByHash(r.Context(), hash)
+	if err != nil {
+		writeProblem(w, http.StatusUnauthorized, "the Agent connection key is invalid or revoked")
+		return agentIngestPrincipal{}, false
+	}
+	user, err := s.store.GetUserByAPITokenHash(r.Context(), hash)
+	if err != nil {
+		writeProblem(w, http.StatusUnauthorized, "the Agent connection key is invalid or revoked")
+		return agentIngestPrincipal{}, false
+	}
+	principal := agentIngestPrincipal{User: &user}
+	if token.AgentID == "" {
+		return principal, true
+	}
+	agent, err := s.store.GetRegisteredAgentByOwner(r.Context(), user.ID, token.AgentID)
+	if err != nil {
+		writeProblem(w, http.StatusUnauthorized, "the Agent connection key is no longer bound")
+		return agentIngestPrincipal{}, false
+	}
+	principal.Agent = &agent
+	return principal, true
+}
+
+func (s *HTTPServer) requireConversationIngestPrincipal(
+	w http.ResponseWriter,
+	r *http.Request,
+) (agentIngestPrincipal, bool) {
+	if platformUser, handled, ok := s.requirePlatformGatewayUser(w, r); handled {
+		return agentIngestPrincipal{User: platformUser}, ok
+	}
+	return s.requireAgentAPITokenPrincipal(w, r)
+}
+
 // requireIngestUser keeps the historical direct PAT path for local
 // compatibility while making the signed Platform project principal canonical.
 // Public project API keys terminate at spiral-app and are never forwarded to
@@ -548,7 +600,7 @@ func bearerAPIToken(r *http.Request) (string, bool) {
 		return "", false
 	}
 	token := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
-	if !strings.HasPrefix(token, "barena_pat_") ||
+	if (!strings.HasPrefix(token, "barena_pat_") && !strings.HasPrefix(token, "catena_agent_")) ||
 		len(token) > 256 ||
 		strings.ContainsAny(token, " \t\r\n") {
 		return "", false

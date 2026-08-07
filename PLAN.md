@@ -4,7 +4,22 @@ Updated: 2026-08-07
 
 ## Current status
 
-Catena is a standalone Go + React product. Go owns OAuth, API keys, OTLP/Conversation ingestion, Trace queries, Agent identity and Evolution Job orchestration. The embedded XiaoBaOS Runtime consumes retained Evidence Packs and produces reviewable Agent assets. Target Agent execution remains local.
+Catena is a standalone Go + React product. Go owns OAuth, Agent registration,
+Agent-bound API keys, OTLP/Conversation ingestion, Trace queries and Evolution
+Job orchestration. The embedded XiaoBaOS Runtime consumes retained Evidence
+Packs and produces reviewable Agent assets. Target Agent execution remains
+local.
+
+## Active milestone — Agent-first onboarding
+
+- [x] Replace the generic API-key form with `接入新 Agent` and one Agent-name
+      input; do not ask for Runtime.
+- [x] Atomically create stable `agent_id`, display name and Agent-bound key.
+- [x] Force Conversation and Trace ownership from the Agent key.
+- [x] Detect XiaoBaOS, Codex, Claude Code or generic OTel Runtime from accepted
+      evidence and expose it as read-only status.
+- [x] Preserve existing unbound keys as hidden ingestion compatibility.
+- [x] Verify create → upload → automatic attribution → revoke end to end.
 
 ## MVP1 — complete
 
