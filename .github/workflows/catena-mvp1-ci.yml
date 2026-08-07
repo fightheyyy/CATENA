@@ -70,7 +70,6 @@ jobs:
           CATENA_GITHUB_CLIENT_SECRET: test-client-secret
           CATENA_POSTGRES_ADMIN_PASSWORD: 2123456789abcdef0123456789abcdef
           CATENA_CORE_DB_PASSWORD: 3123456789abcdef0123456789abcdef
-          CATENA_LANGWATCH_DB_PASSWORD: 4123456789abcdef0123456789abcdef
           CATENA_CLICKHOUSE_PASSWORD: 5123456789abcdef0123456789abcdef
           XIAOBA_LLM_API_BASE: https://api.example.com/v1
           XIAOBA_LLM_API_KEY: test-model-key

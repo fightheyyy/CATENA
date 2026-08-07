@@ -369,7 +369,7 @@ func (s *HTTPServer) requireUser(w http.ResponseWriter, r *http.Request) (*User,
 }
 
 // requirePlatformGatewayUser authenticates project context supplied by the
-// LangWatch-derived Platform. A caller cannot become another project merely by
+// Catena platform. A caller cannot become another project merely by
 // changing X-Barena-Project-ID: the method, request URI, project, actor,
 // timestamp, and exact request body are all covered by the shared HMAC.
 //

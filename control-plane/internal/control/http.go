@@ -88,7 +88,7 @@ func NewHTTPHandlerWithMemory(
 	mux.HandleFunc("GET /v1/auth/github", server.githubLogin)
 	mux.HandleFunc("GET /v1/auth/github/callback", server.githubCallback)
 	// Keep the callback already registered by existing Catena GitHub OAuth Apps
-	// while the public Web moves from the LangWatch downstream to this server.
+	// while the public Web and API share this server.
 	mux.HandleFunc("GET /api/auth/callback/github", server.githubCallback)
 	mux.HandleFunc("POST /v1/auth/logout", server.logout)
 	mux.HandleFunc("GET /v1/me/api-tokens", server.listAPITokens)

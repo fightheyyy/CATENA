@@ -1,27 +1,19 @@
-# ADR 0003: Evolution output is a proposal until Barena verifies it
+# ADR 0003: Evolution output remains a proposal
 
 - Status: accepted
 - Date: 2026-08-02
 
 ## Context
 
-XiaoBaOS roles can analyze a Trace and propose changes to a Role, Skill,
-Memory, or Harness. A language-model review is useful evidence, but it cannot
-prove that applying the change preserves known capabilities or is safe to
-release.
+Model-driven roles can analyze evidence and propose changes to `agent.md`, a Skill, a Role or a XiaoBaOS Harness. A review of that proposal does not prove the modified Agent still satisfies known capabilities.
 
 ## Decision
 
-Evolution jobs persist a Finding, replay Case proposal, Candidate, and Review.
-Every Candidate is `draft/unverified`. MVP1 requires explicit human promotion
-of evidence into an immutable Case, followed by Barena Replay and Release
-Check. Only the Barena release record may say `cleared`, `held`, or `rejected`.
+Every Candidate is evidence-linked and `draft/unverified`. Catena displays and exports it but does not mutate or publish the target automatically. A release claim requires independent Barena Replay and deterministic verifier evidence.
 
 ## Consequences
 
-- The UI never presents role output as an applied optimization.
-- No target source tree is changed and no Hub publication occurs in MVP1.
-- Generic cleared Role/Skill assets may later be published through RoleHub or
-  SkillHub adapters; XiaoBaOS-specific Harness changes return to XiaoBaOS.
-- Candidate application and before/after Compare need a separate, explicit
-  future contract.
+- The UI labels Candidates as proposals.
+- Trace provenance remains attached to every generated asset.
+- Applying or publishing an asset is an explicit future/user action.
+- Only Barena release records may say `cleared`, `held` or `rejected`.

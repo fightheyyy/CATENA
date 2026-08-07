@@ -27,14 +27,11 @@ case "$action" in
   logs)
     "${compose[@]}" logs -f --tail=200 catena-core catena-runner
     ;;
-  legacy-up)
-    "${compose[@]}" --profile legacy up -d --build --wait --wait-timeout 600
-    ;;
   down)
     "${compose[@]}" down --remove-orphans
     ;;
   *)
-    echo "usage: $0 {config|build|up|smoke|logs|legacy-up|down}" >&2
+    echo "usage: $0 {config|build|up|smoke|logs|down}" >&2
     exit 2
     ;;
 esac
