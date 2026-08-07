@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -30,6 +31,7 @@ const (
 	gatewayProjectHeader    = "X-Barena-Project-ID"
 	gatewayActorHeader      = "X-Barena-Actor-ID"
 	maxGatewayBodyBytes     = 2 * 1024 * 1024
+	githubHTTPTimeout       = 30 * time.Second
 )
 
 type AuthConfig struct {
@@ -100,7 +102,7 @@ func (c AuthConfig) normalized() AuthConfig {
 		c.UserAPIURL = "https://api.github.com/user"
 	}
 	if c.HTTPClient == nil {
-		c.HTTPClient = &http.Client{Timeout: 10 * time.Second}
+		c.HTTPClient = &http.Client{Timeout: githubHTTPTimeout}
 	}
 	return c
 }
@@ -206,12 +208,14 @@ func (s *HTTPServer) githubCallback(w http.ResponseWriter, r *http.Request) {
 
 	accessToken, err := s.exchangeGitHubCode(r.Context(), code, verifierCookie.Value)
 	if err != nil {
-		writeProblem(w, http.StatusBadGateway, bounded(err.Error(), 300))
+		slog.Warn("GitHub token exchange failed", "error", err)
+		http.Redirect(w, r, s.oauthRecoveryURL("upstream"), http.StatusSeeOther)
 		return
 	}
 	identity, err := s.fetchGitHubIdentity(r.Context(), accessToken)
 	if err != nil {
-		writeProblem(w, http.StatusBadGateway, bounded(err.Error(), 300))
+		slog.Warn("GitHub identity lookup failed", "error", err)
+		http.Redirect(w, r, s.oauthRecoveryURL("upstream"), http.StatusSeeOther)
 		return
 	}
 	now := time.Now().UTC()

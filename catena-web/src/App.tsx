@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AgentWorkspace } from "./AgentWorkspace";
 import { api } from "./api";
+import { copyText } from "./clipboard";
 import { ConversationWorkspace } from "./ConversationWorkspace";
 import { EvolutionWorkspace } from "./EvolutionWorkspace";
 import { MemoryGraphCanvas } from "./MemoryGraphCanvas";
@@ -27,6 +28,8 @@ const copy = {
     nav: { home: "首页", agents: "Agent", conversations: "对话", traces: "Trace", evolution: "Trace Farm", memory: "记忆", settings: "设置" },
     signIn: "使用 GitHub 登录",
     oauthFlowExpired: "登录流程已过期或从另一个地址发起。请重新登录，Catena 会自动使用正确的回调地址。",
+    oauthUpstreamUnavailable: "GitHub 连接暂时超时，请重新登录。Catena 不会保留失败的授权流程。",
+    oauthCancelled: "GitHub 授权已取消，你可以随时重新登录。",
     landingTitle: "让 Agent 的每次变化，都有证据。",
     landingBody: "汇聚不同 Agent 的 Trace，用内置 XiaoBaOS 持续提炼 agent.md、Skill、Role 与 Harness 优化。",
     landingNote: "跨 Agent 证据。持续提炼。可复用资产。",
@@ -126,7 +129,11 @@ const copy = {
     legacyKey: "旧密钥仅保存了哈希，请新建替代密钥后删除",
     copied: "已复制",
     copy: "复制",
-    keyCreated: "密钥已创建，可从对应行复制。",
+    keyCreated: "密钥已创建，请复制并保存。",
+    copyUnavailable: "浏览器未允许自动复制。密钥已显示，请手动选择复制。",
+    tokenVisible: "可复制的明文密钥",
+    tokenVisibleHint: "仅在需要时显示；点击输入框可全选。",
+    hideToken: "隐藏明文",
     authRequired: "配置 GitHub 登录后才能创建个人 API 密钥。",
     statusReady: "可用",
     statusUnavailable: "不可用",
@@ -136,6 +143,8 @@ const copy = {
     nav: { home: "Home", agents: "Agents", conversations: "Conversations", traces: "Traces", evolution: "Trace Farm", memory: "Memory", settings: "Settings" },
     signIn: "Continue with GitHub",
     oauthFlowExpired: "This sign-in flow expired or started on another address. Restart it and Catena will use the canonical callback origin.",
+    oauthUpstreamUnavailable: "GitHub temporarily timed out. Restart sign-in; Catena does not retain the failed authorization flow.",
+    oauthCancelled: "GitHub authorization was cancelled. You can restart sign-in at any time.",
     landingTitle: "Evidence for every Agent change.",
     landingBody: "Unify Traces across Agents and let built-in XiaoBaOS continuously distill agent.md, Skill, Role, and Harness improvements.",
     landingNote: "Cross-Agent evidence. Continuous distillation. Reusable assets.",
@@ -235,7 +244,11 @@ const copy = {
     legacyKey: "This legacy key only retained a hash. Create its replacement before deleting it.",
     copied: "Copied",
     copy: "Copy",
-    keyCreated: "Key created. You can copy it from its row at any time.",
+    keyCreated: "Key created. Copy and save it now.",
+    copyUnavailable: "The browser denied automatic copy. The key is visible so you can select it manually.",
+    tokenVisible: "Copyable plaintext key",
+    tokenVisibleHint: "Shown only when needed; click the field to select all.",
+    hideToken: "Hide plaintext",
     authRequired: "Configure GitHub login before creating personal API keys.",
     statusReady: "Ready",
     statusUnavailable: "Unavailable",
@@ -332,7 +345,7 @@ export function App() {
         locale={locale}
         onLocale={changeLocale}
         loginURL={session?.login_url ?? "/v1/auth/github"}
-        oauthError={new URLSearchParams(window.location.search).has("auth_error")}
+        oauthError={new URLSearchParams(window.location.search).get("auth_error") ?? ""}
       />
     );
   }
@@ -371,8 +384,15 @@ export function App() {
   );
 }
 
-function Landing({ locale, onLocale, loginURL, oauthError }: { locale: Locale; onLocale: () => void; loginURL: string; oauthError: boolean }) {
+function Landing({ locale, onLocale, loginURL, oauthError }: { locale: Locale; onLocale: () => void; loginURL: string; oauthError: string }) {
   const t = copy[locale];
+  const oauthErrorMessage = oauthError === "upstream"
+    ? t.oauthUpstreamUnavailable
+    : oauthError === "cancelled"
+      ? t.oauthCancelled
+      : oauthError
+        ? t.oauthFlowExpired
+        : "";
   return (
     <main className="landing">
       <header className="landing-nav">
@@ -385,7 +405,7 @@ function Landing({ locale, onLocale, loginURL, oauthError }: { locale: Locale; o
         <div className="landing-copy">
           <h1>{t.landingTitle}</h1>
           <p>{t.landingBody}</p>
-          {oauthError ? <p className="landing-auth-error" role="alert">{t.oauthFlowExpired}</p> : null}
+          {oauthErrorMessage ? <p className="landing-auth-error" role="alert">{oauthErrorMessage}</p> : null}
           <a className="primary-button" href={loginURL}>{t.signIn}</a>
         </div>
         <div className="landing-mark" aria-hidden="true">
@@ -774,6 +794,7 @@ function Settings({ locale, session }: { locale: Locale; session: Session }) {
   const [busyTokenID, setBusyTokenID] = useState("");
   const [copiedTokenID, setCopiedTokenID] = useState("");
   const [confirmDeleteID, setConfirmDeleteID] = useState("");
+  const [revealedToken, setRevealedToken] = useState<{ id: string; token: string } | null>(null);
 
   const loadTokens = useCallback(async () => {
     if (session.mode !== "github") return;
@@ -802,7 +823,8 @@ function Settings({ locale, session }: { locale: Locale; session: Session }) {
               setBusy(true);
               setMessage("");
               try {
-                await api.createApiToken(name.trim());
+                const result = await api.createApiToken(name.trim());
+                setRevealedToken({ id: result.api_token.id, token: result.token });
                 setName("");
                 await loadTokens();
                 setMessageTone("neutral");
@@ -841,8 +863,16 @@ function Settings({ locale, session }: { locale: Locale; session: Session }) {
                         setMessage("");
                         try {
                           const result = await api.revealApiToken(token.id);
-                          await navigator.clipboard.writeText(result.token);
-                          setCopiedTokenID(token.id);
+                          setRevealedToken({ id: token.id, token: result.token });
+                          if (await copyText(result.token)) {
+                            setCopiedTokenID(token.id);
+                            setMessageTone("neutral");
+                            setMessage(t.copied);
+                          } else {
+                            setCopiedTokenID("");
+                            setMessageTone("neutral");
+                            setMessage(t.copyUnavailable);
+                          }
                         } catch (cause) {
                           setMessageTone("error");
                           setMessage(cause instanceof Error ? cause.message : "Request failed");
@@ -866,6 +896,7 @@ function Settings({ locale, session }: { locale: Locale; session: Session }) {
                           await api.deleteApiToken(token.id);
                           setConfirmDeleteID("");
                           setCopiedTokenID("");
+                          if (revealedToken?.id === token.id) setRevealedToken(null);
                           await loadTokens();
                         } catch (cause) {
                           setMessageTone("error");
@@ -876,6 +907,24 @@ function Settings({ locale, session }: { locale: Locale; session: Session }) {
                       }}
                     >{confirmDeleteID === token.id ? t.confirmDeleteKey : t.deleteKey}</button>
                   </div>
+                  {revealedToken?.id === token.id ? (
+                    <div className="token-reveal" role="status">
+                      <div>
+                        <strong>{t.tokenVisible}</strong>
+                        <span>{t.tokenVisibleHint}</span>
+                      </div>
+                      <input
+                        aria-label={t.tokenVisible}
+                        autoComplete="off"
+                        readOnly
+                        spellCheck={false}
+                        value={revealedToken.token}
+                        onClick={(event) => event.currentTarget.select()}
+                        onFocus={(event) => event.currentTarget.select()}
+                      />
+                      <button className="text-button" type="button" onClick={() => setRevealedToken(null)}>{t.hideToken}</button>
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>
