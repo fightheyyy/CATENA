@@ -1,6 +1,6 @@
 # Catena Implementation Plan
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 ## Current status
 
@@ -80,6 +80,24 @@ local.
 5. Web tests/build, Go tests/vet/race, and both Compose configurations pass.
 
 ## Verification log
+
+- 2026-08-09: Final release interaction audit passed all seven product
+  destinations plus Home on desktop and 390px. Release blockers in mobile
+  navigation and Conversation detail reflow were fixed; first-time Agent setup
+  now has a direct entry and Run states no longer expose internal English enums.
+
+- 2026-08-09: Terminal Evolution Jobs gained owner-scoped deletion while queued
+  and running Jobs remain protected. Unit, PostgreSQL integration and browser
+  acceptance verified two-step confirmation, immediate list removal and source
+  Trace preservation.
+
+- 2026-08-09: Conversation and Trace inspection were rebuilt as responsive
+  master/detail workspaces. At the production-reported 684px viewport, browser
+  acceptance verified index → detail → back navigation, distinct transcript
+  cards, compact Trace summary, selected Span evidence, and no simultaneous
+  list/detail stacking. Chinese Conversation previews now preserve valid UTF-8.
+- 2026-08-09: 34 Web tests, TypeScript typecheck/build, Go tests and `go vet`
+  passed for the inspection-workspace release.
 
 - 2026-08-07: Owner-provided LLM configuration passed encrypted persistence,
   blank-key preservation, unsafe Base URL rejection, secret non-disclosure and

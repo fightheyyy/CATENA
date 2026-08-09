@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -665,6 +666,72 @@ func TestEvolutionJobPlatformTenantIsolation(t *testing.T) {
 	handler.ServeHTTP(crossStartResponse, crossStart)
 	if crossStartResponse.Code != http.StatusNotFound {
 		t.Fatalf("cross-project start returned %d: %s", crossStartResponse.Code, crossStartResponse.Body.String())
+	}
+}
+
+func TestEvolutionJobDeleteRequiresTerminalOwnedJob(t *testing.T) {
+	store := NewMemoryStore()
+	now := time.Now().UTC()
+	projectA := platformProjectUser("evolution-delete-a", now)
+	projectB := platformProjectUser("evolution-delete-b", now)
+	for _, user := range []User{projectA, projectB} {
+		if _, err := store.UpsertUser(context.Background(), user); err != nil {
+			t.Fatal(err)
+		}
+	}
+	create := func(id string, state EvolutionJobState) EvolutionJob {
+		job := EvolutionJob{
+			Schema: evolutionJobSchema, ID: id, OwnerUserID: projectA.ID,
+			SourceKind: EvolutionSourceTrace, SourceTraceID: newID("delete-trace"),
+			IdempotencyKey: newID("delete-key"), RequestFingerprint: newID("delete-fingerprint"),
+			State: state, Stages: cloneEvolutionStages(evolutionJobStages), CreatedAt: now, UpdatedAt: now,
+		}
+		created, wasCreated, err := store.CreateEvolutionJob(context.Background(), job)
+		if err != nil || !wasCreated {
+			t.Fatalf("create deletion fixture: created=%v err=%v", wasCreated, err)
+		}
+		return created
+	}
+	completed := create(newID("delete-completed"), EvolutionJobCompleted)
+	running := create(newID("delete-running"), EvolutionJobRunning)
+	handler, err := NewHTTPHandlerWithConfig(store, nil, AuthConfig{
+		GatewaySecret: testGatewaySecret, APITokenEncryptionKey: testEvolutionEncryptionKey,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	foreign := httptest.NewRecorder()
+	handler.ServeHTTP(foreign, signedPlatformRequest(
+		t, http.MethodDelete, "/v1/evolution-jobs/"+completed.ID,
+		"evolution-delete-b", "actor-b", nil,
+	))
+	if foreign.Code != http.StatusNotFound {
+		t.Fatalf("cross-owner delete returned %d: %s", foreign.Code, foreign.Body.String())
+	}
+
+	nonterminal := httptest.NewRecorder()
+	handler.ServeHTTP(nonterminal, signedPlatformRequest(
+		t, http.MethodDelete, "/v1/evolution-jobs/"+running.ID,
+		"evolution-delete-a", "actor-a", nil,
+	))
+	if nonterminal.Code != http.StatusConflict {
+		t.Fatalf("running delete returned %d: %s", nonterminal.Code, nonterminal.Body.String())
+	}
+	if _, err := store.GetEvolutionJob(context.Background(), running.ID); err != nil {
+		t.Fatalf("running Job was removed after conflict: %v", err)
+	}
+
+	deleted := httptest.NewRecorder()
+	handler.ServeHTTP(deleted, signedPlatformRequest(
+		t, http.MethodDelete, "/v1/evolution-jobs/"+completed.ID,
+		"evolution-delete-a", "actor-a", nil,
+	))
+	if deleted.Code != http.StatusNoContent {
+		t.Fatalf("terminal delete returned %d: %s", deleted.Code, deleted.Body.String())
+	}
+	if _, err := store.GetEvolutionJob(context.Background(), completed.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("deleted Job is still readable: %v", err)
 	}
 }
 

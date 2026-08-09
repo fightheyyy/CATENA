@@ -1,6 +1,6 @@
 # Catena Web Plan
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 ## Current state
 
@@ -27,6 +27,10 @@ Updated: 2026-08-07
 - [x] Move language and theme controls exclusively to Settings.
 - [x] Collapse each Agent credential into one row; copy recovers directly to
       the clipboard without rendering a duplicate plaintext key card.
+- [x] Separate Conversation and Trace indices from their detail workspaces with
+      a shared responsive master/detail interaction.
+- [x] Give Conversation messages and selected Trace Span evidence explicit
+      visual hierarchy without changing stored evidence or API contracts.
 - [ ] Add responsive browser acceptance to CI.
 - [ ] Improve accessibility and keyboard navigation.
 - [ ] Add durable optimistic/retry states for long-running jobs.
@@ -35,7 +39,31 @@ Updated: 2026-08-07
 
 `pnpm test`, `pnpm typecheck` and `pnpm build` pass; desktop and mobile journeys expose no console errors.
 
+Conversation and Trace details must be visually distinct from their indices at
+desktop widths. At 720px and below, opening a record must replace the index with
+the detail and expose a working back action without horizontal overflow.
+
 ## Verification log
+
+- 2026-08-09: Release UX audit covered Home, Agent, Conversation, Memory,
+  Trace, Trace Farm, API Management and Settings at desktop and 390px. The
+  responsive header was rebuilt as two fixed rows, Conversation detail no
+  longer overflows horizontally, the empty Agent state links directly to API
+  Management, and Run labels are presented in the selected language.
+
+- 2026-08-09: Trace Farm terminal analyses now support an explicit two-step
+  delete flow. Browser acceptance removed a dedicated completed fixture,
+  reduced the recent-analysis count immediately, and verified that a waiting
+  analysis exposes only the non-terminal protection hint.
+
+- 2026-08-09: Conversation and Trace now switch between index and detail at
+  684px with explicit back actions. Browser acceptance verified that hidden
+  master/detail surfaces are not simultaneously visible, selected Span
+  input/output remains accessible, and both pages have no horizontal overflow.
+- 2026-08-09: Conversation previews now truncate on Unicode rune boundaries;
+  Go regression coverage prevents replacement characters in Chinese titles.
+- 2026-08-09: 34 Web tests, TypeScript typecheck, Vite production build,
+  Go control-plane tests and `go vet` passed.
 
 - 2026-08-07: Removed the duplicate expanded API-key presentation. Each Agent
   now renders exactly one credential row with masked value, copy and delete.

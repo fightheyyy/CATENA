@@ -20,6 +20,7 @@ const agentCopy = {
     targetAgents: "你的 Agent",
     emptyTitle: "还没有 Agent 数据",
     emptyBody: "Agent 上传 Trace 或对话后，会自动出现在这里。接入凭证请到 API 管理页面创建。",
+    connect: "接入新 Agent",
     waiting: "等待数据",
     connected: "已连接",
     runtimeUnknown: "Runtime 待识别",
@@ -48,6 +49,7 @@ const agentCopy = {
     targetAgents: "Your Agents",
     emptyTitle: "No Agent data yet",
     emptyBody: "Agents appear here after uploading Trace or conversation data. Create credentials from API Management.",
+    connect: "Connect an Agent",
     waiting: "Waiting for data",
     connected: "Connected",
     runtimeUnknown: "Runtime not detected",
@@ -77,11 +79,13 @@ export function AgentWorkspace({
   workspace,
   onAnalyze,
   onOpenTraces,
+  onConnect,
 }: {
   locale: Locale;
   workspace: WorkspaceData;
   onAnalyze: (agentID: string) => void;
   onOpenTraces: (agentID: string) => void;
+  onConnect: () => void;
 }) {
   const t = agentCopy[locale];
   const registeredAgents = useMemo(() => registeredAgentSummaries(workspace.agents), [workspace.agents]);
@@ -107,6 +111,7 @@ export function AgentWorkspace({
         <section className="agent-empty">
           <h2>{t.emptyTitle}</h2>
           <p>{t.emptyBody}</p>
+          <button className="primary-button compact" type="button" onClick={onConnect}>{t.connect}</button>
         </section>
       ) : (
         <div className="agent-workspace">

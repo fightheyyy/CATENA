@@ -37,6 +37,7 @@ type Store interface {
 	GetEvolutionJob(context.Context, string) (EvolutionJob, error)
 	ListEvolutionJobs(context.Context, int) ([]EvolutionJob, error)
 	ListEvolutionJobsByOwner(context.Context, string, int) ([]EvolutionJob, error)
+	DeleteEvolutionJob(context.Context, string, string) error
 	CreateIssue(context.Context, Issue) error
 	GetIssue(context.Context, string) (Issue, error)
 	ListIssues(context.Context, int) ([]Issue, error)
@@ -473,6 +474,24 @@ func (s *MemoryStore) ListEvolutionJobsByOwner(
 		result = result[:limit]
 	}
 	return result, nil
+}
+
+func (s *MemoryStore) DeleteEvolutionJob(
+	_ context.Context,
+	ownerUserID string,
+	id string,
+) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, exists := s.evolutionJobs[id]
+	if !exists || job.OwnerUserID != ownerUserID {
+		return ErrNotFound
+	}
+	if !job.State.Terminal() {
+		return ErrConflict
+	}
+	delete(s.evolutionJobs, id)
+	return nil
 }
 
 func cloneEvolutionJob(input EvolutionJob) EvolutionJob {

@@ -104,7 +104,7 @@ preferences and live only in Settings.
   user-visible messages whose Agent identity is overwritten from the key.
 - **Memory source:** user-visible Conversation only; Trace is engineering and evolution evidence.
 - **Agent Trace Set:** immutable Agent + time-window snapshot containing at least two server-frozen Trace IDs.
-- **Evolution Job:** Inspector → Evolution → Reviewer analysis over one Agent Trace Set.
+- **Evolution Job:** Inspector → Evolution → Reviewer analysis over one Agent Trace Set. Its owner may delete a completed or failed analysis and its generated assets; the immutable source Trace evidence remains intact.
 - **Agent Asset:** evidence-linked `agent.md`, Skill or Role; Harness is valid only for XiaoBaOS.
 - **Run Bundle:** idempotent Barena terminal facts plus correlated OTLP evidence.
 - **Release truth:** only verifier-backed Barena output may say `cleared`, `held` or `rejected`.
@@ -121,6 +121,7 @@ preferences and live only in Settings.
   creation and never projected into Job records, logs or Candidate assets.
 - GauzMem is private and receives an owner scope derived by Catena.
 - Evolution output is always a proposal and never mutates a target Agent automatically.
+- Queued and running Evolution Jobs cannot be deleted; terminal deletion is owner-scoped and never cascades to source Trace or Conversation evidence.
 
 ## Modules
 

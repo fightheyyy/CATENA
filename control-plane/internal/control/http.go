@@ -130,6 +130,7 @@ func NewHTTPHandlerWithMemory(
 	mux.HandleFunc("POST /v1/runs/{run_id}/evolution-jobs", server.createEvolutionJob)
 	mux.HandleFunc("GET /v1/evolution-jobs", server.listEvolutionJobs)
 	mux.HandleFunc("GET /v1/evolution-jobs/{job_id}", server.getEvolutionJob)
+	mux.HandleFunc("DELETE /v1/evolution-jobs/{job_id}", server.deleteEvolutionJob)
 	mux.HandleFunc("POST /v1/runs/{run_id}/issues", server.createIssue)
 	mux.HandleFunc("GET /v1/issues", server.listIssues)
 	mux.HandleFunc("GET /v1/issues/{issue_id}", server.getIssue)

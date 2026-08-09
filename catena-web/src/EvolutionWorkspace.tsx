@@ -30,6 +30,14 @@ const workspaceCopy = {
     loading: "正在读取分析记录",
     loadFailed: "无法读取分析记录",
     retry: "重试",
+    deleteAnalysis: "删除分析",
+    confirmDelete: "确认删除",
+    cancelDelete: "取消",
+    deleting: "正在删除",
+    deleteFailed: "无法删除分析",
+    confirmDeleteTitle: "删除这条分析？",
+    deleteWarning: "分析记录和生成资产会被删除；来源 Trace 保留。此操作无法恢复。",
+    deleteAfterFinish: "分析完成后可删除",
     analysis: "Agent 分析",
     analyzing: "正在分析",
     analysisCompleted: "分析完成",
@@ -121,6 +129,14 @@ const workspaceCopy = {
     loading: "Reading analysis",
     loadFailed: "Could not read the analysis",
     retry: "Retry",
+    deleteAnalysis: "Delete analysis",
+    confirmDelete: "Delete",
+    cancelDelete: "Cancel",
+    deleting: "Deleting",
+    deleteFailed: "Could not delete analysis",
+    confirmDeleteTitle: "Delete this analysis?",
+    deleteWarning: "The analysis and generated assets will be deleted. Source Traces stay intact. This cannot be undone.",
+    deleteAfterFinish: "Available after the analysis finishes",
     analysis: "Agent analysis",
     analyzing: "Analyzing",
     analysisCompleted: "Analysis complete",
@@ -271,6 +287,7 @@ export function EvolutionWorkspace({
   initialAgentID,
   onJobStarted,
   onJobSelected,
+  onJobDeleted,
 }: {
   locale: Locale;
   jobs: EvolutionJob[];
@@ -279,6 +296,7 @@ export function EvolutionWorkspace({
   initialAgentID?: string;
   onJobStarted: (job: EvolutionJob) => void;
   onJobSelected: (jobID: string) => void;
+  onJobDeleted: (jobID: string) => void;
 }) {
   const t = workspaceCopy[locale];
   const [selectedID, setSelectedID] = useState(initialJobID || "");
@@ -289,10 +307,18 @@ export function EvolutionWorkspace({
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
   const [drawer, setDrawer] = useState<"new" | "">("");
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     setSelectedID(initialJobID || "");
   }, [initialJobID]);
+
+  useEffect(() => {
+    setDeleteConfirming(false);
+    setDeleteError("");
+  }, [selectedID]);
 
   useEffect(() => {
     if (!selectedID) {
@@ -333,6 +359,25 @@ export function EvolutionWorkspace({
     setJob(next);
     setDrawer("");
     onJobStarted(next);
+  };
+
+  const handleDeleteJob = async () => {
+    if (!job || !isEvolutionJobTerminal(job) || deleting) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await api.deleteEvolutionJob(job.job_id);
+      const deletedID = job.job_id;
+      setSelectedID("");
+      setJob(null);
+      setDeleteConfirming(false);
+      onJobSelected("");
+      onJobDeleted(deletedID);
+    } catch (cause) {
+      setDeleteError(cause instanceof Error ? cause.message : t.deleteFailed);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const agentName = (agentID?: string) => agents.find((agent) => (
@@ -397,7 +442,29 @@ export function EvolutionWorkspace({
               <button className="text-button" type="button" onClick={() => setReload((value) => value + 1)}>{t.retry}</button>
             </div>
           ) : null}
-          {job ? <EvolutionJobDetail key={job.job_id} job={job} locale={locale} t={t} agentName={agentName(job.source_agent_id)} /> : null}
+          {deleteError ? <p className="inline-note error" role="alert">{t.deleteFailed}: {deleteError}</p> : null}
+          {job ? <EvolutionJobDetail
+            key={job.job_id}
+            job={job}
+            locale={locale}
+            t={t}
+            agentName={agentName(job.source_agent_id)}
+            action={isEvolutionJobTerminal(job) ? (
+              deleteConfirming ? null : <button className="text-button danger" type="button" onClick={() => setDeleteConfirming(true)}>{t.deleteAnalysis}</button>
+            ) : <span className="job-delete-hint">{t.deleteAfterFinish}</span>}
+            notice={deleteConfirming ? (
+              <div className="job-delete-confirmation" role="group" aria-label={t.confirmDeleteTitle}>
+                <div>
+                  <strong>{t.confirmDeleteTitle}</strong>
+                  <span>{t.deleteWarning}</span>
+                </div>
+                <div>
+                  <button className="secondary-button" type="button" onClick={() => setDeleteConfirming(false)} disabled={deleting}>{t.cancelDelete}</button>
+                  <button className="danger-button" type="button" onClick={() => void handleDeleteJob()} disabled={deleting}>{deleting ? t.deleting : t.confirmDelete}</button>
+                </div>
+              </div>
+            ) : null}
+          /> : null}
         </div>
       )}
       <FarmDrawer open={drawer === "new"} title={t.newAnalysis} closeLabel={t.close} onClose={() => setDrawer("")}>
@@ -484,7 +551,7 @@ function JobSkeleton({ label }: { label: string }) {
   );
 }
 
-function EvolutionJobDetail({ job, locale, t, agentName }: { job: EvolutionJob; locale: Locale; t: Copy; agentName: string }) {
+function EvolutionJobDetail({ job, locale, t, agentName, action, notice }: { job: EvolutionJob; locale: Locale; t: Copy; agentName: string; action?: ReactNode; notice?: ReactNode }) {
   const stages = evolutionStages(job);
   const assets = agentAssets(job);
   const updated = formattedTime(job.updated_at, locale);
@@ -509,8 +576,12 @@ function EvolutionJobDetail({ job, locale, t, agentName }: { job: EvolutionJob; 
           <h2>{title}</h2>
           <p className="job-objective">{objective}</p>
         </div>
-        {updated ? <span className="job-updated">{t.updated} {updated}</span> : null}
+        <div className="job-detail-actions">
+          {updated ? <span className="job-updated">{t.updated} {updated}</span> : null}
+          {action}
+        </div>
       </header>
+      {notice}
       {job.error ? <p className="inline-note error" role="alert">{job.error}</p> : null}
 
       {job.state !== "completed" ? <section className="job-progress-section">

@@ -149,6 +149,7 @@ export function TraceExplorer({
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedSpanID, setSelectedSpanID] = useState("");
   const [detailRequestVersion, setDetailRequestVersion] = useState(0);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const agentWindow = useAgentTraceWindow(agentID, 500);
   const sourceTraces = useMemo(
     () => tracesForAgentSelection(workspace.traces, agentID, agentWindow.traces),
@@ -215,12 +216,15 @@ export function TraceExplorer({
       ) : workspace.traces.length === 0 ? (
         <TraceConnectState title={t.noTraces} body={t.noTracesBody} endpointLabel={t.endpoint} />
       ) : (
-        <div className="trace-browser">
+        <div className={mobileDetailOpen ? "trace-browser detail-open" : "trace-browser"}>
           <aside className="trace-index" aria-label={t.title}>
             <div className="trace-index-tools">
               <label className="trace-agent-filter">
                 <span>{t.agentFilter}</span>
-                <select value={agentID} onChange={(event) => setAgentID(event.target.value)}>
+                <select value={agentID} onChange={(event) => {
+                  setAgentID(event.target.value);
+                  setMobileDetailOpen(false);
+                }}>
                   <option value="">{t.allAgents}</option>
                   {workspace.agents.map((agent) => <option value={agent.agent_id} key={agent.agent_id}>{agent.display_name}</option>)}
                 </select>
@@ -260,7 +264,10 @@ export function TraceExplorer({
                   className={selectedTraceID === trace.trace_id ? "trace-index-row selected" : "trace-index-row"}
                   key={trace.trace_id}
                   type="button"
-                  onClick={() => setSelectedTraceID(trace.trace_id)}
+                  onClick={() => {
+                    setSelectedTraceID(trace.trace_id);
+                    setMobileDetailOpen(true);
+                  }}
                 >
                   <span className="trace-index-heading">
                     <strong>{trace.root_name || shortTraceID(trace.trace_id)}</strong>
@@ -290,7 +297,12 @@ export function TraceExplorer({
                 locale={locale}
                 selectedSpanID={selectedSpanID}
                 onSelectSpan={setSelectedSpanID}
-                onBack={() => document.querySelector<HTMLElement>(".trace-index")?.scrollIntoView({ block: "start" })}
+                onBack={() => {
+                  setMobileDetailOpen(false);
+                  window.requestAnimationFrame(() => {
+                    document.querySelector<HTMLElement>(".trace-index")?.scrollIntoView({ block: "start" });
+                  });
+                }}
               />
             ) : null}
           </main>
@@ -347,6 +359,9 @@ function TraceDetailWorkspace({
             <h2>{detail.summary.root_name}</h2>
             <span title={detail.summary.trace_id}>{shortTraceID(detail.summary.trace_id)} · {detail.summary.service_name}{detail.summary.model ? ` · ${detail.summary.model}` : ""}</span>
           </div>
+          <span className={detail.summary.error_count > 0 ? "trace-detail-status error" : "trace-detail-status"}>
+            {detail.summary.error_count > 0 ? t.statusError : t.statusOk}
+          </span>
         </div>
         <div className="trace-detail-facts">
           <span>{detail.summary.span_count} {t.spans}</span>

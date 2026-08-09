@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestConversationIngestIsVisibleOnlyIdempotentAndOwnerScoped(t *testing.T) {
@@ -99,6 +100,19 @@ func TestConversationIngestIsVisibleOnlyIdempotentAndOwnerScoped(t *testing.T) {
 	handler.ServeHTTP(conflict, signedPlatformRequest(t, http.MethodPost, path, "conversation-project-a", "xiaobaos", mutatedBody))
 	if conflict.Code != http.StatusConflict {
 		t.Fatalf("mutated message retry returned %d: %s", conflict.Code, conflict.Body.String())
+	}
+}
+
+func TestConversationPreviewPreservesUTF8AtRuneBoundary(t *testing.T) {
+	preview := conversationTextPreview([]ConversationContentPart{{
+		Type: "text",
+		Text: "帮我检查今天的部署异常，先说明你看到了什么，再给出下一步。",
+	}}, 12)
+	if preview != "帮我检查今天的部署异常，" {
+		t.Fatalf("preview = %q", preview)
+	}
+	if !utf8.ValidString(preview) {
+		t.Fatalf("preview is invalid UTF-8: %q", preview)
 	}
 }
 

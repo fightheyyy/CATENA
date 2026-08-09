@@ -118,6 +118,10 @@ export const api = {
   evolutionJob: async (jobID: string) => normalizeEvolutionJob(
     await request<unknown>(`/v1/evolution-jobs/${encodeURIComponent(jobID)}`),
   ),
+  deleteEvolutionJob: (jobID: string) => request<void>(
+    `/v1/evolution-jobs/${encodeURIComponent(jobID)}`,
+    { method: "DELETE" },
+  ),
   startAgentEvolutionJob: async (
     agentID: string,
     input: { window_start: string; window_end: string; objective?: string },

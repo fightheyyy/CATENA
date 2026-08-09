@@ -95,12 +95,10 @@ const copy = {
     themeSystem: "跟随系统",
     themeLight: "浅色",
     themeDark: "深色",
-    refresh: "刷新",
     retry: "重试",
     signOut: "退出登录",
     loading: "正在读取 Catena 状态",
     loadFailed: "无法读取平台状态",
-    connected: "控制面正常",
     blocked: "需要处理",
     agentMetric: "已观测 Agent",
     runtime: "Runtime",
@@ -201,12 +199,10 @@ const copy = {
     themeSystem: "System",
     themeLight: "Light",
     themeDark: "Dark",
-    refresh: "Refresh",
     retry: "Retry",
     signOut: "Sign out",
     loading: "Reading Catena state",
     loadFailed: "Could not load platform state",
-    connected: "Control plane ready",
     blocked: "Action needed",
     agentMetric: "Observed Agents",
     runtime: "Runtime",
@@ -338,6 +334,14 @@ export function App() {
     setSelectedEvolutionJobID(jobID);
   }, []);
 
+  const removeEvolutionJob = useCallback((jobID: string) => {
+    setWorkspace((current) => current ? {
+      ...current,
+      evolutionJobs: current.evolutionJobs.filter((item) => item.job_id !== jobID),
+    } : current);
+    setSelectedEvolutionJobID("");
+  }, []);
+
   const openAgentTraces = useCallback((agentID: string) => {
     setSelectedTraceAgentID(agentID);
     navigate("traces");
@@ -374,16 +378,6 @@ export function App() {
     <div className="app-shell">
       <Sidebar route={route} locale={locale} onNavigate={navigateFromSidebar} />
       <main className="main-canvas">
-        <Topbar
-          session={session}
-          locale={locale}
-          onRefresh={load}
-          refreshing={loading}
-          onLogout={async () => {
-            await api.logout();
-            window.location.assign("/");
-          }}
-        />
         {error ? <InlineError message={error} action={t.retry} onRetry={load} /> : null}
         {workspace ? (
           <RouteView
@@ -396,12 +390,18 @@ export function App() {
             selectedTraceAgentID={selectedTraceAgentID}
             onOpenEvolutionJob={openEvolutionJob}
             onSelectEvolutionJob={selectEvolutionJob}
+            onDeleteEvolutionJob={removeEvolutionJob}
             onAnalyzeAgent={analyzeAgent}
             onOpenAgentTraces={openAgentTraces}
+            onConnectAgent={() => navigate("apiKeys")}
             onRefresh={load}
             theme={theme}
             onLocale={selectLocale}
             onTheme={selectTheme}
+            onLogout={async () => {
+              await api.logout();
+              window.location.assign("/");
+            }}
           />
         ) : (
           <LoadingPanel label={t.loading} />
@@ -489,33 +489,6 @@ function Sidebar({
   );
 }
 
-function Topbar({
-  session,
-  locale,
-  onRefresh,
-  refreshing,
-  onLogout,
-}: {
-  session: Session;
-  locale: Locale;
-  onRefresh: () => void;
-  refreshing: boolean;
-  onLogout: () => void;
-}) {
-  const t = copy[locale];
-  return (
-    <header className="topbar">
-      <div className="system-line"><span className="status-mark" />{t.connected}</div>
-      <div className="topbar-actions">
-        <button className="text-button" type="button" onClick={onRefresh} disabled={refreshing}>{t.refresh}</button>
-        {session.user?.avatar_url ? <img className="avatar" src={session.user.avatar_url} alt="" /> : null}
-        <span className="user-name">{session.user?.display_name ?? "Local"}</span>
-        {session.mode === "github" ? <button className="text-button" type="button" onClick={onLogout}>{t.signOut}</button> : null}
-      </div>
-    </header>
-  );
-}
-
 function RouteView({
   route,
   locale,
@@ -526,12 +499,15 @@ function RouteView({
   selectedTraceAgentID,
   onOpenEvolutionJob,
   onSelectEvolutionJob,
+  onDeleteEvolutionJob,
   onAnalyzeAgent,
   onOpenAgentTraces,
+  onConnectAgent,
   onRefresh,
   theme,
   onLocale,
   onTheme,
+  onLogout,
 }: {
   route: Route;
   locale: Locale;
@@ -542,14 +518,17 @@ function RouteView({
   selectedTraceAgentID: string;
   onOpenEvolutionJob: (job: EvolutionJob) => void;
   onSelectEvolutionJob: (jobID: string) => void;
+  onDeleteEvolutionJob: (jobID: string) => void;
   onAnalyzeAgent: (agentID: string) => void;
   onOpenAgentTraces: (agentID: string) => void;
+  onConnectAgent: () => void;
   onRefresh: () => Promise<void>;
   theme: Theme;
   onLocale: (locale: Locale) => void;
   onTheme: (theme: Theme) => void;
+  onLogout: () => void;
 }) {
-  if (route === "agents") return <AgentWorkspace locale={locale} workspace={workspace} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} />;
+  if (route === "agents") return <AgentWorkspace locale={locale} workspace={workspace} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} onConnect={onConnectAgent} />;
   if (route === "apiKeys") return <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} />;
   if (route === "conversations") return <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} />;
   if (route === "traces") return <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} />;
@@ -562,10 +541,11 @@ function RouteView({
       initialAgentID={selectedEvolutionAgentID}
       onJobStarted={onOpenEvolutionJob}
       onJobSelected={onSelectEvolutionJob}
+      onJobDeleted={onDeleteEvolutionJob}
     />
   );
   if (route === "memory") return <Memory locale={locale} workspace={workspace} />;
-  if (route === "settings") return <Settings locale={locale} session={session} theme={theme} onLocale={onLocale} onTheme={onTheme} />;
+  if (route === "settings") return <Settings locale={locale} session={session} theme={theme} onLocale={onLocale} onTheme={onTheme} onLogout={onLogout} />;
   return <Home locale={locale} workspace={workspace} />;
 }
 
@@ -589,7 +569,7 @@ function Home({ locale, workspace }: { locale: Locale; workspace: WorkspaceData 
       <section className="focus-block">
         <div>
           <p className="section-label">{t.latest}</p>
-          <h2>{latestRun ? `${latestRun.operation} / ${latestRun.state}` : t.noRuns}</h2>
+          <h2>{latestRun ? `${runOperationLabel(latestRun.operation, locale)} · ${runStateLabel(latestRun.state, locale)}` : t.noRuns}</h2>
         </div>
         {latestRun ? <Time value={latestRun.updated_at} locale={locale} /> : null}
       </section>
@@ -799,9 +779,38 @@ function MemoryContextFact({ label, value }: { label: string; value: string }) {
 function RunList({ title, empty, runs, locale }: { title: string; empty: string; runs: WorkspaceData["runs"]; locale: Locale }) {
   return (
     <RecordSection title={title} empty={empty}>
-      {runs.map((run) => <RecordRow key={run.run_id} title={run.operation} meta={`${run.origin} / ${run.state}`} time={run.updated_at} locale={locale} />)}
+      {runs.map((run) => <RecordRow key={run.run_id} title={runOperationLabel(run.operation, locale)} meta={`${runOriginLabel(run.origin, locale)} · ${runStateLabel(run.state, locale)}`} time={run.updated_at} locale={locale} />)}
     </RecordSection>
   );
+}
+
+function runOperationLabel(value: string, locale: Locale) {
+  const labels: Record<string, [string, string]> = {
+    explore: ["探索", "Explore"],
+    replay: ["回归", "Replay"],
+    compare: ["对比", "Compare"],
+  };
+  return labels[value]?.[locale === "zh" ? 0 : 1] ?? value;
+}
+
+function runStateLabel(value: string, locale: Locale) {
+  const labels: Record<string, [string, string]> = {
+    queued: ["等待中", "Queued"],
+    running: ["运行中", "Running"],
+    completed: ["已完成", "Completed"],
+    failed: ["失败", "Failed"],
+    cancelled: ["已取消", "Cancelled"],
+  };
+  return labels[value]?.[locale === "zh" ? 0 : 1] ?? value;
+}
+
+function runOriginLabel(value: string, locale: Locale) {
+  const labels: Record<string, [string, string]> = {
+    platform: ["平台", "Platform"],
+    edge: ["端侧", "Edge"],
+    local: ["本地", "Local"],
+  };
+  return labels[value]?.[locale === "zh" ? 0 : 1] ?? value;
 }
 
 function RecordSection({ title, empty, children }: { title: string; empty: string; children: React.ReactNode }) {
@@ -823,7 +832,7 @@ function Status({ value, locale }: { value: string; locale: Locale }) {
   return <span className={ready ? "status ready" : "status blocked"}>{ready ? copy[locale].statusReady : copy[locale].statusUnavailable}</span>;
 }
 
-function Settings({ locale, session, theme, onLocale, onTheme }: { locale: Locale; session: Session; theme: Theme; onLocale: (locale: Locale) => void; onTheme: (theme: Theme) => void }) {
+function Settings({ locale, session, theme, onLocale, onTheme, onLogout }: { locale: Locale; session: Session; theme: Theme; onLocale: (locale: Locale) => void; onTheme: (theme: Theme) => void; onLogout: () => void }) {
   const t = copy[locale];
   return (
     <section className="page settings-page">
@@ -847,6 +856,7 @@ function Settings({ locale, session, theme, onLocale, onTheme }: { locale: Local
         <h2>{locale === "zh" ? "账户" : "Account"}</h2>
         <p>{locale === "zh" ? "这里显示当前登录身份。Agent 接入密钥和 LLM 配置统一在 API 管理页面维护。" : "This is your current identity. Agent credentials and LLM configuration live in API Management."}</p>
         {session.user ? <InlineNote>{session.user.display_name}</InlineNote> : null}
+        {session.mode === "github" ? <button className="text-button danger" type="button" onClick={onLogout}>{t.signOut}</button> : null}
       </section>
     </section>
   );

@@ -796,6 +796,33 @@ ORDER BY created_at DESC LIMIT $2`, ownerUserID, limit)
 	return scanEvolutionJobs(rows)
 }
 
+func (s *PostgresStore) DeleteEvolutionJob(
+	ctx context.Context,
+	ownerUserID string,
+	id string,
+) error {
+	result, err := s.db.ExecContext(ctx, `
+DELETE FROM spiral_evolution_jobs
+WHERE job_id=$1
+  AND COALESCE(owner_user_id,'')=$2
+  AND state IN ('completed','failed')`, id, ownerUserID)
+	if err != nil {
+		return mapStoreError(err)
+	}
+	affected, _ := result.RowsAffected()
+	if affected > 0 {
+		return nil
+	}
+	job, lookupErr := s.GetEvolutionJob(ctx, id)
+	if lookupErr != nil || job.OwnerUserID != ownerUserID {
+		return ErrNotFound
+	}
+	if !job.State.Terminal() {
+		return ErrConflict
+	}
+	return ErrNotFound
+}
+
 func (s *PostgresStore) CreateIssue(ctx context.Context, issue Issue) error {
 	result, err := s.db.ExecContext(ctx, `
 INSERT INTO barena_issues

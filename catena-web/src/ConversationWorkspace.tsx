@@ -25,6 +25,7 @@ const copy = {
     remembering: "正在提炼",
     memoryQueued: "已提交",
     memoryFailed: "记忆提炼失败",
+    backToList: "返回对话列表",
   },
   en: {
     title: "Conversations",
@@ -45,6 +46,7 @@ const copy = {
     remembering: "Distilling",
     memoryQueued: "Submitted",
     memoryFailed: "Memory distillation failed",
+    backToList: "Back to conversations",
   },
 } as const;
 
@@ -57,6 +59,7 @@ export function ConversationWorkspace({ locale, memoryReady }: { locale: Locale;
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState("");
   const [detailError, setDetailError] = useState("");
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   const selected = useMemo(
     () => conversations.find((item) => conversationKey(item) === selectedKey) ?? conversations[0] ?? null,
@@ -114,7 +117,7 @@ export function ConversationWorkspace({ locale, memoryReady }: { locale: Locale;
         <div><p>{t.exclusive}</p><h1>{t.title}</h1><span>{t.body}</span></div>
         <button className="text-button" type="button" onClick={() => void load()} disabled={loading}>{t.refresh}</button>
       </header>
-      <div className="conversation-browser">
+      <div className={mobileDetailOpen ? "conversation-browser detail-open" : "conversation-browser"}>
         <aside className="conversation-index">
           <header><h2>{t.list}</h2><span>{conversations.length}</span></header>
           {loading ? <ConversationState label={t.loading} /> : error ? <ConversationState label={error || t.loadFailed} tone="error" /> : conversations.length === 0 ? (
@@ -128,7 +131,10 @@ export function ConversationWorkspace({ locale, memoryReady }: { locale: Locale;
                     className={selected && conversationKey(selected) === key ? "conversation-index-row selected" : "conversation-index-row"}
                     key={key}
                     type="button"
-                    onClick={() => setSelectedKey(key)}
+                    onClick={() => {
+                      setSelectedKey(key);
+                      setMobileDetailOpen(true);
+                    }}
                   >
                     <span className="conversation-index-meta"><b>{item.surface}</b><time>{formatTime(item.updated_at, locale)}</time></span>
                     <strong>{item.title}</strong>
@@ -142,14 +148,31 @@ export function ConversationWorkspace({ locale, memoryReady }: { locale: Locale;
         <main className="conversation-detail">
           {!selected ? <ConversationState label={t.choose} /> : detailLoading ? <ConversationState label={t.loading} /> : detailError ? (
             <ConversationState label={detailError || t.detailFailed} tone="error" />
-          ) : document ? <ConversationThread document={document} locale={locale} memoryReady={memoryReady} /> : <ConversationState label={t.choose} />}
+          ) : document ? (
+            <ConversationThread
+              document={document}
+              locale={locale}
+              memoryReady={memoryReady}
+              onBack={() => setMobileDetailOpen(false)}
+            />
+          ) : <ConversationState label={t.choose} />}
         </main>
       </div>
     </section>
   );
 }
 
-function ConversationThread({ document, locale, memoryReady }: { document: ConversationDocument; locale: Locale; memoryReady: boolean }) {
+function ConversationThread({
+  document,
+  locale,
+  memoryReady,
+  onBack,
+}: {
+  document: ConversationDocument;
+  locale: Locale;
+  memoryReady: boolean;
+  onBack: () => void;
+}) {
   const t = copy[locale];
   const messages = orderedConversationMessages(document.messages);
   const [memoryState, setMemoryState] = useState<"idle" | "busy" | "done" | "error">("idle");
@@ -162,6 +185,7 @@ function ConversationThread({ document, locale, memoryReady }: { document: Conve
     <div className="conversation-thread">
       <header className="conversation-detail-header">
         <div>
+          <button className="conversation-back-button" type="button" onClick={onBack}>{t.backToList}</button>
           <span>{document.conversation.surface} · {document.conversation.agent_name || document.conversation.agent_id}</span>
           <h2>{document.conversation.title}</h2>
         </div>

@@ -35,6 +35,10 @@ Updated: 2026-08-07
 
 ## Verification log
 
+- 2026-08-09: Added terminal Evolution Job deletion to the memory and
+  PostgreSQL stores plus the owner-scoped HTTP API. Tests cover cross-owner
+  denial, non-terminal conflict, terminal removal and persisted deletion.
+
 - 2026-08-07: LLM configuration lifecycle and two-owner isolation tests passed;
   persisted secrets are AES-GCM envelopes and GET responses expose only
   `api_key_configured`.

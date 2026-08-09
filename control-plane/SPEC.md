@@ -78,6 +78,7 @@ The durable worker queue remains the next control-plane reliability milestone.
 - Idempotency keys return the original logical result.
 - Agent Trace Set membership is frozen before worker execution.
 - Stage events move state forward only; terminal state cannot be overwritten by stale events.
+- Only an owning user may delete a completed or failed Evolution Job. Deletion removes its embedded Candidate assets but never cascades to source Trace or Conversation evidence.
 - Candidate provenance contains the exact Evidence Pack and Trace IDs.
 - OAuth state/PKCE, API-key hashing and token recovery remain fail-closed.
 - Owner LLM APIs may expose Provider, Base URL, Model and key presence, but
@@ -95,6 +96,7 @@ The durable worker queue remains the next control-plane reliability milestone.
 - `/v1/ingest/conversations`: `xiaoba.conversation_batch.v1`.
 - `/v1/ingest/run-bundles`: idempotent `barena.run_bundle.v1`.
 - `/v1/evolution-jobs`: Agent Trace Set creation, listing and detail.
+- `DELETE /v1/evolution-jobs/{job_id}`: owner-scoped terminal analysis deletion; queued and running Jobs return a conflict.
 - `/v1/memories`: private-backend memory operations through owner-derived scope.
 - `GET/PUT/DELETE /v1/me/llm-config`: authenticated owner-provided Evolution
   model configuration; GET never returns the API Key.

@@ -126,6 +126,12 @@ func TestPostgresEvolutionJobPersistenceAndIdempotency(t *testing.T) {
 	if !found {
 		t.Fatalf("persisted Evolution Job %s was not listed", job.ID)
 	}
+	if err := store.DeleteEvolutionJob(ctx, job.OwnerUserID, job.ID); err != nil {
+		t.Fatalf("DeleteEvolutionJob failed: %v", err)
+	}
+	if _, err := store.GetEvolutionJob(ctx, job.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("deleted Evolution Job is still readable: %v", err)
+	}
 }
 
 func TestPostgresTraceOnlyEvolutionJobHasNoSyntheticRun(t *testing.T) {

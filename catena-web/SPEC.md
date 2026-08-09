@@ -1,7 +1,7 @@
 # Catena Web Specification
 
 Status: implemented MVP1 contract
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 ## Responsibilities
 
@@ -14,6 +14,7 @@ flowchart LR
     Routes["React routes"] --> API["Typed fetch client"]
     API --> Go["Catena Go API"]
     Routes --> Views["Agent · Conversation · Memory · Trace · Farm"]
+    Views --> Flat["Conversation / Trace<br/>list and detail share one visual plane"]
     Routes --> Keys["API Management"]
     Keys --> API
     Routes --> Settings["Language · Theme · Account"]
@@ -24,6 +25,10 @@ flowchart LR
 
 ```mermaid
 flowchart LR
+    Conversation["Conversation index"] --> ConversationDetail["User-visible transcript detail"]
+    Trace["Trace index"] --> TraceDetail["Run summary · Span chain · Evidence"]
+    ConversationDetail --> Responsive["Desktop split view<br/>Narrow-screen master/detail"]
+    TraceDetail --> Responsive
     Stats["Agent statistics"] --> Evidence["Trace · Conversation · Error"]
     Keys["/api-keys"] --> Name["Agent name"]
     Name --> API["POST /v1/agents"]
@@ -43,6 +48,9 @@ field; the UI only displays the server's inferred result after evidence arrives.
 ## UX invariants
 
 - The primary navigation is Agent → Conversation → Memory → Trace → Trace Farm.
+- At tablet and mobile widths, API Management and Settings stay visible in a
+  utility row above the five product destinations; navigation never relies on
+  horizontal scrolling.
 - API management asks only for an Agent name when creating a credential.
 - A generated key is presented as that Agent's credential, never as an
   independent settings object.
@@ -56,8 +64,21 @@ field; the UI only displays the server's inferred result after evidence arrives.
   telemetry aliases stay available in Trace, not as duplicate primary Agents.
 - Agent ID, identity source and raw service aliases live under advanced details.
 - Empty states explain the next action rather than exposing internal engine names.
+- The empty Agent workspace offers one direct path to API Management for first-time connection.
 - Trace detail prioritizes Span waterfall, tool calls, input/output and errors.
+- Conversation and Trace use the same master/detail hierarchy: the index selects
+  a record, while the detail owns a distinct header, summary and evidence surface.
+- At narrow widths, index and detail are separate states with an explicit back
+  action; they must never be stacked into one continuous document.
+- At 390px, every primary journey keeps `scrollWidth === innerWidth`; long
+  Conversation titles wrap inside the detail header instead of widening the page.
+- Conversation messages use visibly distinct user and Agent transcript cards.
+- Trace metrics stay compact; Span selection and its input/output evidence read
+  as one selected inspection unit.
 - Trace Farm starts from an Agent and bounded time window, never one isolated Trace.
+- Completed and failed analyses expose a destructive two-step delete action.
+  The confirmation states that generated assets are removed while source Trace
+  evidence remains; queued and running analyses expose no delete action.
 - Candidate content is copyable and clearly labeled as a proposal.
 - Chinese and English share the same information architecture.
 - API management clearly separates Agent ingestion credentials from the

@@ -374,7 +374,7 @@ func summarizeConversation(messages []ConversationMessage) ConversationSummary {
 		}
 	}
 	if title == "" {
-		title = fmt.Sprintf("%s · %s", first.Surface, bounded(first.ConversationID, 12))
+		title = fmt.Sprintf("%s · %s", first.Surface, boundedRunes(first.ConversationID, 12))
 	}
 	return ConversationSummary{
 		ConversationID:   first.ConversationID,
@@ -401,7 +401,18 @@ func conversationTextPreview(parts []ConversationContentPart, limit int) string 
 			values = append(values, "["+part.Name+"]")
 		}
 	}
-	return bounded(strings.Join(values, " "), limit)
+	return boundedRunes(strings.Join(values, " "), limit)
+}
+
+func boundedRunes(value string, max int) string {
+	if max <= 0 {
+		return ""
+	}
+	runes := []rune(value)
+	if len(runes) <= max {
+		return value
+	}
+	return string(runes[:max])
 }
 
 func (s *MemoryStore) IngestConversationMessages(
