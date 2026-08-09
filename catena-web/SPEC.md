@@ -21,6 +21,8 @@ flowchart LR
     Keys --> API
     Routes --> Settings["Language · Theme · Account"]
     Settings --> API
+    Routes --> AccountMenu["Global account menu<br/>identity · switch · sign out"]
+    AccountMenu --> API
 ```
 
 ## Target Architecture
@@ -43,7 +45,9 @@ flowchart LR
     ModelConfig --> Go["GET/PUT/DELETE /v1/me/llm-config"]
     Credential --> Ingest["OTLP · Conversation ingest"]
     Ingest --> Stats
-    Settings["Settings"] --> Preferences["Language · Theme · Account"]
+    Settings["Settings"] --> Preferences["Language · Theme · account details"]
+    Shell["Global shell"] --> AccountMenu["GitHub identity<br/>switch · sign out"]
+    AccountMenu --> Go
 ```
 
 The Agent page is observation-only. `/api-keys` owns Agent identity and
@@ -94,3 +98,5 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - The saved model API Key is never rendered or returned; an empty key while
   editing preserves the current credential.
 - Language and theme appear only in Settings, not in the global navigation.
+- The current GitHub identity is always reachable from the global top-right
+  account menu; switching account and signing out never require opening Settings.

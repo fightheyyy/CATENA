@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import type { MemoryVisualNode } from "./memoryGraph";
 import { primaryNavigationRoutes } from "./navigation";
@@ -97,6 +97,9 @@ const copy = {
     themeLight: "浅色",
     themeDark: "深色",
     retry: "重试",
+    account: "账户",
+    accountSettings: "账户设置",
+    switchAccount: "切换账户",
     signOut: "退出登录",
     loading: "正在读取 Catena 状态",
     loadFailed: "无法读取平台状态",
@@ -201,6 +204,9 @@ const copy = {
     themeLight: "Light",
     themeDark: "Dark",
     retry: "Retry",
+    account: "Account",
+    accountSettings: "Account settings",
+    switchAccount: "Switch account",
     signOut: "Sign out",
     loading: "Reading Catena state",
     loadFailed: "Could not load platform state",
@@ -375,9 +381,26 @@ export function App() {
     );
   }
 
+  const logout = async () => {
+    await api.logout();
+    window.location.assign("/");
+  };
+
+  const switchAccount = async () => {
+    await api.logout();
+    window.location.assign("/v1/auth/github");
+  };
+
   return (
     <div className="app-shell">
       <Sidebar route={route} locale={locale} onNavigate={navigateFromSidebar} />
+      <AccountMenu
+        locale={locale}
+        session={session}
+        onSettings={() => navigate("settings")}
+        onSwitchAccount={switchAccount}
+        onLogout={logout}
+      />
       <main className="main-canvas">
         {error ? <InlineError message={error} action={t.retry} onRetry={load} /> : null}
         {workspace ? (
@@ -400,15 +423,104 @@ export function App() {
             theme={theme}
             onLocale={selectLocale}
             onTheme={selectTheme}
-            onLogout={async () => {
-              await api.logout();
-              window.location.assign("/");
-            }}
+            onLogout={logout}
           />
         ) : (
           <LoadingPanel label={t.loading} />
         )}
       </main>
+    </div>
+  );
+}
+
+function AccountMenu({
+  locale,
+  session,
+  onSettings,
+  onSwitchAccount,
+  onLogout,
+}: {
+  locale: Locale;
+  session: Session;
+  onSettings: () => void;
+  onSwitchAccount: () => Promise<void>;
+  onLogout: () => Promise<void>;
+}) {
+  const t = copy[locale];
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const menuRef = useRef<HTMLDivElement>(null);
+  const user = session.user;
+  const displayName = user?.display_name || user?.login || (locale === "zh" ? "本地账户" : "Local account");
+  const initial = displayName.trim().slice(0, 1).toUpperCase() || "C";
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutside = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  const runAccountAction = async (action: () => Promise<void>) => {
+    setBusy(true);
+    setError("");
+    try {
+      await action();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : (locale === "zh" ? "账户操作失败" : "Account action failed"));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="account-menu" ref={menuRef}>
+      <button
+        className="account-trigger"
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`${t.account}: ${displayName}`}
+        onClick={() => {
+          setError("");
+          setOpen((value) => !value);
+        }}
+      >
+        <span className="account-avatar">
+          {user?.avatar_url ? <img src={user.avatar_url} alt="" referrerPolicy="no-referrer" /> : initial}
+        </span>
+        <span className="account-trigger-name">{displayName}</span>
+        <span className="account-chevron" aria-hidden="true">⌄</span>
+      </button>
+      {open ? (
+        <div className="account-popover" role="menu">
+          <div className="account-identity">
+            <span className="account-avatar large">
+              {user?.avatar_url ? <img src={user.avatar_url} alt="" referrerPolicy="no-referrer" /> : initial}
+            </span>
+            <span><strong>{displayName}</strong>{user?.login ? <small>@{user.login}</small> : null}</span>
+          </div>
+          <div className="account-actions">
+            <button type="button" role="menuitem" onClick={() => { setOpen(false); onSettings(); }}>{t.accountSettings}</button>
+            {session.mode === "github" ? (
+              <button type="button" role="menuitem" disabled={busy} onClick={() => void runAccountAction(onSwitchAccount)}>{t.switchAccount}</button>
+            ) : null}
+            {session.mode === "github" ? (
+              <button className="danger" type="button" role="menuitem" disabled={busy} onClick={() => void runAccountAction(onLogout)}>{t.signOut}</button>
+            ) : null}
+          </div>
+          {error ? <p className="account-error" role="alert">{error}</p> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

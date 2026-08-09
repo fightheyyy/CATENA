@@ -33,6 +33,8 @@ Updated: 2026-08-09
       visual hierarchy without changing stored evidence or API contracts.
 - [x] Replace the Conversation “submitted” dead end with step progress,
       terminal failure/retry, and a completed link to Memory.
+- [x] Add a persistent top-right GitHub account menu with direct account switch,
+      account settings and sign-out actions.
 - [ ] Add responsive browser acceptance to CI.
 - [ ] Improve accessibility and keyboard navigation.
 - [ ] Add durable optimistic/retry states for long-running jobs.
@@ -46,6 +48,12 @@ desktop widths. At 720px and below, opening a record must replace the index with
 the detail and expose a working back action without horizontal overflow.
 
 ## Verification log
+
+- 2026-08-09: The authenticated shell gained a responsive account menu that
+  displays the GitHub identity and exposes account switch/sign-out without a
+  Settings detour. All 38 Web tests, typecheck and production build passed;
+  browser acceptance verified GitHub avatar rendering, direct Settings entry,
+  Escape dismissal and zero horizontal overflow at 390px.
 
 - 2026-08-09: Route workspaces and the XiaoBaOS memory graph now use lazy
   chunks. The production entry bundle fell from 157 KB to 74 KB gzip, keeping

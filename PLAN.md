@@ -89,6 +89,10 @@ local.
 
 ## Verification log
 
+- 2026-08-09: The Web shell now exposes the authenticated GitHub identity and
+  direct account switching in a persistent top-right menu. Desktop and 390px
+  browser acceptance passed without navigation overlap or horizontal overflow.
+
 - 2026-08-09: Production cold-load inspection found the memory graph library in
   the shared entry bundle. Route workspaces and the graph canvas now load on
   demand, reducing the initial JavaScript payload from 157 KB to 74 KB gzip;
