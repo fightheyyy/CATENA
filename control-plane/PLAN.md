@@ -42,6 +42,11 @@ Updated: 2026-08-09
 
 ## Verification log
 
+- 2026-08-09: Production OAuth diagnosis proved the cloud resolver-selected
+  GitHub edge timed out before TLS while an alternate official edge completed
+  both the token and identity endpoints. The public Compose overlay now keeps
+  configurable GitHub host mappings without weakening TLS, state or PKCE.
+
 - 2026-08-09: Added terminal Evolution Job deletion to the memory and
   PostgreSQL stores plus the owner-scoped HTTP API. Tests cover cross-owner
   denial, non-terminal conflict, terminal removal and persisted deletion.

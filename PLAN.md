@@ -89,6 +89,10 @@ local.
 
 ## Verification log
 
+- 2026-08-09: Restored production GitHub OAuth connectivity by routing the
+  public Core container to a tested, configurable GitHub edge while retaining
+  hostname TLS verification and the existing OAuth security boundary.
+
 - 2026-08-09: The Web shell now exposes the authenticated GitHub identity and
   direct account switching in a persistent top-right menu. Desktop and 390px
   browser acceptance passed without navigation overlap or horizontal overflow.

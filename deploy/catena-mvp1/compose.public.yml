@@ -29,6 +29,12 @@ services:
         max-file: "3"
 
   catena-core:
+    # Some mainland cloud DNS resolvers return a GitHub edge that is not
+    # reachable from the host. Keep TLS/SNI on the official hostnames while
+    # allowing operators to select a proven reachable GitHub edge.
+    extra_hosts:
+      - "github.com:${CATENA_GITHUB_WEB_IP:-140.82.114.4}"
+      - "api.github.com:${CATENA_GITHUB_API_IP:-140.82.114.6}"
     environment:
       BARENA_INTERNAL_MODE: "0"
       BARENA_GATEWAY_SECRET: ${CATENA_GATEWAY_SECRET:?CATENA_GATEWAY_SECRET is required}

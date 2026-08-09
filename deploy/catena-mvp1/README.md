@@ -46,6 +46,13 @@ https://<CATENA_DOMAIN>/api/auth/callback/github
 
 An IPv4 `CATENA_DOMAIN` selects the short-lived certificate Caddy configuration automatically.
 
+The public Compose overlay pins `github.com` and `api.github.com` to a known
+reachable edge because some mainland cloud DNS resolvers return an unreachable
+GitHub route. Override `CATENA_GITHUB_WEB_IP` and `CATENA_GITHUB_API_IP` in
+`.env` after testing a different official edge. HTTPS still validates the
+original GitHub hostnames; the override does not bypass OAuth state, PKCE or
+certificate checks.
+
 Use preloaded images on a host without registry access:
 
 ```bash
