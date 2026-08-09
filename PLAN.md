@@ -81,6 +81,11 @@ local.
 
 ## Verification log
 
+- 2026-08-09: Production cold-load inspection found the memory graph library in
+  the shared entry bundle. Route workspaces and the graph canvas now load on
+  demand, reducing the initial JavaScript payload from 157 KB to 74 KB gzip;
+  Web tests, typecheck and production build pass with the split chunks.
+
 - 2026-08-09: Final release interaction audit passed all seven product
   destinations plus Home on desktop and 390px. Release blockers in mobile
   navigation and Conversation detail reflow were fixed; first-time Agent setup

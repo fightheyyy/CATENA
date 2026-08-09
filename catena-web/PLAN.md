@@ -45,6 +45,10 @@ the detail and expose a working back action without horizontal overflow.
 
 ## Verification log
 
+- 2026-08-09: Route workspaces and the XiaoBaOS memory graph now use lazy
+  chunks. The production entry bundle fell from 157 KB to 74 KB gzip, keeping
+  the low-bandwidth cold start independent from the 58 KB graph chunk.
+
 - 2026-08-09: Release UX audit covered Home, Agent, Conversation, Memory,
   Trace, Trace Farm, API Management and Settings at desktop and 390px. The
   responsive header was rebuilt as two fixed rows, Conversation detail no

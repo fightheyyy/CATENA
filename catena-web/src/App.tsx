@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AgentWorkspace } from "./AgentWorkspace";
-import { ApiManagementPage } from "./ApiManagementPage";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
-import { ConversationWorkspace } from "./ConversationWorkspace";
-import { EvolutionWorkspace } from "./EvolutionWorkspace";
-import { MemoryGraphCanvas } from "./MemoryGraphCanvas";
 import type { MemoryVisualNode } from "./memoryGraph";
 import { primaryNavigationRoutes } from "./navigation";
-import { TraceExplorer } from "./TraceExplorer";
 import type { EvolutionJob, MemoryFactGraph, MemoryRecallBundle, MemoryRecallItem, MemoryRecord, Session, WorkspaceData } from "./types";
+
+const AgentWorkspace = lazy(() => import("./AgentWorkspace").then((module) => ({ default: module.AgentWorkspace })));
+const ApiManagementPage = lazy(() => import("./ApiManagementPage").then((module) => ({ default: module.ApiManagementPage })));
+const ConversationWorkspace = lazy(() => import("./ConversationWorkspace").then((module) => ({ default: module.ConversationWorkspace })));
+const EvolutionWorkspace = lazy(() => import("./EvolutionWorkspace").then((module) => ({ default: module.EvolutionWorkspace })));
+const MemoryGraphCanvas = lazy(() => import("./MemoryGraphCanvas").then((module) => ({ default: module.MemoryGraphCanvas })));
+const TraceExplorer = lazy(() => import("./TraceExplorer").then((module) => ({ default: module.TraceExplorer })));
 
 type Route = "home" | "agents" | "apiKeys" | "conversations" | "traces" | "evolution" | "memory" | "settings";
 type Locale = "zh" | "en";
@@ -528,11 +529,12 @@ function RouteView({
   onTheme: (theme: Theme) => void;
   onLogout: () => void;
 }) {
-  if (route === "agents") return <AgentWorkspace locale={locale} workspace={workspace} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} onConnect={onConnectAgent} />;
-  if (route === "apiKeys") return <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} />;
-  if (route === "conversations") return <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} />;
-  if (route === "traces") return <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} />;
-  if (route === "evolution") return (
+  let content: React.ReactNode;
+  if (route === "agents") content = <AgentWorkspace locale={locale} workspace={workspace} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} onConnect={onConnectAgent} />;
+  else if (route === "apiKeys") content = <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} />;
+  else if (route === "conversations") content = <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} />;
+  else if (route === "traces") content = <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} />;
+  else if (route === "evolution") content = (
     <EvolutionWorkspace
       locale={locale}
       jobs={workspace.evolutionJobs}
@@ -544,9 +546,11 @@ function RouteView({
       onJobDeleted={onDeleteEvolutionJob}
     />
   );
-  if (route === "memory") return <Memory locale={locale} workspace={workspace} />;
-  if (route === "settings") return <Settings locale={locale} session={session} theme={theme} onLocale={onLocale} onTheme={onTheme} onLogout={onLogout} />;
-  return <Home locale={locale} workspace={workspace} />;
+  else if (route === "memory") content = <Memory locale={locale} workspace={workspace} />;
+  else if (route === "settings") content = <Settings locale={locale} session={session} theme={theme} onLocale={onLocale} onTheme={onTheme} onLogout={onLogout} />;
+  else content = <Home locale={locale} workspace={workspace} />;
+
+  return <Suspense fallback={<LoadingPanel label={copy[locale].loading} />}>{content}</Suspense>;
 }
 
 function PageHeader({ title, body }: { title: string; body: string }) {
@@ -701,7 +705,9 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
             <section className="memory-graph-panel">
               <header><div><h2>{t.memoryGraph}</h2><p>{t.memoryGraphHint}</p></div>{graph ? <dl><div><dt>{t.memoryEntities}</dt><dd>{graph.total_entities}</dd></div><div><dt>{t.memoryRelations}</dt><dd>{graph.total_relations}</dd></div></dl> : null}</header>
               {graphLoading && !graph ? <LoadingPanel label={t.loading} /> : graph ? (
-                <MemoryGraphCanvas graph={graph} facts={graphCatalog} selectedNodeID={selectedNode?.id ?? `fact:${graph.fact_id}`} onSelect={setSelectedNode} onOpenFact={(factID: string) => { void loadGraph(factID); }} />
+                <Suspense fallback={<LoadingPanel label={t.loading} />}>
+                  <MemoryGraphCanvas graph={graph} facts={graphCatalog} selectedNodeID={selectedNode?.id ?? `fact:${graph.fact_id}`} onSelect={setSelectedNode} onOpenFact={(factID: string) => { void loadGraph(factID); }} />
+                </Suspense>
               ) : loadingRecent ? <LoadingPanel label={t.loading} /> : <EmptyState title={t.memoryGraphEmpty} />}
               {graphError ? <p className="memory-graph-error" role="alert">{graphError}</p> : null}
             </section>
