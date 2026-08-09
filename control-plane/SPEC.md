@@ -1,7 +1,7 @@
 # Catena Control Plane Specification
 
 Status: implemented MVP1 contract
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 ## Responsibilities
 
@@ -34,6 +34,9 @@ flowchart LR
     LLM["Owner LLM config<br/>encrypted at rest"] --> Domain
     Domain -->|"per-job ephemeral config"| Worker
     Domain -.-> Memory["GauzMem"]
+    HTTP --> Task["owner-scoped task projection"]
+    Task --> Memory
+    Memory --> Vector["Qdrant Server"]
     HTTP --> Status["Registered Agent connection status"]
     HTTP --> ModelStatus["Owner-safe LLM settings"]
 ```
@@ -54,6 +57,10 @@ flowchart LR
     ModelAPI --> Encrypted["owner-scoped encrypted credential"]
     Encrypted --> Job["Evolution Job dispatch"]
     Job -->|"ephemeral only"| Runner["XiaoBaOS Evolution Runner"]
+    Conversation --> MemorySubmit["POST memory extraction"]
+    MemorySubmit --> MemoryTask["GET /v1/memories/tasks/{task_id}"]
+    MemoryTask -->|"owner-scoped polling"| GauzMem["GauzMem Task Manager"]
+    GauzMem --> Vector["Qdrant Server"]
 ```
 
 Existing tokens with no `agent_id` remain a bounded compatibility path. Every
@@ -98,6 +105,9 @@ The durable worker queue remains the next control-plane reliability milestone.
 - `/v1/evolution-jobs`: Agent Trace Set creation, listing and detail.
 - `DELETE /v1/evolution-jobs/{job_id}`: owner-scoped terminal analysis deletion; queued and running Jobs return a conflict.
 - `/v1/memories`: private-backend memory operations through owner-derived scope.
+- `GET /v1/memories/tasks/{task_id}`: owner-scoped projection of GauzMem
+  progress and terminal failure; the private project identifier is never
+  returned.
 - `GET/PUT/DELETE /v1/me/llm-config`: authenticated owner-provided Evolution
   model configuration; GET never returns the API Key.
 

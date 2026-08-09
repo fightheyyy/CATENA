@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { conversationKey, orderedConversationMessages } from "./conversationView";
-import type { ConversationDocument, ConversationMessage, ConversationSummary } from "./types";
+import { isMemoryTaskActive, memoryTaskDisplayPercent, memoryTaskFromReceipt, memoryTaskStorageKey } from "./memoryTaskView";
+import type { ConversationDocument, ConversationMessage, ConversationSummary, MemoryTaskStatus } from "./types";
 
 type Locale = "zh" | "en";
 
@@ -22,9 +23,14 @@ const copy = {
     trace: "关联 Trace",
     exclusive: "XiaoBaOS 原生 Conversation",
     remember: "提炼为记忆",
-    remembering: "正在提炼",
-    memoryQueued: "已提交",
+    submitting: "正在提交",
+    memoryWaiting: "等待开始",
+    memoryWorking: "正在提炼",
+    memoryDone: "记忆已生成",
     memoryFailed: "记忆提炼失败",
+    memoryExpired: "任务状态已过期，请确认记忆结果或重新提炼。",
+    retryMemory: "重新提炼",
+    viewMemory: "查看记忆",
     backToList: "返回对话列表",
   },
   en: {
@@ -43,14 +49,27 @@ const copy = {
     trace: "Trace",
     exclusive: "XiaoBaOS native Conversation",
     remember: "Distill to memory",
-    remembering: "Distilling",
-    memoryQueued: "Submitted",
+    submitting: "Submitting",
+    memoryWaiting: "Waiting to start",
+    memoryWorking: "Distilling",
+    memoryDone: "Memory created",
     memoryFailed: "Memory distillation failed",
+    memoryExpired: "Task status expired. Check the memory result or retry.",
+    retryMemory: "Retry",
+    viewMemory: "View memory",
     backToList: "Back to conversations",
   },
 } as const;
 
-export function ConversationWorkspace({ locale, memoryReady }: { locale: Locale; memoryReady: boolean }) {
+export function ConversationWorkspace({
+  locale,
+  memoryReady,
+  onOpenMemory,
+}: {
+  locale: Locale;
+  memoryReady: boolean;
+  onOpenMemory: () => void;
+}) {
   const t = copy[locale];
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [selectedKey, setSelectedKey] = useState("");
@@ -150,9 +169,11 @@ export function ConversationWorkspace({ locale, memoryReady }: { locale: Locale;
             <ConversationState label={detailError || t.detailFailed} tone="error" />
           ) : document ? (
             <ConversationThread
+              key={conversationKey(document.conversation)}
               document={document}
               locale={locale}
               memoryReady={memoryReady}
+              onOpenMemory={onOpenMemory}
               onBack={() => setMobileDetailOpen(false)}
             />
           ) : <ConversationState label={t.choose} />}
@@ -166,21 +187,97 @@ function ConversationThread({
   document,
   locale,
   memoryReady,
+  onOpenMemory,
   onBack,
 }: {
   document: ConversationDocument;
   locale: Locale;
   memoryReady: boolean;
+  onOpenMemory: () => void;
   onBack: () => void;
 }) {
   const t = copy[locale];
   const messages = orderedConversationMessages(document.messages);
-  const [memoryState, setMemoryState] = useState<"idle" | "busy" | "done" | "error">("idle");
-  const [memoryMessage, setMemoryMessage] = useState("");
+  const storageKey = memoryTaskStorageKey(document.conversation.agent_id, document.conversation.conversation_id);
+  const [submittingMemory, setSubmittingMemory] = useState(false);
+  const [memoryTask, setMemoryTask] = useState<MemoryTaskStatus | null>(null);
+  const [memoryError, setMemoryError] = useState("");
+
   useEffect(() => {
-    setMemoryState("idle");
-    setMemoryMessage("");
-  }, [document.conversation.agent_id, document.conversation.conversation_id]);
+    const taskID = readStoredTaskID(storageKey);
+    if (taskID) {
+      setMemoryTask({ task_id: taskID, status: "pending", progress: 0, steps: [] });
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!isMemoryTaskActive(memoryTask)) return;
+    const taskID = memoryTask?.task_id;
+    if (!taskID) return;
+    let active = true;
+    let failures = 0;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const next = await api.memoryTask(taskID);
+        if (!active) return;
+        failures = 0;
+        setMemoryTask(next);
+        setMemoryError("");
+        if (next.status === "pending" || next.status === "processing") {
+          timer = window.setTimeout(() => void poll(), 1250);
+        } else {
+          removeStoredTaskID(storageKey);
+        }
+      } catch (cause) {
+        if (!active) return;
+        failures += 1;
+        if (failures < 3) {
+          timer = window.setTimeout(() => void poll(), 1500);
+          return;
+        }
+        removeStoredTaskID(storageKey);
+        const message = cause instanceof Error && cause.message ? cause.message : t.memoryExpired;
+        setMemoryTask((current) => current ? { ...current, status: "failed", error: message } : current);
+        setMemoryError(message);
+      }
+    };
+    timer = window.setTimeout(() => void poll(), 350);
+    return () => {
+      active = false;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [memoryTask?.task_id, memoryTask?.status, storageKey, t.memoryExpired]);
+
+  const startMemoryTask = async () => {
+    setSubmittingMemory(true);
+    setMemoryError("");
+    setMemoryTask(null);
+    removeStoredTaskID(storageKey);
+    try {
+      const receipt = await api.rememberConversation(document.conversation.agent_id, document.conversation.conversation_id);
+      const next = memoryTaskFromReceipt(receipt);
+      setMemoryTask(next);
+      storeTaskID(storageKey, next.task_id);
+    } catch (cause) {
+      setMemoryError(cause instanceof Error ? cause.message : t.memoryFailed);
+    } finally {
+      setSubmittingMemory(false);
+    }
+  };
+
+  const activeTask = isMemoryTaskActive(memoryTask);
+  const progress = memoryTaskDisplayPercent(memoryTask);
+  const buttonLabel = submittingMemory
+    ? t.submitting
+    : activeTask
+      ? `${t.memoryWorking} ${progress}%`
+      : memoryTask?.status === "completed"
+        ? t.memoryDone
+        : memoryTask?.status === "failed" || memoryError
+          ? t.retryMemory
+          : t.remember;
+
   return (
     <div className="conversation-thread">
       <header className="conversation-detail-header">
@@ -195,29 +292,122 @@ function ConversationThread({
             <button
               className="text-button"
               type="button"
-              disabled={memoryState === "busy" || memoryState === "done"}
-              onClick={async () => {
-                setMemoryState("busy");
-                setMemoryMessage("");
-                try {
-                  await api.rememberConversation(document.conversation.agent_id, document.conversation.conversation_id);
-                  setMemoryState("done");
-                  setMemoryMessage(t.memoryQueued);
-                } catch (cause) {
-                  setMemoryState("error");
-                  setMemoryMessage(cause instanceof Error ? cause.message : t.memoryFailed);
-                }
-              }}
-            >{memoryState === "busy" ? t.remembering : memoryState === "done" ? t.memoryQueued : t.remember}</button>
+              disabled={submittingMemory || activeTask || memoryTask?.status === "completed"}
+              onClick={() => void startMemoryTask()}
+            >{buttonLabel}</button>
           ) : null}
         </div>
       </header>
-      {memoryMessage && memoryState === "error" ? <p className="conversation-memory-note error">{memoryMessage}</p> : null}
+      {memoryTask || memoryError ? (
+        <MemoryTaskProgress
+          task={memoryTask}
+          error={memoryError}
+          locale={locale}
+          onRetry={() => void startMemoryTask()}
+          onOpenMemory={onOpenMemory}
+        />
+      ) : null}
       <ol className="conversation-message-list">
         {messages.map((message) => <ConversationMessageRow key={message.message_id} message={message} locale={locale} />)}
       </ol>
     </div>
   );
+}
+
+function MemoryTaskProgress({
+  task,
+  error,
+  locale,
+  onRetry,
+  onOpenMemory,
+}: {
+  task: MemoryTaskStatus | null;
+  error: string;
+  locale: Locale;
+  onRetry: () => void;
+  onOpenMemory: () => void;
+}) {
+  const t = copy[locale];
+  const status = task?.status ?? "failed";
+  const progress = memoryTaskDisplayPercent(task);
+  const title = status === "completed"
+    ? t.memoryDone
+    : status === "failed"
+      ? t.memoryFailed
+      : status === "pending"
+        ? t.memoryWaiting
+        : task?.current_step
+          ? `${t.memoryWorking} · ${memoryStepLabel(task.current_step, locale)}`
+          : t.memoryWorking;
+  const detail = status === "failed" ? (task?.error || error || t.memoryFailed) : task?.message;
+
+  return (
+    <section className={`conversation-memory-progress ${status}`} aria-live="polite">
+      <div className="conversation-memory-progress-heading">
+        <div>
+          <strong>{title}</strong>
+          {detail ? <span>{detail}</span> : null}
+        </div>
+        {status === "pending" || status === "processing" ? <b>{progress}%</b> : null}
+        {status === "completed" ? <button className="text-button" type="button" onClick={onOpenMemory}>{t.viewMemory}</button> : null}
+        {status === "failed" ? <button className="text-button" type="button" onClick={onRetry}>{t.retryMemory}</button> : null}
+      </div>
+      {status === "pending" || status === "processing" ? (
+        <div className="conversation-memory-meter" aria-label={`${progress}%`}>
+          <i style={{ width: `${progress}%` }} />
+        </div>
+      ) : null}
+      {task?.steps.length ? (
+        <ol className="conversation-memory-steps">
+          {task.steps.map((step, index) => (
+            <li className={step.status} key={`${step.name}-${index}`}>
+              <i />
+              <span>{memoryStepLabel(step.name, locale)}</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </section>
+  );
+}
+
+function memoryStepLabel(value: string, locale: Locale) {
+  const normalized = value.trim().replaceAll("_", " ");
+  if (locale === "en") return normalized;
+  const labels: Array<[RegExp, string]> = [
+    [/fact/i, "提取事实"],
+    [/entit/i, "识别实体"],
+    [/relation/i, "分析关系"],
+    [/graph/i, "构建知识图谱"],
+    [/topic|cluster/i, "聚合主题"],
+    [/vector|embed/i, "生成语义索引"],
+    [/memor/i, "写入长期记忆"],
+  ];
+  return labels.find(([pattern]) => pattern.test(normalized))?.[1] ?? normalized;
+}
+
+function readStoredTaskID(key: string) {
+  try {
+    return window.localStorage.getItem(key) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function storeTaskID(key: string, taskID: string) {
+  try {
+    window.localStorage.setItem(key, taskID);
+  } catch {
+    // Polling still works in the current tab when storage is unavailable.
+  }
+}
+
+function removeStoredTaskID(key: string) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Nothing to clean when storage is unavailable.
+  }
 }
 
 function ConversationMessageRow({ message, locale }: { message: ConversationMessage; locale: Locale }) {

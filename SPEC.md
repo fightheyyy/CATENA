@@ -1,7 +1,7 @@
 # Catena Product Specification
 
 Status: MVP1 architecture contract
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 ## Problem
 
@@ -39,6 +39,11 @@ flowchart LR
     Go --> PG[("PostgreSQL")]
     Go --> CH[("ClickHouse")]
     Go -->|"Conversation"| Memory["GauzMem · optional"]
+    Go --> TaskAPI["owner-scoped memory task API"]
+    TaskAPI -->|"HTTP polling"| Memory
+    Memory --> Vector["Qdrant Server"]
+    TaskAPI --> Progress["step progress · failure · retry"]
+    Progress --> Browser
     Memory --> Recall["semantic · graph · temporal memory"]
     Browser --> Keys["API management"]
     Browser --> ModelSettings["API management · LLM config"]
@@ -71,6 +76,11 @@ flowchart LR
     Runtime --> Assets["agent.md · Skill · Role · Harness"]
     Core --> ModelStatus["Authenticated LLM settings<br/>never returns API Key"]
     Evidence -->|"Conversation only"| GauzMem["GauzMem"]
+    Core --> TaskAPI["owner-scoped memory task API"]
+    TaskAPI -->|"HTTP polling"| GauzMem
+    GauzMem --> Qdrant["Qdrant Server"]
+    TaskAPI --> Progress["extract · entities · relations · vector · memory"]
+    Progress --> Developer
     GauzMem --> Memory["semantic · graph · temporal memory"]
 ```
 
@@ -103,6 +113,9 @@ preferences and live only in Settings.
 - **Conversation:** `xiaoba.conversation_batch.v1`, append-only XiaoBaOS
   user-visible messages whose Agent identity is overwritten from the key.
 - **Memory source:** user-visible Conversation only; Trace is engineering and evolution evidence.
+- **Memory task:** owner-scoped asynchronous GauzMem task exposed through
+  Catena as bounded polling state. Task transport is HTTP; Redis is not a
+  browser transport or the source of product truth.
 - **Agent Trace Set:** immutable Agent + time-window snapshot containing at least two server-frozen Trace IDs.
 - **Evolution Job:** Inspector → Evolution → Reviewer analysis over one Agent Trace Set. Its owner may delete a completed or failed analysis and its generated assets; the immutable source Trace evidence remains intact.
 - **Agent Asset:** evidence-linked `agent.md`, Skill or Role; Harness is valid only for XiaoBaOS.

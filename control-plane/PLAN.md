@@ -1,6 +1,6 @@
 # Catena Control Plane Plan
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 ## Current state
 
@@ -13,6 +13,13 @@ Updated: 2026-08-07
 - [x] Candidate assets retain exact evidence provenance.
 - [x] React is built into and served by the Go binary.
 - [x] GauzMem is private and tenant scope is derived by Go.
+
+## Completed milestone — observable memory extraction
+
+- [x] Add an owner-scoped GauzMem task-status projection.
+- [x] Preserve upstream step progress while hiding private project identity.
+- [x] Return expired or missing tasks explicitly instead of implying success.
+- [x] Run GauzMem against Qdrant Server to remove local-client lock failures.
 
 ## Active milestone — Agent-bound ingestion
 

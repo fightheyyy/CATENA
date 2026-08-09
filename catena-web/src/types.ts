@@ -247,6 +247,28 @@ export type MemoryIngestReceipt = {
   message?: string;
 };
 
+export type MemoryTaskStep = {
+  name: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  started_at?: string;
+  finished_at?: string;
+  duration_seconds?: number;
+  error?: string;
+};
+
+export type MemoryTaskStatus = {
+  task_id: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  current_step?: string;
+  progress: number;
+  message?: string;
+  error?: string;
+  conversation_id?: number;
+  created_at?: string;
+  updated_at?: string;
+  steps: MemoryTaskStep[];
+};
+
 export type MemoryRecallItem = {
   id: string;
   content: string;

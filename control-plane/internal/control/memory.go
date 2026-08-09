@@ -32,6 +32,7 @@ type MemoryBackend interface {
 	Ping(context.Context) error
 	IngestTrace(context.Context, string, TraceDetail) (MemoryIngestReceipt, error)
 	IngestConversation(context.Context, string, ConversationDocument) (MemoryIngestReceipt, error)
+	Task(context.Context, string, string) (MemoryTaskStatus, error)
 	List(context.Context, string, int) (MemoryList, error)
 	Search(context.Context, string, MemorySearchRequest) (MemoryRecallBundle, error)
 	Graph(context.Context, string, int64) (MemoryFactGraph, error)
@@ -45,6 +46,28 @@ type MemoryIngestReceipt struct {
 	Status               string `json:"status"`
 	Indexed              bool   `json:"indexed"`
 	Message              string `json:"message,omitempty"`
+}
+
+type MemoryTaskStep struct {
+	Name            string  `json:"name"`
+	Status          string  `json:"status"`
+	StartedAt       string  `json:"started_at,omitempty"`
+	FinishedAt      string  `json:"finished_at,omitempty"`
+	DurationSeconds float64 `json:"duration_seconds,omitempty"`
+	Error           string  `json:"error,omitempty"`
+}
+
+type MemoryTaskStatus struct {
+	TaskID         string           `json:"task_id"`
+	Status         string           `json:"status"`
+	CurrentStep    string           `json:"current_step,omitempty"`
+	Progress       float64          `json:"progress"`
+	Message        string           `json:"message,omitempty"`
+	Error          string           `json:"error,omitempty"`
+	ConversationID int64            `json:"conversation_id,omitempty"`
+	CreatedAt      string           `json:"created_at,omitempty"`
+	UpdatedAt      string           `json:"updated_at,omitempty"`
+	Steps          []MemoryTaskStep `json:"steps"`
 }
 
 type MemorySearchRequest struct {
@@ -269,6 +292,95 @@ func (c *GauzMemoryClient) IngestConversation(
 	}, nil
 }
 
+func (c *GauzMemoryClient) Task(
+	ctx context.Context,
+	ownerID string,
+	taskID string,
+) (MemoryTaskStatus, error) {
+	taskID = strings.TrimSpace(taskID)
+	if !validConversationIdentifier(taskID, 160) {
+		return MemoryTaskStatus{}, errors.New("task_id must be a valid identifier")
+	}
+	var upstream struct {
+		TaskID         string  `json:"task_id"`
+		ProjectID      string  `json:"project_id"`
+		Status         string  `json:"status"`
+		CurrentStep    string  `json:"current_step"`
+		Progress       float64 `json:"progress"`
+		Message        string  `json:"message"`
+		Error          string  `json:"error"`
+		ConversationID int64   `json:"conversation_id"`
+		CreatedAt      string  `json:"created_at"`
+		UpdatedAt      string  `json:"updated_at"`
+		Steps          []struct {
+			Name            string  `json:"step_name"`
+			Status          string  `json:"status"`
+			StartedAt       string  `json:"start_time"`
+			FinishedAt      string  `json:"end_time"`
+			DurationSeconds float64 `json:"duration_seconds"`
+			Error           string  `json:"error"`
+		} `json:"steps"`
+	}
+	if err := c.getJSON(ctx, "/api/v1/tasks/"+url.PathEscape(taskID), &upstream); err != nil {
+		var upstreamErr *gauzHTTPError
+		if errors.As(err, &upstreamErr) && upstreamErr.Status == http.StatusNotFound {
+			return MemoryTaskStatus{}, ErrNotFound
+		}
+		return MemoryTaskStatus{}, err
+	}
+	if upstream.TaskID != taskID || upstream.ProjectID != memoryProjectID(ownerID) {
+		return MemoryTaskStatus{}, ErrNotFound
+	}
+	if !validMemoryTaskState(upstream.Status) {
+		return MemoryTaskStatus{}, errors.New("GauzMem returned an invalid task state")
+	}
+	progress := upstream.Progress
+	if progress < 0 {
+		progress = 0
+	} else if progress > 1 {
+		progress = 1
+	}
+	steps := upstream.Steps
+	if len(steps) > 20 {
+		steps = steps[:20]
+	}
+	result := MemoryTaskStatus{
+		TaskID:         taskID,
+		Status:         upstream.Status,
+		CurrentStep:    bounded(redactMemoryText(upstream.CurrentStep), 160),
+		Progress:       progress,
+		Message:        bounded(redactMemoryText(upstream.Message), 500),
+		Error:          bounded(redactMemoryText(upstream.Error), 500),
+		ConversationID: upstream.ConversationID,
+		CreatedAt:      bounded(upstream.CreatedAt, 80),
+		UpdatedAt:      bounded(upstream.UpdatedAt, 80),
+		Steps:          make([]MemoryTaskStep, 0, len(steps)),
+	}
+	for _, step := range steps {
+		if !validMemoryTaskState(step.Status) {
+			continue
+		}
+		result.Steps = append(result.Steps, MemoryTaskStep{
+			Name:            bounded(redactMemoryText(step.Name), 160),
+			Status:          step.Status,
+			StartedAt:       bounded(step.StartedAt, 80),
+			FinishedAt:      bounded(step.FinishedAt, 80),
+			DurationSeconds: step.DurationSeconds,
+			Error:           bounded(redactMemoryText(step.Error), 500),
+		})
+	}
+	return result, nil
+}
+
+func validMemoryTaskState(value string) bool {
+	switch value {
+	case "pending", "processing", "completed", "failed":
+		return true
+	default:
+		return false
+	}
+}
+
 func (c *GauzMemoryClient) List(
 	ctx context.Context,
 	ownerID string,
@@ -427,12 +539,21 @@ func (c *GauzMemoryClient) doJSON(request *http.Request, output any) error {
 		if problem.Detail == "" {
 			problem.Detail = http.StatusText(response.StatusCode)
 		}
-		return fmt.Errorf("GauzMem returned HTTP %d: %s", response.StatusCode, bounded(problem.Detail, 500))
+		return &gauzHTTPError{Status: response.StatusCode, Detail: bounded(problem.Detail, 500)}
 	}
 	if err := json.Unmarshal(responseBody, output); err != nil {
 		return errors.New("GauzMem returned invalid JSON")
 	}
 	return nil
+}
+
+type gauzHTTPError struct {
+	Status int
+	Detail string
+}
+
+func (e *gauzHTTPError) Error() string {
+	return fmt.Sprintf("GauzMem returned HTTP %d: %s", e.Status, e.Detail)
 }
 
 func (c *GauzMemoryClient) endpointWithQuery(path string) string {
@@ -724,6 +845,35 @@ func (s *HTTPServer) rememberConversation(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSON(w, http.StatusAccepted, receipt)
+}
+
+func (s *HTTPServer) memoryTaskStatus(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	if s.memory == nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Memory service is not configured")
+		return
+	}
+	taskID := strings.TrimSpace(r.PathValue("task_id"))
+	if !validConversationIdentifier(taskID, 160) {
+		writeProblem(w, http.StatusBadRequest, "task_id must be a valid identifier")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	result, err := s.memory.Task(ctx, traceOwnerID(user), taskID)
+	if errors.Is(err, ErrNotFound) {
+		writeProblem(w, http.StatusNotFound, "Memory task not found or expired")
+		return
+	}
+	if err != nil {
+		slog.Warn("GauzMem task status failed", "task_id", taskID, "error", err)
+		writeProblem(w, http.StatusBadGateway, "Memory task status is unavailable")
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (s *HTTPServer) searchMemories(w http.ResponseWriter, r *http.Request) {

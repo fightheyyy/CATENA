@@ -31,6 +31,8 @@ Updated: 2026-08-09
       a shared responsive master/detail interaction.
 - [x] Give Conversation messages and selected Trace Span evidence explicit
       visual hierarchy without changing stored evidence or API contracts.
+- [x] Replace the Conversation “submitted” dead end with step progress,
+      terminal failure/retry, and a completed link to Memory.
 - [ ] Add responsive browser acceptance to CI.
 - [ ] Improve accessibility and keyboard navigation.
 - [ ] Add durable optimistic/retry states for long-running jobs.

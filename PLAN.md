@@ -10,6 +10,14 @@ Job orchestration. The embedded XiaoBaOS Runtime consumes retained Evidence
 Packs and produces reviewable Agent assets. Target Agent execution remains
 local.
 
+## Completed milestone — observable memory extraction
+
+- [x] Replace Qdrant Local with the private Qdrant Server mode already
+      supported by GauzMem.
+- [x] Proxy owner-scoped memory task progress through Go.
+- [x] Poll and render extraction steps, terminal failure and retry in Conversation.
+- [x] Verify submit → progress → completed memory → recall end to end.
+
 ## Active milestone — owner-provided Evolution model
 
 - [x] Move Provider, Base URL, Model and API Key configuration to API management.

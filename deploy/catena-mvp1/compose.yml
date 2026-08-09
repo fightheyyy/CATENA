@@ -154,7 +154,8 @@ services:
       MYSQL_USER: gauzmem
       MYSQL_PASSWORD: ${CATENA_GAUZMEM_MYSQL_PASSWORD:-gauzmem-local-change-me}
       MYSQL_DB: gauzmem
-      QDRANT_MODE: local
+      QDRANT_MODE: server
+      QDRANT_URL: http://qdrant:6333
       NEO4J_URI: bolt://neo4j:7687
       NEO4J_USER: neo4j
       NEO4J_PASSWORD: ${CATENA_NEO4J_PASSWORD:-catena-neo4j-local}
@@ -171,12 +172,27 @@ services:
         condition: service_healthy
       neo4j:
         condition: service_healthy
+      qdrant:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:1235/health', timeout=3)"]
       interval: 10s
       timeout: 5s
       retries: 20
       start_period: 45s
+    restart: unless-stopped
+
+  qdrant:
+    profiles: ["memory"]
+    image: qdrant/qdrant:v1.18.2
+    volumes:
+      - qdrant-data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
     restart: unless-stopped
 
   gauzmem-mysql:
@@ -229,6 +245,7 @@ volumes:
   clickhouse-data:
   gauzmem-data:
   gauzmem-mysql-data:
+  qdrant-data:
   neo4j-data:
   neo4j-logs:
   neo4j-plugins:

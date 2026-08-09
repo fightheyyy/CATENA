@@ -66,6 +66,12 @@ services:
         max-size: "20m"
         max-file: "5"
 
+  qdrant:
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   caddy-data:
   caddy-config:

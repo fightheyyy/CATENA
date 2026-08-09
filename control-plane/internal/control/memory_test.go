@@ -158,6 +158,40 @@ func TestGauzMemoryClientUsesThreePathRecallAndStableOwnerScope(t *testing.T) {
 	}
 }
 
+func TestGauzMemoryClientProjectsOwnerScopedTaskProgress(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/tasks/task-42" || r.Header.Get("X-API-Key") != "service-key" {
+			http.NotFound(w, r)
+			return
+		}
+		writeTestJSON(t, w, map[string]any{
+			"task_id": "task-42", "project_id": memoryProjectID("owner-one"),
+			"status": "processing", "current_step": "向量化", "progress": 0.75,
+			"message": "api_key=sk_private_value", "conversation_id": 7,
+			"steps": []map[string]any{{"step_name": "事实抽取", "status": "completed"}, {"step_name": "向量化", "status": "processing"}},
+		})
+	}))
+	defer server.Close()
+	client, err := NewGauzMemoryClient(server.URL, "service-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := client.Task(t.Context(), "owner-one", "task-42")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if task.Status != "processing" || task.Progress != 0.75 || task.CurrentStep != "向量化" || len(task.Steps) != 2 {
+		t.Fatalf("unexpected task: %#v", task)
+	}
+	encoded, _ := json.Marshal(task)
+	if strings.Contains(string(encoded), "project_id") || strings.Contains(string(encoded), "sk_private_value") {
+		t.Fatalf("private task data leaked: %s", encoded)
+	}
+	if _, err := client.Task(t.Context(), "owner-two", "task-42"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("foreign owner task should be hidden, got %v", err)
+	}
+}
+
 func TestGauzMemoryClientReadsOwnerScopedFactGraph(t *testing.T) {
 	var projectID string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -328,6 +362,25 @@ func TestRememberConversationReadsOnlyTheAuthenticatedOwnerScope(t *testing.T) {
 	}
 }
 
+func TestMemoryTaskStatusUsesAuthenticatedOwnerAndHidesProviderErrors(t *testing.T) {
+	memory := &recordingMemoryBackend{task: MemoryTaskStatus{TaskID: "task-1", Status: "processing", Progress: 0.5}}
+	server := &HTTPServer{store: NewMemoryStore(), memory: memory, auth: AuthConfig{}.normalized()}
+	request := httptest.NewRequest(http.MethodGet, "/v1/memories/tasks/task-1", nil)
+	request.SetPathValue("task_id", "task-1")
+	recorder := httptest.NewRecorder()
+	server.memoryTaskStatus(recorder, request)
+	if recorder.Code != http.StatusOK || memory.ownerID != "local" || memory.taskID != "task-1" || !strings.Contains(recorder.Body.String(), `"progress":0.5`) {
+		t.Fatalf("unexpected task response: status=%d owner=%q task=%q body=%s", recorder.Code, memory.ownerID, memory.taskID, recorder.Body.String())
+	}
+
+	memory.taskErr = errors.New("provider api_key=sk_private_value")
+	recorder = httptest.NewRecorder()
+	server.memoryTaskStatus(recorder, request)
+	if recorder.Code != http.StatusBadGateway || strings.Contains(recorder.Body.String(), "sk_private_value") {
+		t.Fatalf("provider detail leaked: status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+}
+
 func TestMemoryRecallDoesNotExposeProviderErrors(t *testing.T) {
 	memory := &recordingMemoryBackend{searchErr: errors.New("provider rejected api_key=sk_private_value")}
 	server := &HTTPServer{
@@ -410,6 +463,15 @@ type recordingMemoryBackend struct {
 	searchErr      error
 	factID         int64
 	graphErr       error
+	taskID         string
+	task           MemoryTaskStatus
+	taskErr        error
+}
+
+func (s *recordingMemoryBackend) Task(_ context.Context, ownerID string, taskID string) (MemoryTaskStatus, error) {
+	s.ownerID = ownerID
+	s.taskID = taskID
+	return s.task, s.taskErr
 }
 
 func (s *recordingMemoryBackend) IngestConversation(_ context.Context, ownerID string, document ConversationDocument) (MemoryIngestReceipt, error) {

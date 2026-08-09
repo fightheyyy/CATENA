@@ -9,7 +9,9 @@ The default Compose stack runs four services:
 | `postgres` | Product identity, workflow and audit records |
 | `clickhouse` | Trace and Span storage |
 
-The `memory` profile adds GauzMem, MySQL and Neo4j. Target Agent Runtimes remain external.
+The `memory` profile adds GauzMem, MySQL, Neo4j and a private Qdrant Server.
+Qdrant runs as one shared service so concurrent memory tasks never contend for
+an embedded database file lock. Target Agent Runtimes remain external.
 
 ## Local run
 

@@ -83,7 +83,7 @@ flowchart LR
 | `clickhouse` | Trace 与 Span 时序存储 |
 | `caddy` | 公开部署的 HTTPS 与安全响应头 |
 
-可选 `memory` profile 会增加 GauzMem、MySQL 与 Neo4j。
+可选 `memory` profile 会增加 GauzMem、MySQL、Neo4j 与私有 Qdrant Server。
 
 ## 本地运行
 

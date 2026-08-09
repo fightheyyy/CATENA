@@ -15,6 +15,8 @@ flowchart LR
     API --> Go["Catena Go API"]
     Routes --> Views["Agent · Conversation · Memory · Trace · Farm"]
     Views --> Flat["Conversation / Trace<br/>list and detail share one visual plane"]
+    Views --> MemoryTask["Memory task<br/>step progress · retry · result"]
+    MemoryTask --> API
     Routes --> Keys["API Management"]
     Keys --> API
     Routes --> Settings["Language · Theme · Account"]
@@ -28,6 +30,9 @@ flowchart LR
     Conversation["Conversation index"] --> ConversationDetail["User-visible transcript detail"]
     Trace["Trace index"] --> TraceDetail["Run summary · Span chain · Evidence"]
     ConversationDetail --> Responsive["Desktop split view<br/>Narrow-screen master/detail"]
+    ConversationDetail --> Submit["Distill to memory"]
+    Submit --> Poll["poll owner-scoped task status"]
+    Poll --> Progress["step progress · failure · retry · open Memory"]
     TraceDetail --> Responsive
     Stats["Agent statistics"] --> Evidence["Trace · Conversation · Error"]
     Keys["/api-keys"] --> Name["Agent name"]
@@ -73,6 +78,9 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - At 390px, every primary journey keeps `scrollWidth === innerWidth`; long
   Conversation titles wrap inside the detail header instead of widening the page.
 - Conversation messages use visibly distinct user and Agent transcript cards.
+- Memory distillation never ends at an ambiguous “submitted” label. The
+  Conversation detail shows current step and percentage, explains terminal
+  failure, permits retry, and links completed work to Memory.
 - Trace metrics stay compact; Span selection and its input/output evidence read
   as one selected inspection unit.
 - Trace Farm starts from an Agent and bounded time window, never one isolated Trace.

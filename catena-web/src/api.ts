@@ -12,6 +12,7 @@ import type {
   RegressionCase,
   Release,
   MemoryIngestReceipt,
+  MemoryTaskStatus,
   MemoryFactGraph,
   MemoryList,
   MemoryRecallBundle,
@@ -139,6 +140,10 @@ export const api = {
       method: "POST",
     });
   },
+  memoryTask: (taskID: string) =>
+    request<MemoryTaskStatus>(`/v1/memories/tasks/${encodeURIComponent(taskID)}`, {
+      signal: AbortSignal.timeout(8000),
+    }),
   memories: (limit = 24) => request<MemoryList>(`/v1/memories?limit=${limit}`),
   memoryGraph: (factID: string | number) =>
     request<MemoryFactGraph>(`/v1/memories/facts/${encodeURIComponent(String(factID))}/graph`),

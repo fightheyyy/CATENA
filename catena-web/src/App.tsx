@@ -395,6 +395,7 @@ export function App() {
             onAnalyzeAgent={analyzeAgent}
             onOpenAgentTraces={openAgentTraces}
             onConnectAgent={() => navigate("apiKeys")}
+            onOpenMemory={() => navigate("memory")}
             onRefresh={load}
             theme={theme}
             onLocale={selectLocale}
@@ -504,6 +505,7 @@ function RouteView({
   onAnalyzeAgent,
   onOpenAgentTraces,
   onConnectAgent,
+  onOpenMemory,
   onRefresh,
   theme,
   onLocale,
@@ -523,6 +525,7 @@ function RouteView({
   onAnalyzeAgent: (agentID: string) => void;
   onOpenAgentTraces: (agentID: string) => void;
   onConnectAgent: () => void;
+  onOpenMemory: () => void;
   onRefresh: () => Promise<void>;
   theme: Theme;
   onLocale: (locale: Locale) => void;
@@ -532,7 +535,7 @@ function RouteView({
   let content: React.ReactNode;
   if (route === "agents") content = <AgentWorkspace locale={locale} workspace={workspace} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} onConnect={onConnectAgent} />;
   else if (route === "apiKeys") content = <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} />;
-  else if (route === "conversations") content = <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} />;
+  else if (route === "conversations") content = <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} onOpenMemory={onOpenMemory} />;
   else if (route === "traces") content = <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} />;
   else if (route === "evolution") content = (
     <EvolutionWorkspace
