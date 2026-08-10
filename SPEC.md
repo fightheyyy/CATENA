@@ -37,12 +37,13 @@ flowchart LR
     Go -->|"per-job ephemeral model config"| Runner
     Runner --> Asset["agent.md · Skill · Role · Harness"]
     Go --> PG[("PostgreSQL")]
-    Go --> CH[("ClickHouse")]
+    Go --> CH[("Official ClickHouse<br/>catena database")]
     Go -->|"Conversation"| Memory["GauzMem · optional"]
     Go --> TaskAPI["owner-scoped memory task API"]
+    TaskAPI --> TaskLedger[("durable memory task ledger")]
     TaskAPI -->|"HTTP polling"| Memory
     Memory --> Vector["Qdrant Server"]
-    TaskAPI --> Progress["step progress · failure · retry"]
+    TaskAPI --> Progress["task list · step progress · failure · retry"]
     Progress --> Browser
     Memory --> Recall["semantic · graph · temporal memory"]
     Browser --> Keys["API management"]
@@ -70,6 +71,7 @@ flowchart LR
     Core --> Detect["Runtime auto-detection"]
     Core --> Evidence[("Evidence Store")]
     Evidence --> Queue["durable Evolution queue"]
+    Core --> CH[("Official ClickHouse<br/>catena database")]
     Owner["Owner BYOK<br/>Provider · Base URL · Model · API Key"] --> Core
     Core -->|"decrypt only for job"| Runtime
     Queue --> Runtime["XiaoBaOS Evolution Runtime"]
@@ -77,11 +79,15 @@ flowchart LR
     Core --> ModelStatus["Authenticated LLM settings<br/>never returns API Key"]
     Evidence -->|"Conversation only"| GauzMem["GauzMem"]
     Core --> TaskAPI["owner-scoped memory task API"]
+    TaskAPI --> MemoryLedger[("PostgreSQL memory task ledger")]
     TaskAPI -->|"HTTP polling"| GauzMem
     GauzMem --> Qdrant["Qdrant Server"]
     TaskAPI --> Progress["extract · entities · relations · vector · memory"]
     Progress --> Developer
-    GauzMem --> Memory["semantic · graph · temporal memory"]
+    GauzMem --> Semantic["semantic entities · relations"]
+    Evidence --> Provenance["Conversation · Agent · same-Conversation provenance"]
+    Semantic --> Memory["truthful memory graph"]
+    Provenance --> Memory
 ```
 
 The target makes Agent identity explicit before any data arrives. The API key,
@@ -110,12 +116,20 @@ preferences and live only in Settings.
 - **Owner LLM config:** one encrypted owner-scoped Provider/Base URL/Model/API
   Key tuple used only for that owner's Evolution Jobs.
 - **Trace:** OTLP/HTTP protobuf or JSON authenticated by Agent API key.
+- **Trace store:** Catena-owned `catena_spans` in the `catena` database on the
+  pinned official ClickHouse image. Product code, configuration and runtime do
+  not depend on retired platform images, schemas or attribute aliases.
 - **Conversation:** `xiaoba.conversation_batch.v1`, append-only XiaoBaOS
   user-visible messages whose Agent identity is overwritten from the key.
 - **Memory source:** user-visible Conversation only; Trace is engineering and evolution evidence.
 - **Memory task:** owner-scoped asynchronous GauzMem task exposed through
-  Catena as bounded polling state. Task transport is HTTP; Redis is not a
-  browser transport or the source of product truth.
+  Catena as a durable, listable task record plus bounded polling state. Task
+  transport is HTTP; Redis is not a browser transport or the source of product
+  truth.
+- **Memory graph:** semantic relations come from GauzMem. Catena may add only
+  provenance-backed structural context (source Conversation, Agent and
+  same-Conversation adjacency); it never fabricates a semantic relation merely
+  to populate the UI.
 - **Agent Trace Set:** immutable Agent + time-window snapshot containing at least two server-frozen Trace IDs.
 - **Evolution Job:** Inspector → Evolution → Reviewer analysis over one Agent Trace Set. Its owner may delete a completed or failed analysis and its generated assets; the immutable source Trace evidence remains intact.
 - **Agent Asset:** evidence-linked `agent.md`, Skill or Role; Harness is valid only for XiaoBaOS.

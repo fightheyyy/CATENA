@@ -1,6 +1,6 @@
 # Catena Web Plan
 
-Updated: 2026-08-09
+Updated: 2026-08-11
 
 ## Current state
 
@@ -35,6 +35,10 @@ Updated: 2026-08-09
       terminal failure/retry, and a completed link to Memory.
 - [x] Add a persistent top-right GitHub account menu with direct account switch,
       account settings and sign-out actions.
+- [x] Keep the account menu labeled at narrow widths instead of exposing an
+      unexplained avatar-only control.
+- [x] Add a Memory task center backed by server-listed extraction tasks.
+- [x] Distinguish GauzMem semantic edges from Catena provenance edges.
 - [ ] Add responsive browser acceptance to CI.
 - [ ] Improve accessibility and keyboard navigation.
 - [ ] Add durable optimistic/retry states for long-running jobs.
@@ -48,6 +52,15 @@ desktop widths. At 720px and below, opening a record must replace the index with
 the detail and expose a working back action without horizontal overflow.
 
 ## Verification log
+
+- 2026-08-11: MVP1 release-candidate verification passed all 39 Web tests,
+  TypeScript typecheck and the production Vite build.
+
+- 2026-08-10: The Memory page gained a durable recent-task center and visibly
+  distinct provenance graph edges. Browser acceptance verified a real failed
+  extraction remains visible after leaving Conversation, refreshing and
+  restarting Core. The fixed account control remains labeled at the 842px audit
+  viewport. All 39 Web tests, typecheck and production build passed.
 
 - 2026-08-09: The authenticated shell gained a responsive account menu that
   displays the GitHub identity and exposes account switch/sign-out without a

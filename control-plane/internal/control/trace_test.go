@@ -76,8 +76,8 @@ func TestConvertOTLPSpanRecognizesCodexHistoryEvidenceAttributes(t *testing.T) {
 		{
 			name: "turn root",
 			attributes: []*commonv1.KeyValue{
-				stringAttribute("langwatch.input", `{"type":"chat_messages","value":[]}`),
-				stringAttribute("langwatch.output", "completed response"),
+				stringAttribute("input.value", `{"type":"chat_messages","value":[]}`),
+				stringAttribute("output.value", "completed response"),
 			},
 			input:  `{"type":"chat_messages","value":[]}`,
 			output: "completed response",

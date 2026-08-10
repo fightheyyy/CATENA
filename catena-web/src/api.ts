@@ -13,6 +13,7 @@ import type {
   Release,
   MemoryIngestReceipt,
   MemoryTaskStatus,
+  MemoryTaskRecord,
   MemoryFactGraph,
   MemoryList,
   MemoryRecallBundle,
@@ -144,6 +145,8 @@ export const api = {
     request<MemoryTaskStatus>(`/v1/memories/tasks/${encodeURIComponent(taskID)}`, {
       signal: AbortSignal.timeout(8000),
     }),
+  memoryTasks: (limit = 20) =>
+    request<{ tasks: MemoryTaskRecord[] }>(`/v1/memories/tasks?limit=${limit}`),
   memories: (limit = 24) => request<MemoryList>(`/v1/memories?limit=${limit}`),
   memoryGraph: (factID: string | number) =>
     request<MemoryFactGraph>(`/v1/memories/facts/${encodeURIComponent(String(factID))}/graph`),

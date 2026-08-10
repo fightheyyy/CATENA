@@ -1,6 +1,6 @@
 # Catena Implementation Plan
 
-Updated: 2026-08-09
+Updated: 2026-08-11
 
 ## Current status
 
@@ -10,6 +10,25 @@ Job orchestration. The embedded XiaoBaOS Runtime consumes retained Evidence
 Packs and produces reviewable Agent assets. Target Agent execution remains
 local.
 
+## Completed milestone — trustworthy memory workflow
+
+- [x] Persist every submitted memory extraction as an owner-scoped task.
+- [x] List recent tasks on the Memory page and refresh active tasks after
+      navigation, reload or use on another signed-in browser.
+- [x] Keep terminal task state and source Conversation provenance visible.
+- [x] Augment empty semantic graphs with truthful Conversation, Agent and
+      same-Conversation provenance instead of rendering an isolated Fact.
+- [x] Make the fixed account control visibly identifiable at narrow widths.
+
+## Completed milestone — Catena-owned Trace storage
+
+- [x] Replace the packaged third-party ClickHouse image with the pinned official image.
+- [x] Move Trace storage and DSNs from the legacy database namespace to `catena`.
+- [x] Remove legacy Trace attribute aliases and Scenario source naming.
+- [x] Back up, migrate and row-count-verify the public `catena_spans` table.
+- [x] Remove the legacy database only after public read/write smoke passes.
+- [x] Prove the current source tree and running Compose stack contain no retired platform dependency.
+
 ## Completed milestone — observable memory extraction
 
 - [x] Replace Qdrant Local with the private Qdrant Server mode already
@@ -18,7 +37,7 @@ local.
 - [x] Poll and render extraction steps, terminal failure and retry in Conversation.
 - [x] Verify submit → progress → completed memory → recall end to end.
 
-## Active milestone — owner-provided Evolution model
+## Completed milestone — owner-provided Evolution model
 
 - [x] Move Provider, Base URL, Model and API Key configuration to API management.
 - [x] Encrypt each owner's model API Key and return only key-present status.
@@ -88,6 +107,27 @@ local.
 5. Web tests/build, Go tests/vet/race, and both Compose configurations pass.
 
 ## Verification log
+
+- 2026-08-11: MVP1 release-candidate verification passed: Go unit tests,
+  `go vet`, Go race tests, 39 Web tests, TypeScript typecheck, production Web
+  build, local/public Compose rendering, whitespace checks and retired-platform
+  source scans. The public deployment returned ready before repository sealing.
+
+- 2026-08-10: Replaced the packaged Trace image with the pinned official
+  ClickHouse 25.10.2.65 image and moved storage to `catena.catena_spans`.
+  Disposable-volume compatibility, Go integration tests, production Native
+  backup, row-count plus content fingerprint, public read/write smoke and
+  post-cleanup scans passed. All 35,865 production Span rows were preserved;
+  the retired database and runtime image were removed.
+
+- 2026-08-10: Memory extraction receipts and status are now owner-scoped,
+  PostgreSQL-backed task records. A real failed extraction remained visible
+  after route navigation, page reload and Core restart with its source
+  Conversation, Agent, step and display progress intact. Fact graphs add
+  explicitly typed Conversation, Agent and same-Conversation provenance while
+  keeping semantic edges distinct. The narrow shell exposes a fixed labeled
+  account control. Go tests/vet/race, 39 Web tests, typecheck, production build and
+  local Compose/browser acceptance passed.
 
 - 2026-08-09: Restored production GitHub OAuth connectivity by routing the
   public Core container to a tested, configurable GitHub edge while retaining

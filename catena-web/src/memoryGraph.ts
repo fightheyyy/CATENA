@@ -20,6 +20,7 @@ export type MemoryVisualEdge = {
   target: string;
   label: string;
   confidence?: number;
+  origin?: string;
 };
 
 export type MemoryGraphModel = {
@@ -32,10 +33,14 @@ export type MemoryGraphModel = {
 const maxEntityNodes = 5;
 const maxRelationNodes = 5;
 
-export function buildMemoryGraph(graph: MemoryFactGraph, catalog: MemoryRecord[]): MemoryGraphModel {
+export function buildMemoryGraph(graph: MemoryFactGraph, catalog: MemoryRecord[], locale: "zh" | "en" = "en"): MemoryGraphModel {
   const rootID = `fact:${graph.fact_id}`;
-  const entities = graph.entities.slice(0, maxEntityNodes);
-  const relations = graph.relations.slice(0, maxRelationNodes);
+  const entities = [...graph.entities]
+    .sort((left, right) => sourceEntityRank(left) - sourceEntityRank(right))
+    .slice(0, maxEntityNodes);
+  const allEntityNames = new Set(graph.entities.map((entity) => entity.name.trim().toLowerCase()));
+  const entityRelations = graph.relations.filter((relation) => allEntityNames.has(relation.target.trim().toLowerCase()));
+  const relations = graph.relations.filter((relation) => !allEntityNames.has(relation.target.trim().toLowerCase())).slice(0, maxRelationNodes);
   const nodes: MemoryVisualNode[] = [{
     id: rootID,
     kind: "fact",
@@ -58,7 +63,15 @@ export function buildMemoryGraph(graph: MemoryFactGraph, catalog: MemoryRecord[]
       entity,
       position: { x: 24, y: distributedY(index, entities.length) },
     });
-    edges.push({ id: `edge:${rootID}:${id}`, source: rootID, target: id, label: "MENTIONS" });
+    const relation = entityRelations.find((candidate) => candidate.target.trim().toLowerCase() === entity.name.trim().toLowerCase());
+    edges.push({
+      id: `edge:${rootID}:${id}`,
+      source: rootID,
+      target: id,
+      label: relation ? memoryRelationLabel(relation.type, locale) : locale === "zh" ? "提及" : "MENTIONS",
+      confidence: relation?.confidence,
+      origin: relation?.origin || "semantic",
+    });
   });
 
   relations.forEach((relation, index) => {
@@ -79,8 +92,9 @@ export function buildMemoryGraph(graph: MemoryFactGraph, catalog: MemoryRecord[]
       id: `edge:${rootID}:${uniqueID}`,
       source: rootID,
       target: uniqueID,
-      label: relation.type || "RELATED",
+      label: memoryRelationLabel(relation.type, locale),
       confidence: relation.confidence,
+      origin: relation.origin,
     });
   });
 
@@ -88,8 +102,23 @@ export function buildMemoryGraph(graph: MemoryFactGraph, catalog: MemoryRecord[]
     nodes,
     edges,
     hiddenEntities: Math.max(0, graph.entities.length - entities.length),
-    hiddenRelations: Math.max(0, graph.relations.length - relations.length),
+    hiddenRelations: Math.max(0, graph.relations.length - entityRelations.length - relations.length),
   };
+}
+
+function sourceEntityRank(entity: MemoryGraphEntity) {
+  const type = entity.type.trim().toLowerCase();
+  if (type === "conversation") return 0;
+  if (type === "agent") return 1;
+  return 2;
+}
+
+function memoryRelationLabel(value: string, locale: "zh" | "en") {
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "SAME_CONVERSATION") return locale === "zh" ? "同源对话" : "SAME CONVERSATION";
+  if (normalized === "SOURCE_CONVERSATION") return locale === "zh" ? "来自对话" : "FROM CONVERSATION";
+  if (normalized === "SOURCE_AGENT") return locale === "zh" ? "来自 AGENT" : "FROM AGENT";
+  return value || (locale === "zh" ? "相关" : "RELATED");
 }
 
 function distributedY(index: number, total: number) {

@@ -133,6 +133,7 @@ type MemoryGraphRelation struct {
 	Target     string  `json:"target"`
 	Type       string  `json:"type"`
 	Confidence float64 `json:"confidence"`
+	Origin     string  `json:"origin,omitempty"`
 }
 
 // MemoryFactGraph is the public, tenant-safe view of one GauzMem fact
@@ -838,13 +839,45 @@ func (s *HTTPServer) rememberConversation(w http.ResponseWriter, r *http.Request
 		Summary:  summarizeConversation(messages),
 		Messages: messages,
 	}
-	receipt, err := s.memory.IngestConversation(r.Context(), traceOwnerID(user), document)
+	memoryOwnerID := traceOwnerID(user)
+	receipt, err := s.memory.IngestConversation(r.Context(), memoryOwnerID, document)
 	if err != nil {
 		slog.Warn("memory conversation ingestion failed", "conversation_id", conversationID, "error", err)
 		writeProblem(w, http.StatusBadGateway, "Memory conversation ingestion failed")
 		return
 	}
-	writeJSON(w, http.StatusAccepted, receipt)
+	record := newMemoryTaskRecord(memoryOwnerID, document, receipt, time.Now().UTC())
+	if err := s.store.UpsertMemoryTask(r.Context(), record); err != nil {
+		slog.Error("memory task persistence failed", "task_id", receipt.TaskID, "error", err)
+		writeProblem(w, http.StatusInternalServerError, "Memory task could not be tracked")
+		return
+	}
+	writeJSON(w, http.StatusAccepted, record)
+}
+
+func (s *HTTPServer) listMemoryTasks(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	limit := 20
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 1 || parsed > 100 {
+			writeProblem(w, http.StatusBadRequest, "limit must be from 1 to 100")
+			return
+		}
+		limit = parsed
+	}
+	tasks, err := s.store.ListMemoryTasksByOwner(r.Context(), traceOwnerID(user), limit)
+	if err != nil {
+		writeProblem(w, statusFor(err), err.Error())
+		return
+	}
+	if tasks == nil {
+		tasks = []MemoryTaskRecord{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"tasks": tasks})
 }
 
 func (s *HTTPServer) memoryTaskStatus(w http.ResponseWriter, r *http.Request) {
@@ -863,8 +896,14 @@ func (s *HTTPServer) memoryTaskStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
-	result, err := s.memory.Task(ctx, traceOwnerID(user), taskID)
+	ownerID := traceOwnerID(user)
+	record, recordErr := s.store.GetMemoryTaskByOwner(ctx, ownerID, taskID)
+	result, err := s.memory.Task(ctx, ownerID, taskID)
 	if errors.Is(err, ErrNotFound) {
+		if recordErr == nil && (record.Status == "completed" || record.Status == "failed") {
+			writeJSON(w, http.StatusOK, record)
+			return
+		}
 		writeProblem(w, http.StatusNotFound, "Memory task not found or expired")
 		return
 	}
@@ -873,6 +912,16 @@ func (s *HTTPServer) memoryTaskStatus(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, http.StatusBadGateway, "Memory task status is unavailable")
 		return
 	}
+	if recordErr == nil {
+		record = mergeMemoryTaskStatus(record, result, time.Now().UTC())
+		if persistErr := s.store.UpsertMemoryTask(ctx, record); persistErr != nil {
+			slog.Warn("memory task status persistence failed", "task_id", taskID, "error", persistErr)
+		}
+		writeJSON(w, http.StatusOK, record)
+		return
+	}
+	// Compatibility for tasks created before Catena persisted its own task
+	// ledger. GauzMem still enforces the owner-derived project boundary.
 	writeJSON(w, http.StatusOK, result)
 }
 
@@ -918,11 +967,122 @@ func (s *HTTPServer) memoryFactGraph(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, http.StatusBadRequest, "fact_id must be a positive integer")
 		return
 	}
-	result, err := s.memory.Graph(r.Context(), traceOwnerID(user), factID)
+	ownerID := traceOwnerID(user)
+	result, err := s.memory.Graph(r.Context(), ownerID, factID)
 	if err != nil {
 		slog.Warn("GauzMem fact graph failed", "fact_id", factID, "error", err)
 		writeProblem(w, http.StatusBadGateway, "Memory graph is unavailable")
 		return
 	}
+	result = s.augmentMemoryGraph(r.Context(), ownerID, result)
 	writeJSON(w, http.StatusOK, result)
+}
+
+func (s *HTTPServer) augmentMemoryGraph(ctx context.Context, ownerID string, graph MemoryFactGraph) MemoryFactGraph {
+	for index := range graph.Relations {
+		if graph.Relations[index].Origin == "" {
+			graph.Relations[index].Origin = "semantic"
+		}
+	}
+	memories, err := s.memory.List(ctx, ownerID, 100)
+	if err != nil {
+		return graph
+	}
+	selectedIndex := -1
+	for index, memory := range memories.Memories {
+		if memory.ID == strconv.FormatInt(graph.FactID, 10) {
+			selectedIndex = index
+			break
+		}
+	}
+	if selectedIndex < 0 {
+		return graph
+	}
+	selected := memories.Memories[selectedIndex]
+	conversationID := memoryMetadataString(selected.Metadata, "conversation_id")
+	agentID := memoryMetadataString(selected.Metadata, "agent_id")
+	agentName := memoryMetadataString(selected.Metadata, "agent_name")
+	if agentName == "" {
+		agentName = agentID
+	}
+	if conversationID != "" && !memoryGraphHasEntity(graph.Entities, conversationID) {
+		graph.Entities = append(graph.Entities, MemoryGraphEntity{
+			Name: conversationID, Type: "conversation", Description: "Source Conversation",
+		})
+	}
+	if conversationID != "" && !memoryGraphHasRelation(graph.Relations, graph.Content, conversationID, "SOURCE_CONVERSATION") {
+		graph.Relations = append(graph.Relations, MemoryGraphRelation{
+			Source: graph.Content, Target: conversationID, Type: "SOURCE_CONVERSATION",
+			Confidence: 1, Origin: "provenance",
+		})
+	}
+	if agentName != "" && !memoryGraphHasEntity(graph.Entities, agentName) {
+		graph.Entities = append(graph.Entities, MemoryGraphEntity{
+			Name: agentName, Type: "agent", Description: "Source Agent",
+		})
+	}
+	if agentName != "" && !memoryGraphHasRelation(graph.Relations, graph.Content, agentName, "SOURCE_AGENT") {
+		graph.Relations = append(graph.Relations, MemoryGraphRelation{
+			Source: graph.Content, Target: agentName, Type: "SOURCE_AGENT",
+			Confidence: 1, Origin: "provenance",
+		})
+	}
+	semanticRelationCount := 0
+	for _, relation := range graph.Relations {
+		if relation.Origin == "semantic" {
+			semanticRelationCount++
+		}
+	}
+	if semanticRelationCount == 0 && conversationID != "" {
+		added := 0
+		for _, candidate := range memories.Memories {
+			if candidate.ID == selected.ID ||
+				memoryMetadataString(candidate.Metadata, "conversation_id") != conversationID ||
+				strings.TrimSpace(candidate.Content) == "" {
+				continue
+			}
+			graph.Relations = append(graph.Relations, MemoryGraphRelation{
+				Source: graph.Content, Target: candidate.Content, Type: "SAME_CONVERSATION",
+				Confidence: 1, Origin: "provenance",
+			})
+			added++
+			if added == 4 {
+				break
+			}
+		}
+	}
+	graph.TotalEntities = len(graph.Entities)
+	graph.TotalRelations = len(graph.Relations)
+	return graph
+}
+
+func memoryMetadataString(metadata map[string]any, key string) string {
+	if metadata == nil {
+		return ""
+	}
+	value, ok := metadata[key]
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(value))
+}
+
+func memoryGraphHasEntity(entities []MemoryGraphEntity, name string) bool {
+	for _, entity := range entities {
+		if strings.EqualFold(strings.TrimSpace(entity.Name), strings.TrimSpace(name)) {
+			return true
+		}
+	}
+	return false
+}
+
+func memoryGraphHasRelation(relations []MemoryGraphRelation, source string, target string, relationType string) bool {
+	for _, relation := range relations {
+		if strings.EqualFold(strings.TrimSpace(relation.Source), strings.TrimSpace(source)) &&
+			strings.EqualFold(strings.TrimSpace(relation.Target), strings.TrimSpace(target)) &&
+			strings.EqualFold(strings.TrimSpace(relation.Type), strings.TrimSpace(relationType)) {
+			return true
+		}
+	}
+	return false
 }

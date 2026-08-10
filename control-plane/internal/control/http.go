@@ -114,6 +114,7 @@ func NewHTTPHandlerWithMemory(
 	mux.HandleFunc("POST /v1/traces/{trace_id}/evolution-jobs", server.createTraceEvolutionJob)
 	mux.HandleFunc("POST /v1/traces/{trace_id}/memories", server.rememberTrace)
 	mux.HandleFunc("GET /v1/memories/status", server.memoryStatus)
+	mux.HandleFunc("GET /v1/memories/tasks", server.listMemoryTasks)
 	mux.HandleFunc("GET /v1/memories/tasks/{task_id}", server.memoryTaskStatus)
 	mux.HandleFunc("GET /v1/memories", server.listMemories)
 	mux.HandleFunc("POST /v1/memories/search", server.searchMemories)

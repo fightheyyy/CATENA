@@ -2,7 +2,8 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { api } from "./api";
 import type { MemoryVisualNode } from "./memoryGraph";
 import { primaryNavigationRoutes } from "./navigation";
-import type { EvolutionJob, MemoryFactGraph, MemoryRecallBundle, MemoryRecallItem, MemoryRecord, Session, WorkspaceData } from "./types";
+import { isMemoryTaskActive, memoryTaskDisplayPercent } from "./memoryTaskView";
+import type { EvolutionJob, MemoryFactGraph, MemoryRecallBundle, MemoryRecallItem, MemoryRecord, MemoryTaskRecord, Session, WorkspaceData } from "./types";
 
 const AgentWorkspace = lazy(() => import("./AgentWorkspace").then((module) => ({ default: module.AgentWorkspace })));
 const ApiManagementPage = lazy(() => import("./ApiManagementPage").then((module) => ({ default: module.ApiManagementPage })));
@@ -46,6 +47,14 @@ const copy = {
     memoryBody: "把 XiaoBaOS 的用户可见对话提炼为可追溯记忆，并通过语义、关系与时间三条路径召回。",
     memoryConnected: "记忆能力已就绪",
     memoryConnectedBody: "记忆按当前空间独立保存，并保留来源对话。",
+    memoryTasks: "提炼任务",
+    memoryTasksHint: "离开对话后任务仍会继续；这里保留最近状态和进度。",
+    memoryTaskEmpty: "还没有提炼任务。请从一段对话中开始提炼。",
+    memoryTaskPending: "等待处理",
+    memoryTaskProcessing: "正在提炼",
+    memoryTaskCompleted: "提炼完成",
+    memoryTaskFailed: "提炼失败",
+    memoryTaskUnknownSource: "未命名对话",
     semanticRecall: "语义召回",
     semanticRecallBody: "从事实、原始对话和主题中寻找相关内容。",
     graphRecall: "关系扩展",
@@ -153,6 +162,14 @@ const copy = {
     memoryBody: "Distill user-visible XiaoBaOS Conversations into provenance-bearing memory and recall it through semantic, graph, and temporal paths.",
     memoryConnected: "Memory is ready",
     memoryConnectedBody: "Memory is isolated to the current space and keeps its source Conversation.",
+    memoryTasks: "Distillation tasks",
+    memoryTasksHint: "Tasks continue after you leave a Conversation. Recent status and progress stay visible here.",
+    memoryTaskEmpty: "No distillation task yet. Start one from a Conversation.",
+    memoryTaskPending: "Waiting",
+    memoryTaskProcessing: "Distilling",
+    memoryTaskCompleted: "Completed",
+    memoryTaskFailed: "Failed",
+    memoryTaskUnknownSource: "Untitled Conversation",
     semanticRecall: "Semantic recall",
     semanticRecallBody: "Find related facts, original conversations, and topics.",
     graphRecall: "Graph expansion",
@@ -498,6 +515,7 @@ function AccountMenu({
         <span className="account-avatar">
           {user?.avatar_url ? <img src={user.avatar_url} alt="" referrerPolicy="no-referrer" /> : initial}
         </span>
+        <span className="account-trigger-compact">{t.account}</span>
         <span className="account-trigger-name">{displayName}</span>
         <span className="account-chevron" aria-hidden="true">⌄</span>
       </button>
@@ -716,6 +734,28 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
   const [graphLoading, setGraphLoading] = useState(false);
   const [graphError, setGraphError] = useState("");
   const [selectedNode, setSelectedNode] = useState<MemoryVisualNode | null>(null);
+  const [tasks, setTasks] = useState<MemoryTaskRecord[]>([]);
+  const [taskError, setTaskError] = useState("");
+
+  const loadTasks = useCallback(async () => {
+    try {
+      const response = await api.memoryTasks(12);
+      const refreshed = await Promise.all(response.tasks.map(async (task) => {
+        if (!isMemoryTaskActive(task)) return task;
+        try {
+          return { ...task, ...await api.memoryTask(task.task_id) };
+        } catch {
+          return task;
+        }
+      }));
+      setTasks(refreshed);
+      setTaskError("");
+      return refreshed;
+    } catch {
+      setTaskError(t.memoryLoadFailed);
+      return [];
+    }
+  }, [t.memoryLoadFailed]);
 
   const loadGraph = useCallback(async (factID: string) => {
     if (!/^\d+$/.test(factID)) return;
@@ -759,6 +799,23 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
     return () => { active = false; };
   }, [ready, t.memoryLoadFailed, loadGraph]);
 
+  useEffect(() => {
+    if (!ready) return;
+    let stopped = false;
+    let timer = 0;
+    const poll = async () => {
+      const latest = await loadTasks();
+      if (!stopped && latest.some(isMemoryTaskActive)) {
+        timer = window.setTimeout(poll, 1800);
+      }
+    };
+    void poll();
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [ready, loadTasks]);
+
   const visibleEntries: Array<{ kind: string; item: MemoryRecallItem; createdAt?: string }> = results === null
     ? recent.map((item) => ({
       kind: t.recallFact,
@@ -789,6 +846,7 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
         </section>
       ) : (
         <>
+          <MemoryTaskCenter tasks={tasks} locale={locale} error={taskError} />
           <form className="memory-search" onSubmit={async (event) => {
             event.preventDefault();
             if (!query.trim()) return;
@@ -821,7 +879,7 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
               <header><div><h2>{t.memoryGraph}</h2><p>{t.memoryGraphHint}</p></div>{graph ? <dl><div><dt>{t.memoryEntities}</dt><dd>{graph.total_entities}</dd></div><div><dt>{t.memoryRelations}</dt><dd>{graph.total_relations}</dd></div></dl> : null}</header>
               {graphLoading && !graph ? <LoadingPanel label={t.loading} /> : graph ? (
                 <Suspense fallback={<LoadingPanel label={t.loading} />}>
-                  <MemoryGraphCanvas graph={graph} facts={graphCatalog} selectedNodeID={selectedNode?.id ?? `fact:${graph.fact_id}`} onSelect={setSelectedNode} onOpenFact={(factID: string) => { void loadGraph(factID); }} />
+                  <MemoryGraphCanvas graph={graph} facts={graphCatalog} locale={locale} selectedNodeID={selectedNode?.id ?? `fact:${graph.fact_id}`} onSelect={setSelectedNode} onOpenFact={(factID: string) => { void loadGraph(factID); }} />
                 </Suspense>
               ) : loadingRecent ? <LoadingPanel label={t.loading} /> : <EmptyState title={t.memoryGraphEmpty} />}
               {graphError ? <p className="memory-graph-error" role="alert">{graphError}</p> : null}
@@ -855,6 +913,49 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
             )}
           </section>
         </>
+      )}
+    </section>
+  );
+}
+
+function MemoryTaskCenter({ tasks, locale, error }: { tasks: MemoryTaskRecord[]; locale: Locale; error: string }) {
+  const t = copy[locale];
+  const activeCount = tasks.filter(isMemoryTaskActive).length;
+  const statusLabel = (status: MemoryTaskRecord["status"]) => ({
+    pending: t.memoryTaskPending,
+    processing: t.memoryTaskProcessing,
+    completed: t.memoryTaskCompleted,
+    failed: t.memoryTaskFailed,
+  })[status];
+
+  return (
+    <section className="memory-task-center" aria-live="polite">
+      <header>
+        <div><h2>{t.memoryTasks}</h2><p>{t.memoryTasksHint}</p></div>
+        {activeCount > 0 ? <strong>{activeCount} {t.memoryTaskProcessing}</strong> : null}
+      </header>
+      {error ? <p className="memory-task-error" role="alert">{error}</p> : tasks.length === 0 ? (
+        <p className="memory-task-empty">{t.memoryTaskEmpty}</p>
+      ) : (
+        <div className="memory-task-list">
+          {tasks.slice(0, 5).map((task) => {
+            const percent = memoryTaskDisplayPercent(task);
+            return (
+              <article className={`memory-task-row ${task.status}`} key={task.task_id}>
+                <i aria-hidden="true" />
+                <div className="memory-task-copy">
+                  <strong>{task.source_conversation_title || task.source_conversation_id || t.memoryTaskUnknownSource}</strong>
+                  <span>{task.agent_name || task.agent_id}{task.current_step ? ` · ${task.current_step}` : task.message ? ` · ${task.message}` : ""}</span>
+                </div>
+                <div className="memory-task-state">
+                  <strong>{statusLabel(task.status)}</strong>
+                  <span>{percent}%</span>
+                </div>
+                <div className="memory-task-meter" aria-label={`${statusLabel(task.status)} ${percent}%`}><i style={{ width: `${percent}%` }} /></div>
+              </article>
+            );
+          })}
+        </div>
       )}
     </section>
   );

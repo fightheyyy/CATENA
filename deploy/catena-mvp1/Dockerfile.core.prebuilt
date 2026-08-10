@@ -1,25 +1,14 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:24-alpine AS web-build
-ARG NPM_CONFIG_REGISTRY=https://registry.npmjs.org
-ENV COREPACK_NPM_REGISTRY=$NPM_CONFIG_REGISTRY
-RUN corepack enable
-WORKDIR /src/catena-web
-COPY catena-web/package.json catena-web/pnpm-lock.yaml ./
-RUN pnpm config set registry "$NPM_CONFIG_REGISTRY" \
-  && pnpm install --frozen-lockfile --ignore-workspace
-COPY catena-web/index.html catena-web/tsconfig.json catena-web/tsconfig.app.json catena-web/tsconfig.node.json catena-web/vite.config.ts ./
-COPY catena-web/public ./public
-COPY catena-web/src ./src
-RUN pnpm build
-
+# Production/offline build path. The web bundle must be generated and placed
+# in catena-web/dist before building this image.
 FROM golang:1.25-alpine AS build
 WORKDIR /src/control-plane
 COPY control-plane/go.mod control-plane/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY control-plane ./
 RUN rm -rf internal/control/web
-COPY --from=web-build /src/catena-web/dist ./internal/control/web
+COPY catena-web/dist ./internal/control/web
 RUN --mount=type=cache,target=/root/.cache/go-build \
   --mount=type=cache,target=/go/pkg/mod \
   CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/catena-server ./cmd/barena-server \
@@ -30,10 +19,6 @@ RUN apk add --no-cache ca-certificates
 COPY --from=build /out/catena-server /usr/local/bin/catena-server
 COPY --from=build /out/catena-runner-client /usr/local/bin/catena-runner-client
 COPY deploy/catena-mvp1/worker-markers /opt/catena
-# The shared catena-data volume is also written by the Node runner image,
-# whose non-root `node` account is UID/GID 1000. Keep the Go control plane on
-# the same numeric identity so both services can create run/evolution
-# workspaces without making the volume world-writable.
 RUN addgroup -S -g 1000 catena \
   && adduser -S -D -H -u 1000 -G catena catena \
   && mkdir -p /var/lib/catena/runs /var/lib/catena/evolution \

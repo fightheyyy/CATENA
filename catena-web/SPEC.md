@@ -34,7 +34,8 @@ flowchart LR
     ConversationDetail --> Responsive["Desktop split view<br/>Narrow-screen master/detail"]
     ConversationDetail --> Submit["Distill to memory"]
     Submit --> Poll["poll owner-scoped task status"]
-    Poll --> Progress["step progress · failure · retry · open Memory"]
+    Poll --> TaskCenter["Memory task center<br/>survives navigation · reload"]
+    TaskCenter --> Progress["step progress · failure · retry · open result"]
     TraceDetail --> Responsive
     Stats["Agent statistics"] --> Evidence["Trace · Conversation · Error"]
     Keys["/api-keys"] --> Name["Agent name"]
@@ -46,7 +47,7 @@ flowchart LR
     Credential --> Ingest["OTLP · Conversation ingest"]
     Ingest --> Stats
     Settings["Settings"] --> Preferences["Language · Theme · account details"]
-    Shell["Global shell"] --> AccountMenu["GitHub identity<br/>switch · sign out"]
+    Shell["Global shell"] --> AccountMenu["fixed labeled identity<br/>switch · sign out"]
     AccountMenu --> Go
 ```
 
@@ -84,7 +85,12 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - Conversation messages use visibly distinct user and Agent transcript cards.
 - Memory distillation never ends at an ambiguous “submitted” label. The
   Conversation detail shows current step and percentage, explains terminal
-  failure, permits retry, and links completed work to Memory.
+  failure, permits retry, and links completed work to Memory. The Memory page
+  also lists recent tasks so status remains visible after navigation or reload.
+- An isolated Fact is not presented as a meaningful graph. When GauzMem has no
+  semantic edge, the graph shows only provenance-backed Conversation, Agent or
+  same-Conversation context, and labels that context distinctly from semantic
+  relations.
 - Trace metrics stay compact; Span selection and its input/output evidence read
   as one selected inspection unit.
 - Trace Farm starts from an Agent and bounded time window, never one isolated Trace.
@@ -98,5 +104,6 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - The saved model API Key is never rendered or returned; an empty key while
   editing preserves the current credential.
 - Language and theme appear only in Settings, not in the global navigation.
-- The current GitHub identity is always reachable from the global top-right
-  account menu; switching account and signing out never require opening Settings.
+- The current GitHub identity is always reachable from a fixed, visibly labeled
+  top-right account menu; switching account and signing out never require opening
+  Settings.

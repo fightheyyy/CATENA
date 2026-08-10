@@ -43,7 +43,7 @@ services:
       BARENA_GITHUB_CLIENT_SECRET: ${CATENA_GITHUB_CLIENT_SECRET:?CATENA_GITHUB_CLIENT_SECRET is required}
       BARENA_GITHUB_REDIRECT_URL: https://${CATENA_DOMAIN:?CATENA_DOMAIN is required}/api/auth/callback/github
       BARENA_DATABASE_URL: postgresql://catena_core:${CATENA_CORE_DB_PASSWORD:?CATENA_CORE_DB_PASSWORD is required}@postgres:5432/catena_core?sslmode=disable
-      CATENA_CLICKHOUSE_DSN: http://default:${CATENA_CLICKHOUSE_PASSWORD:?CATENA_CLICKHOUSE_PASSWORD is required}@clickhouse:8123/langwatch?dial_timeout=5s
+      CATENA_CLICKHOUSE_DSN: http://default:${CATENA_CLICKHOUSE_PASSWORD:?CATENA_CLICKHOUSE_PASSWORD is required}@clickhouse:8123/catena?dial_timeout=5s
     logging:
       options:
         max-size: "20m"

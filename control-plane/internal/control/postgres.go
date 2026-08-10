@@ -84,6 +84,18 @@ CREATE TABLE IF NOT EXISTS catena_evolution_model_configs (
   encrypted_api_key TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL
 );
+CREATE TABLE IF NOT EXISTS catena_memory_tasks (
+  task_id TEXT PRIMARY KEY,
+  owner_user_id TEXT NOT NULL,
+  source_conversation_id TEXT NOT NULL,
+  agent_id TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending','processing','completed','failed')),
+  document JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX IF NOT EXISTS catena_memory_tasks_owner_updated_idx
+  ON catena_memory_tasks (owner_user_id, updated_at DESC);
 CREATE TABLE IF NOT EXISTS barena_agent_profiles (
   owner_user_id TEXT PRIMARY KEY REFERENCES barena_users(user_id) ON DELETE CASCADE,
   slug TEXT NOT NULL UNIQUE,

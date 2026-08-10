@@ -9,6 +9,11 @@ The default Compose stack runs four services:
 | `postgres` | Product identity, workflow and audit records |
 | `clickhouse` | Trace and Span storage |
 
+Trace storage runs on the pinned official ClickHouse image and uses the
+`catena` database. Upgrades from an earlier database namespace must copy and
+verify `catena_spans` while Core ingestion is stopped; retain a Native backup
+until public read/write smoke passes.
+
 The `memory` profile adds GauzMem, MySQL, Neo4j and a private Qdrant Server.
 Qdrant runs as one shared service so concurrent memory tasks never contend for
 an embedded database file lock. Target Agent Runtimes remain external.

@@ -550,9 +550,9 @@ func convertOTLPSpan(
 		Model: firstAttributeString(attributes,
 			"gen_ai.response.model", "gen_ai.request.model", "llm.response.model", "llm.request.model", "model"),
 		Input: firstAttributeString(attributes,
-			"input.value", "gen_ai.input.messages", "gen_ai.prompt", "gen_ai.tool.call.arguments", "tool.call.arguments", "langwatch.input"),
+			"input.value", "gen_ai.input.messages", "gen_ai.prompt", "gen_ai.tool.call.arguments", "tool.call.arguments"),
 		Output: firstAttributeString(attributes,
-			"output.value", "gen_ai.output.messages", "gen_ai.completion", "gen_ai.tool.call.result", "tool.call.result", "langwatch.output"),
+			"output.value", "gen_ai.output.messages", "gen_ai.completion", "gen_ai.tool.call.result", "tool.call.result"),
 	}
 	if converted.ServiceName == "" {
 		converted.ServiceName = firstAttributeString(attributes, "service.name", "agent.name", "runtime.name")

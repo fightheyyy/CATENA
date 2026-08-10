@@ -24,7 +24,7 @@ For backend-only development:
 
 ```bash
 export BARENA_DATABASE_URL='postgres://catena_core:catena-core-local@127.0.0.1:54329/catena_core?sslmode=disable'
-export CATENA_CLICKHOUSE_DSN='http://default:langwatch@127.0.0.1:8123/langwatch?dial_timeout=5s'
+export CATENA_CLICKHOUSE_DSN='http://default:catena@127.0.0.1:8123/catena?dial_timeout=5s'
 go run ./cmd/barena-server
 ```
 

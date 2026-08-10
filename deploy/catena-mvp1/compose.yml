@@ -16,7 +16,7 @@ services:
       BARENA_GITHUB_CLIENT_SECRET: ${CATENA_GITHUB_CLIENT_SECRET:-}
       BARENA_GITHUB_REDIRECT_URL: ${CATENA_GITHUB_REDIRECT_URL:-}
       BARENA_DATABASE_URL: postgresql://catena_core:${CATENA_CORE_DB_PASSWORD:-catena-core-local}@postgres:5432/catena_core?sslmode=disable
-      CATENA_CLICKHOUSE_DSN: ${CATENA_CLICKHOUSE_DSN:-http://default:langwatch@clickhouse:8123/langwatch?dial_timeout=5s}
+      CATENA_CLICKHOUSE_DSN: ${CATENA_CLICKHOUSE_DSN:-http://default:catena@clickhouse:8123/catena?dial_timeout=5s}
       # Set CATENA_MEMORY_URL=http://gauzmem:1235 together with the `memory`
       # Compose profile after configuring the model and embedding credentials.
       CATENA_MEMORY_URL: ${CATENA_MEMORY_URL:-}
@@ -112,10 +112,12 @@ services:
     restart: unless-stopped
 
   clickhouse:
-    image: langwatch/clickhouse-serverless:0.2.0
+    image: clickhouse/clickhouse-server:25.10.2.65-alpine
     environment:
-      CLICKHOUSE_DB: langwatch
-      CLICKHOUSE_PASSWORD: ${CATENA_CLICKHOUSE_PASSWORD:-langwatch}
+      CLICKHOUSE_DB: catena
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${CATENA_CLICKHOUSE_PASSWORD:-catena}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
     ports:
       - "127.0.0.1:${CATENA_CLICKHOUSE_PORT:-8123}:8123"
     volumes:

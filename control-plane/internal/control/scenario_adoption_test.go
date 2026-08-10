@@ -35,6 +35,17 @@ func TestScenarioRunAdoptionIsTerminalIdempotentEvidence(t *testing.T) {
 		adopted.Run.State != StateCompleted || adopted.Run.Operation != OperationExplore {
 		t.Fatalf("unexpected adopted Run: %#v", adopted)
 	}
+	var runInput struct {
+		Source struct {
+			Kind string `json:"kind"`
+		} `json:"source"`
+	}
+	if err := json.Unmarshal(adopted.Run.Input, &runInput); err != nil {
+		t.Fatal(err)
+	}
+	if runInput.Source.Kind != "catena_scenario_run" {
+		t.Fatalf("source kind = %q, want catena_scenario_run", runInput.Source.Kind)
+	}
 	if retained, err := store.RunHasTrace(context.Background(), adopted.Run.ID, traceID); err != nil || !retained {
 		t.Fatalf("adopted Trace was not retained: retained=%v err=%v", retained, err)
 	}

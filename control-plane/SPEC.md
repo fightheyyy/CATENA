@@ -29,7 +29,7 @@ flowchart LR
     Barena["Barena"] --> HTTP
     HTTP --> Domain["Domain + state machines"]
     Domain --> PG[("PostgreSQL")]
-    HTTP --> CH[("ClickHouse")]
+    HTTP --> CH[("Official ClickHouse<br/>catena.catena_spans")]
     Domain --> Worker["Evolution Runner"]
     LLM["Owner LLM config<br/>encrypted at rest"] --> Domain
     Domain -->|"per-job ephemeral config"| Worker
@@ -52,15 +52,21 @@ flowchart LR
     Auth --> Normalize["force Agent identity"]
     Normalize --> Detect["infer Runtime"]
     Normalize --> Evidence[("Trace · Conversation")]
+    Evidence --> CH[("Official ClickHouse<br/>catena.catena_spans")]
     Detect --> Registry
     Web["API management"] --> ModelAPI["GET · PUT · DELETE /v1/me/llm-config"]
     ModelAPI --> Encrypted["owner-scoped encrypted credential"]
     Encrypted --> Job["Evolution Job dispatch"]
     Job -->|"ephemeral only"| Runner["XiaoBaOS Evolution Runner"]
     Conversation --> MemorySubmit["POST memory extraction"]
-    MemorySubmit --> MemoryTask["GET /v1/memories/tasks/{task_id}"]
+    MemorySubmit --> Ledger[("memory extraction tasks")]
+    Ledger --> MemoryTask["GET /v1/memories/tasks<br/>GET /v1/memories/tasks/{task_id}"]
     MemoryTask -->|"owner-scoped polling"| GauzMem["GauzMem Task Manager"]
     GauzMem --> Vector["Qdrant Server"]
+    GauzMem --> Semantic["semantic graph"]
+    Conversation --> Provenance["source + same-Conversation provenance"]
+    Semantic --> Graph["memory graph response"]
+    Provenance --> Graph
 ```
 
 Existing tokens with no `agent_id` remain a bounded compatibility path. Every
@@ -108,7 +114,14 @@ The durable worker queue remains the next control-plane reliability milestone.
 - `GET /v1/memories/tasks/{task_id}`: owner-scoped projection of GauzMem
   progress and terminal failure; the private project identifier is never
   returned.
+- `GET /v1/memories/tasks`: owner-scoped recent extraction tasks persisted by
+  Catena, including their source Conversation and last known state.
+- A fact-graph response may be augmented with source Conversation, Agent and
+  same-Conversation adjacency derived from stored provenance. Such structural
+  edges are explicitly typed and never presented as model-inferred semantic truth.
 - `GET/PUT/DELETE /v1/me/llm-config`: authenticated owner-provided Evolution
   model configuration; GET never returns the API Key.
 
-Compatibility attribute aliases may be accepted during OTLP normalization, but they do not define Catena's architecture.
+OTLP normalization accepts Catena and standard OpenTelemetry/GenAI attributes.
+Product-specific aliases from the retired platform are not part of the public
+contract.

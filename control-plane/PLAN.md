@@ -1,6 +1,6 @@
 # Catena Control Plane Plan
 
-Updated: 2026-08-09
+Updated: 2026-08-11
 
 ## Current state
 
@@ -21,7 +21,15 @@ Updated: 2026-08-09
 - [x] Return expired or missing tasks explicitly instead of implying success.
 - [x] Run GauzMem against Qdrant Server to remove local-client lock failures.
 
-## Active milestone — Agent-bound ingestion
+## Completed milestone — durable memory workflow
+
+- [x] Persist the receipt and latest status of each memory extraction.
+- [x] Add an owner-scoped recent-task list and refresh records during polling.
+- [x] Preserve source Conversation and Agent provenance in every task record.
+- [x] Add provenance and same-Conversation graph edges when semantic extraction returns
+      an isolated Fact, without inventing semantic claims.
+
+## Completed milestone — Agent-bound ingestion
 
 - [x] Add owner-scoped Registered Agent persistence.
 - [x] Bind every newly created credential to one stable `agent_id`.
@@ -31,7 +39,7 @@ Updated: 2026-08-09
 - [x] Keep legacy unbound credentials compatible but hidden from onboarding.
 - [x] Expose cheap Registered Agent connection polling without a ClickHouse scan.
 
-## Active milestone — owner-provided Evolution model
+## Completed milestone — owner-provided Evolution model
 
 - [x] Persist one encrypted Provider/Base URL/Model/API Key config per owner.
 - [x] Expose safe authenticated GET/PUT/DELETE APIs without secret recovery.
@@ -41,6 +49,15 @@ Updated: 2026-08-09
 - [x] Prove cross-owner isolation and secret non-disclosure.
 
 ## Verification log
+
+- 2026-08-11: MVP1 release-candidate Go tests, `go vet` and race tests passed;
+  local and public Compose configurations rendered successfully.
+
+- 2026-08-10: Added the PostgreSQL `catena_memory_tasks` ledger, owner-scoped
+  task list, poll-to-record refresh and terminal-state fallback. Unit tests
+  cover persisted source identity, progress and provenance graph augmentation;
+  Go tests, `go vet` and race tests passed. Local acceptance proved the task ledger survives
+  a Core restart.
 
 - 2026-08-09: Production OAuth diagnosis proved the cloud resolver-selected
   GitHub edge timed out before TLS while an alternate official edge completed
@@ -63,7 +80,7 @@ Updated: 2026-08-09
 - 2026-08-07: Public Core deployment remained healthy with the existing
   DashScope-compatible model configuration and a tagged rollback image.
 
-## Active milestone — durable worker queue
+## Next milestone — durable worker queue
 
 - [ ] Add atomic `queued → leased → running → terminal` transitions.
 - [ ] Persist lease owner, expiry and heartbeat.
@@ -72,6 +89,13 @@ Updated: 2026-08-09
 - [ ] Prevent duplicate terminal events and stale-event overwrite.
 - [ ] Export queue depth, lease age, job duration and retry count.
 - [ ] Verify with concurrent workers and process-kill fault injection.
+
+## Completed milestone — Catena-owned Trace store
+
+- [x] Point the control plane exclusively at `catena.catena_spans`.
+- [x] Remove retired platform attribute aliases and source-kind values.
+- [x] Verify standard OTLP input/output normalization and ClickHouse round trips.
+- [x] Verify the migrated public table has the same row count before deleting the legacy database.
 
 ## Acceptance
 

@@ -72,6 +72,9 @@ type Store interface {
 	UpsertEvolutionModelConfig(context.Context, EvolutionModelConfig) (EvolutionModelConfig, error)
 	GetEvolutionModelConfigByOwner(context.Context, string) (EvolutionModelConfig, error)
 	DeleteEvolutionModelConfigByOwner(context.Context, string) error
+	UpsertMemoryTask(context.Context, MemoryTaskRecord) error
+	GetMemoryTaskByOwner(context.Context, string, string) (MemoryTaskRecord, error)
+	ListMemoryTasksByOwner(context.Context, string, int) ([]MemoryTaskRecord, error)
 	EnsureAgentProfile(context.Context, AgentProfile) (AgentProfile, error)
 	GetAgentProfileByOwner(context.Context, string) (AgentProfile, error)
 	UpdateAgentProfile(context.Context, AgentProfile) (AgentProfile, error)
@@ -101,6 +104,7 @@ type MemoryStore struct {
 	runBundles            map[string]RunBundle
 	conversationMessages  map[string]ConversationMessage
 	evolutionModelConfigs map[string]EvolutionModelConfig
+	memoryTasks           map[string]MemoryTaskRecord
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -122,6 +126,7 @@ func NewMemoryStore() *MemoryStore {
 		runBundles:            make(map[string]RunBundle),
 		conversationMessages:  make(map[string]ConversationMessage),
 		evolutionModelConfigs: make(map[string]EvolutionModelConfig),
+		memoryTasks:           make(map[string]MemoryTaskRecord),
 	}
 }
 

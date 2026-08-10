@@ -269,6 +269,13 @@ export type MemoryTaskStatus = {
   steps: MemoryTaskStep[];
 };
 
+export type MemoryTaskRecord = MemoryTaskStatus & {
+  source_conversation_id: string;
+  source_conversation_title?: string;
+  agent_id: string;
+  agent_name?: string;
+};
+
 export type MemoryRecallItem = {
   id: string;
   content: string;
@@ -311,6 +318,7 @@ export type MemoryGraphRelation = {
   target: string;
   type: string;
   confidence: number;
+  origin?: "semantic" | "provenance" | string;
 };
 
 export type MemoryFactGraph = {

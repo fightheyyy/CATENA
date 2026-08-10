@@ -16,6 +16,7 @@ import type { MemoryFactGraph, MemoryRecord } from "./types";
 type MemoryGraphProps = {
   graph: MemoryFactGraph;
   facts: MemoryRecord[];
+  locale: "zh" | "en";
   selectedNodeID: string;
   onSelect: (node: MemoryVisualNode) => void;
   onOpenFact: (factID: string) => void;
@@ -23,8 +24,8 @@ type MemoryGraphProps = {
 
 type FlowNode = Node<MemoryVisualNode, "memory">;
 
-export function MemoryGraphCanvas({ graph, facts, selectedNodeID, onSelect, onOpenFact }: MemoryGraphProps) {
-  const model = useMemo(() => buildMemoryGraph(graph, facts), [graph, facts]);
+export function MemoryGraphCanvas({ graph, facts, locale, selectedNodeID, onSelect, onOpenFact }: MemoryGraphProps) {
+  const model = useMemo(() => buildMemoryGraph(graph, facts, locale), [graph, facts, locale]);
   const nodes = useMemo<FlowNode[]>(() => model.nodes.map((node) => ({
     id: node.id,
     type: "memory",
@@ -40,7 +41,7 @@ export function MemoryGraphCanvas({ graph, facts, selectedNodeID, onSelect, onOp
     label: edge.label,
     type: "smoothstep",
     markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: "#777a75" },
-    style: { stroke: "#8d8f8a", strokeWidth: 1.25 },
+    style: { stroke: "#8d8f8a", strokeWidth: 1.25, strokeDasharray: edge.origin === "provenance" ? "5 4" : undefined },
     labelStyle: { fill: "#4d4f4b", fontSize: 10, fontWeight: 700 },
     labelBgStyle: { fill: "#fafaf8", fillOpacity: 0.94 },
     labelBgPadding: [5, 3],

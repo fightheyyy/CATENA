@@ -360,6 +360,39 @@ func TestRememberConversationReadsOnlyTheAuthenticatedOwnerScope(t *testing.T) {
 	if memory.ownerID != "local" || memory.conversationID != "conversation-1" {
 		t.Fatalf("owner/conversation boundary mismatch: owner=%q conversation=%q", memory.ownerID, memory.conversationID)
 	}
+	tasks, err := store.ListMemoryTasksByOwner(t.Context(), "local", 10)
+	if err != nil || len(tasks) != 1 {
+		t.Fatalf("memory task was not persisted: tasks=%#v err=%v", tasks, err)
+	}
+	if tasks[0].TaskID != "task" || tasks[0].SourceConversationID != "conversation-1" || tasks[0].AgentID != "xiaoba-base" {
+		t.Fatalf("memory task lost source identity: %#v", tasks[0])
+	}
+}
+
+func TestMemoryTaskStatusPersistsProgressAcrossNavigation(t *testing.T) {
+	store := NewMemoryStore()
+	now := time.Now().UTC()
+	record := MemoryTaskRecord{
+		MemoryTaskStatus: MemoryTaskStatus{TaskID: "task-1", Status: "pending", Progress: 0, Steps: []MemoryTaskStep{}},
+		OwnerUserID:      "local", SourceConversationID: "conversation-1", AgentID: "xiaoba-base",
+		CreatedAtTime: now, UpdatedAtTime: now,
+	}
+	if err := store.UpsertMemoryTask(t.Context(), record); err != nil {
+		t.Fatal(err)
+	}
+	memory := &recordingMemoryBackend{task: MemoryTaskStatus{TaskID: "task-1", Status: "processing", Progress: 0.5, CurrentStep: "关系抽取", Steps: []MemoryTaskStep{}}}
+	server := &HTTPServer{store: store, memory: memory, auth: AuthConfig{}.normalized()}
+	request := httptest.NewRequest(http.MethodGet, "/v1/memories/tasks/task-1", nil)
+	request.SetPathValue("task_id", "task-1")
+	recorder := httptest.NewRecorder()
+	server.memoryTaskStatus(recorder, request)
+	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"source_conversation_id":"conversation-1"`) {
+		t.Fatalf("durable task response lost source data: status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	stored, err := store.GetMemoryTaskByOwner(t.Context(), "local", "task-1")
+	if err != nil || stored.Status != "processing" || stored.Progress != 0.5 || stored.CurrentStep != "关系抽取" {
+		t.Fatalf("task progress was not persisted: task=%#v err=%v", stored, err)
+	}
 }
 
 func TestMemoryTaskStatusUsesAuthenticatedOwnerAndHidesProviderErrors(t *testing.T) {
@@ -423,6 +456,43 @@ func TestMemoryFactGraphUsesAuthenticatedOwnerAndHidesProviderErrors(t *testing.
 	}
 }
 
+func TestMemoryFactGraphAddsTruthfulProvenanceAndConversationRelations(t *testing.T) {
+	memory := &recordingMemoryBackend{
+		graph: MemoryFactGraph{FactID: 27, Content: "用户要求整理发布说明。", Entities: []MemoryGraphEntity{}, Relations: []MemoryGraphRelation{}},
+		list: MemoryList{Memories: []MemoryRecord{
+			{ID: "27", Content: "用户要求整理发布说明。", Metadata: map[string]any{"conversation_id": "pet-42", "agent_id": "xiaoba-base", "agent_name": "小八"}},
+			{ID: "28", Content: "小八交付了发布说明。", Metadata: map[string]any{"conversation_id": "pet-42", "agent_id": "xiaoba-base"}},
+		}},
+	}
+	server := &HTTPServer{store: NewMemoryStore(), memory: memory, auth: AuthConfig{}.normalized()}
+	request := httptest.NewRequest(http.MethodGet, "/v1/memories/facts/27/graph", nil)
+	request.SetPathValue("fact_id", "27")
+	recorder := httptest.NewRecorder()
+	server.memoryFactGraph(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	var graph MemoryFactGraph
+	if err := json.Unmarshal(recorder.Body.Bytes(), &graph); err != nil {
+		t.Fatal(err)
+	}
+	if graph.TotalEntities != 2 || graph.TotalRelations != 3 {
+		t.Fatalf("expected Agent, Conversation, and same-conversation provenance: %#v", graph)
+	}
+	for _, relationType := range []string{"SOURCE_CONVERSATION", "SOURCE_AGENT", "SAME_CONVERSATION"} {
+		found := false
+		for _, relation := range graph.Relations {
+			if relation.Type == relationType && relation.Origin == "provenance" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("missing %s provenance relation: %#v", relationType, graph.Relations)
+		}
+	}
+}
+
 type memoryTraceStore struct {
 	ownerID string
 	trace   TraceDetail
@@ -463,6 +533,8 @@ type recordingMemoryBackend struct {
 	searchErr      error
 	factID         int64
 	graphErr       error
+	graph          MemoryFactGraph
+	list           MemoryList
 	taskID         string
 	task           MemoryTaskStatus
 	taskErr        error
@@ -491,7 +563,7 @@ func (s *recordingMemoryBackend) IngestTrace(_ context.Context, ownerID string, 
 	}, nil
 }
 func (s *recordingMemoryBackend) List(context.Context, string, int) (MemoryList, error) {
-	return MemoryList{}, nil
+	return s.list, nil
 }
 func (s *recordingMemoryBackend) Search(context.Context, string, MemorySearchRequest) (MemoryRecallBundle, error) {
 	return MemoryRecallBundle{}, s.searchErr
@@ -499,6 +571,9 @@ func (s *recordingMemoryBackend) Search(context.Context, string, MemorySearchReq
 func (s *recordingMemoryBackend) Graph(_ context.Context, ownerID string, factID int64) (MemoryFactGraph, error) {
 	s.ownerID = ownerID
 	s.factID = factID
+	if s.graph.FactID != 0 {
+		return s.graph, s.graphErr
+	}
 	return MemoryFactGraph{FactID: factID, Content: "fact"}, s.graphErr
 }
 

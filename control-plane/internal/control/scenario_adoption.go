@@ -249,7 +249,7 @@ func (r ScenarioRunAdoptionRequest) materialize(
 	input, err := json.Marshal(map[string]any{
 		"schema": platformExploreScenarioSchema,
 		"source": map[string]any{
-			"kind": "langwatch_scenario_run", "project_id": r.SourceProjectID,
+			"kind": "catena_scenario_run", "project_id": r.SourceProjectID,
 			"scenario_run_id": r.ScenarioRunID, "scenario_id": r.ScenarioID,
 			"snapshot_sha256": fingerprint,
 		},
