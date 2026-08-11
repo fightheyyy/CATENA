@@ -14,6 +14,7 @@ export type TraceEvidencePresentation = {
   hiddenContextCount: number;
   hiddenFieldCount: number;
   structured: boolean;
+  truncated: boolean;
 };
 
 export type SemanticTraceSpan = {
@@ -227,6 +228,20 @@ export function presentTraceEvidence(
   const parsed = embeddedToolArguments ?? parseTraceJSON(value);
   const structured = parsed !== undefined;
 
+  if (kind === "model" && direction === "input" && !structured) {
+    const partial = partialModelRequest(value);
+    if (partial) {
+      return presentation({
+        kind: partial.messages.length > 0 ? "messages" : "fields",
+        messages: partial.messages,
+        fields: partial.model ? [{ key: "model", value: partial.model, code: false }] : [],
+        hiddenContextCount: partial.hiddenContextCount,
+        structured: true,
+        truncated: true,
+      });
+    }
+  }
+
   if (kind === "model" && direction === "input" && structured) {
     const request = modelRequestMessages(parsed);
     if (request.messages.length > 0) {
@@ -305,6 +320,68 @@ function presentation(
     hiddenContextCount: partial.hiddenContextCount ?? 0,
     hiddenFieldCount: partial.hiddenFieldCount ?? 0,
     structured: partial.structured ?? false,
+    truncated: partial.truncated ?? false,
+  };
+}
+
+function partialModelRequest(value: string) {
+  const trimmed = value.trimStart();
+  if (!trimmed.startsWith("{") || !/"input"\s*:/.test(trimmed)) return undefined;
+
+  const inputKey = trimmed.search(/"input"\s*:/);
+  const inputStart = trimmed.indexOf("[", inputKey);
+  if (inputStart < 0) return undefined;
+
+  const items: unknown[] = [];
+  let arrayDepth = 1;
+  let objectDepth = 0;
+  let objectStart = -1;
+  let inString = false;
+  let escaped = false;
+  for (let index = inputStart + 1; index < trimmed.length; index += 1) {
+    const character = trimmed[index];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') inString = false;
+      continue;
+    }
+    if (character === '"') {
+      inString = true;
+      continue;
+    }
+    if (character === "[") arrayDepth += 1;
+    else if (character === "]") arrayDepth -= 1;
+    else if (character === "{") {
+      if (arrayDepth === 1 && objectDepth === 0) objectStart = index;
+      objectDepth += 1;
+    } else if (character === "}") {
+      objectDepth -= 1;
+      if (objectDepth === 0 && objectStart >= 0) {
+        try {
+          items.push(JSON.parse(trimmed.slice(objectStart, index + 1)));
+        } catch {
+          // A complete-looking item can still contain exporter corruption.
+        }
+        objectStart = -1;
+      }
+    }
+  }
+
+  const request = modelRequestMessages({ input: items });
+  const modelMatch = trimmed.match(/"model"\s*:\s*"((?:\\.|[^"\\])*)"/);
+  let model = "";
+  if (modelMatch) {
+    try {
+      model = JSON.parse(`"${modelMatch[1]}"`);
+    } catch {
+      model = modelMatch[1];
+    }
+  }
+  return {
+    model,
+    messages: request.messages,
+    hiddenContextCount: request.hiddenContextCount + (objectStart >= 0 ? 1 : 0),
   };
 }
 

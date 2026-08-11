@@ -128,6 +128,20 @@ test("Codex exec wrappers render arguments and terminal output without JSON chro
   assert.equal(output.text, "Script completed\nOutput:\n/workspace\n");
 });
 
+test("truncated Codex requests fail closed instead of rendering giant JSON as a user message", () => {
+  const evidence = presentTraceEvidence(
+    '{"model":"gpt-5.6-sol","input":[{"type":"message","role":"developer","content":[{"type":"input_text","text":"system"}]},{"type":"message","role":"user","content":[{"type":"input_text","text":"unfinished',
+    "model",
+    "input",
+  );
+  assert.equal(evidence.kind, "fields");
+  assert.deepEqual(evidence.fields, [{ key: "model", value: "gpt-5.6-sol", code: false }]);
+  assert.deepEqual(evidence.messages, []);
+  assert.equal(evidence.hiddenContextCount, 2);
+  assert.equal(evidence.structured, true);
+  assert.equal(evidence.truncated, true);
+});
+
 test("Long Trace IDs are shortened without losing both ends", () => {
   assert.equal(shortTraceID("c2d7cd176b43d718a9135442b0ddcd36"), "c2d7cd17…ddcd36");
   assert.equal(shortTraceID("trace-short"), "trace-short");

@@ -73,6 +73,7 @@ const traceCopy = {
     rawData: "原始数据",
     hiddenContext: "条系统、工具或注入上下文已折叠",
     hiddenFields: "个次要字段已折叠",
+    truncatedEvidence: "结构化证据在导出时被截断，未上传的内容无法恢复。",
     roles: { user: "用户", assistant: "Agent", system: "系统", tool: "工具" },
     noEvidence: "这个 Span 没有导出输入或输出证据。",
     metadataOnly: "Runtime 只导出了工具名与状态，没有输入或输出正文。",
@@ -130,6 +131,7 @@ const traceCopy = {
     rawData: "Raw data",
     hiddenContext: "system, tool, or injected context items folded",
     hiddenFields: "secondary fields folded",
+    truncatedEvidence: "Structured evidence was truncated during export; content that was not uploaded cannot be recovered.",
     roles: { user: "User", assistant: "Agent", system: "System", tool: "Tool" },
     noEvidence: "This Span exported no input or output evidence.",
     metadataOnly: "The Runtime exported the tool name and status, but no input or output content.",
@@ -539,6 +541,7 @@ function EvidenceBlock({
       {evidence.hiddenFieldCount > 0 ? (
         <p className="trace-evidence-folded"><strong>{evidence.hiddenFieldCount}</strong> {t.hiddenFields}</p>
       ) : null}
+      {evidence.truncated ? <p className="trace-evidence-warning">{t.truncatedEvidence}</p> : null}
       {evidence.structured ? (
         <details className="trace-evidence-raw">
           <summary>{t.rawData}</summary>

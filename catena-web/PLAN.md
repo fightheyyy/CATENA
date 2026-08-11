@@ -131,5 +131,6 @@ the detail and expose a working back action without horizontal overflow.
 - 2026-08-11: Trace detail gained evidence-aware presentation for turns, model
   requests, tool calls and tool results. Large Codex payloads now show the
   visible conversation, command fields and terminal output first; injected
-  context and raw JSON are folded. 41 Web tests, typecheck and production build
-  passed.
+  context and raw JSON are folded. Truncated model requests fail closed with a
+  clear evidence warning instead of rendering malformed JSON as user text.
+  42 Web tests, typecheck and production build passed.
