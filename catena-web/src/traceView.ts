@@ -32,6 +32,17 @@ export type TraceSemanticView = {
   foldedInternalCount: number;
 };
 
+export type TraceSessionGroup = {
+  key: string;
+  agentID: string;
+  sessionID: string;
+  traces: TraceSummary[];
+  spanCount: number;
+  errorCount: number;
+  startedAt: string;
+  endedAt: string;
+};
+
 export const TRACE_STEP_PAGE_SIZE = 200;
 
 export function tracesForAgentSelection(
@@ -55,10 +66,41 @@ export function filterTraceSummaries(
     if (filter === "errors" && trace.error_count === 0) return false;
     if (filter === "multi" && trace.span_count <= 1) return false;
     if (!needle) return true;
-    return [trace.root_name, trace.service_name, trace.model, trace.trace_id]
+    return [trace.root_name, trace.service_name, trace.model, trace.trace_id, trace.agent_id, trace.session_id]
       .filter((value): value is string => Boolean(value))
       .some((value) => value.toLocaleLowerCase().includes(needle));
   });
+}
+
+export function traceSessionKey(trace: TraceSummary, fallbackAgentID = "") {
+  return `${trace.agent_id || fallbackAgentID}\u0000${trace.session_id || "__ungrouped__"}`;
+}
+
+export function groupTraceSummariesBySession(traces: TraceSummary[], fallbackAgentID = ""): TraceSessionGroup[] {
+  const groups = new Map<string, TraceSessionGroup>();
+  for (const trace of traces) {
+    const key = traceSessionKey(trace, fallbackAgentID);
+    const existing = groups.get(key);
+    if (existing) {
+      existing.traces.push(trace);
+      existing.spanCount += trace.span_count;
+      existing.errorCount += trace.error_count;
+      if (trace.start_time < existing.startedAt) existing.startedAt = trace.start_time;
+      if (trace.end_time > existing.endedAt) existing.endedAt = trace.end_time;
+      continue;
+    }
+    groups.set(key, {
+      key,
+      agentID: trace.agent_id || fallbackAgentID,
+      sessionID: trace.session_id || "",
+      traces: [trace],
+      spanCount: trace.span_count,
+      errorCount: trace.error_count,
+      startedAt: trace.start_time,
+      endedAt: trace.end_time,
+    });
+  }
+  return [...groups.values()].sort((left, right) => right.endedAt.localeCompare(left.endedAt));
 }
 
 export function traceSpanDepth(span: TraceSpan, spansByID: Map<string, TraceSpan>) {

@@ -10,6 +10,13 @@ Job orchestration. The embedded XiaoBaOS Runtime consumes retained Evidence
 Packs and produces reviewable Agent assets. Target Agent execution remains
 local.
 
+## In progress — evidence hierarchy
+
+- [x] Derive Agent and Session identity in every Trace summary.
+- [x] Group Trace navigation as Agent → Session → Trace → Span.
+- [x] Keep legacy evidence without Session metadata in an explicit ungrouped bucket.
+- [ ] Verify the hierarchy against retained Codex data and responsive layouts.
+
 ## Completed milestone — trustworthy memory workflow
 
 - [x] Persist every submitted memory extraction as an owner-scoped task.

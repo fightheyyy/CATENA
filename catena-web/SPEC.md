@@ -30,7 +30,9 @@ flowchart LR
 ```mermaid
 flowchart LR
     Conversation["Conversation index"] --> ConversationDetail["User-visible transcript detail"]
-    Trace["Trace index"] --> TraceDetail["Run summary · Span chain · Evidence"]
+    AgentTrace["Agent selector"] --> Session["Session index"]
+    Session --> Trace["Trace index"]
+    Trace --> TraceDetail["Trace summary · Span chain · Evidence"]
     ConversationDetail --> Responsive["Desktop split view<br/>Narrow-screen master/detail"]
     ConversationDetail --> Submit["Distill to memory"]
     Submit --> Poll["poll owner-scoped task status"]
@@ -76,6 +78,9 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - Empty states explain the next action rather than exposing internal engine names.
 - The empty Agent workspace offers one direct path to API Management for first-time connection.
 - Trace detail prioritizes Span waterfall, tool calls, input/output and errors.
+- Trace navigation preserves the evidence hierarchy: Agent → Session → Trace →
+  Span. Session groups use exported identity only; missing identity appears in
+  one explicit ungrouped bucket rather than a fabricated session.
 - Conversation and Trace use the same master/detail hierarchy: the index selects
   a record, while the detail owns a distinct header, summary and evidence surface.
 - At narrow widths, index and detail are separate states with an explicit back

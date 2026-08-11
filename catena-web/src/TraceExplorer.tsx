@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
-import type { TraceDetail, TraceSpan, WorkspaceData } from "./types";
+import type { TraceDetail, TraceSpan, TraceSummary, WorkspaceData } from "./types";
 import {
   TRACE_STEP_PAGE_SIZE,
   boundedTraceSteps,
   buildTraceSemanticView,
   filterTraceSummaries,
   formatTraceEvidence,
+  groupTraceSummariesBySession,
   presentTraceEvidence,
   preferredTraceSpan,
   shortTraceID,
@@ -14,6 +15,7 @@ import {
   traceSpanDepth,
   traceSpanAttributeString,
   traceSpanToolName,
+  traceSessionKey,
   type TraceFilter,
   type TraceLens,
   type TraceSpanSemanticKind,
@@ -36,6 +38,15 @@ const traceCopy = {
     all: "全部",
     errorsOnly: "错误",
     multiStep: "多步骤",
+    sessions: "Session",
+    traces: "Trace",
+    ungroupedSession: "未归组 Session",
+    ungroupedHint: "这些 Trace 没有导出 Session 标识",
+    hierarchy: "证据层级",
+    agentLevel: "AGENT",
+    sessionLevel: "SESSION",
+    traceLevel: "TRACE",
+    spanLevel: "SPAN",
     spans: "Span",
     errors: "错误",
     duration: "耗时",
@@ -94,6 +105,15 @@ const traceCopy = {
     all: "All",
     errorsOnly: "Errors",
     multiStep: "Multi-step",
+    sessions: "Sessions",
+    traces: "Traces",
+    ungroupedSession: "Ungrouped Session",
+    ungroupedHint: "These Traces exported no Session identity",
+    hierarchy: "Evidence hierarchy",
+    agentLevel: "AGENT",
+    sessionLevel: "SESSION",
+    traceLevel: "TRACE",
+    spanLevel: "SPAN",
     spans: "Spans",
     errors: "Errors",
     duration: "Duration",
@@ -161,6 +181,9 @@ export function TraceExplorer({
   const [selectedSpanID, setSelectedSpanID] = useState("");
   const [detailRequestVersion, setDetailRequestVersion] = useState(0);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [expandedSessionKey, setExpandedSessionKey] = useState(
+    workspace.traces[0] ? traceSessionKey(workspace.traces[0], initialAgentID) : "",
+  );
   const agentWindow = useAgentTraceWindow(agentID, 500);
   const sourceTraces = useMemo(
     () => tracesForAgentSelection(workspace.traces, agentID, agentWindow.traces),
@@ -177,6 +200,14 @@ export function TraceExplorer({
     () => filterTraceSummaries(sourceTraces, query, filter),
     [sourceTraces, query, filter],
   );
+  const sessionGroups = useMemo(
+    () => groupTraceSummariesBySession(filteredTraces, agentID),
+    [agentID, filteredTraces],
+  );
+  const agentNames = useMemo(
+    () => new Map(workspace.agents.map((agent) => [agent.agent_id, agent.display_name])),
+    [workspace.agents],
+  );
 
   useEffect(() => {
     if (filteredTraces.length === 0) {
@@ -188,6 +219,11 @@ export function TraceExplorer({
       setSelectedTraceID(filteredTraces[0].trace_id);
     }
   }, [filteredTraces, selectedTraceID]);
+
+  useEffect(() => {
+    const selected = filteredTraces.find((trace) => trace.trace_id === selectedTraceID);
+    if (selected) setExpandedSessionKey(traceSessionKey(selected, agentID));
+  }, [agentID, filteredTraces, selectedTraceID]);
 
   useEffect(() => {
     if (!selectedTraceID) return;
@@ -258,7 +294,9 @@ export function TraceExplorer({
                     onClick={() => setFilter(value)}
                   >{label}</button>
                 ))}
-                <span className="trace-result-count">{agentWindow.loading ? "…" : agentWindow.error ? "!" : filteredTraces.length}</span>
+                <span className="trace-result-count">
+                  {agentWindow.loading ? "…" : agentWindow.error ? "!" : `${sessionGroups.length} ${t.sessions} · ${filteredTraces.length} ${t.traces}`}
+                </span>
               </div>
             </div>
             <div className="trace-index-list">
@@ -270,29 +308,52 @@ export function TraceExplorer({
                 </div>
               ) : null}
               {!agentWindow.loading && !agentWindow.error && filteredTraces.length === 0 ? <div className="trace-list-empty">{t.noMatch}</div> : null}
-              {!agentWindow.loading && !agentWindow.error ? filteredTraces.map((trace) => (
-                <button
-                  className={selectedTraceID === trace.trace_id ? "trace-index-row selected" : "trace-index-row"}
-                  key={trace.trace_id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedTraceID(trace.trace_id);
-                    setMobileDetailOpen(true);
-                  }}
-                >
-                  <span className="trace-index-heading">
-                    <strong>{trace.root_name || shortTraceID(trace.trace_id)}</strong>
-                    <i className={trace.error_count > 0 ? "trace-state-dot error" : "trace-state-dot"} aria-label={trace.error_count > 0 ? t.statusError : t.statusOk} />
-                  </span>
-                  <span className="trace-index-source">{trace.service_name}{trace.model ? ` / ${trace.model}` : ""}</span>
-                  <span className="trace-index-facts">
-                    <span>{trace.span_count} {t.spans}</span>
-                    {trace.error_count > 0 ? <span className="trace-error-fact">{trace.error_count} {t.errors}</span> : null}
-                    <span>{formatDuration(trace.duration_ms)}</span>
-                    <TraceTime value={trace.end_time} locale={locale} />
-                  </span>
-                </button>
-              )) : null}
+              {!agentWindow.loading && !agentWindow.error ? sessionGroups.map((group) => {
+                const expanded = expandedSessionKey === group.key;
+                const groupAgentName = agentNames.get(group.agentID) || group.agentID;
+                return (
+                  <section className={expanded ? "trace-session expanded" : "trace-session"} key={group.key}>
+                    <button
+                      className="trace-session-heading"
+                      type="button"
+                      aria-expanded={expanded}
+                      onClick={() => {
+                        const nextExpanded = !expanded;
+                        setExpandedSessionKey(nextExpanded ? group.key : "");
+                        if (nextExpanded && !group.traces.some((trace) => trace.trace_id === selectedTraceID)) {
+                          setSelectedTraceID(group.traces[0].trace_id);
+                        }
+                      }}
+                    >
+                      <span className="trace-session-identity">
+                        <em>{t.sessionLevel}</em>
+                        <strong>{group.sessionID ? shortTraceID(group.sessionID) : t.ungroupedSession}</strong>
+                        {groupAgentName ? <small>{groupAgentName}</small> : null}
+                      </span>
+                      <span className="trace-session-facts">
+                        <span>{group.traces.length} {t.traces}</span>
+                        <span>{group.spanCount} {t.spans}</span>
+                        <TraceTime value={group.endedAt} locale={locale} />
+                        <i aria-hidden="true">⌄</i>
+                      </span>
+                    </button>
+                    {!group.sessionID && expanded ? <p className="trace-session-hint">{t.ungroupedHint}</p> : null}
+                    {expanded ? <div className="trace-session-traces">{group.traces.map((trace) => (
+                      <TraceIndexRow
+                        key={trace.trace_id}
+                        trace={trace}
+                        locale={locale}
+                        selected={selectedTraceID === trace.trace_id}
+                        labels={t}
+                        onSelect={() => {
+                          setSelectedTraceID(trace.trace_id);
+                          setMobileDetailOpen(true);
+                        }}
+                      />
+                    ))}</div> : null}
+                  </section>
+                );
+              }) : null}
             </div>
           </aside>
           <main className="trace-detail-shell" id="selected-trace-detail">
@@ -314,6 +375,7 @@ export function TraceExplorer({
                     document.querySelector<HTMLElement>(".trace-index")?.scrollIntoView({ block: "start" });
                   });
                 }}
+                agentName={agentNames.get(detail.summary.agent_id || agentID) || detail.summary.agent_id || agentNames.get(agentID) || agentID}
               />
             ) : null}
           </main>
@@ -323,18 +385,50 @@ export function TraceExplorer({
   );
 }
 
+function TraceIndexRow({
+  trace,
+  locale,
+  selected,
+  labels,
+  onSelect,
+}: {
+  trace: TraceSummary;
+  locale: Locale;
+  selected: boolean;
+  labels: (typeof traceCopy)[Locale];
+  onSelect: () => void;
+}) {
+  return (
+    <button className={selected ? "trace-index-row selected" : "trace-index-row"} type="button" onClick={onSelect}>
+      <span className="trace-index-heading">
+        <strong>{labels.traceLevel} {shortTraceID(trace.trace_id)}</strong>
+        <i className={trace.error_count > 0 ? "trace-state-dot error" : "trace-state-dot"} aria-label={trace.error_count > 0 ? labels.statusError : labels.statusOk} />
+      </span>
+      <span className="trace-index-source">{trace.root_name} · {trace.service_name}{trace.model ? ` / ${trace.model}` : ""}</span>
+      <span className="trace-index-facts">
+        <span>{trace.span_count} {labels.spans}</span>
+        {trace.error_count > 0 ? <span className="trace-error-fact">{trace.error_count} {labels.errors}</span> : null}
+        <span>{formatDuration(trace.duration_ms)}</span>
+        <TraceTime value={trace.end_time} locale={locale} />
+      </span>
+    </button>
+  );
+}
+
 function TraceDetailWorkspace({
   detail,
   locale,
   selectedSpanID,
   onSelectSpan,
   onBack,
+  agentName,
 }: {
   detail: TraceDetail;
   locale: Locale;
   selectedSpanID: string;
   onSelectSpan: (spanID: string) => void;
   onBack: () => void;
+  agentName: string;
 }) {
   const t = traceCopy[locale];
   const spansByID = useMemo(() => new Map(detail.spans.map((span) => [span.span_id, span])), [detail.spans]);
@@ -365,10 +459,19 @@ function TraceDetailWorkspace({
     <article className="trace-detail-workspace">
       <header className="trace-detail-header">
         <button className="trace-back-button" type="button" onClick={onBack}>{t.backToList}</button>
+        <nav className="trace-hierarchy" aria-label={t.hierarchy}>
+          <span><em>{t.agentLevel}</em><strong>{agentName || "—"}</strong></span>
+          <i aria-hidden="true">›</i>
+          <span><em>{t.sessionLevel}</em><strong>{detail.summary.session_id ? shortTraceID(detail.summary.session_id) : t.ungroupedSession}</strong></span>
+          <i aria-hidden="true">›</i>
+          <span><em>{t.traceLevel}</em><strong>{shortTraceID(detail.summary.trace_id)}</strong></span>
+          <i aria-hidden="true">›</i>
+          <span className="current"><em>{t.spanLevel}</em><strong>{selectedSpanID ? shortTraceID(selectedSpanID) : "—"}</strong></span>
+        </nav>
         <div className="trace-detail-title-row">
           <div className="trace-detail-identity">
-            <h2>{detail.summary.root_name}</h2>
-            <span title={detail.summary.trace_id}>{shortTraceID(detail.summary.trace_id)} · {detail.summary.service_name}{detail.summary.model ? ` · ${detail.summary.model}` : ""}</span>
+            <h2>{t.traceLevel} {shortTraceID(detail.summary.trace_id)}</h2>
+            <span title={detail.summary.trace_id}>{detail.summary.root_name} · {detail.summary.service_name}{detail.summary.model ? ` · ${detail.summary.model}` : ""}</span>
           </div>
           <span className={detail.summary.error_count > 0 ? "trace-detail-status error" : "trace-detail-status"}>
             {detail.summary.error_count > 0 ? t.statusError : t.statusOk}

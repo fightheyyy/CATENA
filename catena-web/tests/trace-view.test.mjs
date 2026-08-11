@@ -5,10 +5,12 @@ import {
   boundedTraceSteps,
   buildTraceSemanticView,
   filterTraceSummaries,
+  groupTraceSummariesBySession,
   formatTraceEvidence,
   presentTraceEvidence,
   preferredTraceSpan,
   shortTraceID,
+  traceSessionKey,
   traceSpanDepth,
   traceSpanSemanticKind,
   traceSpanToolName,
@@ -63,6 +65,32 @@ test("Trace filtering preserves raw service names from a canonical Agent query",
     filterTraceSummaries(canonicalCodexTraces, "tool", "all").map((trace) => trace.trace_id),
     [],
   );
+});
+
+test("Trace summaries preserve Agent, Session, Trace, Span hierarchy", () => {
+  const sessionTraces = [
+    { ...traces[0], agent_id: "codex", session_id: "session-a", start_time: "2026-08-11T01:00:00Z", end_time: "2026-08-11T01:02:00Z" },
+    { ...traces[0], trace_id: "trace-codex-2", agent_id: "codex", session_id: "session-a", span_count: 4, start_time: "2026-08-11T01:03:00Z", end_time: "2026-08-11T01:04:00Z" },
+    { ...traces[2], agent_id: "xiaoba", session_id: "session-x", start_time: "2026-08-11T02:00:00Z", end_time: "2026-08-11T02:01:00Z" },
+  ];
+  const groups = groupTraceSummariesBySession(sessionTraces);
+  assert.deepEqual(groups.map((group) => [group.agentID, group.sessionID, group.traces.length]), [
+    ["xiaoba", "session-x", 1],
+    ["codex", "session-a", 2],
+  ]);
+  assert.equal(groups[1].spanCount, 25);
+  assert.equal(traceSessionKey(sessionTraces[0]), "codex\u0000session-a");
+});
+
+test("missing Session identity stays explicitly ungrouped per Agent", () => {
+  const groups = groupTraceSummariesBySession([
+    { ...traces[0], agent_id: "codex", start_time: "2026-08-11T01:00:00Z", end_time: "2026-08-11T01:01:00Z" },
+    { ...traces[0], trace_id: "trace-codex-2", start_time: "2026-08-11T01:02:00Z", end_time: "2026-08-11T01:03:00Z" },
+  ], "codex");
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].sessionID, "");
+  assert.equal(groups[0].traces.length, 2);
+  assert.equal(groups[0].key, "codex\u0000__ungrouped__");
 });
 
 test("Span depth follows parent links and fails closed on cycles", () => {

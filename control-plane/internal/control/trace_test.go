@@ -65,6 +65,41 @@ func TestDecodeOTLPRequestPreservesToolEvidence(t *testing.T) {
 	}
 }
 
+func TestSummarizeTracePreservesAgentSessionHierarchy(t *testing.T) {
+	start := time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC)
+	spans := []TraceSpan{
+		{
+			TraceID: "00112233445566778899aabbccddeeff", SpanID: "0011223344556677",
+			Name: "agent.turn", ServiceName: "catena-tap-codex", StartTime: start, EndTime: start.Add(time.Second),
+			Attributes: map[string]any{"agent.session.id": "session-from-root"}, ResourceAttributes: map[string]any{},
+		},
+		{
+			AgentID: "agent-codex", TraceID: "00112233445566778899aabbccddeeff", SpanID: "8899aabbccddeeff",
+			ParentSpanID: "0011223344556677", Name: "gen_ai.model.call", ServiceName: "catena-tap-codex",
+			StartTime: start.Add(100 * time.Millisecond), EndTime: start.Add(900 * time.Millisecond),
+			Attributes: map[string]any{}, ResourceAttributes: map[string]any{},
+		},
+	}
+	summary := summarizeTrace(spans, start.Add(2*time.Second))
+	if summary.AgentID != "agent-codex" || summary.SessionID != "session-from-root" ||
+		summary.TraceID != spans[0].TraceID || summary.SpanCount != 2 {
+		t.Fatalf("unexpected hierarchy summary: %+v", summary)
+	}
+}
+
+func TestTraceSpanSessionIDUsesSupportedAttributesWithoutGuessing(t *testing.T) {
+	span := TraceSpan{
+		Attributes:         map[string]any{"gen_ai.conversation.id": " conversation-42 "},
+		ResourceAttributes: map[string]any{"session.id": "resource-fallback"},
+	}
+	if got := traceSpanSessionID(span); got != "conversation-42" {
+		t.Fatalf("unexpected Session identity %q", got)
+	}
+	if got := traceSpanSessionID(TraceSpan{Attributes: map[string]any{}, ResourceAttributes: map[string]any{}}); got != "" {
+		t.Fatalf("missing Session identity must stay empty, got %q", got)
+	}
+}
+
 func TestDecodeOTLPJSONAcceptsCatenaTapProtoJSONIDs(t *testing.T) {
 	body := []byte(`{
   "resourceSpans": [{

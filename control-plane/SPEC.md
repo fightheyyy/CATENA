@@ -52,6 +52,7 @@ flowchart LR
     Auth --> Normalize["force Agent identity"]
     Normalize --> Detect["infer Runtime"]
     Normalize --> Evidence[("Trace · Conversation")]
+    Evidence --> Hierarchy["derive Agent · Session · Trace · Span"]
     Evidence --> CH[("Official ClickHouse<br/>catena.catena_spans")]
     Detect --> Registry
     Web["API management"] --> ModelAPI["GET · PUT · DELETE /v1/me/llm-config"]
@@ -80,6 +81,8 @@ The durable worker queue remains the next control-plane reliability milestone.
 - PostgreSQL Registered Agent owns display name, inferred Runtime and key
   binding; payload metadata cannot mutate its stable identity.
 - ClickHouse: raw Trace, Span and event evidence.
+- ClickHouse Trace summaries derive `agent_id` from authenticated ingestion and
+  `session_id` from supported OTel attributes without rewriting raw evidence.
 - Runner filesystem: temporary workspaces only.
 - GauzMem stores: optional memory facts and indexes behind the private gateway.
 
@@ -106,6 +109,8 @@ The durable worker queue remains the next control-plane reliability milestone.
 - `GET /v1/agents/{agent_id}`: cheap PostgreSQL-backed connection polling.
 - `GET /v1/agents`: registered Agents merged with evidence metrics.
 - `/v1/otlp/v1/traces`: Agent-key-authenticated OTLP/HTTP ingestion.
+- `GET /v1/traces` and Agent Trace windows: each summary includes its stable
+  Agent identity and an optional exported Session identity.
 - `/v1/ingest/conversations`: `xiaoba.conversation_batch.v1`.
 - `/v1/ingest/run-bundles`: idempotent `barena.run_bundle.v1`.
 - `/v1/evolution-jobs`: Agent Trace Set creation, listing and detail.

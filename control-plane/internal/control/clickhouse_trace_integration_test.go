@@ -33,13 +33,17 @@ func TestClickHouseTraceRoundTrip(t *testing.T) {
 	traceID := "00112233445566778899aabbccddeeff"
 	spans := []TraceSpan{
 		{
-			TraceID:            traceID,
-			SpanID:             "0011223344556677",
-			Name:               "agent.turn",
-			ServiceName:        "xiaoba-test",
-			StartTime:          start,
-			EndTime:            start.Add(2 * time.Second),
-			Attributes:         map[string]any{"gen_ai.operation.name": "agent"},
+			AgentID:     "agent-xiaoba",
+			TraceID:     traceID,
+			SpanID:      "0011223344556677",
+			Name:        "agent.turn",
+			ServiceName: "xiaoba-test",
+			StartTime:   start,
+			EndTime:     start.Add(2 * time.Second),
+			Attributes: map[string]any{
+				"gen_ai.operation.name":  "agent",
+				"gen_ai.conversation.id": "session-round-trip",
+			},
 			ResourceAttributes: map[string]any{"service.name": "xiaoba-test"},
 			Events:             []TraceEvent{},
 			Links:              []TraceLink{},
@@ -70,7 +74,8 @@ func TestClickHouseTraceRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(summaries) != 1 || summaries[0].RootName != "agent.turn" ||
+	if len(summaries) != 1 || summaries[0].AgentID != "agent-xiaoba" ||
+		summaries[0].SessionID != "session-round-trip" || summaries[0].RootName != "agent.turn" ||
 		summaries[0].SpanCount != 2 || summaries[0].ErrorCount != 1 ||
 		summaries[0].Model != "gpt-5.6-sol" {
 		t.Fatalf("unexpected summaries: %+v", summaries)
@@ -80,7 +85,8 @@ func TestClickHouseTraceRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(detail.Spans) != 2 || detail.Summary.DurationMS != 2000 ||
+	if len(detail.Spans) != 2 || detail.Summary.AgentID != "agent-xiaoba" ||
+		detail.Summary.SessionID != "session-round-trip" || detail.Summary.DurationMS != 2000 ||
 		detail.Spans[1].Input != `{"path":"README.md"}` {
 		t.Fatalf("unexpected detail: %+v", detail)
 	}

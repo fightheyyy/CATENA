@@ -39,6 +39,8 @@ Updated: 2026-08-11
       unexplained avatar-only control.
 - [x] Add a Memory task center backed by server-listed extraction tasks.
 - [x] Distinguish GauzMem semantic edges from Catena provenance edges.
+- [x] Replace the flat Trace index with Agent → Session → Trace → Span navigation.
+- [x] Render missing Session identity as an explicit ungrouped bucket.
 - [ ] Add responsive browser acceptance to CI.
 - [ ] Improve accessibility and keyboard navigation.
 - [ ] Add durable optimistic/retry states for long-running jobs.

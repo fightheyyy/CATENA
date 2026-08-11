@@ -45,6 +45,8 @@ flowchart LR
     Runner --> Asset["agent.md · Skill · Role · Harness"]
     Go --> PG[("PostgreSQL")]
     Go --> CH[("Official ClickHouse<br/>catena database")]
+    CH --> Hierarchy["Agent → Session → Trace → Span"]
+    Hierarchy --> Browser
     Go -->|"Conversation"| Memory["GauzMem · optional"]
     Go --> TaskAPI["owner-scoped memory task API"]
     TaskAPI --> TaskLedger[("durable memory task ledger")]
@@ -81,6 +83,8 @@ flowchart LR
     Core --> Evidence[("Evidence Store")]
     Evidence --> Queue["durable Evolution queue"]
     Core --> CH[("Official ClickHouse<br/>catena database")]
+    CH --> Hierarchy["Agent → Session → Trace → Span"]
+    Hierarchy --> Workspace["Evidence workspace"]
     Owner["Owner BYOK<br/>Provider · Base URL · Model · API Key"] --> Core
     Core -->|"decrypt only for job"| Runtime
     Queue --> Runtime["XiaoBaOS Evolution Runtime"]
@@ -124,7 +128,14 @@ preferences and live only in Settings.
   Registered Agent; it determines Agent identity for every upload.
 - **Owner LLM config:** one encrypted owner-scoped Provider/Base URL/Model/API
   Key tuple used only for that owner's Evolution Jobs.
-- **Trace:** OTLP/HTTP protobuf or JSON authenticated by Agent API key.
+- **Evidence hierarchy:** Agent is the stable deployment identity; Session is
+  the Runtime-provided conversation/task identity; Trace is one end-to-end
+  Agent turn or request; Span is one model, tool or internal operation. Missing
+  Session metadata is presented as ungrouped evidence and never inferred from
+  timing alone.
+- **Trace:** OTLP/HTTP protobuf or JSON authenticated by Agent API key. Trace
+  summaries expose their authenticated Agent and the first supported Session
+  identity found in retained Span attributes.
 - **Trace store:** Catena-owned `catena_spans` in the `catena` database on the
   pinned official ClickHouse image. Product code, configuration and runtime do
   not depend on retired platform images, schemas or attribute aliases.

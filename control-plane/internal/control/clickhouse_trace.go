@@ -169,6 +169,20 @@ func (s *ClickHouseTraceStore) ListTraces(
 ) ([]TraceSummary, error) {
 	rows, err := s.conn.Query(ctx, `
 SELECT
+  anyIf(agent_id, agent_id != '') AS agent_id,
+  coalesce(
+    nullIf(argMinIf(JSONExtractString(attributes_json, 'agent.session.id'), start_time, JSONExtractString(attributes_json, 'agent.session.id') != ''), ''),
+    nullIf(argMinIf(JSONExtractString(attributes_json, 'gen_ai.conversation.id'), start_time, JSONExtractString(attributes_json, 'gen_ai.conversation.id') != ''), ''),
+    nullIf(argMinIf(JSONExtractString(attributes_json, 'gen_ai.session.id'), start_time, JSONExtractString(attributes_json, 'gen_ai.session.id') != ''), ''),
+    nullIf(argMinIf(JSONExtractString(attributes_json, 'session.id'), start_time, JSONExtractString(attributes_json, 'session.id') != ''), ''),
+    nullIf(argMinIf(JSONExtractString(attributes_json, 'conversation.id'), start_time, JSONExtractString(attributes_json, 'conversation.id') != ''), ''),
+    nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'agent.session.id'), start_time, JSONExtractString(resource_attributes_json, 'agent.session.id') != ''), ''),
+    nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'gen_ai.conversation.id'), start_time, JSONExtractString(resource_attributes_json, 'gen_ai.conversation.id') != ''), ''),
+    nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'gen_ai.session.id'), start_time, JSONExtractString(resource_attributes_json, 'gen_ai.session.id') != ''), ''),
+    nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'session.id'), start_time, JSONExtractString(resource_attributes_json, 'session.id') != ''), ''),
+    nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'conversation.id'), start_time, JSONExtractString(resource_attributes_json, 'conversation.id') != ''), ''),
+    ''
+  ) AS session_id,
   trace_id,
   argMin(name, tuple(parent_span_id != '', start_time)) AS root_name,
   argMin(service_name, start_time) AS service_name,
@@ -192,6 +206,8 @@ LIMIT ?`, ownerID, limit)
 	for rows.Next() {
 		var value TraceSummary
 		if err := rows.Scan(
+			&value.AgentID,
+			&value.SessionID,
 			&value.TraceID,
 			&value.RootName,
 			&value.ServiceName,
@@ -221,12 +237,25 @@ func (s *ClickHouseTraceStore) ListAgentTraces(
 	legacyFilter, legacyFilterArgs := agentServiceNameFilter(agentID)
 	query := fmt.Sprintf(`
 SELECT
-  trace_id, root_name, service_name, model, started_at, ended_at,
+  agent_id, session_id, trace_id, root_name, service_name, model, started_at, ended_at,
   duration_ms, span_count, error_count, last_ingested_at
 FROM (
   SELECT
     trace_id,
 	    anyIf(agent_id, agent_id != '') AS agent_id,
+	    coalesce(
+	      nullIf(argMinIf(JSONExtractString(attributes_json, 'agent.session.id'), start_time, JSONExtractString(attributes_json, 'agent.session.id') != ''), ''),
+	      nullIf(argMinIf(JSONExtractString(attributes_json, 'gen_ai.conversation.id'), start_time, JSONExtractString(attributes_json, 'gen_ai.conversation.id') != ''), ''),
+	      nullIf(argMinIf(JSONExtractString(attributes_json, 'gen_ai.session.id'), start_time, JSONExtractString(attributes_json, 'gen_ai.session.id') != ''), ''),
+	      nullIf(argMinIf(JSONExtractString(attributes_json, 'session.id'), start_time, JSONExtractString(attributes_json, 'session.id') != ''), ''),
+	      nullIf(argMinIf(JSONExtractString(attributes_json, 'conversation.id'), start_time, JSONExtractString(attributes_json, 'conversation.id') != ''), ''),
+	      nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'agent.session.id'), start_time, JSONExtractString(resource_attributes_json, 'agent.session.id') != ''), ''),
+	      nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'gen_ai.conversation.id'), start_time, JSONExtractString(resource_attributes_json, 'gen_ai.conversation.id') != ''), ''),
+	      nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'gen_ai.session.id'), start_time, JSONExtractString(resource_attributes_json, 'gen_ai.session.id') != ''), ''),
+	      nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'session.id'), start_time, JSONExtractString(resource_attributes_json, 'session.id') != ''), ''),
+	      nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'conversation.id'), start_time, JSONExtractString(resource_attributes_json, 'conversation.id') != ''), ''),
+	      ''
+	    ) AS session_id,
     argMin(name, tuple(parent_span_id != '', start_time)) AS root_name,
     argMin(service_name, tuple(parent_span_id != '', start_time)) AS service_name,
     anyIf(model, model != '') AS model,
@@ -256,6 +285,8 @@ LIMIT ?`, legacyFilter)
 	for rows.Next() {
 		var value TraceSummary
 		if err := rows.Scan(
+			&value.AgentID,
+			&value.SessionID,
 			&value.TraceID,
 			&value.RootName,
 			&value.ServiceName,
@@ -442,6 +473,8 @@ func agentServiceNameFilter(agentID string) (string, []any) {
 
 func summarizeTrace(spans []TraceSpan, lastIngested time.Time) TraceSummary {
 	summary := TraceSummary{
+		AgentID:      spans[0].AgentID,
+		SessionID:    traceSpanSessionID(spans[0]),
 		TraceID:      spans[0].TraceID,
 		RootName:     spans[0].Name,
 		ServiceName:  spans[0].ServiceName,
@@ -451,6 +484,12 @@ func summarizeTrace(spans []TraceSpan, lastIngested time.Time) TraceSummary {
 		LastIngested: lastIngested,
 	}
 	for _, span := range spans {
+		if summary.AgentID == "" && span.AgentID != "" {
+			summary.AgentID = span.AgentID
+		}
+		if summary.SessionID == "" {
+			summary.SessionID = traceSpanSessionID(span)
+		}
 		if span.ParentSpanID == "" {
 			summary.RootName = span.Name
 		}
@@ -472,6 +511,24 @@ func summarizeTrace(spans []TraceSpan, lastIngested time.Time) TraceSummary {
 	}
 	summary.DurationMS = summary.EndTime.Sub(summary.StartTime).Milliseconds()
 	return summary
+}
+
+func traceSpanSessionID(span TraceSpan) string {
+	for _, key := range []string{
+		"agent.session.id",
+		"gen_ai.conversation.id",
+		"gen_ai.session.id",
+		"session.id",
+		"conversation.id",
+	} {
+		if value, ok := span.Attributes[key].(string); ok && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+		if value, ok := span.ResourceAttributes[key].(string); ok && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func marshalTraceJSON(value any) (string, error) {

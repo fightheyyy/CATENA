@@ -201,6 +201,8 @@ export type ApiToken = {
 };
 
 export type TraceSummary = {
+  agent_id?: string;
+  session_id?: string;
   trace_id: string;
   root_name: string;
   service_name: string;

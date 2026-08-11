@@ -238,6 +238,21 @@ a { color: inherit; }
 .trace-index-list { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
 .trace-list-empty { min-height: 110px; padding: 22px; display: grid; place-items: center; color: var(--muted); font-size: 12px; text-align: center; }
 .trace-list-error { align-content: center; gap: 4px; color: var(--bad); }
+.trace-session { border-bottom: 1px solid var(--line-strong); }
+.trace-session-heading { width: 100%; min-height: 70px; padding: 12px 16px; border: 0; background: var(--surface-strong); color: var(--ink); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; text-align: left; cursor: pointer; }
+.trace-session-heading:hover, .trace-session.expanded > .trace-session-heading { background: var(--surface); }
+.trace-session-identity { min-width: 0; display: grid; gap: 3px; }
+.trace-session-identity em { color: var(--accent); font: 7px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; letter-spacing: .1em; }
+.trace-session-identity strong, .trace-session-identity small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trace-session-identity strong { font-size: 12px; }
+.trace-session-identity small { color: var(--muted); font: 8px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.trace-session-facts { display: grid; justify-items: end; gap: 3px; color: var(--muted); font: 8px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+.trace-session-facts i { margin-top: 2px; color: var(--ink); font-size: 11px; font-style: normal; transition: transform .16s ease; }
+.trace-session.expanded .trace-session-facts i { transform: rotate(180deg); }
+.trace-session-hint { margin: 0; padding: 9px 16px; border-top: 1px solid var(--line); background: var(--canvas); color: var(--muted); font-size: 9px; line-height: 1.45; }
+.trace-session-traces { border-top: 1px solid var(--line); background: var(--canvas); }
+.trace-session-traces .trace-index-row { padding-left: 24px; }
+.trace-session-traces .trace-index-row.selected { padding-left: 21px; }
 .trace-index-row { width: 100%; min-height: 88px; padding: 14px 16px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); display: grid; gap: 6px; text-align: left; cursor: pointer; }
 .trace-index-row:hover { background: color-mix(in srgb, var(--surface), transparent 20%); }
 .trace-index-row.selected { padding-left: 13px; border-left: 3px solid var(--accent); background: var(--canvas); box-shadow: inset 0 1px 0 var(--line), inset 0 -1px 0 var(--line); }
@@ -253,6 +268,13 @@ a { color: inherit; }
 .trace-detail-workspace { min-width: 0; }
 .trace-detail-header { position: sticky; z-index: 3; top: 0; padding: 21px 26px 17px; border-bottom: 1px solid var(--line-strong); background: color-mix(in srgb, var(--canvas), transparent 4%); box-shadow: 0 8px 22px color-mix(in srgb, var(--ink), transparent 97%); }
 .trace-back-button { display: none; padding: 0 0 11px; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; }
+.trace-hierarchy { min-width: 0; margin-bottom: 14px; padding-bottom: 9px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; overflow-x: auto; color: var(--muted); scrollbar-width: none; }
+.trace-hierarchy::-webkit-scrollbar { display: none; }
+.trace-hierarchy > i { flex: 0 0 auto; color: var(--line-strong); font-size: 15px; font-style: normal; }
+.trace-hierarchy > span { min-width: 0; flex: 0 1 auto; display: grid; gap: 3px; }
+.trace-hierarchy em { color: var(--muted); font: 6px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; letter-spacing: .11em; }
+.trace-hierarchy strong { max-width: 116px; overflow: hidden; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; font: 8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.trace-hierarchy .current em, .trace-hierarchy .current strong { color: var(--accent); }
 .trace-detail-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; }
 .trace-detail-identity { min-width: 0; }
 .trace-detail-identity h2 { margin: 0; overflow: hidden; font-size: 21px; letter-spacing: -.025em; text-overflow: ellipsis; white-space: nowrap; }

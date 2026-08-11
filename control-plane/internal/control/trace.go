@@ -82,6 +82,8 @@ type TraceLink struct {
 }
 
 type TraceSummary struct {
+	AgentID      string    `json:"agent_id,omitempty"`
+	SessionID    string    `json:"session_id,omitempty"`
 	TraceID      string    `json:"trace_id"`
 	RootName     string    `json:"root_name"`
 	ServiceName  string    `json:"service_name"`

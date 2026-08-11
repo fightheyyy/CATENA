@@ -14,6 +14,13 @@ Updated: 2026-08-11
 - [x] React is built into and served by the Go binary.
 - [x] GauzMem is private and tenant scope is derived by Go.
 
+## Completed milestone — Trace hierarchy projection
+
+- [x] Add authenticated Agent and exported Session identity to Trace summaries.
+- [x] Support `agent.session.id`, `gen_ai.conversation.id`,
+      `gen_ai.session.id`, `session.id` and `conversation.id` without a schema migration.
+- [x] Preserve empty Session identity instead of grouping by timestamp heuristics.
+
 ## Completed milestone — observable memory extraction
 
 - [x] Add an owner-scoped GauzMem task-status projection.
