@@ -41,6 +41,8 @@ Updated: 2026-08-11
 - [x] Distinguish GauzMem semantic edges from Catena provenance edges.
 - [x] Replace the flat Trace index with Agent → Session → Trace → Span navigation.
 - [x] Render missing Session identity as an explicit ungrouped bucket.
+- [ ] Unwrap Runtime `chat_messages` envelopes into visible message cards;
+      keep `type` and `value` only in the raw-data disclosure.
 - [ ] Add responsive browser acceptance to CI.
 - [ ] Improve accessibility and keyboard navigation.
 - [ ] Add durable optimistic/retry states for long-running jobs.

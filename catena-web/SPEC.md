@@ -78,6 +78,9 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - Empty states explain the next action rather than exposing internal engine names.
 - The empty Agent workspace offers one direct path to API Management for first-time connection.
 - Trace detail prioritizes Span waterfall, tool calls, input/output and errors.
+- Trace evidence renders semantic payloads rather than transport envelopes:
+  `chat_messages` input becomes visible role/content message cards, while its
+  `type` and `value` wrapper remains available only under raw data.
 - Trace navigation preserves the evidence hierarchy: Agent → Session → Trace →
   Span. Session groups use exported identity only; missing identity appears in
   one explicit ungrouped bucket rather than a fabricated session.

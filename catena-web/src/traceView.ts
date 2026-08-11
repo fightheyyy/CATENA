@@ -284,7 +284,7 @@ export function presentTraceEvidence(
     }
   }
 
-  if (kind === "model" && direction === "input" && structured) {
+  if ((kind === "model" || kind === "turn") && direction === "input" && structured) {
     const request = modelRequestMessages(parsed);
     if (request.messages.length > 0) {
       return presentation({
@@ -463,7 +463,9 @@ function parseEmbeddedToolArguments(value: string): unknown | undefined {
 
 function modelRequestMessages(value: unknown) {
   if (!isRecord(value)) return { messages: [], hiddenContextCount: 0 };
-  const source = value.input ?? value.messages;
+  const source = value.type === "chat_messages"
+    ? value.value
+    : value.input ?? value.messages;
   if (typeof source === "string") {
     return { messages: [{ role: "user" as const, text: source }], hiddenContextCount: 0 };
   }

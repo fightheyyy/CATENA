@@ -135,6 +135,24 @@ test("Codex model requests render the visible conversation instead of raw reques
   assert.equal(evidence.structured, true);
 });
 
+test("Codex turn inputs unwrap chat_messages instead of exposing protocol fields", () => {
+  const evidence = presentTraceEvidence(JSON.stringify({
+    type: "chat_messages",
+    value: [
+      { role: "user", content: [{ type: "input_text", text: "帮我检查部署异常。" }] },
+      { role: "assistant", content: [{ type: "output_text", text: "我先检查服务状态。" }] },
+    ],
+  }), "turn", "input");
+
+  assert.equal(evidence.kind, "messages");
+  assert.deepEqual(evidence.messages, [
+    { role: "user", text: "帮我检查部署异常。" },
+    { role: "assistant", text: "我先检查服务状态。" },
+  ]);
+  assert.deepEqual(evidence.fields, []);
+  assert.equal(evidence.structured, true);
+});
+
 test("Codex exec wrappers render arguments and terminal output without JSON chrome", () => {
   const input = presentTraceEvidence(
     'const r = await tools.exec_command({"cmd":"pwd","workdir":"/workspace","yield_time_ms":10000});\ntext(r.output);',
