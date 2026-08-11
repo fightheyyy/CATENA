@@ -3,3 +3,6 @@ Copyright 2026 fightheyyy
 
 The product is distributed under the Apache License, Version 2.0. See
 LICENSE.md for the complete license text.
+
+Catena Tap depends on claude-tap (https://github.com/liaohch3/claude-tap),
+Copyright liaohch3, distributed under the MIT License.

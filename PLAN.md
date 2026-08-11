@@ -91,6 +91,13 @@ local.
 - [ ] Run failure injection for Runner loss, database interruption and restart.
 - [ ] Add backup/restore rehearsal for PostgreSQL and ClickHouse.
 
+## Active milestone — canonical Runtime capture
+
+- [x] Add `catena tap` using the pinned claude-tap capture engine.
+- [x] Normalize model and tool exchanges into one Trace per user turn.
+- [x] Cover Codex, Codex App, Claude Code, Hermes and OpenClaw from one CLI.
+- [x] Verify fail-open upload and a real local Codex tool turn.
+
 ## Later
 
 - [ ] Organization/team tenancy and RBAC.
@@ -107,6 +114,14 @@ local.
 5. Web tests/build, Go tests/vet/race, and both Compose configurations pass.
 
 ## Verification log
+
+- 2026-08-11: Catena Tap pinned `claude-tap==0.1.142`, passed ten Python
+  tests for OpenAI Responses, Anthropic Messages, Chat Completions, tool-result
+  pairing, authenticated OTLP upload and CLI delegation. A real Codex 0.147.0
+  turn executed `pwd` through the wrapper and produced one canonical Trace with
+  four Spans: Turn, Model, `exec` Tool and final Model. Go OTLP JSON decoding,
+  Runtime inference and control-plane tests passed. The Tap suite is included
+  in the repository CI path filter and Python 3.12 job.
 
 - 2026-08-11: MVP1 release-candidate verification passed: Go unit tests,
   `go vet`, Go race tests, 39 Web tests, TypeScript typecheck, production Web

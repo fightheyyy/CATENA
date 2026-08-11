@@ -1,0 +1,36 @@
+[project]
+name = "catena-tap"
+version = "0.1.0"
+description = "Capture coding-agent model traffic and export canonical Agent Turn traces to Catena."
+requires-python = ">=3.11"
+license = "Apache-2.0"
+readme = "README.md"
+dependencies = [
+  "claude-tap==0.1.142",
+]
+
+[project.scripts]
+catena = "catena_tap.cli:main_entry"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["catena_tap"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-q", "--strict-markers"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]

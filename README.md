@@ -36,6 +36,7 @@ flowchart LR
     GitHub["GitHub<br/>OAuth · 开发者身份"] -->|"登录"| Core
 
     subgraph Edge["用户环境 / CI"]
+        Tap["Catena Tap<br/>统一捕获 Turn · Model · Tool"]
         Agent["目标 Agent<br/>Codex · Claude Code · Claw"]
         XiaoBa["XiaoBaOS<br/>拟人化 Agent"]
         Barena["Barena<br/>Explore · Replay · Compare · Verifier"]
@@ -44,6 +45,8 @@ flowchart LR
 
         Barena <--> Agent
         Barena <--> XiaoBa
+        Tap <--> Agent
+        Tap --> Trace
         Agent --> Trace
         XiaoBa --> Trace
         XiaoBa --> Conversation
@@ -128,6 +131,30 @@ Catena 会从证据自动识别 XiaoBaOS、Codex、Claude Code；无法识别时
 通用 OTel Agent。客户端提交的 Agent 身份不能覆盖密钥绑定。普通 OTLP Trace
 足以进行观测与跨 Run 分析；Barena Run Bundle 可补充 Artifact、Verifier 与发布结论。
 
+### 捕获完整的 Agent Turn
+
+部分 Runtime 的原生 OTLP 只导出一条顶层 Span，无法还原中间的模型请求、
+Tool Call 和 Tool Result。Catena Tap 复用固定版本的
+[`claude-tap`](https://github.com/liaohch3/claude-tap) 作为唯一捕获引擎，
+在本地把新运行标准化为 `Turn → Model → Tool` 后上传 Catena：
+
+```bash
+python3 -m pip install ./tap
+
+export CATENA_URL="https://your-catena.example"
+export CATENA_API_KEY="catena_agent_..."
+
+catena tap codex
+catena tap claude
+catena tap hermes
+catena tap openclaw
+```
+
+Runtime 参数放在 `--` 后，例如 `catena tap codex -- --full-auto`。
+捕获和上传均为 fail-open：Catena 暂时不可达时可能丢失观测数据，但不会改变
+Agent 的返回内容或退出码。当前只捕获通过该命令启动的新运行，不导入历史会话。
+详细说明见 [Catena Tap](./tap/README.md)。
+
 ## 接入 XiaoBaOS 对话
 
 XiaoBaOS 使用同一个 Agent 接入密钥增量同步用户可见的 Conversation Journal：
@@ -172,6 +199,7 @@ MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、用户自带 
 ```bash
 cd catena-web && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm typecheck && pnpm build
 cd ../control-plane && go test ./... && go vet ./...
+cd ../tap && python3 -m pip install -e '.[dev]' && pytest
 docker compose -f deploy/catena-mvp1/compose.yml config >/dev/null
 ```
 

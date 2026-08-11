@@ -65,6 +65,39 @@ func TestDecodeOTLPRequestPreservesToolEvidence(t *testing.T) {
 	}
 }
 
+func TestDecodeOTLPJSONAcceptsCatenaTapProtoJSONIDs(t *testing.T) {
+	body := []byte(`{
+  "resourceSpans": [{
+    "resource": {"attributes": [{"key":"service.name","value":{"stringValue":"catena-tap-codex"}}]},
+    "scopeSpans": [{
+      "scope": {"name":"catena.tap","version":"0.1.0"},
+      "spans": [{
+        "traceId":"ABEiM0RVZneImaq7zN3u/w==",
+        "spanId":"ABEiM0RVZnc=",
+        "name":"agent.turn",
+        "kind":1,
+        "startTimeUnixNano":"1785800000000000000",
+        "endTimeUnixNano":"1785800001000000000",
+        "attributes":[{"key":"input.value","value":{"stringValue":"hello"}}],
+        "status":{"code":1}
+      }]
+    }]
+  }]
+}`)
+	decoded, encoding, err := decodeOTLPRequest(body, "application/json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if encoding != "json" || len(decoded.Spans) != 1 {
+		t.Fatalf("encoding/spans = %q/%d", encoding, len(decoded.Spans))
+	}
+	span := decoded.Spans[0]
+	if span.TraceID != "00112233445566778899aabbccddeeff" ||
+		span.SpanID != "0011223344556677" || span.Input != "hello" {
+		t.Fatalf("unexpected Catena Tap span: %+v", span)
+	}
+}
+
 func TestConvertOTLPSpanRecognizesCodexHistoryEvidenceAttributes(t *testing.T) {
 	start := uint64(1_785_800_000_000_000_000)
 	tests := []struct {

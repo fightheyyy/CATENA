@@ -5,6 +5,7 @@ on:
     paths:
       - "catena-web/**"
       - "control-plane/**"
+      - "tap/**"
       - "deploy/catena-mvp1/**"
       - ".github/workflows/catena-mvp1-ci.yml"
   push:
@@ -12,6 +13,7 @@ on:
     paths:
       - "catena-web/**"
       - "control-plane/**"
+      - "tap/**"
       - "deploy/catena-mvp1/**"
       - ".github/workflows/catena-mvp1-ci.yml"
 
@@ -54,6 +56,23 @@ jobs:
       - run: go test ./...
       - run: go vet ./...
       - run: go test -race ./internal/control
+
+  tap:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tap
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tap/pyproject.toml
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e '.[dev]'
+      - run: pytest
+      - run: python -m compileall -q catena_tap scripts
 
   compose-contract:
     runs-on: ubuntu-latest

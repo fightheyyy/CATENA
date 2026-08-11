@@ -143,6 +143,10 @@ func detectOTLPRuntime(spans []TraceSpan) string {
 			return "codex"
 		case strings.Contains(joined, "claude") || strings.Contains(joined, "anthropic"):
 			return "claude_code"
+		case strings.Contains(joined, "hermes"):
+			return "hermes"
+		case strings.Contains(joined, "openclaw"):
+			return "openclaw"
 		}
 	}
 	return "otel"

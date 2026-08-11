@@ -1,7 +1,7 @@
 # Catena Product Specification
 
 Status: MVP1 architecture contract
-Updated: 2026-08-09
+Updated: 2026-08-11
 
 ## Problem
 
@@ -19,6 +19,9 @@ Catena owns:
 - an embedded XiaoBaOS Evolution Runtime that produces evidence-linked `agent.md`, Skill and Role assets, plus XiaoBaOS-only Harness proposals;
 - an owner-scoped gateway to the optional GauzMem memory service.
 
+Catena also ships a local `catena tap` companion that wraps supported Agent
+Runtimes with one capture engine and exports canonical Agent Turn Traces.
+
 Catena does not host the target Agent, execute Explore/Replay/Compare, automatically edit a target repository, or claim that a model review is a release decision. Those execution and verification responsibilities remain in local Barena.
 
 ## Current Architecture
@@ -27,7 +30,11 @@ Catena does not host the target Agent, execute Explore/Replay/Compare, automatic
 flowchart LR
     GitHub["GitHub OAuth"] --> Go
     Browser["Browser"] --> Go["Catena Server · Go<br/>React · Auth · OTLP · APIs"]
-    Runtime["External Agent"] -->|"API key + OTLP"| Go
+    Developer["Developer"] --> Tap["catena tap"]
+    Tap -->|"wrap"| Runtime["External Agent"]
+    Runtime -->|"model traffic"| Tap
+    Tap -->|"API key + canonical Turn OTLP"| Go
+    Runtime -->|"native API key + OTLP"| Go
     XiaoBa["XiaoBaOS"] -->|"API key + OTLP"| Go
     XiaoBa --> Conversation["User-visible Conversation"]
     Conversation -->|"API key + HTTPS"| Go
@@ -60,6 +67,8 @@ XiaoBaOS follows an anthropomorphic coworker model, so its durable memory is gro
 
 ```mermaid
 flowchart LR
+    Developer --> Tap["catena tap<br/>Codex · Claude · Hermes · OpenClaw"]
+    Tap -->|"canonical Turn OTLP"| Core
     Developer["Developer"] -->|"Agent name"| Keys["API management"]
     Keys --> Binding["agent_id + Agent API key"]
     Binding --> Manage["Copy · revoke"]
@@ -154,5 +163,6 @@ preferences and live only in Settings.
 
 - [Go control plane](./control-plane/SPEC.md)
 - [React Web](./catena-web/SPEC.md)
+- [Catena Tap](./tap/SPEC.md)
 - [Deployment](./deploy/catena-mvp1/README.md)
 - [Barena engine](https://github.com/fightheyyy/barena)
