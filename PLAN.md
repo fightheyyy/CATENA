@@ -10,12 +10,12 @@ Job orchestration. The embedded XiaoBaOS Runtime consumes retained Evidence
 Packs and produces reviewable Agent assets. Target Agent execution remains
 local.
 
-## In progress — evidence hierarchy
+## Completed milestone — evidence hierarchy
 
 - [x] Derive Agent and Session identity in every Trace summary.
 - [x] Group Trace navigation as Agent → Session → Trace → Span.
 - [x] Keep legacy evidence without Session metadata in an explicit ungrouped bucket.
-- [ ] Verify the hierarchy against retained Codex data and responsive layouts.
+- [x] Verify the hierarchy against retained Codex data and responsive layouts.
 
 ## Completed milestone — trustworthy memory workflow
 
@@ -121,6 +121,13 @@ local.
 5. Web tests/build, Go tests/vet/race, and both Compose configurations pass.
 
 ## Verification log
+
+- 2026-08-11: Trace navigation now preserves Agent → Session → Trace → Span.
+  The public retained set exposed 1,601 Codex Session identities without a
+  migration; browser acceptance expanded a 14-Trace / 416-Span Session,
+  selected a three-Span Trace, and passed 842px plus 390px layouts with no
+  horizontal overflow or console errors. Evidence without exported Session
+  identity remains explicitly ungrouped.
 
 - 2026-08-11: Rebuilt the React production bundle into Go's embedded Web
   assets and added a CI parity check between `catena-web/dist` and

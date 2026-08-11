@@ -21,6 +21,12 @@ Updated: 2026-08-11
       `gen_ai.session.id`, `session.id` and `conversation.id` without a schema migration.
 - [x] Preserve empty Session identity instead of grouping by timestamp heuristics.
 
+### Verification
+
+- The public retained Codex set projects exported Session identity directly
+  from Span attributes. Go unit/integration contracts, `go vet` and the race
+  suite pass without adding a storage migration.
+
 ## Completed milestone — observable memory extraction
 
 - [x] Add an owner-scoped GauzMem task-status projection.

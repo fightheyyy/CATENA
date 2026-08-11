@@ -55,6 +55,12 @@ the detail and expose a working back action without horizontal overflow.
 
 ## Verification log
 
+- 2026-08-11: The Trace workspace groups retained evidence by Agent and
+  exported Session before exposing Trace rows and Span detail. Public browser
+  acceptance verified a 14-Trace / 416-Span Session, the four-level breadcrumb,
+  mobile detail/back behavior, zero horizontal overflow and zero console
+  errors. All 44 Web tests, typecheck and the production build passed.
+
 - 2026-08-11: Synchronized the production Vite bundle with Go's embedded
   static assets and added CI enforcement that rejects stale embedded Web
   output.
