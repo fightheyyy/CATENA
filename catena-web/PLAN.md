@@ -41,7 +41,7 @@ Updated: 2026-08-11
 - [x] Distinguish GauzMem semantic edges from Catena provenance edges.
 - [x] Replace the flat Trace index with Agent → Session → Trace → Span navigation.
 - [x] Render missing Session identity as an explicit ungrouped bucket.
-- [ ] Unwrap Runtime `chat_messages` envelopes into visible message cards;
+- [x] Unwrap Runtime `chat_messages` envelopes into visible message cards;
       keep `type` and `value` only in the raw-data disclosure.
 - [ ] Add responsive browser acceptance to CI.
 - [ ] Improve accessibility and keyboard navigation.
@@ -56,6 +56,13 @@ desktop widths. At 720px and below, opening a record must replace the index with
 the detail and expose a working back action without horizontal overflow.
 
 ## Verification log
+
+- 2026-08-11: Codex Turn input now unwraps the `chat_messages` transport
+  envelope into role/content message cards. Public browser acceptance replayed
+  the reported Trace and verified that the input visibly contains `用户` and
+  the actual message, while `type`/`value` remain only under raw data. The page
+  had no horizontal overflow or console errors; all 45 Web tests, typecheck,
+  production build, Go tests, `go vet` and the race suite passed.
 
 - 2026-08-11: The Trace workspace groups retained evidence by Agent and
   exported Session before exposing Trace rows and Span detail. Public browser
