@@ -4,6 +4,18 @@ export type TraceFilter = "all" | "errors" | "multi";
 export type TraceLens = "agent" | "tools" | "errors" | "raw";
 export type TraceSpanSemanticKind = "turn" | "model" | "tool" | "artifact" | "error" | "internal";
 
+export type TraceEvidenceRole = "user" | "assistant" | "system" | "tool";
+
+export type TraceEvidencePresentation = {
+  kind: "messages" | "fields" | "text" | "terminal";
+  messages: Array<{ role: TraceEvidenceRole; text: string }>;
+  fields: Array<{ key: string; value: string; code: boolean }>;
+  text: string;
+  hiddenContextCount: number;
+  hiddenFieldCount: number;
+  structured: boolean;
+};
+
 export type SemanticTraceSpan = {
   span: TraceSpan;
   kind: TraceSpanSemanticKind;
@@ -202,6 +214,253 @@ export function formatTraceEvidence(value: string): string {
   } catch {
     return value;
   }
+}
+
+export function presentTraceEvidence(
+  value: string,
+  kind: TraceSpanSemanticKind,
+  direction: "input" | "output",
+): TraceEvidencePresentation {
+  const embeddedToolArguments = kind === "tool" || kind === "artifact"
+    ? parseEmbeddedToolArguments(value)
+    : undefined;
+  const parsed = embeddedToolArguments ?? parseTraceJSON(value);
+  const structured = parsed !== undefined;
+
+  if (kind === "model" && direction === "input" && structured) {
+    const request = modelRequestMessages(parsed);
+    if (request.messages.length > 0) {
+      return presentation({
+        kind: "messages",
+        messages: request.messages,
+        hiddenContextCount: request.hiddenContextCount,
+        structured,
+      });
+    }
+  }
+
+  if (structured && (kind === "tool" || kind === "artifact")) {
+    if (direction === "output") {
+      const result = contentText(parsed);
+      if (result) return presentation({ kind: "terminal", text: result, structured });
+    }
+    const summarized = evidenceFields(parsed);
+    if (summarized.fields.length > 0) {
+      return presentation({
+        kind: "fields",
+        fields: summarized.fields,
+        hiddenFieldCount: summarized.hiddenCount,
+        structured,
+      });
+    }
+  }
+
+  if (structured && direction === "output") {
+    const response = responseText(parsed);
+    if (response) {
+      return presentation({
+        kind: kind === "model" || kind === "turn" ? "messages" : "text",
+        messages: kind === "model" || kind === "turn" ? [{ role: "assistant", text: response }] : [],
+        text: kind === "model" || kind === "turn" ? "" : response,
+        structured,
+      });
+    }
+  }
+
+  if (structured) {
+    const summarized = evidenceFields(parsed);
+    if (summarized.fields.length > 0) {
+      return presentation({
+        kind: "fields",
+        fields: summarized.fields,
+        hiddenFieldCount: summarized.hiddenCount,
+        structured,
+      });
+    }
+  }
+
+  const text = typeof parsed === "string" ? parsed : value;
+  if (kind === "turn" || kind === "model") {
+    return presentation({
+      kind: "messages",
+      messages: [{ role: direction === "input" ? "user" : "assistant", text }],
+      structured,
+    });
+  }
+  return presentation({
+    kind: kind === "tool" || kind === "artifact" ? "terminal" : "text",
+    text,
+    structured,
+  });
+}
+
+function presentation(
+  partial: Partial<TraceEvidencePresentation> & Pick<TraceEvidencePresentation, "kind">,
+): TraceEvidencePresentation {
+  return {
+    kind: partial.kind,
+    messages: partial.messages ?? [],
+    fields: partial.fields ?? [],
+    text: partial.text ?? "",
+    hiddenContextCount: partial.hiddenContextCount ?? 0,
+    hiddenFieldCount: partial.hiddenFieldCount ?? 0,
+    structured: partial.structured ?? false,
+  };
+}
+
+function parseTraceJSON(value: string): unknown | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  try {
+    let parsed: unknown = JSON.parse(trimmed);
+    if (typeof parsed === "string") {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        return parsed;
+      }
+    }
+    return parsed;
+  } catch {
+    return undefined;
+  }
+}
+
+function parseEmbeddedToolArguments(value: string): unknown | undefined {
+  for (const marker of ["tools.exec_command(", "tools.write_stdin("]) {
+    const start = value.indexOf(marker);
+    if (start < 0) continue;
+    const payloadStart = start + marker.length;
+    const payloadEnd = value.indexOf(");", payloadStart);
+    if (payloadEnd < 0) continue;
+    try {
+      return JSON.parse(value.slice(payloadStart, payloadEnd));
+    } catch {
+      continue;
+    }
+  }
+  return parseTraceJSON(value);
+}
+
+function modelRequestMessages(value: unknown) {
+  if (!isRecord(value)) return { messages: [], hiddenContextCount: 0 };
+  const source = value.input ?? value.messages;
+  if (typeof source === "string") {
+    return { messages: [{ role: "user" as const, text: source }], hiddenContextCount: 0 };
+  }
+  if (!Array.isArray(source)) return { messages: [], hiddenContextCount: 0 };
+
+  const messages: Array<{ role: TraceEvidenceRole; text: string }> = [];
+  let hiddenContextCount = typeof value.instructions === "string" && value.instructions.trim() ? 1 : 0;
+  for (const item of source) {
+    if (typeof item === "string") {
+      messages.push({ role: "user", text: item });
+      continue;
+    }
+    if (!isRecord(item)) {
+      hiddenContextCount += 1;
+      continue;
+    }
+    const role = normalizeEvidenceRole(item.role);
+    const type = typeof item.type === "string" ? item.type : "";
+    const text = contentText(item.content ?? item.text ?? item.output);
+    if (
+      role === "system"
+      || type === "additional_tools"
+      || type.includes("tool_call")
+      || isInjectedContext(text)
+    ) {
+      hiddenContextCount += 1;
+      continue;
+    }
+    if (text) messages.push({ role, text });
+    else hiddenContextCount += 1;
+  }
+  return {
+    messages: messages.slice(-6),
+    hiddenContextCount: hiddenContextCount + Math.max(0, messages.length - 6),
+  };
+}
+
+function normalizeEvidenceRole(value: unknown): TraceEvidenceRole {
+  if (value === "assistant") return "assistant";
+  if (value === "tool") return "tool";
+  if (value === "system" || value === "developer") return "system";
+  return "user";
+}
+
+function isInjectedContext(value: string) {
+  const trimmed = value.trimStart();
+  return [
+    "<recommended_plugins>",
+    "<environment_context>",
+    "<in-app-browser-context",
+    "<skills_instructions>",
+    "<multi_agent_mode>",
+  ].some((prefix) => trimmed.startsWith(prefix));
+}
+
+function responseText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (!isRecord(value)) return contentText(value);
+  return contentText(value.output_text ?? value.output ?? value.content ?? value.message);
+}
+
+function contentText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.map(contentText).filter(Boolean).join("");
+  }
+  if (!isRecord(value)) return "";
+  if (typeof value.text === "string") return value.text;
+  if (typeof value.output_text === "string") return value.output_text;
+  if (value.content !== undefined) return contentText(value.content);
+  if (value.output !== undefined) return contentText(value.output);
+  return "";
+}
+
+function evidenceFields(value: unknown) {
+  if (!isRecord(value)) {
+    if (Array.isArray(value)) {
+      return {
+        fields: [{ key: "items", value: `${value.length}`, code: false }],
+        hiddenCount: 0,
+      };
+    }
+    return { fields: [], hiddenCount: 0 };
+  }
+  const preferredKeys = ["cmd", "command", "workdir", "path", "query", "url", "method"];
+  const entries = Object.entries(value).sort(([left], [right]) => {
+    const leftOrder = preferredKeys.indexOf(left);
+    const rightOrder = preferredKeys.indexOf(right);
+    if (leftOrder >= 0 || rightOrder >= 0) {
+      return (leftOrder >= 0 ? leftOrder : preferredKeys.length) - (rightOrder >= 0 ? rightOrder : preferredKeys.length);
+    }
+    return left.localeCompare(right);
+  });
+  const fields = entries.slice(0, 10).map(([key, item]) => ({
+    key,
+    value: summarizeFieldValue(item),
+    code: typeof item === "string" && (key === "cmd" || key === "command" || key === "path" || key === "workdir"),
+  }));
+  return { fields, hiddenCount: Math.max(0, entries.length - fields.length) };
+}
+
+function summarizeFieldValue(value: unknown): string {
+  if (typeof value === "string") return truncateEvidenceText(value, 4_000);
+  if (typeof value === "number" || typeof value === "boolean" || value === null) return String(value);
+  if (Array.isArray(value)) return `${value.length} items`;
+  if (isRecord(value)) return `${Object.keys(value).length} fields`;
+  return String(value ?? "");
+}
+
+function truncateEvidenceText(value: string, limit: number) {
+  if (value.length <= limit) return value;
+  return `${value.slice(0, limit)}\n…`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function shortTraceID(traceID: string) {

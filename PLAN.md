@@ -195,3 +195,9 @@ local.
 - 2026-08-07: Authenticated browser acceptance confirmed the online deployment
   renders the existing DashScope-compatible Provider, Base URL and Model while
   exposing only API-key readiness.
+
+- 2026-08-11: Trace evidence now renders model conversation, tool arguments and
+  terminal results as semantic UI instead of exposing request JSON by default.
+  Runtime/system context and secondary fields remain folded with raw evidence
+  available on demand. 41 Web tests, typecheck/build, Go tests, `go vet` and the
+  control-plane race suite passed.

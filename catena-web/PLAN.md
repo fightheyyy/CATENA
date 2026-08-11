@@ -127,3 +127,9 @@ the detail and expose a working back action without horizontal overflow.
   overflow and no credential content was rendered.
 - 2026-08-07: Public browser acceptance passed for Settings model visibility,
   copy-ready ingest endpoints and Trace Farm's empty analysis overview.
+
+- 2026-08-11: Trace detail gained evidence-aware presentation for turns, model
+  requests, tool calls and tool results. Large Codex payloads now show the
+  visible conversation, command fields and terminal output first; injected
+  context and raw JSON are folded. 41 Web tests, typecheck and production build
+  passed.

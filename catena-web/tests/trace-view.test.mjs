@@ -6,6 +6,7 @@ import {
   buildTraceSemanticView,
   filterTraceSummaries,
   formatTraceEvidence,
+  presentTraceEvidence,
   preferredTraceSpan,
   shortTraceID,
   traceSpanDepth,
@@ -82,6 +83,49 @@ test("Tool names and evidence are rendered semantically", () => {
   assert.equal(traceSpanToolName({ attributes: { "gen_ai.tool.name": " search_repo " } }), "search_repo");
   assert.equal(formatTraceEvidence('{"query":"trace","limit":3}'), '{\n  "query": "trace",\n  "limit": 3\n}');
   assert.equal(formatTraceEvidence("plain result"), "plain result");
+});
+
+test("Codex model requests render the visible conversation instead of raw request JSON", () => {
+  const evidence = presentTraceEvidence(JSON.stringify({
+    model: "gpt-5.6-sol",
+    input: [
+      { type: "additional_tools", role: "developer", tools: [{ name: "exec" }] },
+      { type: "message", role: "developer", content: [{ type: "input_text", text: "system instructions" }] },
+      { type: "message", role: "user", content: [{ type: "input_text", text: "<recommended_plugins>hidden</recommended_plugins>" }] },
+      { type: "message", role: "user", content: [{ type: "input_text", text: "Run pwd once." }] },
+      { type: "message", role: "assistant", content: [{ type: "output_text", text: "I will run it." }] },
+      { type: "custom_tool_call", name: "exec", input: "pwd" },
+    ],
+  }), "model", "input");
+
+  assert.equal(evidence.kind, "messages");
+  assert.deepEqual(evidence.messages, [
+    { role: "user", text: "Run pwd once." },
+    { role: "assistant", text: "I will run it." },
+  ]);
+  assert.equal(evidence.hiddenContextCount, 4);
+  assert.equal(evidence.structured, true);
+});
+
+test("Codex exec wrappers render arguments and terminal output without JSON chrome", () => {
+  const input = presentTraceEvidence(
+    'const r = await tools.exec_command({"cmd":"pwd","workdir":"/workspace","yield_time_ms":10000});\ntext(r.output);',
+    "tool",
+    "input",
+  );
+  const output = presentTraceEvidence(
+    '[{"type":"input_text","text":"Script completed\\nOutput:\\n"},{"type":"input_text","text":"/workspace\\n"}]',
+    "tool",
+    "output",
+  );
+
+  assert.equal(input.kind, "fields");
+  assert.deepEqual(input.fields.slice(0, 2), [
+    { key: "cmd", value: "pwd", code: true },
+    { key: "workdir", value: "/workspace", code: true },
+  ]);
+  assert.equal(output.kind, "terminal");
+  assert.equal(output.text, "Script completed\nOutput:\n/workspace\n");
 });
 
 test("Long Trace IDs are shortened without losing both ends", () => {

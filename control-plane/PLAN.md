@@ -114,3 +114,9 @@ Updated: 2026-08-11
 - Kubernetes deployment.
 - Cross-organization sharing.
 - Automatic mutation or publication of Candidate assets.
+
+## Verification log
+
+- 2026-08-11: Synchronized the semantic Trace evidence frontend into the Go
+  embedded asset tree. Asset parity, all Go tests, `go vet` and
+  `go test -race ./internal/control` passed.

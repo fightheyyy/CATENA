@@ -319,10 +319,27 @@ a { color: inherit; }
 .trace-evidence-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .trace-evidence-block { min-width: 0; }
 .trace-evidence-block h4 { margin: 0 0 7px; color: var(--muted); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
-.trace-evidence-block pre, .trace-attributes pre { max-height: 250px; margin: 0; padding: 13px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-strong); overflow: auto; color: var(--ink); font: 9px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+.trace-evidence-messages { display: grid; gap: 8px; }
+.trace-evidence-message { padding: 12px 13px; border: 1px solid var(--line); border-left: 3px solid var(--ink); border-radius: 8px; background: var(--surface-strong); }
+.trace-evidence-message.user { border-left-color: var(--accent); background: color-mix(in srgb, var(--accent), transparent 96%); }
+.trace-evidence-message.tool { border-left-color: var(--good); }
+.trace-evidence-message > span { display: block; margin-bottom: 7px; color: var(--muted); font-size: 8px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.trace-evidence-message > p, .trace-evidence-text { max-height: 300px; margin: 0; overflow: auto; color: var(--ink); font-size: 11px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+.trace-evidence-fields { margin: 0; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-strong); overflow: hidden; }
+.trace-evidence-fields > div { min-width: 0; padding: 10px 12px; display: grid; grid-template-columns: minmax(72px, .34fr) minmax(0, 1fr); gap: 12px; }
+.trace-evidence-fields > div + div { border-top: 1px solid var(--line); }
+.trace-evidence-fields dt { color: var(--muted); font: 8px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-word; }
+.trace-evidence-fields dd { margin: 0; color: var(--ink); font-size: 10px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.trace-evidence-fields dd.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.trace-evidence-terminal, .trace-evidence-raw pre, .trace-attributes pre { max-height: 250px; margin: 0; padding: 13px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-strong); overflow: auto; color: var(--ink); font: 9px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+.trace-evidence-terminal { border-left: 3px solid var(--ink); }
+.trace-evidence-folded { margin: 9px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.trace-evidence-folded strong { color: var(--ink); }
+.trace-evidence-raw { margin-top: 10px; }
+.trace-evidence-raw summary, .trace-attributes summary { width: fit-content; color: var(--muted); cursor: pointer; font-size: 9px; }
+.trace-evidence-raw pre { max-height: 180px; margin-top: 8px; }
 .trace-no-evidence { margin: 0; color: var(--muted); font-size: 11px; }
 .trace-attributes { margin-top: 13px; }
-.trace-attributes summary { width: fit-content; color: var(--muted); cursor: pointer; font-size: 10px; }
 .trace-attributes pre { max-height: 180px; margin-top: 9px; }
 .trace-lens-empty { min-height: 126px; padding: 28px; border-bottom: 1px solid var(--line); display: grid; place-items: center; color: var(--muted); font-size: 11px; line-height: 1.6; text-align: center; }
 .trace-more { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }

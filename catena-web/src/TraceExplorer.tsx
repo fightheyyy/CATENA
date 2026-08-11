@@ -7,6 +7,7 @@ import {
   buildTraceSemanticView,
   filterTraceSummaries,
   formatTraceEvidence,
+  presentTraceEvidence,
   preferredTraceSpan,
   shortTraceID,
   tracesForAgentSelection,
@@ -69,6 +70,10 @@ const traceCopy = {
     input: "输入",
     output: "输出",
     attributes: "属性",
+    rawData: "原始数据",
+    hiddenContext: "条系统、工具或注入上下文已折叠",
+    hiddenFields: "个次要字段已折叠",
+    roles: { user: "用户", assistant: "Agent", system: "系统", tool: "工具" },
     noEvidence: "这个 Span 没有导出输入或输出证据。",
     metadataOnly: "Runtime 只导出了工具名与状态，没有输入或输出正文。",
     statusOk: "成功",
@@ -122,6 +127,10 @@ const traceCopy = {
     input: "Input",
     output: "Output",
     attributes: "Attributes",
+    rawData: "Raw data",
+    hiddenContext: "system, tool, or injected context items folded",
+    hiddenFields: "secondary fields folded",
+    roles: { user: "User", assistant: "Agent", system: "System", tool: "Tool" },
     noEvidence: "This Span exported no input or output evidence.",
     metadataOnly: "The Runtime exported the tool name and status, but no input or output content.",
     statusOk: "Success",
@@ -425,7 +434,7 @@ function TraceDetailWorkspace({
                   <span className="trace-span-track"><i className={span.status_code === 2 ? "trace-span-bar error" : "trace-span-bar"} style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }} /></span>
                   <span className="trace-span-duration">{formatDuration(Math.max(0, end - start))}</span>
                 </button>
-                {selected ? <SpanEvidence span={span} toolName={toolName} locale={locale} /> : null}
+                {selected ? <SpanEvidence span={span} kind={kind} toolName={toolName} locale={locale} /> : null}
               </div>
             );
           })}
@@ -450,15 +459,33 @@ function traceSpanDisplayName(span: TraceSpan, kind: TraceSpanSemanticKind) {
   return span.name;
 }
 
-function SpanEvidence({ span, toolName, locale }: { span: TraceSpan; toolName: string; locale: Locale }) {
+function SpanEvidence({
+  span,
+  kind,
+  toolName,
+  locale,
+}: {
+  span: TraceSpan;
+  kind: TraceSpanSemanticKind;
+  toolName: string;
+  locale: Locale;
+}) {
   const t = traceCopy[locale];
-  const attributes = Object.keys(span.attributes).length > 0 ? JSON.stringify(span.attributes, null, 2) : "";
+  const diagnosticAttributes = Object.fromEntries(Object.entries(span.attributes).filter(([key]) => ![
+    "input.value",
+    "output.value",
+    "gen_ai.tool.call.arguments",
+    "gen_ai.tool.call.result",
+    "tool.call.arguments",
+    "tool.call.result",
+  ].includes(key)));
+  const attributes = Object.keys(diagnosticAttributes).length > 0 ? JSON.stringify(diagnosticAttributes, null, 2) : "";
   return (
     <div className="trace-span-inspector">
       {span.status_code === 2 && span.status_message ? <p className="trace-span-error">{span.status_message}</p> : null}
       <div className="trace-evidence-grid">
-        {span.input ? <EvidenceBlock title={t.input} value={span.input} /> : null}
-        {span.output ? <EvidenceBlock title={t.output} value={span.output} /> : null}
+        {span.input ? <EvidenceBlock title={t.input} value={span.input} kind={kind} direction="input" locale={locale} /> : null}
+        {span.output ? <EvidenceBlock title={t.output} value={span.output} kind={kind} direction="output" locale={locale} /> : null}
       </div>
       {!span.input && !span.output ? <p className="trace-no-evidence">{toolName ? t.metadataOnly : t.noEvidence}</p> : null}
       {attributes ? <details className="trace-attributes"><summary>{t.attributes}</summary><pre>{attributes}</pre></details> : null}
@@ -466,8 +493,60 @@ function SpanEvidence({ span, toolName, locale }: { span: TraceSpan; toolName: s
   );
 }
 
-function EvidenceBlock({ title, value }: { title: string; value: string }) {
-  return <section className="trace-evidence-block"><h4>{title}</h4><pre>{formatTraceEvidence(value)}</pre></section>;
+function EvidenceBlock({
+  title,
+  value,
+  kind,
+  direction,
+  locale,
+}: {
+  title: string;
+  value: string;
+  kind: TraceSpanSemanticKind;
+  direction: "input" | "output";
+  locale: Locale;
+}) {
+  const t = traceCopy[locale];
+  const evidence = presentTraceEvidence(value, kind, direction);
+  return (
+    <section className={`trace-evidence-block ${evidence.kind}`}>
+      <h4>{title}</h4>
+      {evidence.kind === "messages" ? (
+        <div className="trace-evidence-messages">
+          {evidence.messages.map((message, index) => (
+            <article className={`trace-evidence-message ${message.role}`} key={`${message.role}-${index}`}>
+              <span>{t.roles[message.role]}</span>
+              <p>{message.text}</p>
+            </article>
+          ))}
+        </div>
+      ) : null}
+      {evidence.kind === "fields" ? (
+        <dl className="trace-evidence-fields">
+          {evidence.fields.map((field) => (
+            <div key={field.key}>
+              <dt>{field.key}</dt>
+              <dd className={field.code ? "code" : ""}>{field.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {evidence.kind === "terminal" ? <pre className="trace-evidence-terminal">{evidence.text}</pre> : null}
+      {evidence.kind === "text" ? <p className="trace-evidence-text">{evidence.text}</p> : null}
+      {evidence.hiddenContextCount > 0 ? (
+        <p className="trace-evidence-folded"><strong>{evidence.hiddenContextCount}</strong> {t.hiddenContext}</p>
+      ) : null}
+      {evidence.hiddenFieldCount > 0 ? (
+        <p className="trace-evidence-folded"><strong>{evidence.hiddenFieldCount}</strong> {t.hiddenFields}</p>
+      ) : null}
+      {evidence.structured ? (
+        <details className="trace-evidence-raw">
+          <summary>{t.rawData}</summary>
+          <pre>{formatTraceEvidence(value)}</pre>
+        </details>
+      ) : null}
+    </section>
+  );
 }
 
 function TraceRuler({ duration }: { duration: number }) {
