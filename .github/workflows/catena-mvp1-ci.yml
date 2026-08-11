@@ -41,6 +41,8 @@ jobs:
       - run: pnpm test
       - run: pnpm typecheck
       - run: pnpm build
+      - name: Verify Go embedded Web bundle is current
+        run: diff -qr dist ../control-plane/internal/control/web
 
   control-plane:
     runs-on: ubuntu-latest

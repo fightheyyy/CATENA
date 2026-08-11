@@ -115,6 +115,12 @@ local.
 
 ## Verification log
 
+- 2026-08-11: Rebuilt the React production bundle into Go's embedded Web
+  assets and added a CI parity check between `catena-web/dist` and
+  `control-plane/internal/control/web`. This prevents a direct Go build from
+  serving a stale pre-Catena frontend when the normal multi-stage Docker build
+  is bypassed.
+
 - 2026-08-11: Catena Tap pinned `claude-tap==0.1.142`, passed ten Python
   tests for OpenAI Responses, Anthropic Messages, Chat Completions, tool-result
   pairing, authenticated OTLP upload and CLI delegation. A real Codex 0.147.0

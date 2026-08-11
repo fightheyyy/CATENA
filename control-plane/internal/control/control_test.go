@@ -82,13 +82,23 @@ func TestHTTPRunLifecycleAndSSEReconnect(t *testing.T) {
 	indexResponse.Body.Close()
 	indexHTML := string(indexBody)
 	if indexResponse.StatusCode != http.StatusOK ||
-		!strings.Contains(indexHTML, "Barena") ||
+		!strings.Contains(indexHTML, "Catena | Agent Evolution Platform") ||
 		!strings.Contains(indexHTML, `id="root"`) ||
-		!strings.Contains(indexHTML, "Agent evaluation workbench") ||
+		!strings.Contains(indexHTML, "Catena turns Agent traces") ||
 		!strings.Contains(indexHTML, "/assets/") {
 		t.Fatalf("embedded Web surface is unavailable: %d %s", indexResponse.StatusCode, indexBody)
 	}
-	bundleResponse, err := http.Get(server.URL + "/assets/app.js")
+	scriptStart := strings.Index(indexHTML, `src="/assets/`)
+	if scriptStart < 0 {
+		t.Fatalf("embedded Web surface has no production script: %s", indexHTML)
+	}
+	scriptStart += len(`src="`)
+	scriptEnd := strings.Index(indexHTML[scriptStart:], `"`)
+	if scriptEnd < 0 {
+		t.Fatalf("embedded Web script source is malformed: %s", indexHTML)
+	}
+	bundlePath := indexHTML[scriptStart : scriptStart+scriptEnd]
+	bundleResponse, err := http.Get(server.URL + bundlePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,9 +106,9 @@ func TestHTTPRunLifecycleAndSSEReconnect(t *testing.T) {
 	bundleResponse.Body.Close()
 	bundle := string(bundleBody)
 	if bundleResponse.StatusCode != http.StatusOK ||
-		!strings.Contains(bundle, "Explore an Agent") ||
-		!strings.Contains(bundle, "User simulation → Target Agent → Inspector → Reviewer") ||
-		!strings.Contains(bundle, "barena-results.log") {
+		len(bundle) < 1_000 ||
+		!strings.Contains(bundle, "Catena") ||
+		!strings.Contains(bundle, "Trace Farm") {
 		t.Fatalf("embedded Web bundle is unavailable: %d", bundleResponse.StatusCode)
 	}
 

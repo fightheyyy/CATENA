@@ -50,6 +50,10 @@ Updated: 2026-08-11
 
 ## Verification log
 
+- 2026-08-11: The embedded React assets are now generated from the current
+  Catena Web build, and CI compares them byte-for-byte after every production
+  Web build so a standalone Go binary cannot regress to stale product UI.
+
 - 2026-08-11: MVP1 release-candidate Go tests, `go vet` and race tests passed;
   local and public Compose configurations rendered successfully.
 

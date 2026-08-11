@@ -35,7 +35,7 @@ func TestSPAHandlerServesKnownAsset(t *testing.T) {
 		t.Fatal(err)
 	}
 	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodGet, "/favicon.svg", nil)
+	request := httptest.NewRequest(http.MethodGet, "/catena-mark.svg", nil)
 
 	newSPAHandler(root).ServeHTTP(recorder, request)
 

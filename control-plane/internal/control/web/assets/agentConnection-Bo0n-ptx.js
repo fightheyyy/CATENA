@@ -1,0 +1,1 @@
+function e(e){return e.filter(e=>e.registered)}function t(e){return e.connected&&e.trace_count>=2}export{e as n,t};

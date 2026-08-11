@@ -53,6 +53,10 @@ the detail and expose a working back action without horizontal overflow.
 
 ## Verification log
 
+- 2026-08-11: Synchronized the production Vite bundle with Go's embedded
+  static assets and added CI enforcement that rejects stale embedded Web
+  output.
+
 - 2026-08-11: MVP1 release-candidate verification passed all 39 Web tests,
   TypeScript typecheck and the production Vite build.
 
