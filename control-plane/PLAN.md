@@ -51,6 +51,8 @@ Updated: 2026-08-11
 - [x] Merge registered Agents with Trace and Conversation counts.
 - [x] Keep legacy unbound credentials compatible but hidden from onboarding.
 - [x] Expose cheap Registered Agent connection polling without a ClickHouse scan.
+- [x] Make local-mode Agent creation and bound-key ingestion independent of
+      GitHub OAuth, then verify create → OTLP → Trace query end to end.
 
 ## Completed milestone — owner-provided Evolution model
 
@@ -62,6 +64,12 @@ Updated: 2026-08-11
 - [x] Prove cross-owner isolation and secret non-disclosure.
 
 ## Verification log
+
+- 2026-08-11: Local mode now provisions the implicit `local` workspace for
+  human control-plane actions while preserving Agent-key authentication on
+  ingestion. A real Codex rollout backfill used the normal Agent registration
+  and OTLP APIs and retained 16 Sessions, 104 Traces and 483 Spans; unit tests,
+  the full Go suite and `go vet` passed.
 
 - 2026-08-11: The embedded React assets are now generated from the current
   Catena Web build, and CI compares them byte-for-byte after every production

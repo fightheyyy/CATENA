@@ -1,7 +1,7 @@
 # Catena Product Specification
 
 Status: MVP1 architecture contract
-Updated: 2026-08-11
+Updated: 2026-08-12
 
 ## Problem
 
@@ -126,6 +126,9 @@ preferences and live only in Settings.
   inferred Runtime and connection timestamps.
 - **Agent API key:** one recoverable/revocable credential bound to exactly one
   Registered Agent; it determines Agent identity for every upload.
+- **Local workspace:** the loopback Compose deployment keeps the same
+  Agent-name → bound-key → OTLP contract without requiring GitHub OAuth.
+  Public deployments continue to require OAuth for human control-plane access.
 - **Owner LLM config:** one encrypted owner-scoped Provider/Base URL/Model/API
   Key tuple used only for that owner's Evolution Jobs.
 - **Evidence hierarchy:** Agent is the stable deployment identity; Session is
@@ -136,6 +139,9 @@ preferences and live only in Settings.
 - **Trace:** OTLP/HTTP protobuf or JSON authenticated by Agent API key. Trace
   summaries expose their authenticated Agent and the first supported Session
   identity found in retained Span attributes.
+- **Barena observation:** a correlated evaluation Trace is presented as
+  Run → Turn → Model/Tool → Check. Wrapper spans remain queryable as raw
+  evidence but do not compete with user-visible turns or verifier conclusions.
 - **Trace store:** Catena-owned `catena_spans` in the `catena` database on the
   pinned official ClickHouse image. Product code, configuration and runtime do
   not depend on retired platform images, schemas or attribute aliases.

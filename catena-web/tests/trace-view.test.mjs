@@ -239,6 +239,49 @@ test("Runtime turn-context helpers stay folded instead of masquerading as Agent 
   assert.equal(traceSpanSemanticKind(helper), "internal");
 });
 
+test("Barena and XiaoBaOS spans render as one readable cross-process Agent chain", () => {
+  const root = span({ span_id: "run", parent_span_id: "", name: "barena.simulation" });
+  const turn = span({
+    span_id: "barena-turn",
+    parent_span_id: "run",
+    name: "barena.turn",
+    attributes: { "agent.turn.id": "turn-1" },
+    input: "ambiguous user request",
+    output: "agent answer",
+  });
+  const session = span({
+    span_id: "xiaoba-session",
+    parent_span_id: "barena-turn",
+    name: "xiaoba.session",
+  });
+  const model = span({
+    span_id: "xiaoba-model",
+    parent_span_id: "xiaoba-session",
+    name: "xiaoba.model.call",
+  });
+  const assertion = span({
+    span_id: "assertion",
+    parent_span_id: "run",
+    name: "barena.assertion",
+    attributes: { "barena.assertion.kind": "excludes", "barena.assertion.status": "pass" },
+    input: '["forbidden"]',
+    output: "excluded forbidden text",
+  });
+
+  const view = buildTraceSemanticView([root, turn, session, model, assertion]);
+  assert.deepEqual(view.agentSteps.map((item) => [item.span.span_id, item.kind]), [
+    ["run", "run"],
+    ["barena-turn", "turn"],
+    ["xiaoba-model", "model"],
+    ["assertion", "check"],
+  ]);
+  assert.equal(view.turnCount, 1);
+  assert.equal(view.counts.model, 1);
+  assert.equal(view.counts.check, 1);
+  assert.equal(view.foldedInternalCount, 1);
+  assert.equal(preferredTraceSpan(view).span_id, "barena-turn");
+});
+
 test("Raw Span disclosure is bounded even for a 30k Span Trace", () => {
   const spans = Array.from({ length: 30_000 }, (_, index) => span({
     span_id: `internal-${index}`,

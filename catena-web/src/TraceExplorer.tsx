@@ -69,6 +69,7 @@ const traceCopy = {
     turns: "Turn",
     models: "模型调用",
     tools: "工具与产物",
+    checks: "验证",
     rawSpans: "原始 Span",
     folded: "条 Runtime 内部 Span 已折叠",
     rawHint: "原始 OTel 视图用于排障，并按批次加载，避免超大 Trace 卡住浏览器。",
@@ -77,7 +78,7 @@ const traceCopy = {
     noErrors: "这条 Trace 没有错误 Span。",
     showMore: "继续显示 200 条",
     remaining: "条尚未显示",
-    kinds: { turn: "TURN", model: "MODEL", tool: "TOOL", artifact: "ARTIFACT", error: "ERROR", internal: "OTEL" },
+    kinds: { run: "RUN", turn: "TURN", model: "MODEL", tool: "TOOL", artifact: "ARTIFACT", check: "CHECK", error: "ERROR", internal: "OTEL" },
     input: "输入",
     output: "输出",
     attributes: "属性",
@@ -88,6 +89,13 @@ const traceCopy = {
     roles: { user: "用户", assistant: "Agent", system: "系统", tool: "工具" },
     noEvidence: "这个 Span 没有导出输入或输出证据。",
     metadataOnly: "Runtime 只导出了工具名与状态，没有输入或输出正文。",
+    modelMetadataOnly: "XiaoBaOS 只上传了模型调用的耗时、Token 和状态；对话正文请看所属 Turn。",
+    runSummary: "测试摘要",
+    caseLabel: "Case",
+    runLabel: "Run",
+    checkPassed: "通过",
+    checkFailed: "未通过",
+    checkRules: { contains_any: "至少包含一项", contains_all: "必须全部包含", excludes: "不得包含" },
     statusOk: "成功",
     statusError: "失败",
     backToList: "返回 Trace 列表",
@@ -136,6 +144,7 @@ const traceCopy = {
     turns: "Turns",
     models: "Model calls",
     tools: "Tools & artifacts",
+    checks: "Checks",
     rawSpans: "Raw Spans",
     folded: "Runtime-internal Spans folded",
     rawHint: "The raw OTel view loads in bounded batches so a large Trace cannot freeze the browser.",
@@ -144,7 +153,7 @@ const traceCopy = {
     noErrors: "This Trace contains no error Spans.",
     showMore: "Show 200 more",
     remaining: "not shown",
-    kinds: { turn: "TURN", model: "MODEL", tool: "TOOL", artifact: "ARTIFACT", error: "ERROR", internal: "OTEL" },
+    kinds: { run: "RUN", turn: "TURN", model: "MODEL", tool: "TOOL", artifact: "ARTIFACT", check: "CHECK", error: "ERROR", internal: "OTEL" },
     input: "Input",
     output: "Output",
     attributes: "Attributes",
@@ -155,6 +164,13 @@ const traceCopy = {
     roles: { user: "User", assistant: "Agent", system: "System", tool: "Tool" },
     noEvidence: "This Span exported no input or output evidence.",
     metadataOnly: "The Runtime exported the tool name and status, but no input or output content.",
+    modelMetadataOnly: "XiaoBaOS exported model duration, token usage, and status only. Read the owning Turn for the conversation.",
+    runSummary: "Test summary",
+    caseLabel: "Case",
+    runLabel: "Run",
+    checkPassed: "Passed",
+    checkFailed: "Failed",
+    checkRules: { contains_any: "Contains any", contains_all: "Contains all", excludes: "Excludes" },
     statusOk: "Success",
     statusError: "Failed",
     backToList: "Back to Trace list",
@@ -308,15 +324,17 @@ export function TraceExplorer({
                 </div>
               ) : null}
               {!agentWindow.loading && !agentWindow.error && filteredTraces.length === 0 ? <div className="trace-list-empty">{t.noMatch}</div> : null}
-              {!agentWindow.loading && !agentWindow.error ? sessionGroups.map((group) => {
+              {!agentWindow.loading && !agentWindow.error ? sessionGroups.map((group, groupIndex) => {
                 const expanded = expandedSessionKey === group.key;
                 const groupAgentName = agentNames.get(group.agentID) || group.agentID;
+                const tracePanelID = `trace-session-panel-${groupIndex}`;
                 return (
                   <section className={expanded ? "trace-session expanded" : "trace-session"} key={group.key}>
                     <button
                       className="trace-session-heading"
                       type="button"
                       aria-expanded={expanded}
+                      aria-controls={tracePanelID}
                       onClick={() => {
                         const nextExpanded = !expanded;
                         setExpandedSessionKey(nextExpanded ? group.key : "");
@@ -326,9 +344,11 @@ export function TraceExplorer({
                       }}
                     >
                       <span className="trace-session-identity">
-                        <em>{t.sessionLevel}</em>
+                        <span className="trace-session-kicker">
+                          <em>{t.sessionLevel}</em>
+                          {groupAgentName ? <small>{groupAgentName}</small> : null}
+                        </span>
                         <strong>{group.sessionID ? shortTraceID(group.sessionID) : t.ungroupedSession}</strong>
-                        {groupAgentName ? <small>{groupAgentName}</small> : null}
                       </span>
                       <span className="trace-session-facts">
                         <span>{group.traces.length} {t.traces}</span>
@@ -338,7 +358,7 @@ export function TraceExplorer({
                       </span>
                     </button>
                     {!group.sessionID && expanded ? <p className="trace-session-hint">{t.ungroupedHint}</p> : null}
-                    {expanded ? <div className="trace-session-traces">{group.traces.map((trace) => (
+                    {expanded ? <div className="trace-session-traces" id={tracePanelID}>{group.traces.map((trace) => (
                       <TraceIndexRow
                         key={trace.trace_id}
                         trace={trace}
@@ -399,12 +419,15 @@ function TraceIndexRow({
   onSelect: () => void;
 }) {
   return (
-    <button className={selected ? "trace-index-row selected" : "trace-index-row"} type="button" onClick={onSelect}>
+    <button className={selected ? "trace-index-row selected" : "trace-index-row"} type="button" aria-current={selected ? "true" : undefined} onClick={onSelect}>
       <span className="trace-index-heading">
-        <strong>{labels.traceLevel} {shortTraceID(trace.trace_id)}</strong>
+        <span className="trace-index-title">
+          <em>{labels.traceLevel} · {shortTraceID(trace.trace_id)}</em>
+          <strong>{trace.root_name || labels.traceLevel}</strong>
+        </span>
         <i className={trace.error_count > 0 ? "trace-state-dot error" : "trace-state-dot"} aria-label={trace.error_count > 0 ? labels.statusError : labels.statusOk} />
       </span>
-      <span className="trace-index-source">{trace.root_name} · {trace.service_name}{trace.model ? ` / ${trace.model}` : ""}</span>
+      <span className="trace-index-source">{trace.service_name}{trace.model ? ` / ${trace.model}` : ""}</span>
       <span className="trace-index-facts">
         <span>{trace.span_count} {labels.spans}</span>
         {trace.error_count > 0 ? <span className="trace-error-fact">{trace.error_count} {labels.errors}</span> : null}
@@ -488,8 +511,8 @@ function TraceDetailWorkspace({
         <div><strong>{semanticView.turnCount}</strong><span>{t.turns}</span></div>
         <div><strong>{semanticView.counts.model}</strong><span>{t.models}</span></div>
         <div><strong>{semanticView.counts.tool + semanticView.counts.artifact}</strong><span>{t.tools}</span></div>
+        <div><strong>{semanticView.counts.check}</strong><span>{t.checks}</span></div>
         <div className={semanticView.counts.error > 0 ? "has-error" : ""}><strong>{semanticView.counts.error}</strong><span>{t.errors}</span></div>
-        <div><strong>{detail.spans.length}</strong><span>{t.rawSpans}</span></div>
       </section>
       <section className="trace-execution">
         <div className="trace-execution-heading"><h3>{t.execution}</h3><span>{t.selectSpan}</span></div>
@@ -532,8 +555,8 @@ function TraceDetailWorkspace({
                     <i className={`trace-span-kind ${kind}`} />
                     <span className="trace-span-copy">
                       <em>{t.kinds[kind]}</em>
-                      <strong>{traceSpanDisplayName(span, kind)}</strong>
-                      {traceSpanDisplayName(span, kind) !== span.name ? <small>{span.name}</small> : null}
+                      <strong>{traceSpanDisplayName(span, kind, locale, detail.summary.model)}</strong>
+                      {traceSpanDisplayName(span, kind, locale, detail.summary.model) !== span.name ? <small>{span.name}</small> : null}
                     </span>
                   </span>
                   <span className="trace-span-track"><i className={span.status_code === 2 ? "trace-span-bar error" : "trace-span-bar"} style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }} /></span>
@@ -555,11 +578,24 @@ function TraceDetailWorkspace({
   );
 }
 
-function traceSpanDisplayName(span: TraceSpan, kind: TraceSpanSemanticKind) {
+function traceSpanDisplayName(span: TraceSpan, kind: TraceSpanSemanticKind, locale: Locale, traceModel?: string) {
   const toolName = traceSpanToolName(span);
   if (toolName) return toolName;
+  if (kind === "run") return locale === "zh" ? "测试运行" : "Test run";
+  if (kind === "check") {
+    const assertionKind = traceSpanAttributeString(span, "barena.assertion.kind");
+    const rules = traceCopy[locale].checkRules;
+    return rules[assertionKind as keyof typeof rules] ?? (locale === "zh" ? "结果验证" : "Result check");
+  }
+  if (kind === "turn") {
+    const turn = traceSpanAttributeString(span, "barena.turn.index");
+    if (turn) return `Turn ${turn}`;
+  }
   if (kind === "model") {
-    return span.model || traceSpanAttributeString(span, "gen_ai.request.model", "gen_ai.response.model", "model") || span.name;
+    return span.model
+      || traceSpanAttributeString(span, "gen_ai.request.model", "gen_ai.response.model", "model")
+      || traceModel
+      || (span.name === "xiaoba.model.call" ? (locale === "zh" ? "模型调用" : "Model call") : span.name);
   }
   return span.name;
 }
@@ -585,6 +621,17 @@ function SpanEvidence({
     "tool.call.result",
   ].includes(key)));
   const attributes = Object.keys(diagnosticAttributes).length > 0 ? JSON.stringify(diagnosticAttributes, null, 2) : "";
+  if (kind === "run" && span.name === "barena.simulation") {
+    return <BarenaRunEvidence span={span} locale={locale} attributes={attributes} />;
+  }
+  if (kind === "check" && span.name === "barena.assertion") {
+    return <BarenaCheckEvidence span={span} locale={locale} attributes={attributes} />;
+  }
+  const missingEvidence = kind === "model" && span.name === "xiaoba.model.call"
+    ? t.modelMetadataOnly
+    : toolName
+      ? t.metadataOnly
+      : t.noEvidence;
   return (
     <div className="trace-span-inspector">
       {span.status_code === 2 && span.status_message ? <p className="trace-span-error">{span.status_message}</p> : null}
@@ -592,10 +639,61 @@ function SpanEvidence({
         {span.input ? <EvidenceBlock title={t.input} value={span.input} kind={kind} direction="input" locale={locale} /> : null}
         {span.output ? <EvidenceBlock title={t.output} value={span.output} kind={kind} direction="output" locale={locale} /> : null}
       </div>
-      {!span.input && !span.output ? <p className="trace-no-evidence">{toolName ? t.metadataOnly : t.noEvidence}</p> : null}
+      {!span.input && !span.output ? <p className="trace-no-evidence">{missingEvidence}</p> : null}
       {attributes ? <details className="trace-attributes"><summary>{t.attributes}</summary><pre>{attributes}</pre></details> : null}
     </div>
   );
+}
+
+function BarenaRunEvidence({ span, locale, attributes }: { span: TraceSpan; locale: Locale; attributes: string }) {
+  const t = traceCopy[locale];
+  const status = traceSpanAttributeString(span, "barena.result.status");
+  const passed = status === "pass" && span.status_code !== 2;
+  return (
+    <div className="trace-run-evidence">
+      <div className="trace-run-evidence-heading">
+        <span>{t.runSummary}</span>
+        <strong className={passed ? "pass" : "fail"}>{passed ? t.checkPassed : t.checkFailed}</strong>
+      </div>
+      <dl>
+        <div><dt>{t.caseLabel}</dt><dd>{traceSpanAttributeString(span, "barena.case.id") || "—"}</dd></div>
+        <div><dt>{t.runLabel}</dt><dd>{traceSpanAttributeString(span, "barena.run.id") || "—"}</dd></div>
+        <div><dt>{t.turns}</dt><dd>{traceSpanAttributeString(span, "barena.turn.count") || "—"}</dd></div>
+        <div><dt>{t.checks}</dt><dd>{traceSpanAttributeString(span, "barena.assertion.passed_count") || "—"} / {traceSpanAttributeString(span, "barena.assertion.count") || "—"}</dd></div>
+      </dl>
+      {span.output ? <p>{span.output}</p> : null}
+      {attributes ? <details className="trace-attributes"><summary>{t.attributes}</summary><pre>{attributes}</pre></details> : null}
+    </div>
+  );
+}
+
+function BarenaCheckEvidence({ span, locale, attributes }: { span: TraceSpan; locale: Locale; attributes: string }) {
+  const t = traceCopy[locale];
+  const assertionKind = traceSpanAttributeString(span, "barena.assertion.kind");
+  const passed = traceSpanAttributeString(span, "barena.assertion.status") === "pass" && span.status_code !== 2;
+  const expected = parseStringList(span.input);
+  const rule = t.checkRules[assertionKind as keyof typeof t.checkRules] ?? (locale === "zh" ? "验证条件" : "Rule");
+  return (
+    <div className="trace-check-evidence">
+      <div className="trace-check-evidence-heading">
+        <span>{rule}</span>
+        <strong className={passed ? "pass" : "fail"}>{passed ? t.checkPassed : t.checkFailed}</strong>
+      </div>
+      {expected.length > 0 ? <ul>{expected.map((value) => <li key={value}>{value}</li>)}</ul> : null}
+      {span.output ? <p>{span.output}</p> : null}
+      {attributes ? <details className="trace-attributes"><summary>{t.attributes}</summary><pre>{attributes}</pre></details> : null}
+    </div>
+  );
+}
+
+function parseStringList(value?: string) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 function EvidenceBlock({

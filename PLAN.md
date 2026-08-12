@@ -1,6 +1,6 @@
 # Catena Implementation Plan
 
-Updated: 2026-08-11
+Updated: 2026-08-12
 
 ## Current status
 
@@ -104,6 +104,10 @@ local.
 - [x] Normalize model and tool exchanges into one Trace per user turn.
 - [x] Cover Codex, Codex App, Claude Code, Hermes and OpenClaw from one CLI.
 - [x] Verify fail-open upload and a real local Codex tool turn.
+- [x] Verify the loopback local workspace can create an Agent key and ingest a
+      real Codex capture without GitHub OAuth or direct database writes.
+- [x] Render real Barena/XiaoBaOS evaluation evidence as Run, Turn, Model and
+      Check steps while preserving Runtime wrappers in Raw Span.
 
 ## Later
 
@@ -121,6 +125,14 @@ local.
 5. Web tests/build, Go tests/vet/race, and both Compose configurations pass.
 
 ## Verification log
+
+- 2026-08-11: Loopback local mode created a bound `Codex Local` Agent key
+  without GitHub OAuth and backfilled 16 real Codex rollout Sessions through
+  the authenticated OTLP endpoint. Catena retained 104 Turn Traces and 483
+  Spans, including tool inputs/results, with exactly one root Span per Trace.
+  Mock preview rows were removed; browser acceptance opened a real ten-Span
+  Trace with nine tool calls. Go tests/vet, Web typecheck and all 45 Web tests
+  passed.
 
 - 2026-08-11: Trace navigation now preserves Agent → Session → Trace → Span.
   The public retained set exposed 1,601 Codex Session identities without a
@@ -215,3 +227,19 @@ local.
   Runtime/system context, malformed exporter payloads and secondary fields
   remain folded with raw evidence available on demand. 42 Web tests,
   typecheck/build, Go tests, `go vet` and the control-plane race suite passed.
+
+- 2026-08-12: Completed the local-engine/cloud-observation boundary with a real
+  Barena → XiaoBaOS → Catena run. Catena retained Trace
+  `77ef5a0aba8aaed1c85bfcb146d56502` as one nine-Span hierarchy with two
+  `barena.turn` branches, each parenting the corresponding `xiaoba.session` and
+  `xiaoba.model.call`. The React Trace view classifies and renders that chain
+  semantically; Catena does not execute the tested Agent. Final verification
+  passed 46 Web tests, typecheck/build, embedded-bundle parity, Go tests and
+  `go vet`.
+
+- 2026-08-12: Replayed the same boundary after the semantic evidence repair.
+  Trace `0c133a14cdd90f81d39c488b85f78aae` retained nine truthful Spans while
+  the default product lens reduced them to seven useful steps: one Run, two
+  Turns, two model calls and two ordered Checks. The requested model now appears
+  in the Trace summary, Run/Check evidence is readable without raw JSON, and
+  the first selected step contains the actual user/Agent exchange.

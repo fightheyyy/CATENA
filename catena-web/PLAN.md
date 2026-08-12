@@ -1,6 +1,6 @@
 # Catena Web Plan
 
-Updated: 2026-08-11
+Updated: 2026-08-12
 
 ## Current state
 
@@ -43,6 +43,10 @@ Updated: 2026-08-11
 - [x] Render missing Session identity as an explicit ungrouped bucket.
 - [x] Unwrap Runtime `chat_messages` envelopes into visible message cards;
       keep `type` and `value` only in the raw-data disclosure.
+- [x] Make Session a visually explicit group container and Trace an inset,
+      compact child list with an independent selected state.
+- [x] Render the Barena/XiaoBaOS chain as Run → Turn → Model → Check;
+      fold session wrappers and select the first evidence-bearing Turn by default.
 - [ ] Add responsive browser acceptance to CI.
 - [ ] Improve accessibility and keyboard navigation.
 - [ ] Add durable optimistic/retry states for long-running jobs.
@@ -56,6 +60,12 @@ desktop widths. At 720px and below, opening a record must replace the index with
 the detail and expose a working back action without horizontal overflow.
 
 ## Verification log
+
+- 2026-08-11: Trace navigation now renders Session as a bordered group surface
+  with an inset Trace child list. Trace root names lead scanning while opaque
+  IDs remain utility labels; expanded Session and selected Trace use separate
+  states. Browser acceptance at 700px verified disclosure collapse/expand,
+  no horizontal overflow and no console errors.
 
 - 2026-08-11: Codex Turn input now unwraps the `chat_messages` transport
   envelope into role/content message cards. Public browser acceptance replayed
@@ -151,3 +161,11 @@ the detail and expose a working back action without horizontal overflow.
   context and raw JSON are folded. Truncated model requests fail closed with a
   clear evidence warning instead of rendering malformed JSON as user text.
   42 Web tests, typecheck and production build passed.
+
+- 2026-08-12: Trace semantics now render the cross-process Barena/XiaoBaOS
+  chain as one Run, two Turns, two model calls and two deterministic Checks.
+  Two `xiaoba.session` wrappers remain available under Raw Span but are folded
+  from the default chain. Browser acceptance opened real nine-Span Trace
+  `0c133a14cdd90f81d39c488b85f78aae`, selected the first evidence-bearing Turn,
+  rendered the requested model plus Run/Check facts, and exposed the real
+  prompt/answer. All 46 Web tests, typecheck and production build passed.

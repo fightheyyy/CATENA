@@ -58,6 +58,59 @@ func TestCreateRegisteredAgentCreatesStableIdentityAndBoundKey(t *testing.T) {
 	}
 }
 
+func TestLocalModeCreatesAgentAndAcceptsItsBoundKey(t *testing.T) {
+	store := NewMemoryStore()
+	traces := &recordingTraceStore{}
+	server := &HTTPServer{
+		store:  store,
+		traces: traces,
+		auth: AuthConfig{
+			APITokenEncryptionKey: "local-test-agent-token-encryption-key",
+		}.normalized(),
+	}
+	createRequest := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/agents",
+		strings.NewReader(`{"display_name":"Local Codex"}`),
+	)
+	createRecorder := httptest.NewRecorder()
+
+	server.createRegisteredAgent(createRecorder, createRequest)
+
+	if createRecorder.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, body = %s", createRecorder.Code, createRecorder.Body.String())
+	}
+	var created struct {
+		Agent RegisteredAgent `json:"agent"`
+		Token string          `json:"token"`
+	}
+	if err := json.Unmarshal(createRecorder.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(created.Token, "catena_agent_") {
+		t.Fatalf("unexpected local Agent response: %#v", created)
+	}
+	storedAgent, err := store.GetRegisteredAgentByOwner(context.Background(), "local", created.Agent.ID)
+	if err != nil || storedAgent.OwnerUserID != "local" {
+		t.Fatalf("stored local Agent = %#v, %v", storedAgent, err)
+	}
+
+	body := mustProtoMarshal(t, testOTLPRequest(false))
+	ingestRequest := httptest.NewRequest(http.MethodPost, "/v1/otlp/v1/traces", bytes.NewReader(body))
+	ingestRequest.Header.Set("Content-Type", "application/x-protobuf")
+	ingestRequest.Header.Set("Authorization", "Bearer "+created.Token)
+	ingestRecorder := httptest.NewRecorder()
+
+	server.ingestOTLPTraces(ingestRecorder, ingestRequest)
+
+	if ingestRecorder.Code != http.StatusOK {
+		t.Fatalf("ingest status = %d, body = %s", ingestRecorder.Code, ingestRecorder.Body.String())
+	}
+	if traces.ownerID != "local" || len(traces.spans) != 1 || traces.spans[0].AgentID != created.Agent.ID {
+		t.Fatalf("local Trace attribution = owner %q spans %#v", traces.ownerID, traces.spans)
+	}
+}
+
 func TestGetRegisteredAgentReturnsCheapConnectionStatus(t *testing.T) {
 	store, user, agent, _ := registeredAgentFixture(t, "大狗")
 	now := time.Now().UTC()

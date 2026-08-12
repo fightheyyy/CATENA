@@ -2,7 +2,7 @@ import type { TraceSpan, TraceSummary } from "./types";
 
 export type TraceFilter = "all" | "errors" | "multi";
 export type TraceLens = "agent" | "tools" | "errors" | "raw";
-export type TraceSpanSemanticKind = "turn" | "model" | "tool" | "artifact" | "error" | "internal";
+export type TraceSpanSemanticKind = "run" | "turn" | "model" | "tool" | "artifact" | "check" | "error" | "internal";
 
 export type TraceEvidenceRole = "user" | "assistant" | "system" | "tool";
 
@@ -129,14 +129,17 @@ export function traceSpanAttributeString(span: TraceSpan, ...keys: string[]) {
   for (const key of keys) {
     const value = span.attributes[key] ?? span.resource_attributes[key];
     if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
   }
   return "";
 }
 
 export function traceSpanSemanticKind(span: TraceSpan): TraceSpanSemanticKind {
+  const name = span.name.trim().toLocaleLowerCase();
+  if (/^barena[._/]simulation$/.test(name)) return "run";
+  if (/^barena[._/]assertion$/.test(name)) return "check";
   if (span.status_code === 2) return "error";
 
-  const name = span.name.trim().toLocaleLowerCase();
   const toolName = traceSpanToolName(span).toLocaleLowerCase();
   const artifactHint = traceSpanAttributeString(
     span,
@@ -166,9 +169,11 @@ export function traceSpanSemanticKind(span: TraceSpan): TraceSpanSemanticKind {
     && /(^|[._/])(run_sampling_request|try_run_sampling_request|stream_responses|responses_websocket|chat|completion|generate|inference|llm|model_client)([._/]|$)/.test(name)
   ) return "model";
   if (/^(chat|llm|gen_ai|model)[._/ -]/.test(name)) return "model";
+  if (/^(?:xiaoba|xiaobaos)[._/]model[._/]call$/.test(name)) return "model";
 
   if (
     !span.parent_span_id
+    || /^barena[._/]turn$/.test(name)
     || /^(turn(?:\/start)?|agent_run|agent[./]run|session(?:[./](?:start|run))?)$/.test(name)
   ) return "turn";
 
@@ -177,10 +182,12 @@ export function traceSpanSemanticKind(span: TraceSpan): TraceSpanSemanticKind {
 
 export function buildTraceSemanticView(spans: TraceSpan[]): TraceSemanticView {
   const counts: Record<TraceSpanSemanticKind, number> = {
+    run: 0,
     turn: 0,
     model: 0,
     tool: 0,
     artifact: 0,
+    check: 0,
     error: 0,
     internal: 0,
   };
@@ -197,8 +204,17 @@ export function buildTraceSemanticView(spans: TraceSpan[]): TraceSemanticView {
     counts[kind] += 1;
     if (kind !== "internal") agentSteps.push(semanticSpan);
     if (kind === "tool" || kind === "artifact") toolSteps.push(semanticSpan);
-    if (kind === "error") errorSteps.push(semanticSpan);
-    const turnID = traceSpanAttributeString(span, "turn_id", "gen_ai.conversation.id", "gen_ai.session.id");
+    if (span.status_code === 2) {
+      errorSteps.push(semanticSpan);
+      if (kind !== "error") counts.error += 1;
+    }
+    const turnID = traceSpanAttributeString(
+      span,
+      "agent.turn.id",
+      "turn_id",
+      "gen_ai.conversation.id",
+      "gen_ai.session.id",
+    );
     if (turnID) turnIDs.add(turnID);
   }
 
@@ -234,8 +250,10 @@ export function boundedTraceSteps(view: TraceSemanticView, lens: TraceLens, limi
 
 export function preferredTraceSpan(view: TraceSemanticView) {
   return view.errorSteps[0]?.span
+    ?? view.agentSteps.find(({ span, kind }) => kind === "turn" && Boolean(span.input || span.output))?.span
     ?? view.toolSteps.find(({ span }) => Boolean(span.input || span.output))?.span
     ?? view.toolSteps[0]?.span
+    ?? view.agentSteps.find(({ span }) => Boolean(span.input || span.output))?.span
     ?? view.agentSteps.find(({ kind }) => kind === "model")?.span
     ?? view.agentSteps[0]?.span
     ?? view.rawSteps[0]?.span;

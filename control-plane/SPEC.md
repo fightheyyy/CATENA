@@ -109,6 +109,10 @@ The durable worker queue remains the next control-plane reliability milestone.
 - `GET /v1/agents/{agent_id}`: cheap PostgreSQL-backed connection polling.
 - `GET /v1/agents`: registered Agents merged with evidence metrics.
 - `/v1/otlp/v1/traces`: Agent-key-authenticated OTLP/HTTP ingestion.
+- In loopback local mode, Agent registration and Agent-key ingestion remain
+  available to the implicit `local` workspace; disabling OAuth never disables
+  the product's local evidence path. Public mode still uses authenticated
+  human sessions for credential management.
 - `GET /v1/traces` and Agent Trace windows: each summary includes its stable
   Agent identity and an optional exported Session identity.
 - `/v1/ingest/conversations`: `xiaoba.conversation_batch.v1`.

@@ -493,8 +493,20 @@ func (s *HTTPServer) requireSessionUser(
 	r *http.Request,
 ) (*User, bool) {
 	if !s.auth.Enabled() {
-		writeProblem(w, http.StatusNotFound, "endpoint credentials require GitHub authentication")
-		return nil, false
+		now := time.Now().UTC()
+		user, err := s.store.UpsertUser(r.Context(), User{
+			ID:          "local",
+			GitHubID:    (int64(1) << 62) - 1,
+			Login:       "local",
+			DisplayName: "Local workspace",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		})
+		if err != nil {
+			writeProblem(w, http.StatusInternalServerError, "local workspace persistence failed")
+			return nil, false
+		}
+		return &user, true
 	}
 	user, err := s.currentSessionUser(r)
 	if err != nil {
@@ -508,10 +520,6 @@ func (s *HTTPServer) requireAPITokenUser(
 	w http.ResponseWriter,
 	r *http.Request,
 ) (*User, bool) {
-	if !s.auth.Enabled() {
-		writeProblem(w, http.StatusNotFound, "edge ingestion requires configured authentication")
-		return nil, false
-	}
 	token, ok := bearerAPIToken(r)
 	if !ok {
 		writeProblem(w, http.StatusUnauthorized, "a Barena API token is required")
@@ -537,10 +545,6 @@ func (s *HTTPServer) requireAgentAPITokenPrincipal(
 	w http.ResponseWriter,
 	r *http.Request,
 ) (agentIngestPrincipal, bool) {
-	if !s.auth.Enabled() {
-		writeProblem(w, http.StatusNotFound, "edge ingestion requires configured authentication")
-		return agentIngestPrincipal{}, false
-	}
 	plaintext, ok := bearerAPIToken(r)
 	if !ok {
 		writeProblem(w, http.StatusUnauthorized, "an Agent connection key is required")

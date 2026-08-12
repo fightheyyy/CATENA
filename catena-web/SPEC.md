@@ -1,7 +1,7 @@
 # Catena Web Specification
 
 Status: implemented MVP1 contract
-Updated: 2026-08-09
+Updated: 2026-08-12
 
 ## Responsibilities
 
@@ -14,7 +14,7 @@ flowchart LR
     Routes["React routes"] --> API["Typed fetch client"]
     API --> Go["Catena Go API"]
     Routes --> Views["Agent · Conversation · Memory · Trace · Farm"]
-    Views --> Flat["Conversation / Trace<br/>list and detail share one visual plane"]
+    Views --> Flat["Trace index<br/>Session and Trace share similar row chrome"]
     Views --> MemoryTask["Memory task<br/>step progress · retry · result"]
     MemoryTask --> API
     Routes --> Keys["API Management"]
@@ -31,7 +31,8 @@ flowchart LR
 flowchart LR
     Conversation["Conversation index"] --> ConversationDetail["User-visible transcript detail"]
     AgentTrace["Agent selector"] --> Session["Session index"]
-    Session --> Trace["Trace index"]
+    Session --> SessionGroup["Session group header"]
+    SessionGroup --> Trace["Inset Trace child list"]
     Trace --> TraceDetail["Trace summary · Span chain · Evidence"]
     ConversationDetail --> Responsive["Desktop split view<br/>Narrow-screen master/detail"]
     ConversationDetail --> Submit["Distill to memory"]
@@ -78,12 +79,24 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - Empty states explain the next action rather than exposing internal engine names.
 - The empty Agent workspace offers one direct path to API Management for first-time connection.
 - Trace detail prioritizes Span waterfall, tool calls, input/output and errors.
+- Cross-process Barena/XiaoBaOS traces are semantic product evidence, not raw
+  telemetry noise: `barena.simulation`, `barena.turn`, `xiaoba.model.call` and
+  `barena.assertion` render as Run, Turn, Model and Check steps. Runtime wrapper
+  spans such as `xiaoba.session` retain their true parentage in Raw Span while
+  staying folded in the default chain.
+- The default selected step is the first evidence-bearing Turn, not an empty
+  model or Runtime wrapper Span. Run and Check details render test facts rather
+  than generic input/output envelopes.
 - Trace evidence renders semantic payloads rather than transport envelopes:
   `chat_messages` input becomes visible role/content message cards, while its
   `type` and `value` wrapper remains available only under raw data.
 - Trace navigation preserves the evidence hierarchy: Agent → Session → Trace →
   Span. Session groups use exported identity only; missing identity appears in
   one explicit ungrouped bucket rather than a fabricated session.
+- Session is rendered as a group container, not as a sibling of Trace. Its
+  expanded state is communicated by the group surface and disclosure; the
+  selected Trace alone receives the accent selection treatment. Trace root
+  names are primary scan labels while opaque Trace IDs remain secondary.
 - Conversation and Trace use the same master/detail hierarchy: the index selects
   a record, while the detail owns a distinct header, summary and evidence surface.
 - At narrow widths, index and detail are separate states with an explicit back
