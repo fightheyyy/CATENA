@@ -185,6 +185,7 @@ SELECT
   ) AS session_id,
   trace_id,
   argMin(name, tuple(parent_span_id != '', start_time)) AS root_name,
+  leftUTF8(argMinIf(input, start_time, input != ''), 512) AS input_preview,
   argMin(service_name, start_time) AS service_name,
   anyIf(model, model != '') AS model,
   min(start_time) AS started_at,
@@ -210,6 +211,7 @@ LIMIT ?`, ownerID, limit)
 			&value.SessionID,
 			&value.TraceID,
 			&value.RootName,
+			&value.InputPreview,
 			&value.ServiceName,
 			&value.Model,
 			&value.StartTime,
@@ -237,7 +239,7 @@ func (s *ClickHouseTraceStore) ListAgentTraces(
 	legacyFilter, legacyFilterArgs := agentServiceNameFilter(agentID)
 	query := fmt.Sprintf(`
 SELECT
-  agent_id, session_id, trace_id, root_name, service_name, model, started_at, ended_at,
+  agent_id, session_id, trace_id, root_name, input_preview, service_name, model, started_at, ended_at,
   duration_ms, span_count, error_count, last_ingested_at
 FROM (
   SELECT
@@ -257,6 +259,7 @@ FROM (
 	      ''
 	    ) AS session_id,
     argMin(name, tuple(parent_span_id != '', start_time)) AS root_name,
+    leftUTF8(argMinIf(input, start_time, input != ''), 512) AS input_preview,
     argMin(service_name, tuple(parent_span_id != '', start_time)) AS service_name,
     anyIf(model, model != '') AS model,
     min(start_time) AS started_at,
@@ -289,6 +292,7 @@ LIMIT ?`, legacyFilter)
 			&value.SessionID,
 			&value.TraceID,
 			&value.RootName,
+			&value.InputPreview,
 			&value.ServiceName,
 			&value.Model,
 			&value.StartTime,
@@ -477,6 +481,7 @@ func summarizeTrace(spans []TraceSpan, lastIngested time.Time) TraceSummary {
 		SessionID:    traceSpanSessionID(spans[0]),
 		TraceID:      spans[0].TraceID,
 		RootName:     spans[0].Name,
+		InputPreview: traceInputPreview(spans),
 		ServiceName:  spans[0].ServiceName,
 		StartTime:    spans[0].StartTime,
 		EndTime:      spans[0].EndTime,
@@ -511,6 +516,23 @@ func summarizeTrace(spans []TraceSpan, lastIngested time.Time) TraceSummary {
 	}
 	summary.DurationMS = summary.EndTime.Sub(summary.StartTime).Milliseconds()
 	return summary
+}
+
+func traceInputPreview(spans []TraceSpan) string {
+	var fallback string
+	for _, span := range spans {
+		input := strings.TrimSpace(span.Input)
+		if input == "" {
+			continue
+		}
+		if fallback == "" {
+			fallback = input
+		}
+		if span.Name == "agent.turn" || strings.EqualFold(firstAttributeString(span.Attributes, "catena.node.kind"), "turn") {
+			return boundedRunes(input, 512)
+		}
+	}
+	return boundedRunes(fallback, 512)
 }
 
 func traceSpanSessionID(span TraceSpan) string {

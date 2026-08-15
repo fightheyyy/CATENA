@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   TRACE_STEP_PAGE_SIZE,
   boundedTraceSteps,
+  buildTraceNarrative,
   buildTraceSemanticView,
   filterTraceSummaries,
   groupTraceSummariesBySession,
@@ -11,16 +13,20 @@ import {
   preferredTraceSpan,
   shortTraceID,
   traceSessionKey,
+  traceSessionTitle,
   traceSpanDepth,
   traceSpanSemanticKind,
+  traceSpanState,
+  traceSpanTokenUsage,
   traceSpanToolName,
+  traceSummaryTitle,
 } from "../src/traceView.ts";
 
 const traces = [
   {
     trace_id: "trace-codex",
     root_name: "codex.turn.response",
-    service_name: "Codex Desktop",
+    service_name: "catena-runtime-codex",
     model: "gpt-5.6-sol",
     span_count: 21,
     error_count: 0,
@@ -47,6 +53,26 @@ test("Trace list search stays focused on root Trace identity", () => {
   assert.deepEqual(filterTraceSummaries(traces, "TRACE-XIAOBA", "all").map((trace) => trace.trace_id), ["trace-xiaoba"]);
 });
 
+test("Trace rows use the real user request instead of a Runtime fallback label", () => {
+  const direct = { ...traces[0], root_name: "agent.turn", input_preview: "剩下两题过完更新吧" };
+  assert.equal(traceSummaryTitle(direct, "zh"), "剩下两题过完更新吧");
+
+  const wrapped = {
+    ...direct,
+    input_preview: JSON.stringify({
+      type: "chat_messages",
+      value: [
+        { role: "assistant", content: "上一轮回答" },
+        { role: "user", content: "检查一下发布结果" },
+      ],
+    }),
+  };
+  assert.equal(traceSummaryTitle(wrapped, "zh"), "检查一下发布结果");
+  assert.equal(traceSummaryTitle({ ...direct, input_preview: "" }, "zh"), "用户请求");
+  assert.equal(traceSummaryTitle({ ...direct, input_preview: "" }, "en"), "User request");
+  assert.deepEqual(filterTraceSummaries([wrapped], "发布结果", "all").map((trace) => trace.trace_id), ["trace-codex"]);
+});
+
 test("Trace filters expose errors and multi-step runs without a query builder", () => {
   assert.deepEqual(filterTraceSummaries(traces, "", "errors").map((trace) => trace.trace_id), ["trace-barena"]);
   assert.deepEqual(filterTraceSummaries(traces, "", "multi").map((trace) => trace.trace_id), ["trace-codex", "trace-barena"]);
@@ -55,11 +81,11 @@ test("Trace filters expose errors and multi-step runs without a query builder", 
 test("Trace filtering preserves raw service names from a canonical Agent query", () => {
   const canonicalCodexTraces = [
     traces[0],
-    { ...traces[0], trace_id: "trace-codex-live", service_name: "codex-app-server" },
+    { ...traces[0], trace_id: "trace-codex-live", service_name: "catena-runtime-codex-live" },
   ];
   assert.deepEqual(
     filterTraceSummaries(canonicalCodexTraces, "", "all").map((trace) => trace.service_name),
-    ["Codex Desktop", "codex-app-server"],
+    ["catena-runtime-codex", "catena-runtime-codex-live"],
   );
   assert.deepEqual(
     filterTraceSummaries(canonicalCodexTraces, "tool", "all").map((trace) => trace.trace_id),
@@ -80,6 +106,31 @@ test("Trace summaries preserve Agent, Session, Trace, Span hierarchy", () => {
   ]);
   assert.equal(groups[1].spanCount, 25);
   assert.equal(traceSessionKey(sessionTraces[0]), "codex\u0000session-a");
+});
+
+test("Session titles use the earliest retained user request without an LLM", () => {
+  const groups = groupTraceSummariesBySession([
+    {
+      ...traces[0],
+      trace_id: "trace-later",
+      agent_id: "codex",
+      session_id: "session-a",
+      input_preview: "继续下一题",
+      start_time: "2026-08-11T01:03:00Z",
+      end_time: "2026-08-11T01:04:00Z",
+    },
+    {
+      ...traces[0],
+      trace_id: "trace-first",
+      agent_id: "codex",
+      session_id: "session-a",
+      input_preview: JSON.stringify({ type: "chat_messages", value: [{ role: "user", content: "帮我讲解回溯算法" }] }),
+      start_time: "2026-08-11T01:00:00Z",
+      end_time: "2026-08-11T01:02:00Z",
+    },
+  ]);
+  assert.equal(traceSessionTitle(groups[0]), "帮我讲解回溯算法");
+  assert.equal(traceSessionTitle({ ...groups[0], traces: groups[0].traces.map((trace) => ({ ...trace, input_preview: "" })) }), "");
 });
 
 test("missing Session identity stays explicitly ungrouped per Agent", () => {
@@ -111,6 +162,24 @@ test("Tool names and evidence are rendered semantically", () => {
   assert.equal(traceSpanToolName({ attributes: { "gen_ai.tool.name": " search_repo " } }), "search_repo");
   assert.equal(formatTraceEvidence('{"query":"trace","limit":3}'), '{\n  "query": "trace",\n  "limit": 3\n}');
   assert.equal(formatTraceEvidence("plain result"), "plain result");
+});
+
+test("Token usage accepts both Codex and Claude Runtime attribute names", () => {
+  assert.deepEqual(traceSpanTokenUsage({
+    attributes: {
+      "gen_ai.usage.input_tokens": 19154,
+      "gen_ai.usage.output_tokens": 86,
+      "gen_ai.usage.total_tokens": 19240,
+    },
+    resource_attributes: {},
+  }), { input: 19154, output: 86, total: 19240 });
+  assert.deepEqual(traceSpanTokenUsage({
+    attributes: {
+      "gen_ai.usage.input": 8119,
+      "gen_ai.usage.output": 151,
+    },
+    resource_attributes: {},
+  }), { input: 8119, output: 151, total: 8270 });
 });
 
 test("Codex model requests render the visible conversation instead of raw request JSON", () => {
@@ -200,7 +269,7 @@ function span(overrides) {
     parent_span_id: overrides.parent_span_id ?? "root",
     name: overrides.name,
     kind: 1,
-    service_name: "codex-app-server",
+    service_name: "catena-runtime-codex",
     start_time: "2026-08-06T00:00:00Z",
     end_time: "2026-08-06T00:00:01Z",
     status_code: overrides.status_code ?? 0,
@@ -227,6 +296,142 @@ test("Agent semantic lens separates useful steps from Runtime internals", () => 
   assert.deepEqual(view.toolSteps.map((item) => item.span.span_id), ["tool", "artifact"]);
   assert.equal(preferredTraceSpan(view).span_id, "error");
   assert.equal(traceSpanSemanticKind(internal), "internal");
+});
+
+test("Catena canonical states keep failed tools visible in both tool and error lenses", () => {
+  const turn = span({
+    span_id: "canonical-turn",
+    parent_span_id: "",
+    name: "agent.turn",
+    status_code: 2,
+    attributes: { "catena.node.kind": "turn", "catena.state": "aborted", "agent.turn.id": "turn-abort" },
+  });
+  const failedTool = span({
+    span_id: "canonical-tool",
+    parent_span_id: "canonical-turn",
+    name: "agent.tool.call Bash",
+    status_code: 2,
+    attributes: {
+      "catena.node.kind": "tool",
+      "catena.state": "error",
+      "gen_ai.tool.name": "Bash",
+      "gen_ai.tool.call.id": "toolu_failure",
+    },
+  });
+  const retry = span({
+    span_id: "canonical-retry",
+    parent_span_id: "canonical-turn",
+    name: "gen_ai.model.retry",
+    status_code: 2,
+    attributes: { "catena.node.kind": "retry", "catena.state": "retry" },
+  });
+  const view = buildTraceSemanticView([turn, failedTool, retry]);
+
+  assert.deepEqual(view.agentSteps.map((item) => item.kind), ["turn", "tool", "retry"]);
+  assert.deepEqual(view.toolSteps.map((item) => item.span.span_id), ["canonical-tool"]);
+  assert.deepEqual(view.errorSteps.map((item) => item.span.span_id), ["canonical-turn", "canonical-tool", "canonical-retry"]);
+});
+
+test("Canonical narrative preserves parallel tools, Subagents, and distinct state events", () => {
+  const turn = span({
+    span_id: "narrative-turn",
+    parent_span_id: "",
+    name: "agent.turn",
+    input: "Inspect the repository",
+    output: "Inspection complete",
+    attributes: { "catena.node.kind": "turn", "catena.state": "ok", "agent.turn.id": "turn-narrative" },
+  });
+  const model = span({
+    span_id: "narrative-model",
+    parent_span_id: turn.span_id,
+    name: "gen_ai.model.call",
+    attributes: { "catena.node.kind": "model", "catena.model.step.index": "0" },
+  });
+  const firstTool = span({
+    span_id: "parallel-a",
+    parent_span_id: model.span_id,
+    name: "agent.tool.call file_search",
+    attributes: { "catena.node.kind": "tool", "gen_ai.tool.name": "file_search", "gen_ai.tool.call.id": "call-a" },
+  });
+  const secondTool = span({
+    span_id: "parallel-b",
+    parent_span_id: model.span_id,
+    name: "agent.tool.call web_search",
+    attributes: { "catena.node.kind": "tool", "gen_ai.tool.name": "web_search", "gen_ai.tool.call.id": "call-b" },
+  });
+  const subagent = span({
+    span_id: "subagent-thread",
+    parent_span_id: firstTool.span_id,
+    name: "agent.subagent.thread",
+    attributes: { "catena.node.kind": "subagent", "agent.subagent.thread.id": "thread-child" },
+  });
+  const compact = span({
+    span_id: "compact",
+    parent_span_id: turn.span_id,
+    name: "agent.context.compact",
+    attributes: { "catena.node.kind": "context_compact", "catena.state": "ok" },
+  });
+  const retry = span({
+    span_id: "retry",
+    parent_span_id: turn.span_id,
+    name: "gen_ai.model.retry",
+    status_code: 2,
+    attributes: { "catena.node.kind": "retry", "catena.state": "retry" },
+  });
+  const wrapper = span({ span_id: "runtime-wrapper", parent_span_id: turn.span_id, name: "runtime.persist" });
+  const finalModel = span({
+    span_id: "final-model",
+    parent_span_id: wrapper.span_id,
+    name: "gen_ai.model.call",
+    attributes: { "catena.node.kind": "model", "catena.model.step.index": "1" },
+  });
+
+  const narrative = buildTraceNarrative([turn, model, firstTool, secondTool, subagent, compact, retry, wrapper, finalModel]);
+  assert.equal(narrative.primaryTurn?.span.span_id, turn.span_id);
+  assert.deepEqual(narrative.primaryTurn?.children.map((node) => node.kind), ["model", "compact", "retry", "model"]);
+  assert.deepEqual(narrative.primaryTurn?.children[0].children.map((node) => node.span.span_id), ["parallel-a", "parallel-b"]);
+  assert.equal(narrative.primaryTurn?.children[0].children[0].children[0].kind, "subagent");
+  assert.equal(traceSpanSemanticKind(compact), "compact");
+  assert.equal(traceSpanSemanticKind(retry), "retry");
+  assert.equal(traceSpanState(retry), "retry");
+});
+
+test("Codex and Claude OTLP goldens render as Agent, Tool, Subagent and Error evidence", () => {
+  for (const runtime of ["codex", "claude"]) {
+    const payloads = JSON.parse(readFileSync(
+      new URL(`../../tap/fixtures/golden/${runtime}.otlp.json`, import.meta.url),
+      "utf8",
+    ));
+    const spans = payloads.flatMap((payload) => payload.resourceSpans.flatMap((resource) => (
+      resource.scopeSpans.flatMap((scope) => scope.spans.map((value) => {
+        const attributes = Object.fromEntries(value.attributes.map((attribute) => [
+          attribute.key,
+          Object.values(attribute.value)[0],
+        ]));
+        return {
+          trace_id: value.traceId,
+          span_id: value.spanId,
+          parent_span_id: value.parentSpanId ?? "",
+          name: value.name,
+          kind: value.kind,
+          service_name: `catena-runtime-${runtime}`,
+          start_time: value.startTimeUnixNano,
+          end_time: value.endTimeUnixNano,
+          status_code: value.status.code,
+          attributes,
+          resource_attributes: {},
+          input: attributes["input.value"] ?? "",
+          output: attributes["output.value"] ?? "",
+        };
+      }))
+    )));
+    const view = buildTraceSemanticView(spans);
+    assert.ok(view.counts.turn >= payloads.length, `${runtime} turn count`);
+    assert.ok(view.toolSteps.some(({ span }) => traceSpanToolName(span)), `${runtime} tool evidence`);
+    assert.ok(view.errorSteps.some(({ span }) => span.attributes["catena.state"] === "aborted"), `${runtime} abort`);
+    assert.ok(view.errorSteps.some(({ span }) => span.attributes["catena.node.kind"] === "unmatched_tool_result"), `${runtime} unmatched result`);
+    assert.ok(view.agentSteps.some(({ span }) => span.attributes["catena.node.kind"] === "subagent"), `${runtime} subagent`);
+  }
 });
 
 test("Runtime turn-context helpers stay folded instead of masquerading as Agent turns", () => {

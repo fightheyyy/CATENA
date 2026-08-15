@@ -39,4 +39,5 @@ test("Agent evolution request identity changes with Agent, window, or objective"
   assert.notEqual(base, agentEvolutionRequestSignature("agent-b", window, "reduce failures"));
   assert.notEqual(base, agentEvolutionRequestSignature("agent-a", agentEvolutionWindow(new Date("2026-08-05T12:30:00.000Z"), "24h"), "reduce failures"));
   assert.notEqual(base, agentEvolutionRequestSignature("agent-a", window, "find latency"));
+  assert.notEqual(base, agentEvolutionRequestSignature("agent-a", window, "reduce failures", "en"));
 });

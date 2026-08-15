@@ -11,9 +11,8 @@ const (
 	agentIdentitySourceAlias       = "catena.alias"
 	agentIdentitySourceCredential  = "api_key"
 
-	agentSourceKindNativeLive      = "native_live"
-	agentSourceKindHistoryBackfill = "history_backfill"
-	agentSourceKindOTel            = "otel"
+	agentSourceKindNativeLive = "native_live"
+	agentSourceKindOTel       = "otel"
 )
 
 type agentSourceClassification string
@@ -50,13 +49,10 @@ type agentSourceAggregate struct {
 	LastSeenAt  time.Time
 }
 
-var codexSourceKinds = map[string]string{
-	"codex":            agentSourceKindNativeLive,
-	"codex-app-server": agentSourceKindNativeLive,
-	"codex desktop":    agentSourceKindHistoryBackfill,
+var acceptedRuntimeSourceKinds = map[string]string{
+	"catena-runtime-codex":       agentSourceKindNativeLive,
+	"catena-runtime-claude-code": agentSourceKindNativeLive,
 }
-
-var codexSourceAliases = []string{"codex", "codex-app-server", "codex desktop"}
 
 var xiaoBaOSSourceAliases = []string{"xiaobaos", "barena-xiaoba-target"}
 
@@ -76,18 +72,6 @@ func classifyAgentSource(serviceName string) classifiedAgentSource {
 			Kind:           agentSourceKindOTel,
 		}
 	}
-	if kind, ok := codexSourceKinds[normalized]; ok {
-		return classifiedAgentSource{
-			Classification: agentSourceClassificationTarget,
-			Identity: canonicalAgentIdentity{
-				AgentID:        "codex",
-				DisplayName:    "Codex",
-				IdentitySource: agentIdentitySourceAlias,
-				Aliases:        append([]string(nil), codexSourceAliases...),
-			},
-			Kind: kind,
-		}
-	}
 	if normalized == "xiaobaos" || normalized == "barena-xiaoba-target" {
 		return classifiedAgentSource{
 			Classification: agentSourceClassificationTarget,
@@ -100,6 +84,10 @@ func classifyAgentSource(serviceName string) classifiedAgentSource {
 			Kind: agentSourceKindNativeLive,
 		}
 	}
+	kind := agentSourceKindOTel
+	if acceptedKind, ok := acceptedRuntimeSourceKinds[normalized]; ok {
+		kind = acceptedKind
+	}
 	return classifiedAgentSource{
 		Classification: agentSourceClassificationTarget,
 		Identity: canonicalAgentIdentity{
@@ -108,7 +96,7 @@ func classifyAgentSource(serviceName string) classifiedAgentSource {
 			IdentitySource: agentIdentitySourceServiceName,
 			Aliases:        []string{trimmed},
 		},
-		Kind: agentSourceKindOTel,
+		Kind: kind,
 	}
 }
 
@@ -140,6 +128,14 @@ func serviceBelongsToAgent(serviceName string, agentID string) bool {
 	serviceIdentity := classified.Identity
 	agentIdentity := canonicalAgentForID(agentID)
 	return serviceIdentity.AgentID != "" && serviceIdentity.AgentID == agentIdentity.AgentID
+}
+
+func traceSummaryBelongsToAgent(summary TraceSummary, agentID string) bool {
+	boundAgentID := strings.TrimSpace(summary.AgentID)
+	if boundAgentID != "" {
+		return boundAgentID == strings.TrimSpace(agentID)
+	}
+	return serviceBelongsToAgent(summary.ServiceName, agentID)
 }
 
 func mergeAgentSourceAggregates(values []agentSourceAggregate, limit int) []AgentSummary {
@@ -239,25 +235,14 @@ func mergeAgentSourceAggregates(values []agentSourceAggregate, limit int) []Agen
 }
 
 func agentSourceDisplayName(serviceName string) string {
-	switch normalizedAgentSource(serviceName) {
-	case "codex":
-		return "codex"
-	case "codex-app-server":
-		return "codex-app-server"
-	case "codex desktop":
-		return "Codex Desktop"
-	default:
-		return strings.TrimSpace(serviceName)
-	}
+	return strings.TrimSpace(serviceName)
 }
 
 func agentSourceKindRank(kind string) int {
 	switch kind {
 	case agentSourceKindNativeLive:
 		return 0
-	case agentSourceKindHistoryBackfill:
-		return 1
 	default:
-		return 2
+		return 1
 	}
 }

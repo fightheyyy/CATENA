@@ -1,0 +1,24 @@
+{
+  "name": "@catena/codex-runtime-parser",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Langfuse-derived Codex rollout parser with Catena Canonical Event Graph and OTLP export",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsdown --config tsdown.config.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "verify:bundle": "pnpm build && git diff --exit-code -- plugins/tracing/dist/index.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsdown": "^0.18.0",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.0"
+  },
+  "packageManager": "pnpm@10.24.0"
+}

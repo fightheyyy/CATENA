@@ -245,8 +245,8 @@ func TestAgentEvolutionJobFreezesMultipleTracesAndKeepsPluralProvenance(t *testi
 	store := NewMemoryStore()
 	seedTestEvolutionModelConfig(t, store, "local")
 	now := time.Now().UTC()
-	agentID := "codex"
-	serviceNames := []string{"codex", "codex-app-server", "Codex Desktop"}
+	agentID := "agent-codex-runtime"
+	serviceName := "catena-runtime-codex"
 	traceStore := &agentEvolutionTraceStore{ownerID: "local"}
 	for index, traceID := range []string{
 		"10112233445566778899aabbccddeeff",
@@ -260,15 +260,15 @@ func TestAgentEvolutionJobFreezesMultipleTracesAndKeepsPluralProvenance(t *testi
 		}
 		traceStore.traces = append(traceStore.traces, TraceDetail{
 			Summary: TraceSummary{
-				TraceID: traceID, RootName: "agent.turn", ServiceName: serviceNames[index],
+				AgentID: agentID, TraceID: traceID, RootName: "agent.turn", ServiceName: serviceName,
 				StartTime: startedAt, EndTime: startedAt.Add(time.Second),
 				DurationMS: 1000, SpanCount: 2,
 				ErrorCount: uint64(map[bool]int{true: 1, false: 0}[statusCode == 2]),
 			},
 			Spans: []TraceSpan{
 				{
-					TraceID: traceID, SpanID: fmt.Sprintf("%016d", index+1), Name: "agent.turn",
-					ServiceName: serviceNames[index], StartTime: startedAt, EndTime: startedAt.Add(time.Second),
+					AgentID: agentID, TraceID: traceID, SpanID: fmt.Sprintf("%016d", index+1), Name: "agent.turn",
+					ServiceName: serviceName, StartTime: startedAt, EndTime: startedAt.Add(time.Second),
 					StatusCode: statusCode, Input: fmt.Sprintf(`{"task":"task-%d"}`, index+1),
 					Output: "result",
 				},
@@ -794,16 +794,26 @@ func TestEvolutionJobUsesConservativeEnvelopeForUnstructuredRoleOutput(t *testin
 	}
 }
 
-func TestTraceFarmAcceptsPortableAssetsAndXiaoBaHarnessOnly(t *testing.T) {
-	agentMD := candidateOutput(json.RawMessage(`{"candidate":{"kind":"agent_md","title":"Operating rules","summary":"Portable instructions.","content":{"path":"agent.md","markdown":"# Rules\n\nCheck tool results."}}}`), "codex")
+func TestTraceFarmAcceptsOnlyPortableAgentMDAndXiaoBaPackages(t *testing.T) {
+	agentMD := candidateOutput(json.RawMessage(`{"candidate":{"kind":"agent_md","title":"Operating rules","summary":"Portable instructions.","content":{"root":"agent.md","files":[{"path":"agent.md","content":"# Rules\n\nCheck tool results."}]}}}`), "codex")
 	if agentMD.Kind != EvolutionCandidateAgentMD {
 		t.Fatalf("valid agent.md asset was rejected: %#v", agentMD)
+	}
+	skill := candidateOutput(json.RawMessage(`{"candidate":{"kind":"skill","title":"Clarify first","summary":"Portable clarification behavior.","content":{"root":"skills/clarify-first","files":[{"path":"skills/clarify-first/SKILL.md","content":"---\nname: clarify-first\ndescription: Ask for missing constraints before acting.\n---\n\n# Clarify first"},{"path":"skills/clarify-first/scripts/check.sh","content":"#!/bin/sh\necho check"}]}}}`), "codex")
+	if skill.Kind != EvolutionCandidateSkill {
+		t.Fatalf("valid SKILL.md asset was rejected: %#v", skill)
+	}
+	role := candidateOutput(json.RawMessage(`{"candidate":{"kind":"role","title":"Evidence reviewer","summary":"Portable review role.","content":{"root":"roles/evidence-reviewer","files":[{"path":"roles/evidence-reviewer/role.json","content":"{\"name\":\"evidence-reviewer\",\"displayName\":\"Evidence Reviewer\",\"description\":\"Review retained evidence.\",\"promptFile\":\"evidence-reviewer.md\",\"inheritBaseTools\":false}"},{"path":"roles/evidence-reviewer/prompts/evidence-reviewer.md","content":"# Evidence reviewer\n\nReview retained evidence."},{"path":"roles/evidence-reviewer/skills/grounding/SKILL.md","content":"---\nname: grounding\ndescription: Check retained evidence.\n---\n\n# Grounding"}]}}}`), "codex")
+	if role.Kind != EvolutionCandidateRole {
+		t.Fatalf("valid Role package was rejected: %#v", role)
 	}
 
 	for _, raw := range []json.RawMessage{
 		json.RawMessage(`{"candidate":{"kind":"memory","title":"Remember user","summary":"Wrong evidence path.","content":{"memory":"value"}}}`),
 		json.RawMessage(`{"candidate":{"kind":"case","title":"Replay task","summary":"Wrong product output.","content":{"prompt":"task"}}}`),
 		json.RawMessage(`{"candidate":{"kind":"harness","title":"Loop guard","summary":"Runtime change.","content":{"change":"limit loop"}}}`),
+		json.RawMessage(`{"candidate":{"kind":"skill","title":"Advice only","summary":"Not a file.","content":{"instruction":"Ask first."}}}`),
+		json.RawMessage(`{"candidate":{"kind":"role","title":"Unsafe path","summary":"Path traversal.","content":{"root":"roles/unsafe","files":[{"path":"../role.json","content":"{}"}]}}}`),
 	} {
 		if candidate := candidateOutput(raw, "codex"); candidate.Kind != EvolutionCandidateAgentMD || candidate.Title != "Unclassified EvolutionCat draft" {
 			t.Fatalf("non-portable Codex asset was accepted: %#v", candidate)
@@ -811,8 +821,8 @@ func TestTraceFarmAcceptsPortableAssetsAndXiaoBaHarnessOnly(t *testing.T) {
 	}
 
 	xiaobaHarness := candidateOutput(json.RawMessage(`{"candidate":{"kind":"harness","title":"Loop guard","summary":"XiaoBaOS Runtime change.","content":{"target":"xiaobaos","change":"limit loop"}}}`), "xiaobaos")
-	if xiaobaHarness.Kind != EvolutionCandidateHarness {
-		t.Fatalf("XiaoBaOS Harness asset was rejected: %#v", xiaobaHarness)
+	if xiaobaHarness.Kind != EvolutionCandidateAgentMD || xiaobaHarness.Title != "Unclassified EvolutionCat draft" {
+		t.Fatalf("Trace Farm accepted a fourth asset type: %#v", xiaobaHarness)
 	}
 }
 
@@ -861,7 +871,7 @@ func (s *agentEvolutionTraceStore) ListAgentTraces(
 	}
 	result := make([]TraceSummary, 0, len(s.traces))
 	for _, trace := range s.traces {
-		if !serviceBelongsToAgent(trace.Summary.ServiceName, agentID) || trace.Summary.EndTime.Before(windowStart) ||
+		if !traceSummaryBelongsToAgent(trace.Summary, agentID) || trace.Summary.EndTime.Before(windowStart) ||
 			trace.Summary.StartTime.After(windowEnd) {
 			continue
 		}
@@ -998,8 +1008,8 @@ const content = request.role === "inspector-cat"
       finding: {title: "Ambiguous request was not clarified", summary: "The retained trace reached a terminal response without a clarification turn.", severity: "high", evidence: ["The retained trace contains the terminal response."]},
       case_proposal: {title: "Clarify incomplete input", replay_prompt: "Ask for missing constraints before writing result.txt.", success_criteria: "The Agent asks one clarification question.", verifier: {kind: "artifact_assertions", artifacts: [{path: "result.txt", exists: true}]}}
     })
-  : request.role === "evolution-cat"
-    ? JSON.stringify({candidate: {kind: "skill", title: "Clarify first", summary: "Draft a reusable clarification behavior.", content: {instruction: "Ask for missing constraints before acting."}}})
+	  : request.role === "evolution-cat"
+	    ? JSON.stringify({candidate: {kind: "skill", title: "Clarify first", summary: "Draft a reusable clarification behavior.", content: {root: "skills/clarify-first", files: [{path: "skills/clarify-first/SKILL.md", content: "---\nname: clarify-first\ndescription: Ask for missing constraints before acting.\n---\n\n# Clarify first\n\nAsk for missing constraints before acting."}]}}})
     : JSON.stringify({review: {verdict: "pass", summary: "The draft is grounded in the retained finding, but remains unverified."}});
 console.log(JSON.stringify({
   schema: "barena.xiaoba_evolution_response.v1",
@@ -1027,6 +1037,41 @@ console.log(JSON.stringify({
 }
 
 const testEvolutionEncryptionKey = "catena-test-evolution-encryption-key-0001"
+
+func TestEvolutionOutputLanguageIsExplicitAcrossEveryRole(t *testing.T) {
+	job := EvolutionJob{
+		OutputLanguage: "zh-CN",
+		SourceAgentID:  "agent-local",
+		SourceTraceIDs: []string{"00112233445566778899aabbccddeeff"},
+	}
+	evidence := json.RawMessage(`{"trace":"retained"}`)
+	for name, prompt := range map[string]string{
+		"inspector": buildInspectorPrompt(job, evidence),
+		"evolution": buildCandidatePrompt(job),
+		"reviewer":  buildReviewerPrompt(job, evidence),
+	} {
+		if !strings.Contains(prompt, "简体中文") {
+			t.Fatalf("%s prompt does not preserve the requested Chinese output language: %s", name, prompt)
+		}
+	}
+
+	job.OutputLanguage = "en"
+	if prompt := buildCandidatePrompt(job); !strings.Contains(prompt, "in English") {
+		t.Fatalf("English asset prompt does not preserve its output language: %s", prompt)
+	}
+}
+
+func TestNormalizedEvolutionOutputLanguageDefaultsToChinese(t *testing.T) {
+	for input, want := range map[string]string{"": "zh-CN", "zh": "zh-CN", "zh-Hans": "zh-CN", "en-US": "en"} {
+		got, err := normalizedEvolutionOutputLanguage(input)
+		if err != nil || got != want {
+			t.Fatalf("normalizedEvolutionOutputLanguage(%q) = %q, %v; want %q", input, got, err, want)
+		}
+	}
+	if _, err := normalizedEvolutionOutputLanguage("fr"); err == nil {
+		t.Fatal("unsupported output language was accepted")
+	}
+}
 
 func testEvolutionAuthConfig() AuthConfig {
 	return AuthConfig{APITokenEncryptionKey: testEvolutionEncryptionKey}

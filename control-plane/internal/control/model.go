@@ -650,6 +650,7 @@ type EvolutionJob struct {
 	WindowStart        *time.Time                `json:"window_start,omitempty"`
 	WindowEnd          *time.Time                `json:"window_end,omitempty"`
 	Objective          string                    `json:"objective,omitempty"`
+	OutputLanguage     string                    `json:"output_language,omitempty"`
 	IdempotencyKey     string                    `json:"-"`
 	RequestFingerprint string                    `json:"-"`
 	State              EvolutionJobState         `json:"state"`
@@ -676,9 +677,10 @@ type CreateTraceEvolutionJobRequest struct {
 }
 
 type CreateAgentEvolutionJobRequest struct {
-	WindowStart time.Time `json:"window_start"`
-	WindowEnd   time.Time `json:"window_end"`
-	Objective   string    `json:"objective,omitempty"`
+	WindowStart    time.Time `json:"window_start"`
+	WindowEnd      time.Time `json:"window_end"`
+	Objective      string    `json:"objective,omitempty"`
+	OutputLanguage string    `json:"output_language,omitempty"`
 }
 
 func (r CreateAgentEvolutionJobRequest) Validate(now time.Time) error {

@@ -29,27 +29,31 @@ const apiCopy = {
     llmClear: "清除配置",
     llmConfirmClear: "确认清除",
     llmCleared: "LLM 配置已清除。",
-    createTitle: "创建 Agent 密钥",
+    createTitle: "接入新 Agent",
     agentName: "Agent 名称",
     placeholder: "例如：大狗",
-    create: "生成密钥",
+    create: "生成接入密钥",
     creating: "正在生成",
     created: "密钥已生成，可从对应行复制。",
     endpoints: "接收地址",
     otlp: "OTLP Trace",
     conversation: "XiaoBaOS 对话",
-    keys: "Agent 密钥",
-    empty: "还没有 Agent 密钥。",
-    connected: "已连接",
-    waiting: "等待数据",
-    noKey: "没有密钥",
+    keys: "Agent 接入",
+    keysBody: "撤销密钥只会停止后续上传，Agent 与历史数据会继续保留。",
+    empty: "还没有接入 Agent。",
+    connected: "接入正常",
+    waiting: "等待首条数据",
+    paused: "接入已停用",
+    retained: "历史数据保留",
+    noData: "尚未上传数据",
+    noKey: "密钥已撤销",
     copy: "复制",
     copied: "已复制",
     copyOtlp: "复制 OTLP Trace 接收地址",
     copyConversation: "复制 XiaoBaOS 对话接收地址",
-    revoke: "删除",
-    confirmRevoke: "确认删除",
-    recreate: "生成密钥",
+    revoke: "撤销密钥",
+    confirmRevoke: "确认撤销",
+    recreate: "重新生成",
   },
   en: {
     title: "API Management",
@@ -73,27 +77,31 @@ const apiCopy = {
     llmClear: "Clear configuration",
     llmConfirmClear: "Confirm clear",
     llmCleared: "LLM configuration cleared.",
-    createTitle: "Create an Agent key",
+    createTitle: "Connect a new Agent",
     agentName: "Agent name",
     placeholder: "For example: Big Dog",
-    create: "Generate key",
+    create: "Generate ingest key",
     creating: "Generating",
     created: "Key generated. Copy it from the corresponding row.",
     endpoints: "Ingest endpoints",
     otlp: "OTLP Trace",
     conversation: "XiaoBaOS conversation",
-    keys: "Agent keys",
-    empty: "No Agent key yet.",
-    connected: "Connected",
-    waiting: "Waiting for data",
-    noKey: "No key",
+    keys: "Agent connections",
+    keysBody: "Revoking a key stops future ingestion. The Agent and its historical data remain available.",
+    empty: "No Agent connected yet.",
+    connected: "Ingest active",
+    waiting: "Waiting for first data",
+    paused: "Ingest paused",
+    retained: "Historical data retained",
+    noData: "No data uploaded yet",
+    noKey: "Key revoked",
     copy: "Copy",
     copied: "Copied",
     copyOtlp: "Copy OTLP Trace ingest endpoint",
     copyConversation: "Copy XiaoBaOS conversation ingest endpoint",
-    revoke: "Delete",
-    confirmRevoke: "Confirm delete",
-    recreate: "Generate key",
+    revoke: "Revoke key",
+    confirmRevoke: "Confirm revoke",
+    recreate: "Regenerate",
   },
 } as const;
 
@@ -332,7 +340,7 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
       </section>
 
       <section className="api-key-section">
-        <header><h2>{t.keys}</h2><span>{agents.length}</span></header>
+        <header><div><h2>{t.keys}</h2><p>{t.keysBody}</p></div><span>{agents.length}</span></header>
         {agents.length === 0 ? <div className="empty-state"><span>{t.empty}</span></div> : <div className="token-list">
           {agents.map((agent) => {
             const credential = credentialFor(agent);
@@ -340,7 +348,10 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
               <div className="token-identity">
                 <strong>{agent.display_name}</strong>
                 <code>{credential?.masked_token ?? t.noKey}</code>
-                <span>{agent.connected ? t.connected : t.waiting}</span>
+                <span className={credential ? "token-state active" : "token-state paused"}>
+                  <b>{credential ? (agent.connected ? t.connected : t.waiting) : t.paused}</b>
+                  {!credential ? <small>{agent.connected ? t.retained : t.noData}</small> : null}
+                </span>
               </div>
               <div className="token-actions">
                 {credential ? <>

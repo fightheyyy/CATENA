@@ -306,14 +306,62 @@ export function prettyJSON(value: unknown): string {
 }
 
 export function agentAssets(job: EvolutionJob): EvolutionCandidate[] {
-  return job.candidates.filter((candidate) => {
-    if (candidate.kind === "agent_md" || candidate.kind === "skill" || candidate.kind === "role") return true;
-    return candidate.kind === "harness" && job.source_agent_id?.toLowerCase() === "xiaobaos";
-  });
+  return job.candidates.filter((candidate) => (
+    (candidate.kind === "agent_md" || candidate.kind === "skill" || candidate.kind === "role")
+    && isUsableAgentAsset(candidate)
+  ));
+}
+
+export type AgentAssetFile = {
+  path: string;
+  content: string;
+};
+
+export function agentAssetFiles(candidate: EvolutionCandidate): AgentAssetFile[] {
+  const content = record(candidate.content);
+  if (content) {
+    const files = Array.isArray(content.files) ? content.files.flatMap((value) => {
+      const file = record(value);
+      const path = stringValue(file?.path);
+      const body = stringValue(file?.content);
+      return path && body ? [{ path, content: body }] : [];
+    }) : [];
+    if (files.length) return files;
+
+    const path = stringValue(content.path);
+    const markdown = stringValue(content.markdown);
+    const defaultPath = candidate.kind === "agent_md" ? "agent.md"
+      : candidate.kind === "skill" ? "SKILL.md"
+        : candidate.kind === "role" ? "role.json"
+          : "agent-asset.json";
+    if (markdown) return [{ path: path || defaultPath, content: markdown }];
+  }
+  return [];
+}
+
+export function isUsableAgentAsset(candidate: EvolutionCandidate): boolean {
+  const files = agentAssetFiles(candidate);
+  if (candidate.kind === "agent_md") {
+    return files.length === 1 && files[0].path === "agent.md";
+  }
+  const root = stringValue(record(candidate.content)?.root).replace(/\/$/, "");
+  if (candidate.kind === "skill") {
+    if (!root) return files.length === 1 && /^skills\/[a-z0-9][a-z0-9-]*\/SKILL\.md$/.test(files[0]?.path || "");
+    return /^skills\/[a-z0-9][a-z0-9-]*$/.test(root) && files.some((file) => file.path === `${root}/SKILL.md`);
+  }
+  if (candidate.kind === "role") {
+    if (!/^roles\/[a-z0-9][a-z0-9-]*$/.test(root)) return false;
+    return files.some((file) => file.path === `${root}/role.json`)
+      && files.some((file) => file.path.startsWith(`${root}/prompts/`) && file.path.endsWith(".md"));
+  }
+  return false;
 }
 
 export function agentAssetText(candidate: EvolutionCandidate): string {
-  if (candidate.kind === "agent_md" && typeof candidate.content === "object" && candidate.content !== null) {
+  const files = agentAssetFiles(candidate);
+  if (files.length === 1) return files[0].content;
+  if (files.length > 1) return files.map((file) => `===== ${file.path} =====\n${file.content}`).join("\n\n");
+  if (typeof candidate.content === "object" && candidate.content !== null) {
     const markdown = (candidate.content as Record<string, unknown>).markdown;
     if (typeof markdown === "string") return markdown;
   }
@@ -321,23 +369,34 @@ export function agentAssetText(candidate: EvolutionCandidate): string {
 }
 
 export function agentAssetFilename(candidate: EvolutionCandidate): string {
-  if (candidate.kind === "agent_md") {
-    if (typeof candidate.content === "object" && candidate.content !== null) {
-      const path = (candidate.content as Record<string, unknown>).path;
-      if (typeof path === "string" && path.trim()) {
-        const filename = path.trim().split(/[\\/]/).filter(Boolean).at(-1);
-        if (filename) return filename;
-      }
+  const files = agentAssetFiles(candidate);
+  if (files.length) return files[0].path.split("/").at(-1) || files[0].path;
+  if (typeof candidate.content === "object" && candidate.content !== null) {
+    const path = (candidate.content as Record<string, unknown>).path;
+    if (typeof path === "string" && path.trim()) {
+      const filename = path.trim().split(/[\\/]/).filter(Boolean).at(-1);
+      if (filename) return filename;
     }
-    return "agent.md";
   }
-  if (candidate.kind === "skill") return "skill.json";
+  if (candidate.kind === "agent_md") return "agent.md";
+  if (candidate.kind === "skill") return "SKILL.md";
   if (candidate.kind === "role") return "role.json";
-  if (candidate.kind === "harness") return "harness.json";
   return "agent-asset.json";
 }
 
+export function agentAssetPath(candidate: EvolutionCandidate): string {
+  if (typeof candidate.content === "object" && candidate.content !== null) {
+    const root = (candidate.content as Record<string, unknown>).root;
+    if (typeof root === "string" && root.trim()) return root.trim();
+    const path = (candidate.content as Record<string, unknown>).path;
+    if (typeof path === "string" && path.trim()) return path.trim();
+  }
+  return agentAssetFilename(candidate);
+}
+
 export function agentAssetDownloadURL(filename: string, content: string): string {
-  const type = filename.endsWith(".md") ? "text/markdown" : "application/json";
+  const type = filename.endsWith(".md") ? "text/markdown"
+    : filename.endsWith(".json") ? "application/json"
+      : "text/plain";
   return `data:${type};charset=utf-8,${encodeURIComponent(content)}`;
 }

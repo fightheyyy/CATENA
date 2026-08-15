@@ -4,5 +4,15 @@ Copyright 2026 fightheyyy
 The product is distributed under the Apache License, Version 2.0. See
 LICENSE.md for the complete license text.
 
-Catena Tap depends on claude-tap (https://github.com/liaohch3/claude-tap),
-Copyright liaohch3, distributed under the MIT License.
+Catena Runtime Capture contains modified parser and turn-assembly code from:
+
+- Langfuse Codex Observability Plugin
+  https://github.com/langfuse/codex-observability-plugin
+  commit 7500867afecf963d1cf83bf2b860a659591ace18
+- Langfuse Claude Observability Plugin
+  https://github.com/langfuse/claude-observability-plugin
+  commit 5b3d4323c49f3839545fad36883ed02420ebc0ba
+
+Copyright Langfuse GmbH, distributed under the MIT License. Exact license
+texts, pinned source records and Catena modification notes are retained under
+tap/third_party/ and tap/THIRD_PARTY_NOTICES.md.

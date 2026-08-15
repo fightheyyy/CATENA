@@ -1,6 +1,6 @@
 # Catena Implementation Plan
 
-Updated: 2026-08-12
+Updated: 2026-08-14
 
 ## Current status
 
@@ -10,10 +10,29 @@ Job orchestration. The embedded XiaoBaOS Runtime consumes retained Evidence
 Packs and produces reviewable Agent assets. Target Agent execution remains
 local.
 
+## Active milestone — asset-first Evolution
+
+- [x] Make Trace Farm open on the accumulated Agent Asset Library instead of
+      analysis history.
+- [x] Limit product assets to `agent.md`, Skill packages and Role packages.
+- [x] Render package files with readable content, per-file copy/download and
+      exact Trace provenance.
+- [x] Keep analysis progress and raw role output as a secondary audit surface.
+- [x] Match XiaoBaOS package contracts: Skill requires `SKILL.md` and may carry
+      support files; Role requires `role.json`, prompt and optional local Skills.
+- [x] Persist Trace Farm output language and make all three evolution roles
+      generate human-readable assets in the selected UI language.
+- [x] Add direct asset deletion and place the global account control in the
+      sidebar utility/account area across every route.
+- [ ] Verify empty, running, failed and completed asset states at desktop and
+      narrow widths in both themes.
+
 ## Completed milestone — evidence hierarchy
 
 - [x] Derive Agent and Session identity in every Trace summary.
 - [x] Group Trace navigation as Agent → Session → Trace → Span.
+- [x] Give Session groups a deterministic first-request title without adding an
+      LLM call or changing the authoritative exported Session identity.
 - [x] Keep legacy evidence without Session metadata in an explicit ungrouped bucket.
 - [x] Verify the hierarchy against retained Codex data and responsive layouts.
 
@@ -25,7 +44,7 @@ local.
 - [x] Keep terminal task state and source Conversation provenance visible.
 - [x] Augment empty semantic graphs with truthful Conversation, Agent and
       same-Conversation provenance instead of rendering an isolated Fact.
-- [x] Make the fixed account control visibly identifiable at narrow widths.
+- [x] Make the sidebar account control visibly identifiable at narrow widths.
 
 ## Completed milestone — Catena-owned Trace storage
 
@@ -83,7 +102,7 @@ local.
 - [x] XiaoBaOS user-visible Conversation ingestion.
 - [x] Agent + time-window Trace Set selection.
 - [x] Inspector → Evolution → Reviewer stage execution and persistence.
-- [x] Evidence-linked `agent.md`, Skill, Role and XiaoBaOS Harness candidates.
+- [x] Evidence-linked `agent.md`, Skill package and Role package candidates.
 - [x] Optional Conversation-derived GauzMem recall and graph view.
 - [x] Document GitHub identity and the separate Trace-to-asset / Conversation-to-memory paths.
 - [x] React product UI served by Go.
@@ -98,16 +117,34 @@ local.
 - [ ] Run failure injection for Runner loss, database interruption and restart.
 - [ ] Add backup/restore rehearsal for PostgreSQL and ClickHouse.
 
-## Active milestone — canonical Runtime capture
+## Active milestone — authoritative Coding Agent Runtime capture
 
-- [x] Add `catena tap` using the pinned claude-tap capture engine.
-- [x] Normalize model and tool exchanges into one Trace per user turn.
-- [x] Cover Codex, Codex App, Claude Code, Hermes and OpenClaw from one CLI.
-- [x] Verify fail-open upload and a real local Codex tool turn.
-- [x] Verify the loopback local workspace can create an Agent key and ingest a
-      real Codex capture without GitHub OAuth or direct database writes.
+- [x] Replace `claude-tap` proxy capture and the heuristic Python normalizer
+      with pinned Langfuse-derived Codex rollout and Claude transcript parsers.
+- [x] Route both live hooks and historical import through Canonical Event Graph
+      v1 and Catena's deterministic OTLP exporter.
+- [x] Support only real-accepted Codex CLI and Claude Code; remove Codex App,
+      Hermes and OpenClaw claims.
+- [x] Commit desensitized Runtime fixtures/goldens for the complete parser,
+      failure, retry, abort, subagent, compact, resume and idempotency matrix.
+- [x] Complete one real E2E for each Runtime through ClickHouse and Web Trace
+      View, without deleting non-Catena evidence.
 - [x] Render real Barena/XiaoBaOS evaluation evidence as Run, Turn, Model and
       Check steps while preserving Runtime wrappers in Raw Span.
+
+## Completed milestone — readable Coding Agent Trace narrative
+
+- [x] Import fresh Codex and Claude Code evidence through the new Runtime
+      parsers into the local Catena stack and use those Traces as the UI
+      acceptance baseline.
+- [x] Make the default Trace detail read as one Turn narrative: user request,
+      model attempts, exact Tool calls/results and final answer.
+- [x] Render parallel Tools and Subagents as explicit branches, and surface
+      Retry, Context Compact, Abort and Incomplete as first-class events.
+- [x] Keep the complete Span waterfall and attributes under a separate
+      diagnostics lens instead of making telemetry the primary reading model.
+- [x] Verify desktop and narrow layouts against real new-parser Traces, then
+      synchronize the production Web bundle embedded by Go.
 
 ## Later
 
@@ -125,6 +162,23 @@ local.
 5. Web tests/build, Go tests/vet/race, and both Compose configurations pass.
 
 ## Verification log
+
+- 2026-08-14: configured the official Codex plugin lifecycle locally with an
+  owner-only Agent credential and persisted Hook trust through Codex's own
+  configuration API. A real no-tool Codex Turn reached Catena as Trace
+  `9a1fe9d219fdea97827a10fda487d2e2` (Turn + Model Call, both successful), and
+  an identical repeated Hook produced no additional Trace or Span.
+
+- 2026-08-14: Imported fresh, complete benign-at-source Codex and Claude Code
+  executions through the replacement parsers. Catena retained trace
+  `b500a6a56a920efe1702f4b468e3917e` for Codex and
+  `2e83c300eff4332a3ae94b12da2617f0` for Claude, each as one Turn, two Model
+  calls and one exact Tool with zero errors. The Web default is now a causal
+  Turn narrative; raw OTel remains a diagnostics lens. Browser acceptance at
+  desktop, a constrained 1200px workspace and 390px passed with zero overflow
+  or console errors. Python checks, Codex TypeScript tests/build, 50 Web tests,
+  Go tests/vet/race, both Compose configurations, Compose smoke and embedded
+  Web parity all passed.
 
 - 2026-08-11: Loopback local mode created a bound `Codex Local` Agent key
   without GitHub OAuth and backfilled 16 real Codex rollout Sessions through
@@ -147,13 +201,15 @@ local.
   serving a stale pre-Catena frontend when the normal multi-stage Docker build
   is bypassed.
 
-- 2026-08-11: Catena Tap pinned `claude-tap==0.1.142`, passed ten Python
-  tests for OpenAI Responses, Anthropic Messages, Chat Completions, tool-result
-  pairing, authenticated OTLP upload and CLI delegation. A real Codex 0.147.0
-  turn executed `pwd` through the wrapper and produced one canonical Trace with
-  four Spans: Turn, Model, `exec` Tool and final Model. Go OTLP JSON decoding,
-  Runtime inference and control-plane tests passed. The Tap suite is included
-  in the repository CI path filter and Python 3.12 job.
+- 2026-08-14: Deleted the `claude-tap` proxy/TraceStore/heuristic-normalizer
+  path and replaced it with MIT Langfuse-derived parsers pinned at Codex
+  `7500867afecf963d1cf83bf2b860a659591ace18` and Claude
+  `5b3d4323c49f3839545fad36883ed02420ebc0ba`. Real redacted fixtures account
+  183/183 source rows into 28 traces and 106 spans. Authenticated Codex CLI
+  `0.147.0` and Claude Code `2.1.112` each completed Hook → OTLP → Go →
+  ClickHouse → Web with four spans, zero errors, live/import identity equality
+  and duplicate-hook no-op. Full evidence is recorded in
+  `tap/ACCEPTANCE-2026-08-14.md`.
 
 - 2026-08-11: MVP1 release-candidate verification passed: Go unit tests,
   `go vet`, Go race tests, 39 Web tests, TypeScript typecheck, production Web

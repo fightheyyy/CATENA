@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -181,6 +182,11 @@ func (s *HTTPServer) createAgentEvolutionJob(w http.ResponseWriter, r *http.Requ
 	request.WindowStart = request.WindowStart.UTC()
 	request.WindowEnd = request.WindowEnd.UTC()
 	request.Objective = strings.TrimSpace(request.Objective)
+	request.OutputLanguage, err = normalizedEvolutionOutputLanguage(request.OutputLanguage)
+	if err != nil {
+		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := request.Validate(time.Now().UTC()); err != nil {
 		writeProblem(w, http.StatusBadRequest, err.Error())
 		return
@@ -210,7 +216,7 @@ func (s *HTTPServer) createAgentEvolutionJob(w http.ResponseWriter, r *http.Requ
 			writeProblem(w, statusFor(traceErr), traceErr.Error())
 			return
 		}
-		if !serviceBelongsToAgent(detail.Summary.ServiceName, agentID) {
+		if !traceSummaryBelongsToAgent(detail.Summary, agentID) {
 			writeProblem(w, http.StatusConflict, "Agent Trace identity changed while evidence was being frozen")
 			return
 		}
@@ -224,7 +230,7 @@ func (s *HTTPServer) createAgentEvolutionJob(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	fingerprint, err := agentEvolutionSourceRequestFingerprint(
-		agentID, request.WindowStart, request.WindowEnd, request.Objective,
+		agentID, request.WindowStart, request.WindowEnd, request.Objective, request.OutputLanguage,
 	)
 	if err != nil {
 		writeProblem(w, http.StatusInternalServerError, "Evolution request could not be fingerprinted")
@@ -243,6 +249,7 @@ func (s *HTTPServer) createAgentEvolutionJob(w http.ResponseWriter, r *http.Requ
 		WindowStart:        &windowStart,
 		WindowEnd:          &windowEnd,
 		Objective:          request.Objective,
+		OutputLanguage:     request.OutputLanguage,
 		IdempotencyKey:     idempotencyKey,
 		RequestFingerprint: fingerprint,
 		State:              EvolutionJobQueued,
@@ -576,6 +583,7 @@ func agentEvolutionSourceRequestFingerprint(
 	windowStart time.Time,
 	windowEnd time.Time,
 	objective string,
+	outputLanguage string,
 ) (string, error) {
 	encoded, err := json.Marshal(map[string]any{
 		"source_kind":     EvolutionSourceAgentTraceSet,
@@ -583,12 +591,31 @@ func agentEvolutionSourceRequestFingerprint(
 		"window_start":    windowStart.UTC(),
 		"window_end":      windowEnd.UTC(),
 		"objective":       objective,
+		"output_language": outputLanguage,
 	})
 	if err != nil {
 		return "", err
 	}
 	digest := sha256.Sum256(encoded)
 	return fmt.Sprintf("%x", digest[:]), nil
+}
+
+func normalizedEvolutionOutputLanguage(value string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", "zh", "zh-cn", "zh-hans":
+		return "zh-CN", nil
+	case "en", "en-us", "en-gb":
+		return "en", nil
+	default:
+		return "", errors.New("output_language must be zh-CN or en")
+	}
+}
+
+func evolutionOutputLanguageInstruction(job EvolutionJob) string {
+	if job.OutputLanguage == "en" {
+		return "Write every human-readable title, summary, explanation, and asset body in English. Keep protocol keys, file paths, code identifiers, commands, and required schema values unchanged."
+	}
+	return "所有面向人的标题、摘要、说明和资产正文都必须使用简体中文。协议字段、文件路径、代码标识符、命令及规范要求的固定值保持原样。"
 }
 
 func selectAgentEvolutionTraces(values []TraceSummary, limit int) []TraceSummary {
@@ -832,7 +859,7 @@ func buildAgentTraceSetEvidencePack(
 		perTraceBudget = 12
 	}
 	for _, trace := range traces {
-		if trace.Summary.TraceID == "" || !serviceBelongsToAgent(trace.Summary.ServiceName, agentID) || len(trace.Spans) == 0 {
+		if trace.Summary.TraceID == "" || !traceSummaryBelongsToAgent(trace.Summary, agentID) || len(trace.Spans) == 0 {
 			return EvolutionEvidencePack{}, fmt.Errorf("stored Trace does not belong to the selected Agent")
 		}
 		if trace.Summary.EndTime.Before(windowStart) || trace.Summary.StartTime.After(windowEnd) {
@@ -1063,6 +1090,7 @@ func buildInspectorPrompt(job EvolutionJob, evidence json.RawMessage) string {
 	}
 	return fmt.Sprintf(`You are InspectorCat in Catena. Analyze only the retained execution evidence below.
 Do not invent tool calls, artifacts, verification, or outcomes. Focus: %s
+Output language: %s
 Return one JSON object only with this exact shape:
 {"finding":{"title":"...","summary":"...","severity":"low|medium|high|critical|unknown","evidence":["specific retained fact"]}}
 	Do not propose Memory, Case, or a Replay workflow. Conversation owns memory; EvolutionCat owns Agent assets.
@@ -1071,7 +1099,7 @@ Return one JSON object only with this exact shape:
 	Source Traces: %s
 	Source Run (optional): %s
 	Evidence:
-	%s`, focus, job.SourceAgentID, strings.Join(evolutionJobTraceIDs(job), ","), job.SourceRunID, evidence)
+	%s`, focus, evolutionOutputLanguageInstruction(job), job.SourceAgentID, strings.Join(evolutionJobTraceIDs(job), ","), job.SourceRunID, evidence)
 }
 
 func buildCandidatePrompt(job EvolutionJob) string {
@@ -1079,17 +1107,19 @@ func buildCandidatePrompt(job EvolutionJob) string {
 		"finding":         job.Finding,
 		"source_agent_id": job.SourceAgentID,
 	})
-	allowedKinds := "agent_md|skill|role"
-	if isXiaoBaAgentID(job.SourceAgentID) {
-		allowedKinds += "|harness"
-	}
-	return fmt.Sprintf(`You are EvolutionCat in Catena's XiaoBaOS Evolution Runtime. Produce the smallest reusable Agent asset suggested by the accepted evidence analysis.
+	return fmt.Sprintf(`You are EvolutionCat in Catena's XiaoBaOS Evolution Runtime. Produce one small, reusable Agent asset that directly prevents the accepted failure mode.
+	Output language: %s
 	Return one JSON object only with this exact shape:
-	{"candidate":{"kind":"%s","title":"...","summary":"...","content":{}}}
-	For agent_md, content must be {"path":"agent.md","markdown":"# ..."}. Skill and Role content must be portable structured JSON. Harness is permitted only for canonical XiaoBaOS and must describe a XiaoBaOS Runtime-level optimization.
+	{"candidate":{"kind":"agent_md|skill|role","title":"...","summary":"...","content":{"root":"...","files":[{"path":"...","content":"..."}]}}}
+	The asset must be an immediately usable repository file or package, not an optimization report.
+	Use exactly one of these XiaoBaOS-compatible contracts:
+	- agent_md: root is "agent.md" and files contains exactly one file whose path is "agent.md". Its Markdown heading and instructions must use the requested output language.
+	- skill: root is "skills/<kebab-name>" and files must contain "skills/<kebab-name>/SKILL.md" with YAML frontmatter name and description. It may also contain text files under scripts/, references/, or assets/ when they are necessary for the capability.
+	- role: root is "roles/<kebab-name>". A Role is a complete specialist package above Skills, not a Markdown persona. Files must contain role.json and prompts/<prompt-file>.md; role.json must declare name, displayName, description and promptFile. It may define evidence-supported tool policy, confirmation gates and role-local skills/<skill-name>/SKILL.md. All Roles reuse the XiaoBaOS Agent Runtime.
+	Every file path must stay below the declared root. Write concrete instructions, triggers, expected behavior, and failure guards. Keep the package narrow enough to review in one sitting. Do not paste Trace IDs or analysis prose into file bodies. Never invent tool names: omit optional tool policy fields when the retained evidence does not justify them.
 	Never emit Memory or Case: Conversation owns memory, and Trace Farm owns Agent assets. Do not claim the asset was installed, applied, replayed, verified, or released.
 Analysis:
-%s`, allowedKinds, inputs)
+%s`, evolutionOutputLanguageInstruction(job), inputs)
 }
 
 func buildReviewerPrompt(job EvolutionJob, evidence json.RawMessage) string {
@@ -1098,13 +1128,14 @@ func buildReviewerPrompt(job EvolutionJob, evidence json.RawMessage) string {
 		"candidate": job.Candidate,
 	})
 	return fmt.Sprintf(`You are ReviewerCat in Catena. Review whether this proposal is coherent and grounded in the retained evidence.
+Output language: %s
 Return one JSON object only with this exact shape:
 {"review":{"verdict":"pass|fail|blocked","summary":"..."}}
 	This is grounding review only. Do not invent Replay, verification, adoption, or a Release decision.
 Proposal:
 %s
 Retained evidence:
-%s`, inputs, evidence)
+%s`, evolutionOutputLanguageInstruction(job), inputs, evidence)
 }
 
 func inspectorOutput(raw json.RawMessage) EvolutionFinding {
@@ -1183,7 +1214,7 @@ func candidateOutput(raw json.RawMessage, sourceAgentID string) EvolutionCandida
 		Kind:    EvolutionCandidateAgentMD,
 		Title:   "Unclassified EvolutionCat draft",
 		Summary: "EvolutionCat returned an invalid Agent asset. Review the retained stage output before use.",
-		Content: json.RawMessage(`{"path":"agent.md","markdown":"# Human review required\n\nEvolutionCat returned an invalid Agent asset. Review the retained stage output before use."}`),
+		Content: json.RawMessage(`{"root":"agent.md","files":[{"path":"agent.md","content":"# Human review required\n\nEvolutionCat returned an invalid Agent asset. Review the retained stage output before use."}]}`),
 		Status:  evolutionCandidateStatus,
 	}
 }
@@ -1259,29 +1290,137 @@ func validEvolutionCandidate(value EvolutionCandidate) bool {
 		len(value.Content) > 0 && json.Valid(value.Content)
 }
 
-func validCurrentEvolutionCandidate(value EvolutionCandidate, sourceAgentID string) bool {
+func validCurrentEvolutionCandidate(value EvolutionCandidate, _ string) bool {
 	if !validEvolutionCandidate(value) {
 		return false
 	}
 	switch value.Kind {
 	case EvolutionCandidateAgentMD:
-		var content struct {
-			Path     string `json:"path"`
-			Markdown string `json:"markdown"`
-		}
-		return json.Unmarshal(value.Content, &content) == nil &&
-			content.Path == "agent.md" && strings.TrimSpace(content.Markdown) != ""
-	case EvolutionCandidateSkill, EvolutionCandidateRole:
-		return jsonObject(value.Content)
-	case EvolutionCandidateHarness:
-		return isXiaoBaAgentID(sourceAgentID) && jsonObject(value.Content)
+		return validAgentMDPackage(value.Content)
+	case EvolutionCandidateSkill:
+		return validSkillPackage(value.Content)
+	case EvolutionCandidateRole:
+		return validRolePackage(value.Content)
 	default:
 		return false
 	}
 }
 
-func isXiaoBaAgentID(value string) bool {
-	return strings.EqualFold(strings.TrimSpace(value), "xiaobaos")
+type portableAssetFile struct {
+	Path    string `json:"path"`
+	Content string `json:"content"`
+}
+
+type portableAssetPackage struct {
+	Root  string              `json:"root"`
+	Files []portableAssetFile `json:"files"`
+}
+
+func decodePortableAssetPackage(raw json.RawMessage) (portableAssetPackage, map[string]string, bool) {
+	var content portableAssetPackage
+	if json.Unmarshal(raw, &content) != nil || len(content.Files) == 0 || len(content.Files) > 24 {
+		return portableAssetPackage{}, nil, false
+	}
+	content.Root = strings.TrimSuffix(strings.TrimSpace(content.Root), "/")
+	if !validRelativeAssetPath(content.Root) {
+		return portableAssetPackage{}, nil, false
+	}
+	files := make(map[string]string, len(content.Files))
+	for index := range content.Files {
+		filePath := strings.TrimSpace(content.Files[index].Path)
+		body := content.Files[index].Content
+		if !validRelativeAssetPath(filePath) || strings.TrimSpace(body) == "" ||
+			(filePath != content.Root && !strings.HasPrefix(filePath, content.Root+"/")) {
+			return portableAssetPackage{}, nil, false
+		}
+		if _, duplicate := files[filePath]; duplicate {
+			return portableAssetPackage{}, nil, false
+		}
+		files[filePath] = body
+	}
+	return content, files, true
+}
+
+func validRelativeAssetPath(value string) bool {
+	if value == "" || strings.HasPrefix(value, "/") || strings.Contains(value, "\\") {
+		return false
+	}
+	for _, part := range strings.Split(value, "/") {
+		if part == "" || part == "." || part == ".." {
+			return false
+		}
+	}
+	return true
+}
+
+func validAgentMDPackage(raw json.RawMessage) bool {
+	content, files, ok := decodePortableAssetPackage(raw)
+	return ok && content.Root == "agent.md" && len(files) == 1 && strings.TrimSpace(files["agent.md"]) != ""
+}
+
+func validSkillPackage(raw json.RawMessage) bool {
+	content, files, ok := decodePortableAssetPackage(raw)
+	parts := strings.Split(content.Root, "/")
+	if !ok || len(parts) != 2 || parts[0] != "skills" || !validAssetName(parts[1]) {
+		return false
+	}
+	skill, exists := files[content.Root+"/SKILL.md"]
+	return exists && frontmatterValue(skill, "name") == parts[1] && frontmatterValue(skill, "description") != ""
+}
+
+func validRolePackage(raw json.RawMessage) bool {
+	content, files, ok := decodePortableAssetPackage(raw)
+	parts := strings.Split(content.Root, "/")
+	if !ok || len(parts) != 2 || parts[0] != "roles" || !validAssetName(parts[1]) {
+		return false
+	}
+	var role struct {
+		Name        string `json:"name"`
+		DisplayName string `json:"displayName"`
+		Description string `json:"description"`
+		PromptFile  string `json:"promptFile"`
+	}
+	if json.Unmarshal([]byte(files[content.Root+"/role.json"]), &role) != nil ||
+		role.Name != parts[1] || strings.TrimSpace(role.DisplayName) == "" ||
+		strings.TrimSpace(role.Description) == "" || !validAssetFilename(role.PromptFile) {
+		return false
+	}
+	_, promptExists := files[content.Root+"/prompts/"+role.PromptFile]
+	return promptExists
+}
+
+func validAssetName(value string) bool {
+	if value == "" || len(value) > 64 || value[0] < 'a' || value[0] > 'z' {
+		return false
+	}
+	for _, char := range value {
+		if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
+			return false
+		}
+	}
+	return true
+}
+
+func validAssetFilename(value string) bool {
+	value = strings.TrimSpace(value)
+	return value != "" && value != "." && value != ".." && !strings.ContainsAny(value, "/\\")
+}
+
+func frontmatterValue(markdown string, key string) string {
+	lines := strings.Split(strings.ReplaceAll(markdown, "\r\n", "\n"), "\n")
+	if len(lines) < 3 || strings.TrimSpace(lines[0]) != "---" {
+		return ""
+	}
+	for _, line := range lines[1:] {
+		if strings.TrimSpace(line) == "---" {
+			break
+		}
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 && strings.TrimSpace(parts[0]) == key {
+			return strings.Trim(strings.TrimSpace(parts[1]), "\"'")
+		}
+	}
+	return ""
 }
 
 func validEvolutionReview(value EvolutionReview) bool {

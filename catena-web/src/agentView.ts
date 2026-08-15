@@ -17,7 +17,6 @@ export function agentSourceKindLabel(
   locale: Locale,
 ) {
   if (kind === "native_live") return locale === "zh" ? "实时" : "Live";
-  if (kind === "history_backfill") return locale === "zh" ? "历史" : "History";
   return "OTel";
 }
 

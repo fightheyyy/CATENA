@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://catena.local/schemas/coding-agent-event-graph-v1.json",
+  "title": "Catena Coding Agent Canonical Event Graph v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "runtime", "session_id", "source", "traces"],
+  "properties": {
+    "schema_version": {
+      "const": "catena.coding_agent.event_graph.v1"
+    },
+    "runtime": {
+      "enum": ["codex", "claude-code"]
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "path", "parser", "upstream_commit"],
+      "properties": {
+        "format": {
+          "enum": ["codex-rollout-jsonl", "claude-transcript-jsonl"]
+        },
+        "path": { "type": "string" },
+        "parser": { "type": "string", "minLength": 1 },
+        "upstream_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+    "traces": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/trace" }
+    }
+  },
+  "$defs": {
+    "state": {
+      "enum": ["ok", "error", "retry", "aborted", "incomplete"]
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "kind",
+        "name",
+        "start_time_unix_nano",
+        "end_time_unix_nano",
+        "state",
+        "attributes",
+        "source_event_ids"
+      ],
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "parent_key": { "type": "string" },
+        "kind": {
+          "enum": [
+            "turn",
+            "model",
+            "tool",
+            "subagent",
+            "context_compact",
+            "retry",
+            "unmatched_tool_result"
+          ]
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "runtime_id": { "type": "string" },
+        "start_time_unix_nano": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "end_time_unix_nano": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "state": { "$ref": "#/$defs/state" },
+        "status_message": { "type": "string" },
+        "input": {},
+        "output": {},
+        "model": { "type": "string" },
+        "usage": { "$ref": "#/$defs/usage" },
+        "attributes": { "type": "object" },
+        "source_event_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "accounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "disposition"],
+      "properties": {
+        "event_id": { "type": "string", "minLength": 1 },
+        "disposition": { "enum": ["span", "ignored"] },
+        "node_key": { "type": "string" },
+        "reason": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "disposition": { "const": "span" } } },
+          "then": { "required": ["node_key"] }
+        },
+        {
+          "if": { "properties": { "disposition": { "const": "ignored" } } },
+          "then": { "required": ["reason"] }
+        }
+      ]
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trace_id", "turn_id", "state", "nodes", "accounting"],
+      "properties": {
+        "trace_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+        "turn_id": { "type": "string", "minLength": 1 },
+        "state": { "$ref": "#/$defs/state" },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/node" }
+        },
+        "accounting": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/accounting" }
+        }
+      }
+    }
+  }
+}

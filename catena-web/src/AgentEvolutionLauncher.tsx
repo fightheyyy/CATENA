@@ -148,9 +148,10 @@ export function AgentEvolutionLauncher({
           const input = {
             window_start: preview.window_start,
             window_end: preview.window_end,
+            output_language: locale === "zh" ? "zh-CN" as const : "en" as const,
             ...(objective.trim() ? { objective: objective.trim() } : {}),
           };
-          const signature = agentEvolutionRequestSignature(agentID, input, objective);
+          const signature = agentEvolutionRequestSignature(agentID, input, objective, input.output_language);
           if (requestIdentity.current.signature !== signature) {
             requestIdentity.current = { signature, key: evolutionIdempotencyKey(agentID) };
           }

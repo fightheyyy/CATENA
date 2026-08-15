@@ -129,24 +129,21 @@ func shouldReplaceRuntimeKind(current string, observed string) bool {
 
 func detectOTLPRuntime(spans []TraceSpan) string {
 	for _, span := range spans {
-		values := []string{span.ServiceName, span.ScopeName}
-		for _, key := range []string{"service.name", "telemetry.sdk.name", "gen_ai.system", "agent.runtime"} {
-			if value, ok := span.ResourceAttributes[key]; ok {
-				values = append(values, strings.TrimSpace(strings.ToLower(toTraceString(value))))
-			}
+		serviceName := normalizedAgentSource(span.ServiceName)
+		if value, ok := span.ResourceAttributes["service.name"]; ok {
+			serviceName = normalizedAgentSource(toTraceString(value))
 		}
-		joined := strings.ToLower(strings.Join(values, " "))
+		runtime := ""
+		if value, ok := span.ResourceAttributes["agent.runtime"]; ok {
+			runtime = normalizedAgentSource(toTraceString(value))
+		}
 		switch {
-		case strings.Contains(joined, "xiaoba"):
+		case serviceName == "xiaobaos" || serviceName == "barena-xiaoba-target":
 			return "xiaobaos"
-		case strings.Contains(joined, "codex"):
+		case serviceName == "catena-runtime-codex" && runtime == "codex":
 			return "codex"
-		case strings.Contains(joined, "claude") || strings.Contains(joined, "anthropic"):
+		case serviceName == "catena-runtime-claude-code" && runtime == "claude-code":
 			return "claude_code"
-		case strings.Contains(joined, "hermes"):
-			return "hermes"
-		case strings.Contains(joined, "openclaw"):
-			return "openclaw"
 		}
 	}
 	return "otel"

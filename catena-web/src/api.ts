@@ -126,7 +126,7 @@ export const api = {
   ),
   startAgentEvolutionJob: async (
     agentID: string,
-    input: { window_start: string; window_end: string; objective?: string },
+    input: { window_start: string; window_end: string; objective?: string; output_language: "zh-CN" | "en" },
     idempotencyKey: string,
   ) => normalizeEvolutionJob(
     await request<unknown>(`/v1/agents/${encodeURIComponent(agentID)}/evolution-jobs`, {

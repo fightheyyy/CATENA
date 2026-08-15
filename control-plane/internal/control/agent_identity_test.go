@@ -6,21 +6,16 @@ import (
 	"time"
 )
 
-func TestCanonicalAgentForSourceMergesCodexAliases(t *testing.T) {
-	for _, serviceName := range []string{
-		"codex",
-		"CODEX",
-		" codex-app-server ",
-		"Codex Desktop",
-		"  cOdEx DeSkToP  ",
-	} {
+func TestCanonicalAgentForSourcePreservesAcceptedRuntimeIdentity(t *testing.T) {
+	for _, serviceName := range []string{"catena-runtime-codex", "catena-runtime-claude-code"} {
 		identity := canonicalAgentForSource(serviceName)
-		if identity.AgentID != "codex" || identity.DisplayName != "Codex" ||
-			identity.IdentitySource != agentIdentitySourceAlias {
+		if identity.AgentID != serviceName || identity.DisplayName != serviceName ||
+			identity.IdentitySource != agentIdentitySourceServiceName ||
+			!reflect.DeepEqual(identity.Aliases, []string{serviceName}) {
 			t.Fatalf("source %q resolved to %#v", serviceName, identity)
 		}
-		if !serviceBelongsToAgent(serviceName, "codex") {
-			t.Fatalf("source %q does not belong to canonical Codex", serviceName)
+		if agentSourceKind(serviceName) != agentSourceKindNativeLive {
+			t.Fatalf("source %q was not classified as accepted native runtime", serviceName)
 		}
 	}
 }
@@ -34,6 +29,20 @@ func TestCanonicalAgentForSourceKeepsUnknownServiceIdentity(t *testing.T) {
 	}
 	if serviceBelongsToAgent("xiaoba-role", "another-role") {
 		t.Fatal("unregistered service names were merged")
+	}
+}
+
+func TestTraceSummaryBelongsToRegisteredAgentBeforeServiceName(t *testing.T) {
+	summary := TraceSummary{AgentID: "agent-stable-1", ServiceName: "catena-runtime-codex"}
+	if !traceSummaryBelongsToAgent(summary, "agent-stable-1") {
+		t.Fatal("credential-bound Agent identity was not accepted")
+	}
+	if traceSummaryBelongsToAgent(summary, "catena-runtime-codex") {
+		t.Fatal("service name overrode credential-bound Agent identity")
+	}
+	unbound := TraceSummary{ServiceName: "catena-runtime-codex"}
+	if !traceSummaryBelongsToAgent(unbound, "catena-runtime-codex") {
+		t.Fatal("exact unbound service identity was not accepted")
 	}
 }
 
@@ -99,29 +108,24 @@ func TestXiaoBaOSTargetMembershipUsesCanonicalID(t *testing.T) {
 	}
 }
 
-func TestMergeAgentSourceAggregatesReturnsOneAuditableCodexAgent(t *testing.T) {
+func TestMergeAgentSourceAggregatesReturnsOneCredentialBoundRuntimeAgent(t *testing.T) {
 	now := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
 	values := []agentSourceAggregate{
-		{ServiceName: "Codex Desktop", TraceCount: 29, SpanCount: 50, LastSeenAt: now.Add(-time.Hour)},
-		{ServiceName: "codex-app-server", TraceCount: 3636, SpanCount: 356642, ErrorCount: 12, LastSeenAt: now},
-		{ServiceName: " CODEX ", TraceCount: 3, SpanCount: 9, LastSeenAt: now.Add(-time.Minute)},
+		{AgentID: "agent-codex-runtime", ServiceName: "catena-runtime-codex", TraceCount: 2, SpanCount: 8, LastSeenAt: now.Add(-time.Hour)},
+		{AgentID: "agent-codex-runtime", ServiceName: "catena-runtime-codex", TraceCount: 3, SpanCount: 10, ErrorCount: 1, LastSeenAt: now},
 		{ServiceName: "xiaoba-role", TraceCount: 7, SpanCount: 21, LastSeenAt: now.Add(-2 * time.Hour)},
 	}
 	agents := mergeAgentSourceAggregates(values, 10)
 	if len(agents) != 2 {
-		t.Fatalf("agents = %#v, want one Codex and one unknown Agent", agents)
+		t.Fatalf("agents = %#v, want one credential-bound runtime and one generic Agent", agents)
 	}
 	codex := agents[0]
-	if codex.AgentID != "codex" || codex.DisplayName != "Codex" ||
-		codex.IdentitySource != agentIdentitySourceAlias || codex.TraceCount != 3668 ||
-		codex.SpanCount != 356701 || codex.ErrorCount != 12 {
-		t.Fatalf("canonical Codex summary = %#v", codex)
+	if codex.AgentID != "agent-codex-runtime" ||
+		codex.IdentitySource != agentIdentitySourceCredential || codex.TraceCount != 5 ||
+		codex.SpanCount != 18 || codex.ErrorCount != 1 {
+		t.Fatalf("credential-bound Codex summary = %#v", codex)
 	}
-	wantSources := []AgentSource{
-		{ServiceName: "codex", Kind: agentSourceKindNativeLive},
-		{ServiceName: "codex-app-server", Kind: agentSourceKindNativeLive},
-		{ServiceName: "Codex Desktop", Kind: agentSourceKindHistoryBackfill},
-	}
+	wantSources := []AgentSource{{ServiceName: "catena-runtime-codex", Kind: agentSourceKindNativeLive}}
 	if !reflect.DeepEqual(codex.Sources, wantSources) {
 		t.Fatalf("Codex sources = %#v, want %#v", codex.Sources, wantSources)
 	}
@@ -155,14 +159,14 @@ func TestMergeAgentSourceAggregatesExcludesInternalSources(t *testing.T) {
 	}
 }
 
-func TestNormalizedAgentIDAcceptsCodexAliasesButReturnsCanonicalID(t *testing.T) {
-	for _, value := range []string{"codex", "Codex Desktop", " CODEX-APP-SERVER "} {
+func TestNormalizedAgentIDPreservesExactAcceptedRuntimeServiceIDs(t *testing.T) {
+	for _, value := range []string{"catena-runtime-codex", "catena-runtime-claude-code"} {
 		agentID, err := normalizedAgentID(value)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if agentID != "codex" {
-			t.Fatalf("normalizedAgentID(%q) = %q", value, agentID)
+		if agentID != value {
+			t.Fatalf("normalizedAgentID(%q) = %q, want exact identity", value, agentID)
 		}
 	}
 }

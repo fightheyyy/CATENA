@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AgentEvolutionLauncher } from "./AgentEvolutionLauncher";
 import { api } from "./api";
 import {
   agentAssets,
   agentAssetDownloadURL,
+  agentAssetFiles,
   agentAssetFilename,
+  agentAssetPath,
   agentAssetText,
   evolutionStages,
   evolutionTraceCounts,
@@ -21,6 +23,27 @@ const workspaceCopy = {
     title: "Trace Farm",
     body: "选择一个 Agent，找出近期反复出现的问题，并生成可以直接使用的改进资产。",
     jobs: "分析记录",
+    assets: "资产",
+    assetLibrary: "Agent 资产",
+    assetLibraryBody: "这里只保存三类可用产物：agent.md、Skill 包与 Role 包。选择一项即可阅读文件并回查来源 Trace。",
+    assetLibraryEmpty: "还没有生成可复用资产。新建一次分析，Catena 会把最值得修复的问题写成文件。",
+    assetLibraryEmptyTitle: "Trace 还没有变成资产",
+    allAssets: "全部",
+    allAgents: "全部 Agent",
+    assetFilter: "资产类型",
+    agentFilter: "Agent",
+    assetDocument: "资产文件",
+    packageContents: "包内文件",
+    fileCount: "个文件",
+    selectedFile: "当前文件",
+    assetReason: "生成原因",
+    assetQuality: "质量检查",
+    openAnalysis: "查看来源分析",
+    readAsset: "阅读",
+    sourceAsset: "源码",
+    generatedAt: "生成时间",
+    noMatchingAssets: "没有符合当前筛选条件的资产。",
+    traceSources: "条来源 Trace",
     recentJobs: "最近分析",
     recentJobsBody: "选择一条结果后，再查看生成的资产和来源证据。",
     newAnalysis: "新建分析",
@@ -31,6 +54,9 @@ const workspaceCopy = {
     loadFailed: "无法读取分析记录",
     retry: "重试",
     deleteAnalysis: "删除分析",
+    deleteAsset: "删除资产",
+    deleteAssetTitle: "删除这项资产？",
+    deleteAssetWarning: "资产和对应的来源分析将一起删除；来源 Trace 保留。此操作无法恢复。",
     confirmDelete: "确认删除",
     cancelDelete: "取消",
     deleting: "正在删除",
@@ -84,6 +110,7 @@ const workspaceCopy = {
     proposalMissing: "这次分析还没有生成资产。",
     content: "资产内容",
     copyAsset: "复制资产",
+    copyFile: "复制文件",
     copiedAsset: "已复制",
     copyAssetFailed: "复制失败，请检查浏览器剪贴板权限。",
     downloadAsset: "下载",
@@ -120,6 +147,27 @@ const workspaceCopy = {
     title: "Trace Farm",
     body: "Choose an Agent, find recurring problems in recent behavior, and generate improvements you can use directly.",
     jobs: "Analysis history",
+    assets: "Assets",
+    assetLibrary: "Agent assets",
+    assetLibraryBody: "Exactly three usable outputs: agent.md, Skill packages, and Role packages. Read every file and trace it back to evidence.",
+    assetLibraryEmpty: "No reusable asset exists yet. Start an analysis and Catena will turn the highest-impact problem into a file.",
+    assetLibraryEmptyTitle: "No Trace has become an asset yet",
+    allAssets: "All",
+    allAgents: "All Agents",
+    assetFilter: "Asset kind",
+    agentFilter: "Agent",
+    assetDocument: "Asset file",
+    packageContents: "Package contents",
+    fileCount: "files",
+    selectedFile: "Current file",
+    assetReason: "Why it was generated",
+    assetQuality: "Quality check",
+    openAnalysis: "Open source analysis",
+    readAsset: "Read",
+    sourceAsset: "Source",
+    generatedAt: "Generated",
+    noMatchingAssets: "No asset matches the current filters.",
+    traceSources: "source Traces",
     recentJobs: "Recent analyses",
     recentJobsBody: "Select a result to inspect its generated assets and source evidence.",
     newAnalysis: "New analysis",
@@ -130,6 +178,9 @@ const workspaceCopy = {
     loadFailed: "Could not read the analysis",
     retry: "Retry",
     deleteAnalysis: "Delete analysis",
+    deleteAsset: "Delete asset",
+    deleteAssetTitle: "Delete this asset?",
+    deleteAssetWarning: "The asset and its source analysis will be deleted. Source Traces stay intact. This cannot be undone.",
     confirmDelete: "Delete",
     cancelDelete: "Cancel",
     deleting: "Deleting",
@@ -183,6 +234,7 @@ const workspaceCopy = {
     proposalMissing: "This analysis has not generated an asset yet.",
     content: "Asset content",
     copyAsset: "Copy asset",
+    copyFile: "Copy file",
     copiedAsset: "Copied",
     copyAssetFailed: "Could not copy. Check browser clipboard permission.",
     downloadAsset: "Download",
@@ -279,6 +331,12 @@ function conciseReviewSummary(value: string) {
   return summary.length > 240 ? `${summary.slice(0, 237).trim()}...` : summary;
 }
 
+type AssetRecord = {
+  candidate: EvolutionCandidate;
+  job: EvolutionJob;
+  agentName: string;
+};
+
 export function EvolutionWorkspace({
   locale,
   jobs,
@@ -306,6 +364,9 @@ export function EvolutionWorkspace({
   const [loading, setLoading] = useState(Boolean(selectedID));
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
+  const [view, setView] = useState<"assets" | "analyses" | "analysis">(
+    initialJobID ? "analysis" : "assets",
+  );
   const [drawer, setDrawer] = useState<"new" | "">("");
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -313,6 +374,7 @@ export function EvolutionWorkspace({
 
   useEffect(() => {
     setSelectedID(initialJobID || "");
+    if (initialJobID) setView("analysis");
   }, [initialJobID]);
 
   useEffect(() => {
@@ -357,6 +419,7 @@ export function EvolutionWorkspace({
   const handleJobStarted = (next: EvolutionJob) => {
     setSelectedID(next.job_id);
     setJob(next);
+    setView("analysis");
     setDrawer("");
     onJobStarted(next);
   };
@@ -370,6 +433,7 @@ export function EvolutionWorkspace({
       const deletedID = job.job_id;
       setSelectedID("");
       setJob(null);
+      setView("analyses");
       setDeleteConfirming(false);
       onJobSelected("");
       onJobDeleted(deletedID);
@@ -380,9 +444,35 @@ export function EvolutionWorkspace({
     }
   };
 
+  const handleDeleteAsset = async (jobID: string) => {
+    await api.deleteEvolutionJob(jobID);
+    if (selectedID === jobID) {
+      setSelectedID("");
+      setJob(null);
+      onJobSelected("");
+    }
+    onJobDeleted(jobID);
+  };
+
   const agentName = (agentID?: string) => agents.find((agent) => (
     agent.agent_id === agentID || agent.sources?.some((source) => source.service_name === agentID)
   ))?.display_name || agentID || t.analysis;
+
+  const assetRecords = useMemo<AssetRecord[]>(() => jobs.flatMap((sourceJob) => (
+    agentAssets(sourceJob).map((candidate) => ({
+      candidate,
+      job: sourceJob,
+      agentName: agentName(sourceJob.source_agent_id),
+    }))
+  )).sort((left, right) => (
+    new Date(right.job.updated_at).getTime() - new Date(left.job.updated_at).getTime()
+  )), [agents, jobs]);
+
+  const openAnalysis = (jobID: string) => {
+    setSelectedID(jobID);
+    setView("analysis");
+    onJobSelected(jobID);
+  };
 
   return (
     <section className="page evolution-page">
@@ -392,20 +482,43 @@ export function EvolutionWorkspace({
           <p>{t.body}</p>
         </div>
         <div className="evolution-page-actions">
-          {jobs.length > 0 && selectedID ? <button className="secondary-button" type="button" onClick={() => {
-            setSelectedID("");
-            onJobSelected("");
-          }}>{t.jobs}</button> : null}
+          <div className="farm-view-switch" role="group" aria-label={t.title}>
+            <button className={view === "assets" ? "active" : ""} type="button" onClick={() => {
+              setView("assets");
+              setSelectedID("");
+              onJobSelected("");
+            }}>{t.assets}<span>{assetRecords.length}</span></button>
+            <button className={view === "analyses" ? "active" : ""} type="button" onClick={() => {
+              setView("analyses");
+              setSelectedID("");
+              onJobSelected("");
+            }}>{t.jobs}<span>{jobs.length}</span></button>
+          </div>
           <button className="primary-button compact" type="button" onClick={() => setDrawer("new")}>{t.newAnalysis}</button>
         </div>
       </header>
-      {!selectedID && jobs.length === 0 ? (
+      {view === "assets" && assetRecords.length > 0 ? (
+        <AssetLibrary
+          records={assetRecords}
+          agents={agents}
+          locale={locale}
+          t={t}
+          onOpenAnalysis={openAnalysis}
+          onDeleteAsset={handleDeleteAsset}
+        />
+      ) : view === "assets" ? (
+        <div className="evolution-empty">
+          <h2>{t.assetLibraryEmptyTitle}</h2>
+          <p>{t.assetLibraryEmpty}</p>
+          <button className="primary-button compact" type="button" onClick={() => setDrawer("new")}>{t.newAnalysis}</button>
+        </div>
+      ) : view === "analyses" && jobs.length === 0 ? (
         <div className="evolution-empty">
           <h2>{t.noJobsTitle}</h2>
           <p>{t.noJobs}</p>
           <button className="primary-button compact" type="button" onClick={() => setDrawer("new")}>{t.newAnalysis}</button>
         </div>
-      ) : !selectedID ? (
+      ) : view === "analyses" ? (
         <section className="farm-overview" aria-labelledby="farm-recent-title">
           <header>
             <div>
@@ -419,10 +532,7 @@ export function EvolutionWorkspace({
               const traceCount = evolutionTraceCounts(item).frozen;
               const windowLabel = formattedWindow(item, locale);
               return (
-                <button className="job-row" type="button" key={item.job_id} onClick={() => {
-                  setSelectedID(item.job_id);
-                  onJobSelected(item.job_id);
-                }}>
+                <button className="job-row" type="button" key={item.job_id} onClick={() => openAnalysis(item.job_id)}>
                   <span className={`job-state state-${safeState(item.state)}`}>{stateLabel(t, item.state)}</span>
                   <strong>{agentName(item.source_agent_id) || item.finding?.title || item.objective || t.analysis}</strong>
                   <small>{item.source_agent_id ? `${traceCount} ${t.trace} · ${windowLabel || t.agentTraceSet}` : t.legacyTrace}</small>
@@ -432,7 +542,7 @@ export function EvolutionWorkspace({
             })}
           </div>
         </section>
-      ) : (
+      ) : view === "analysis" ? (
         <div className="job-detail-column" aria-live="polite">
           {loading && !job ? <JobSkeleton label={t.loading} /> : null}
           {error ? (
@@ -466,7 +576,7 @@ export function EvolutionWorkspace({
             ) : null}
           /> : null}
         </div>
-      )}
+      ) : null}
       <FarmDrawer open={drawer === "new"} title={t.newAnalysis} closeLabel={t.close} onClose={() => setDrawer("")}>
         <AgentEvolutionLauncher
           locale={locale}
@@ -477,6 +587,368 @@ export function EvolutionWorkspace({
         />
       </FarmDrawer>
     </section>
+  );
+}
+
+function assetKindLabel(t: Copy, kind: EvolutionCandidate["kind"]) {
+  if (kind === "agent_md") return t.agentMD;
+  if (kind === "skill") return t.skill;
+  if (kind === "role") return t.role;
+  return t.harness;
+}
+
+function assetRecordID(record: AssetRecord) {
+  return record.candidate.candidate_id || [
+    record.job.job_id,
+    record.candidate.kind,
+    agentAssetPath(record.candidate),
+    record.candidate.title,
+  ].join(":");
+}
+
+function AssetLibrary({
+  records,
+  agents,
+  locale,
+  t,
+  onOpenAnalysis,
+  onDeleteAsset,
+}: {
+  records: AssetRecord[];
+  agents: AgentSummary[];
+  locale: Locale;
+  t: Copy;
+  onOpenAnalysis: (jobID: string) => void;
+  onDeleteAsset: (jobID: string) => Promise<void>;
+}) {
+  const [kind, setKind] = useState<"all" | EvolutionCandidate["kind"]>("all");
+  const [agentID, setAgentID] = useState("all");
+  const [selectedID, setSelectedID] = useState(assetRecordID(records[0]));
+  const availableKinds = ["agent_md", "skill", "role"] as const;
+  const availableAgents = agents.filter((agent) => records.some((record) => (
+    record.job.source_agent_id === agent.agent_id || record.agentName === agent.display_name
+  )));
+  const filtered = records.filter((record) => (
+    (kind === "all" || record.candidate.kind === kind) &&
+    (agentID === "all" || record.job.source_agent_id === agentID)
+  ));
+  const selected = filtered.find((record) => assetRecordID(record) === selectedID) || filtered[0];
+
+  useEffect(() => {
+    if (!selected) return;
+    const nextID = assetRecordID(selected);
+    if (nextID !== selectedID) setSelectedID(nextID);
+  }, [filtered, selected, selectedID]);
+
+  return (
+    <section className="asset-library" aria-labelledby="asset-library-title">
+      <header className="asset-library-header">
+        <div>
+          <h2 id="asset-library-title">{t.assetLibrary}</h2>
+          <p>{t.assetLibraryBody}</p>
+        </div>
+        <strong>{records.length}</strong>
+      </header>
+      <div className="asset-library-filters">
+        <div className="asset-kind-filter" role="group" aria-label={t.assetFilter}>
+          <button className={kind === "all" ? "active" : ""} type="button" onClick={() => setKind("all")}>{t.allAssets}</button>
+          {availableKinds.map((value) => (
+            <button className={kind === value ? "active" : ""} type="button" key={value} onClick={() => setKind(value)}>
+              {assetKindLabel(t, value)}
+            </button>
+          ))}
+        </div>
+        {availableAgents.length > 1 ? (
+          <label className="asset-agent-filter">
+            <span>{t.agentFilter}</span>
+            <select value={agentID} onChange={(event) => setAgentID(event.target.value)}>
+              <option value="all">{t.allAgents}</option>
+              {availableAgents.map((agent) => <option key={agent.agent_id} value={agent.agent_id}>{agent.display_name}</option>)}
+            </select>
+          </label>
+        ) : null}
+      </div>
+      {filtered.length === 0 ? <p className="asset-library-no-match">{t.noMatchingAssets}</p> : (
+        <div className="asset-library-workspace">
+          <nav className="asset-index" aria-label={t.assetLibrary}>
+            {filtered.map((record) => {
+              const recordID = assetRecordID(record);
+              const active = selected === record;
+              return (
+                <button
+                  className={active ? "asset-index-row selected" : "asset-index-row"}
+                  type="button"
+                  key={recordID}
+                  aria-current={active ? "true" : undefined}
+                  onClick={() => setSelectedID(recordID)}
+                >
+                  <span className="asset-index-file">
+                    {record.candidate.kind === "agent_md"
+                      ? "agent.md"
+                      : locale === "zh"
+                        ? `${assetKindLabel(t, record.candidate.kind)} 包`
+                        : `${assetKindLabel(t, record.candidate.kind)} package`}
+                  </span>
+                  <strong>{record.candidate.title || assetKindLabel(t, record.candidate.kind)}</strong>
+                  <span className="asset-index-meta">
+                    <b>{record.agentName}</b>
+                    <time dateTime={record.job.updated_at}>{formattedTime(record.job.updated_at, locale)}</time>
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+          {selected ? (
+            <AssetDocument
+              candidate={selected.candidate}
+              job={selected.job}
+              agentName={selected.agentName}
+              locale={locale}
+              t={t}
+              onOpenAnalysis={() => onOpenAnalysis(selected.job.job_id)}
+              onDeleteAsset={() => onDeleteAsset(selected.job.job_id)}
+            />
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AssetDocument({
+  candidate,
+  job,
+  agentName,
+  locale,
+  t,
+  onOpenAnalysis,
+  onDeleteAsset,
+}: {
+  candidate: EvolutionCandidate;
+  job?: EvolutionJob;
+  agentName?: string;
+  locale: Locale;
+  t: Copy;
+  onOpenAnalysis?: () => void;
+  onDeleteAsset?: () => Promise<void>;
+}) {
+  const [mode, setMode] = useState<"read" | "source">("read");
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const files = agentAssetFiles(candidate);
+  const path = agentAssetPath(candidate);
+  const [selectedFilePath, setSelectedFilePath] = useState(files[0]?.path || path);
+  const selectedFile = files.find((file) => file.path === selectedFilePath) || files[0];
+  const content = selectedFile?.content || agentAssetText(candidate);
+  const filename = selectedFile?.path.split("/").at(-1) || agentAssetFilename(candidate);
+  const traceCount = candidate.source_trace_ids?.length
+    || (candidate.source_trace_id ? 1 : 0)
+    || job?.source_trace_ids?.length
+    || 0;
+
+  useEffect(() => {
+    setCopyState("idle");
+    setMode("read");
+    setSelectedFilePath(files[0]?.path || path);
+    setDeleteConfirming(false);
+    setDeleteError("");
+  }, [candidate.candidate_id, path]);
+
+  const deleteAsset = async () => {
+    if (!onDeleteAsset || deleting) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await onDeleteAsset();
+    } catch (cause) {
+      setDeleteError(cause instanceof Error ? cause.message : t.deleteFailed);
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <article className="asset-document">
+      <header className="asset-document-header">
+        <div>
+          <span className="asset-document-path">{path}</span>
+          <h3>{candidate.title || filename}</h3>
+          {candidate.summary ? <p>{candidate.summary}</p> : null}
+        </div>
+        <div className="asset-actions">
+          <button className="asset-copy-button" type="button" disabled={!content} onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(content);
+              setCopyState("copied");
+            } catch {
+              setCopyState("error");
+            }
+          }}>{copyState === "copied" ? t.copiedAsset : t.copyFile}</button>
+          <a
+            className="asset-copy-button"
+            aria-disabled={!content}
+            href={content ? agentAssetDownloadURL(filename, content) : undefined}
+            download={filename}
+            onClick={(event) => { if (!content) event.preventDefault(); }}
+          >{t.downloadAsset}</a>
+          {onDeleteAsset ? (
+            <button className="asset-delete-button" type="button" onClick={() => setDeleteConfirming(true)}>{t.deleteAsset}</button>
+          ) : null}
+        </div>
+      </header>
+      {copyState === "error" ? <span className="asset-copy-error" role="alert">{t.copyAssetFailed}</span> : null}
+      {deleteConfirming ? (
+        <div className="asset-delete-confirmation" role="group" aria-label={t.deleteAssetTitle}>
+          <div><strong>{t.deleteAssetTitle}</strong><span>{t.deleteAssetWarning}</span></div>
+          <div>
+            <button className="secondary-button" type="button" onClick={() => setDeleteConfirming(false)} disabled={deleting}>{t.cancelDelete}</button>
+            <button className="danger-button" type="button" onClick={() => void deleteAsset()} disabled={deleting}>{deleting ? t.deleting : t.confirmDelete}</button>
+          </div>
+        </div>
+      ) : null}
+      {deleteError ? <p className="inline-note error asset-delete-error" role="alert">{t.deleteFailed}: {deleteError}</p> : null}
+      <dl className="asset-document-meta">
+        <div><dt>{t.assetFilter}</dt><dd>{assetKindLabel(t, candidate.kind)}</dd></div>
+        {agentName ? <div><dt>{t.agent}</dt><dd>{agentName}</dd></div> : null}
+        <div><dt>{t.packageContents}</dt><dd>{files.length} {t.fileCount}</dd></div>
+        <div><dt>{t.sourceTraces}</dt><dd>{traceCount} {t.traceSources}</dd></div>
+        {job ? <div className="asset-generated-at"><dt>{t.generatedAt}</dt><dd>{formattedTime(job.updated_at, locale)}</dd></div> : null}
+      </dl>
+      <div className={files.length > 1 ? "asset-package-browser has-tree" : "asset-package-browser"}>
+        {files.length > 1 ? (
+          <nav className="asset-file-tree" aria-label={t.packageContents}>
+            <strong>{t.packageContents}</strong>
+            {files.map((file) => (
+              <button
+                className={file.path === selectedFile?.path ? "selected" : ""}
+                type="button"
+                key={file.path}
+                onClick={() => {
+                  setSelectedFilePath(file.path);
+                  setMode("read");
+                  setCopyState("idle");
+                }}
+              >
+                <span>{file.path.slice(path.length).replace(/^\//, "") || file.path}</span>
+              </button>
+            ))}
+          </nav>
+        ) : null}
+        <section className="asset-file-viewer">
+          <header className="asset-file-toolbar">
+            <span><b>{t.selectedFile}</b>{selectedFile?.path || path}</span>
+            <div className="asset-document-toolbar" role="tablist" aria-label={t.assetDocument}>
+              <button className={mode === "read" ? "active" : ""} type="button" role="tab" aria-selected={mode === "read"} onClick={() => setMode("read")}>{t.readAsset}</button>
+              <button className={mode === "source" ? "active" : ""} type="button" role="tab" aria-selected={mode === "source"} onClick={() => setMode("source")}>{t.sourceAsset}</button>
+            </div>
+          </header>
+          <div className="asset-document-body" role="tabpanel">
+            {mode === "source" ? <pre>{content}</pre> : <AgentAssetFileDocument filename={filename} content={content} />}
+          </div>
+        </section>
+      </div>
+      {job ? (
+        <div className="asset-document-context">
+          <section>
+            <h4>{t.assetReason}</h4>
+            <strong>{job.finding?.title || job.objective || t.defaultObjective}</strong>
+            {job.finding?.summary ? <p>{job.finding.summary}</p> : null}
+          </section>
+          <section>
+            <h4>{t.assetQuality}</h4>
+            <strong className={`review-verdict verdict-${safeState(job.review?.verdict || "blocked")}`}>
+              {job.review?.verdict === "pass" ? t.qualityPassed : t.qualityFailed}
+            </strong>
+            {job.review?.summary ? <p>{conciseReviewSummary(job.review.summary)}</p> : null}
+          </section>
+        </div>
+      ) : null}
+      <footer className="asset-document-footer">
+        <ProposalProvenance
+          sourceAgentID={candidate.source_agent_id}
+          sourceTraceID={candidate.source_trace_id}
+          sourceTraceIDs={candidate.source_trace_ids}
+          evidenceSHA={candidate.evidence_pack_sha256}
+          t={t}
+        />
+        {onOpenAnalysis ? <button className="text-button" type="button" onClick={onOpenAnalysis}>{t.openAnalysis}</button> : null}
+      </footer>
+    </article>
+  );
+}
+
+function AgentAssetFileDocument({ filename, content }: { filename: string; content: string }) {
+  if (/\.md$/i.test(filename)) return <MarkdownDocument value={content} />;
+  if (/\.json$/i.test(filename)) {
+    try {
+      return <StructuredAssetDocument value={JSON.parse(content)} />;
+    } catch {
+      return <pre>{content}</pre>;
+    }
+  }
+  return <pre className="asset-code-file">{content}</pre>;
+}
+
+function MarkdownDocument({ value }: { value: string }) {
+  const normalized = value.replace(/\r\n/g, "\n").trim();
+  const frontmatterMatch = normalized.match(/^---\n([\s\S]*?)\n---\n?/);
+  const metadata = frontmatterMatch?.[1].split("\n").map((line) => {
+    const separator = line.indexOf(":");
+    return separator > 0 ? [line.slice(0, separator).trim(), line.slice(separator + 1).trim()] : [line.trim(), ""];
+  }) || [];
+  const body = frontmatterMatch ? normalized.slice(frontmatterMatch[0].length).trim() : normalized;
+  const blocks = body.split(/\n{2,}/).filter(Boolean);
+  return (
+    <div className="markdown-document">
+      {metadata.length ? <dl className="asset-frontmatter">{metadata.map(([key, entry]) => <div key={key}><dt>{key}</dt><dd>{entry}</dd></div>)}</dl> : null}
+      {blocks.map((block, index) => {
+        const heading = block.match(/^(#{1,4})\s+(.+)$/s);
+        if (heading && !heading[2].includes("\n")) {
+          const level = heading[1].length;
+          if (level === 1) return <h1 key={index}>{heading[2]}</h1>;
+          if (level === 2) return <h2 key={index}>{heading[2]}</h2>;
+          return <h3 key={index}>{heading[2]}</h3>;
+        }
+        if (/^```/.test(block)) return <pre key={index}>{block.replace(/^```[^\n]*\n?/, "").replace(/\n?```$/, "")}</pre>;
+        const lines = block.split("\n");
+        if (lines.every((line) => /^[-*]\s+/.test(line))) {
+          return <ul key={index}>{lines.map((line, itemIndex) => <li key={itemIndex}>{inlineMarkdown(line.replace(/^[-*]\s+/, ""))}</li>)}</ul>;
+        }
+        if (lines.every((line) => /^\d+[.)]\s+/.test(line))) {
+          return <ol key={index}>{lines.map((line, itemIndex) => <li key={itemIndex}>{inlineMarkdown(line.replace(/^\d+[.)]\s+/, ""))}</li>)}</ol>;
+        }
+        return <p key={index}>{inlineMarkdown(block)}</p>;
+      })}
+    </div>
+  );
+}
+
+function inlineMarkdown(value: string) {
+  return value.split(/(`[^`]+`|\*\*[^*]+\*\*)/g).filter(Boolean).map((part, index) => {
+    if (part.startsWith("`") && part.endsWith("`")) return <code key={index}>{part.slice(1, -1)}</code>;
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    return part;
+  });
+}
+
+function StructuredAssetDocument({ value }: { value: unknown }) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return <pre>{prettyJSON(value)}</pre>;
+  const entries = Object.entries(value as Record<string, unknown>).filter(([key]) => key !== "path" && key !== "markdown");
+  if (!entries.length) return <pre>{prettyJSON(value)}</pre>;
+  return (
+    <dl className="structured-asset-document">
+      {entries.map(([key, entry]) => (
+        <div key={key}>
+          <dt>{key.replaceAll("_", " ")}</dt>
+          <dd>{Array.isArray(entry) && entry.every((item) => ["string", "number", "boolean"].includes(typeof item))
+            ? <ul>{entry.map((item, index) => <li key={index}>{String(item)}</li>)}</ul>
+            : typeof entry === "string" || typeof entry === "number" || typeof entry === "boolean"
+              ? String(entry)
+              : <pre>{prettyJSON(entry)}</pre>}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

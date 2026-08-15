@@ -1,3 +1,3 @@
-"""Catena's local cross-runtime trace capture companion."""
+"""Catena's local coding-agent evidence runtime."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

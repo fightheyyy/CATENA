@@ -410,10 +410,11 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar route={route} locale={locale} onNavigate={navigateFromSidebar} />
-      <AccountMenu
+      <Sidebar
+        route={route}
         locale={locale}
         session={session}
+        onNavigate={navigateFromSidebar}
         onSettings={() => navigate("settings")}
         onSwitchAccount={switchAccount}
         onLogout={logout}
@@ -591,11 +592,19 @@ function Brand() {
 function Sidebar({
   route,
   locale,
+  session,
   onNavigate,
+  onSettings,
+  onSwitchAccount,
+  onLogout,
 }: {
   route: Route;
   locale: Locale;
+  session: Session;
   onNavigate: (route: Route) => void;
+  onSettings: () => void;
+  onSwitchAccount: () => Promise<void>;
+  onLogout: () => Promise<void>;
 }) {
   const t = copy[locale];
   return (
@@ -613,9 +622,18 @@ function Sidebar({
           </button>
         ))}
       </nav>
-      <div className="sidebar-utilities">
-        <button className={route === "apiKeys" ? "nav-item active" : "nav-item"} type="button" onClick={() => onNavigate("apiKeys")}>{t.nav.apiKeys}</button>
-        <button className={route === "settings" ? "nav-item active" : "nav-item"} type="button" onClick={() => onNavigate("settings")}>{t.nav.settings}</button>
+      <div className="sidebar-footer">
+        <div className="sidebar-utilities">
+          <button className={route === "apiKeys" ? "nav-item active" : "nav-item"} type="button" onClick={() => onNavigate("apiKeys")}>{t.nav.apiKeys}</button>
+          <button className={route === "settings" ? "nav-item active" : "nav-item"} type="button" onClick={() => onNavigate("settings")}>{t.nav.settings}</button>
+        </div>
+        <AccountMenu
+          locale={locale}
+          session={session}
+          onSettings={onSettings}
+          onSwitchAccount={onSwitchAccount}
+          onLogout={onLogout}
+        />
       </div>
     </aside>
   );

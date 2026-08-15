@@ -1,0 +1,9 @@
+{"timestamp":"2026-08-14T04:11:01.300Z","type":"session_meta","payload":{"id":"thread-redacted-child","cli_version":"0.147.0","model_provider":"openai","parent_thread_id":"22222222-2222-4222-8222-222222222222","thread_source":"subagent"}}
+{"timestamp":"2026-08-14T04:11:01.400Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn_child","started_at":"2026-08-14T04:11:01.400Z"}}
+{"timestamp":"2026-08-14T04:11:01.500Z","type":"turn_context","payload":{"model":"gpt-5.4-mini"}}
+{"timestamp":"2026-08-14T04:11:01.600Z","type":"event_msg","payload":{"type":"user_message","message":"[redacted] delegated prompt"}}
+{"timestamp":"2026-08-14T04:11:02.000Z","type":"response_item","payload":{"type":"file_search_call","id":"call_child_search","call_id":"call_child_search","status":"completed","input":{"query":"redacted"},"results":["[redacted] child result"]}}
+{"timestamp":"2026-08-14T04:11:02.100Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":8,"output_tokens":4,"total_tokens":12}}}}
+{"timestamp":"2026-08-14T04:11:03.000Z","type":"response_item","payload":{"type":"message","id":"msg_child","role":"assistant","content":[{"type":"output_text","text":"[redacted] subagent answer"}]}}
+{"timestamp":"2026-08-14T04:11:03.100Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":14,"output_tokens":5,"total_tokens":19}}}}
+{"timestamp":"2026-08-14T04:11:03.200Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"turn_child","completed_at":"2026-08-14T04:11:03.200Z"}}

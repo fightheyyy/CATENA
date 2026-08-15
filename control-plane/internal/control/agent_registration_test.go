@@ -213,13 +213,23 @@ func TestDetectOTLPRuntimeUsesEvidenceAndFallsBackToGenericOTel(t *testing.T) {
 		want    string
 	}{
 		{service: "xiaobaos", want: "xiaobaos"},
-		{service: "codex-app-server", want: "codex"},
-		{service: "claude-code", want: "claude_code"},
+		{service: "catena-runtime-codex", want: "codex"},
+		{service: "catena-runtime-claude-code", want: "claude_code"},
+		{service: "codex-app-server", want: "otel"},
+		{service: "claude-code", want: "otel"},
+		{service: "hermes-codex", want: "otel"},
+		{service: "openclaw-claude", want: "otel"},
 		{service: "custom-agent", scope: "custom.instrumentation", want: "otel"},
 	}
 	for _, test := range tests {
 		got := detectOTLPRuntime([]TraceSpan{{
-			ServiceName: test.service, ScopeName: test.scope, ResourceAttributes: map[string]any{},
+			ServiceName: test.service, ScopeName: test.scope, ResourceAttributes: map[string]any{
+				"service.name": test.service,
+				"agent.runtime": map[string]string{
+					"catena-runtime-codex":       "codex",
+					"catena-runtime-claude-code": "claude-code",
+				}[test.service],
+			},
 		}})
 		if got != test.want {
 			t.Errorf("detectOTLPRuntime(%q, %q) = %q, want %q", test.service, test.scope, got, test.want)

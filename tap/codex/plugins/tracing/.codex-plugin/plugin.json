@@ -1,0 +1,22 @@
+{
+  "name": "tracing",
+  "version": "0.2.0",
+  "description": "Export authoritative Codex rollout traces to Catena.",
+  "author": {
+    "name": "Catena"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["codex", "hooks", "catena", "opentelemetry", "tracing"],
+  "hooks": "./hooks/hooks.json",
+  "interface": {
+    "displayName": "Catena Tracing",
+    "shortDescription": "Export Codex rollout evidence to Catena",
+    "longDescription": "Parses local Codex rollouts into Catena Canonical Event Graphs and sends deterministic OTLP spans to the configured Catena Agent endpoint.",
+    "developerName": "Catena",
+    "category": "Coding",
+    "capabilities": ["Read"],
+    "defaultPrompt": [],
+    "brandColor": "#D76B3F",
+    "screenshots": []
+  }
+}

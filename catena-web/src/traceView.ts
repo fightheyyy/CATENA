@@ -1,8 +1,19 @@
 import type { TraceSpan, TraceSummary } from "./types";
 
 export type TraceFilter = "all" | "errors" | "multi";
-export type TraceLens = "agent" | "tools" | "errors" | "raw";
-export type TraceSpanSemanticKind = "run" | "turn" | "model" | "tool" | "artifact" | "check" | "error" | "internal";
+export type TraceLens = "narrative" | "agent" | "tools" | "errors" | "raw";
+export type TraceSpanSemanticKind =
+  | "run"
+  | "turn"
+  | "model"
+  | "tool"
+  | "artifact"
+  | "subagent"
+  | "retry"
+  | "compact"
+  | "check"
+  | "error"
+  | "internal";
 
 export type TraceEvidenceRole = "user" | "assistant" | "system" | "tool";
 
@@ -22,6 +33,16 @@ export type SemanticTraceSpan = {
   kind: TraceSpanSemanticKind;
 };
 
+export type TraceNarrativeNode = SemanticTraceSpan & {
+  children: TraceNarrativeNode[];
+};
+
+export type TraceNarrativeView = {
+  roots: TraceNarrativeNode[];
+  primaryTurn?: TraceNarrativeNode;
+  canonicalNodeCount: number;
+};
+
 export type TraceSemanticView = {
   agentSteps: SemanticTraceSpan[];
   toolSteps: SemanticTraceSpan[];
@@ -30,6 +51,7 @@ export type TraceSemanticView = {
   counts: Record<TraceSpanSemanticKind, number>;
   turnCount: number;
   foldedInternalCount: number;
+  canonicalNodeCount: number;
 };
 
 export type TraceSessionGroup = {
@@ -66,7 +88,7 @@ export function filterTraceSummaries(
     if (filter === "errors" && trace.error_count === 0) return false;
     if (filter === "multi" && trace.span_count <= 1) return false;
     if (!needle) return true;
-    return [trace.root_name, trace.service_name, trace.model, trace.trace_id, trace.agent_id, trace.session_id]
+    return [trace.input_preview, trace.root_name, trace.service_name, trace.model, trace.trace_id, trace.agent_id, trace.session_id]
       .filter((value): value is string => Boolean(value))
       .some((value) => value.toLocaleLowerCase().includes(needle));
   });
@@ -74,6 +96,24 @@ export function filterTraceSummaries(
 
 export function traceSessionKey(trace: TraceSummary, fallbackAgentID = "") {
   return `${trace.agent_id || fallbackAgentID}\u0000${trace.session_id || "__ungrouped__"}`;
+}
+
+export function traceSummaryTitle(trace: TraceSummary, locale: "zh" | "en") {
+  const preview = traceInputHeadline(trace.input_preview ?? "");
+  if (preview) return preview;
+  if (trace.root_name === "agent.turn") return locale === "zh" ? "用户请求" : "User request";
+  return trace.root_name || (locale === "zh" ? "未命名 Trace" : "Untitled Trace");
+}
+
+function traceInputHeadline(value: string) {
+  if (!value.trim()) return "";
+  const evidence = presentTraceEvidence(value, "turn", "input");
+  if (!evidence.structured && /^[{\[]/.test(value.trimStart())) return "";
+  const userMessage = [...evidence.messages].reverse().find((message) => message.role === "user");
+  const text = userMessage?.text || evidence.text;
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  return normalized.length > 58 ? `${normalized.slice(0, 58)}…` : normalized;
 }
 
 export function groupTraceSummariesBySession(traces: TraceSummary[], fallbackAgentID = ""): TraceSessionGroup[] {
@@ -103,6 +143,15 @@ export function groupTraceSummariesBySession(traces: TraceSummary[], fallbackAge
   return [...groups.values()].sort((left, right) => right.endedAt.localeCompare(left.endedAt));
 }
 
+export function traceSessionTitle(group: TraceSessionGroup) {
+  const traces = [...group.traces].sort((left, right) => left.start_time.localeCompare(right.start_time));
+  for (const trace of traces) {
+    const title = traceInputHeadline(trace.input_preview ?? "");
+    if (title) return title;
+  }
+  return "";
+}
+
 export function traceSpanDepth(span: TraceSpan, spansByID: Map<string, TraceSpan>) {
   let depth = 0;
   let parentID = span.parent_span_id;
@@ -125,6 +174,27 @@ export function traceSpanToolName(span: TraceSpan) {
   return "";
 }
 
+export function traceSpanToolType(span: TraceSpan) {
+  return traceSpanAttributeString(span, "gen_ai.tool.type", "tool.type", "catena.tool.type");
+}
+
+export function traceSpanState(span: TraceSpan) {
+  const state = traceSpanAttributeString(span, "catena.state", "agent.state").toLocaleLowerCase();
+  if (state) return state;
+  return span.status_code === 2 ? "error" : "ok";
+}
+
+export function traceSpanTokenUsage(span: TraceSpan) {
+  const number = (...keys: string[]) => {
+    const value = Number(traceSpanAttributeString(span, ...keys));
+    return Number.isFinite(value) && value >= 0 ? value : 0;
+  };
+  const input = number("gen_ai.usage.input_tokens", "gen_ai.usage.input", "llm.usage.prompt_tokens");
+  const output = number("gen_ai.usage.output_tokens", "gen_ai.usage.output", "llm.usage.completion_tokens");
+  const total = number("gen_ai.usage.total_tokens") || input + output;
+  return { input, output, total };
+}
+
 export function traceSpanAttributeString(span: TraceSpan, ...keys: string[]) {
   for (const key of keys) {
     const value = span.attributes[key] ?? span.resource_attributes[key];
@@ -136,9 +206,15 @@ export function traceSpanAttributeString(span: TraceSpan, ...keys: string[]) {
 
 export function traceSpanSemanticKind(span: TraceSpan): TraceSpanSemanticKind {
   const name = span.name.trim().toLocaleLowerCase();
+  const canonicalKind = traceSpanAttributeString(span, "catena.node.kind").toLocaleLowerCase();
   if (/^barena[._/]simulation$/.test(name)) return "run";
   if (/^barena[._/]assertion$/.test(name)) return "check";
-  if (span.status_code === 2) return "error";
+  if (canonicalKind === "unmatched_tool_result") return "error";
+  if (canonicalKind === "subagent") return "subagent";
+  if (canonicalKind === "retry") return "retry";
+  if (canonicalKind === "context_compact") return "compact";
+  if (canonicalKind === "turn") return "turn";
+  if (canonicalKind === "model") return "model";
 
   const toolName = traceSpanToolName(span).toLocaleLowerCase();
   const artifactHint = traceSpanAttributeString(
@@ -154,8 +230,11 @@ export function traceSpanSemanticKind(span: TraceSpan): TraceSpanSemanticKind {
 
   if (
     toolName
+    || canonicalKind === "tool"
     || /(^|[._/])(handle_tool_call|dispatch_tool_call|execute_tool|invoke_tool|tool_call)([._/]|$)/.test(name)
   ) return "tool";
+
+  if (span.status_code === 2) return "error";
 
   const model = span.model || traceSpanAttributeString(
     span,
@@ -187,6 +266,9 @@ export function buildTraceSemanticView(spans: TraceSpan[]): TraceSemanticView {
     model: 0,
     tool: 0,
     artifact: 0,
+    subagent: 0,
+    retry: 0,
+    compact: 0,
     check: 0,
     error: 0,
     internal: 0,
@@ -196,9 +278,11 @@ export function buildTraceSemanticView(spans: TraceSpan[]): TraceSemanticView {
   const toolSteps: SemanticTraceSpan[] = [];
   const errorSteps: SemanticTraceSpan[] = [];
   const turnIDs = new Set<string>();
+  let canonicalNodeCount = 0;
 
   for (const span of spans) {
     const kind = traceSpanSemanticKind(span);
+    if (traceSpanAttributeString(span, "catena.node.kind")) canonicalNodeCount += 1;
     const semanticSpan = { span, kind };
     rawSteps.push(semanticSpan);
     counts[kind] += 1;
@@ -226,7 +310,56 @@ export function buildTraceSemanticView(spans: TraceSpan[]): TraceSemanticView {
     counts,
     turnCount: turnIDs.size || counts.turn,
     foldedInternalCount: counts.internal,
+    canonicalNodeCount,
   };
+}
+
+export function buildTraceNarrative(spans: TraceSpan[]): TraceNarrativeView {
+  const spansByID = new Map(spans.map((span) => [span.span_id, span]));
+  const orderByID = new Map(spans.map((span, index) => [span.span_id, index]));
+  const nodesByID = new Map<string, TraceNarrativeNode>();
+  let canonicalNodeCount = 0;
+
+  for (const span of spans) {
+    const kind = traceSpanSemanticKind(span);
+    if (traceSpanAttributeString(span, "catena.node.kind")) canonicalNodeCount += 1;
+    if (kind !== "internal") nodesByID.set(span.span_id, { span, kind, children: [] });
+  }
+
+  const roots: TraceNarrativeNode[] = [];
+  for (const node of nodesByID.values()) {
+    let parentID = node.span.parent_span_id;
+    const visited = new Set<string>();
+    let visibleParent: TraceNarrativeNode | undefined;
+    while (parentID && !visited.has(parentID)) {
+      visited.add(parentID);
+      visibleParent = nodesByID.get(parentID);
+      if (visibleParent) break;
+      parentID = spansByID.get(parentID)?.parent_span_id;
+    }
+    if (visibleParent) visibleParent.children.push(node);
+    else roots.push(node);
+  }
+
+  const compare = (left: TraceNarrativeNode, right: TraceNarrativeNode) => {
+    const time = left.span.start_time.localeCompare(right.span.start_time);
+    if (time !== 0) return time;
+    return (orderByID.get(left.span.span_id) ?? 0) - (orderByID.get(right.span.span_id) ?? 0);
+  };
+  const sortTree = (nodes: TraceNarrativeNode[]) => {
+    nodes.sort(compare);
+    for (const node of nodes) sortTree(node.children);
+  };
+  sortTree(roots);
+
+  const allNodes = [...nodesByID.values()];
+  const primaryTurn = allNodes.find(({ span, kind }) => (
+    kind === "turn"
+    && traceSpanAttributeString(span, "catena.node.kind") === "turn"
+    && Boolean(span.input || span.output)
+  )) ?? allNodes.find(({ span, kind }) => kind === "turn" && Boolean(span.input || span.output));
+
+  return { roots, primaryTurn, canonicalNodeCount };
 }
 
 export function traceStepsForLens(view: TraceSemanticView, lens: TraceLens) {
@@ -234,6 +367,7 @@ export function traceStepsForLens(view: TraceSemanticView, lens: TraceLens) {
     case "tools": return view.toolSteps;
     case "errors": return view.errorSteps;
     case "raw": return view.rawSteps;
+    case "narrative": return view.agentSteps;
     default: return view.agentSteps;
   }
 }

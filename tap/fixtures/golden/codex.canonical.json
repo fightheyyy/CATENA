@@ -1,0 +1,2381 @@
+{
+  "schema_version": "catena.coding_agent.event_graph.v1",
+  "runtime": "codex",
+  "session_id": "22222222-2222-4222-8222-222222222222",
+  "source": {
+    "format": "codex-rollout-jsonl",
+    "path": "rollout-redacted-main.jsonl",
+    "parser": "langfuse-codex-derived@7500867",
+    "upstream_commit": "7500867afecf963d1cf83bf2b860a659591ace18"
+  },
+  "traces": [
+    {
+      "trace_id": "4b93ad6b1e3b55099e1db79b96a030d4",
+      "turn_id": "turn_plain",
+      "state": "ok",
+      "nodes": [
+        {
+          "key": "turn:turn_plain",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_plain",
+          "start_time_unix_nano": "1786676401000000000",
+          "end_time_unix_nano": "1786676402300000000",
+          "state": "ok",
+          "input": "[redacted] ordinary turn",
+          "output": "[redacted] ordinary response",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_plain",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_plain",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:1",
+            "main:line:2",
+            "main:line:3",
+            "main:line:4",
+            "main:line:6",
+            "main:line:8"
+          ]
+        },
+        {
+          "key": "turn:turn_plain:model:msg_plain",
+          "parent_key": "turn:turn_plain",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_plain",
+          "start_time_unix_nano": "1786676402000000000",
+          "end_time_unix_nano": "1786676402200000000",
+          "state": "ok",
+          "input": "[redacted] ordinary turn",
+          "output": {
+            "content": "[redacted] ordinary response"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 10,
+            "output_tokens": 5,
+            "total_tokens": 15
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:5",
+            "main:line:7"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:1",
+          "disposition": "span",
+          "node_key": "turn:turn_plain"
+        },
+        {
+          "event_id": "main:line:2",
+          "disposition": "span",
+          "node_key": "turn:turn_plain"
+        },
+        {
+          "event_id": "main:line:3",
+          "disposition": "span",
+          "node_key": "turn:turn_plain"
+        },
+        {
+          "event_id": "main:line:4",
+          "disposition": "span",
+          "node_key": "turn:turn_plain"
+        },
+        {
+          "event_id": "main:line:5",
+          "disposition": "span",
+          "node_key": "turn:turn_plain:model:msg_plain"
+        },
+        {
+          "event_id": "main:line:6",
+          "disposition": "span",
+          "node_key": "turn:turn_plain"
+        },
+        {
+          "event_id": "main:line:7",
+          "disposition": "span",
+          "node_key": "turn:turn_plain:model:msg_plain"
+        },
+        {
+          "event_id": "main:line:8",
+          "disposition": "span",
+          "node_key": "turn:turn_plain"
+        }
+      ]
+    },
+    {
+      "trace_id": "81a56f472e90f2efce4429fbb5022c5d",
+      "turn_id": "turn_single",
+      "state": "ok",
+      "nodes": [
+        {
+          "key": "turn:turn_single",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_single",
+          "start_time_unix_nano": "1786676460000000000",
+          "end_time_unix_nano": "1786676463200000000",
+          "state": "ok",
+          "input": "[redacted] one tool",
+          "output": "[redacted] used tool result",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_single",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_single",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:9",
+            "main:line:10",
+            "main:line:11",
+            "main:line:18"
+          ]
+        },
+        {
+          "key": "turn:turn_single:model:fc_single",
+          "parent_key": "turn:turn_single",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "fc_single",
+          "start_time_unix_nano": "1786676461000000000",
+          "end_time_unix_nano": "1786676461100000000",
+          "state": "ok",
+          "input": "[redacted] one tool",
+          "output": {
+            "tool_calls": [
+              {
+                "id": "call_single",
+                "name": "exec_command",
+                "type": "local_shell",
+                "arguments": {
+                  "cmd": "printf redacted"
+                }
+              }
+            ]
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 14,
+            "output_tokens": 7,
+            "total_tokens": 21
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:12",
+            "main:line:13"
+          ]
+        },
+        {
+          "key": "turn:turn_single:tool:call_single",
+          "parent_key": "turn:turn_single:model:fc_single",
+          "kind": "tool",
+          "name": "agent.tool.call exec_command",
+          "runtime_id": "call_single",
+          "start_time_unix_nano": "1786676461000000000",
+          "end_time_unix_nano": "1786676462100000000",
+          "state": "ok",
+          "input": {
+            "cmd": "printf redacted"
+          },
+          "output": "[redacted] command output",
+          "attributes": {
+            "gen_ai.tool.type": "local_shell",
+            "gen_ai.tool.name": "exec_command",
+            "gen_ai.tool.call.id": "call_single",
+            "codex.response_item.id": "fc_single"
+          },
+          "source_event_ids": [
+            "main:line:12",
+            "main:line:14",
+            "main:line:15"
+          ]
+        },
+        {
+          "key": "turn:turn_single:model:msg_single",
+          "parent_key": "turn:turn_single",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_single",
+          "start_time_unix_nano": "1786676463000000000",
+          "end_time_unix_nano": "1786676463100000000",
+          "state": "ok",
+          "input": [
+            {
+              "call_id": "call_single",
+              "name": "exec_command",
+              "output": "[redacted] command output"
+            }
+          ],
+          "output": {
+            "content": "[redacted] used tool result"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 22,
+            "output_tokens": 6,
+            "total_tokens": 28
+          },
+          "attributes": {
+            "catena.model.step.index": 1
+          },
+          "source_event_ids": [
+            "main:line:16",
+            "main:line:17"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:9",
+          "disposition": "span",
+          "node_key": "turn:turn_single"
+        },
+        {
+          "event_id": "main:line:10",
+          "disposition": "span",
+          "node_key": "turn:turn_single"
+        },
+        {
+          "event_id": "main:line:11",
+          "disposition": "span",
+          "node_key": "turn:turn_single"
+        },
+        {
+          "event_id": "main:line:12",
+          "disposition": "span",
+          "node_key": "turn:turn_single:tool:call_single"
+        },
+        {
+          "event_id": "main:line:13",
+          "disposition": "span",
+          "node_key": "turn:turn_single:model:fc_single"
+        },
+        {
+          "event_id": "main:line:14",
+          "disposition": "span",
+          "node_key": "turn:turn_single:tool:call_single"
+        },
+        {
+          "event_id": "main:line:15",
+          "disposition": "span",
+          "node_key": "turn:turn_single:tool:call_single"
+        },
+        {
+          "event_id": "main:line:16",
+          "disposition": "span",
+          "node_key": "turn:turn_single:model:msg_single"
+        },
+        {
+          "event_id": "main:line:17",
+          "disposition": "span",
+          "node_key": "turn:turn_single:model:msg_single"
+        },
+        {
+          "event_id": "main:line:18",
+          "disposition": "span",
+          "node_key": "turn:turn_single"
+        }
+      ]
+    },
+    {
+      "trace_id": "c16d9d0aea0076a1b8c92d782348f09c",
+      "turn_id": "turn_serial",
+      "state": "ok",
+      "nodes": [
+        {
+          "key": "turn:turn_serial",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_serial",
+          "start_time_unix_nano": "1786676520000000000",
+          "end_time_unix_nano": "1786676525200000000",
+          "state": "ok",
+          "input": "[redacted] two serial tools",
+          "output": "[redacted] serial complete",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_serial",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_serial",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:19",
+            "main:line:20",
+            "main:line:21",
+            "main:line:30"
+          ]
+        },
+        {
+          "key": "turn:turn_serial:model:fc_serial_1",
+          "parent_key": "turn:turn_serial",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "fc_serial_1",
+          "start_time_unix_nano": "1786676521000000000",
+          "end_time_unix_nano": "1786676521100000000",
+          "state": "ok",
+          "input": "[redacted] two serial tools",
+          "output": {
+            "tool_calls": [
+              {
+                "id": "call_serial_1",
+                "name": "exec_command",
+                "type": "local_shell",
+                "arguments": {
+                  "cmd": "first-redacted"
+                }
+              }
+            ]
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 20,
+            "output_tokens": 7,
+            "total_tokens": 27
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:22",
+            "main:line:23"
+          ]
+        },
+        {
+          "key": "turn:turn_serial:tool:call_serial_1",
+          "parent_key": "turn:turn_serial:model:fc_serial_1",
+          "kind": "tool",
+          "name": "agent.tool.call exec_command",
+          "runtime_id": "call_serial_1",
+          "start_time_unix_nano": "1786676521000000000",
+          "end_time_unix_nano": "1786676522000000000",
+          "state": "ok",
+          "input": {
+            "cmd": "first-redacted"
+          },
+          "output": "[redacted] first result",
+          "attributes": {
+            "gen_ai.tool.type": "local_shell",
+            "gen_ai.tool.name": "exec_command",
+            "gen_ai.tool.call.id": "call_serial_1",
+            "codex.response_item.id": "fc_serial_1"
+          },
+          "source_event_ids": [
+            "main:line:22",
+            "main:line:24"
+          ]
+        },
+        {
+          "key": "turn:turn_serial:model:ct_serial_2",
+          "parent_key": "turn:turn_serial",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "ct_serial_2",
+          "start_time_unix_nano": "1786676523000000000",
+          "end_time_unix_nano": "1786676523100000000",
+          "state": "ok",
+          "input": [
+            {
+              "call_id": "call_serial_1",
+              "name": "exec_command",
+              "output": "[redacted] first result"
+            }
+          ],
+          "output": {
+            "tool_calls": [
+              {
+                "id": "call_serial_2",
+                "name": "apply_patch",
+                "type": "custom",
+                "arguments": "[redacted] patch"
+              }
+            ]
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 31,
+            "output_tokens": 9,
+            "total_tokens": 40
+          },
+          "attributes": {
+            "catena.model.step.index": 1
+          },
+          "source_event_ids": [
+            "main:line:25",
+            "main:line:26"
+          ]
+        },
+        {
+          "key": "turn:turn_serial:tool:call_serial_2",
+          "parent_key": "turn:turn_serial:model:ct_serial_2",
+          "kind": "tool",
+          "name": "agent.tool.call apply_patch",
+          "runtime_id": "call_serial_2",
+          "start_time_unix_nano": "1786676523000000000",
+          "end_time_unix_nano": "1786676524000000000",
+          "state": "ok",
+          "input": "[redacted] patch",
+          "output": "[redacted] patched",
+          "attributes": {
+            "gen_ai.tool.type": "custom",
+            "gen_ai.tool.name": "apply_patch",
+            "gen_ai.tool.call.id": "call_serial_2",
+            "codex.response_item.id": "ct_serial_2"
+          },
+          "source_event_ids": [
+            "main:line:25",
+            "main:line:27"
+          ]
+        },
+        {
+          "key": "turn:turn_serial:model:msg_serial",
+          "parent_key": "turn:turn_serial",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_serial",
+          "start_time_unix_nano": "1786676525000000000",
+          "end_time_unix_nano": "1786676525100000000",
+          "state": "ok",
+          "input": [
+            {
+              "call_id": "call_serial_2",
+              "name": "apply_patch",
+              "output": "[redacted] patched"
+            }
+          ],
+          "output": {
+            "content": "[redacted] serial complete"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 42,
+            "output_tokens": 8,
+            "total_tokens": 50
+          },
+          "attributes": {
+            "catena.model.step.index": 2
+          },
+          "source_event_ids": [
+            "main:line:28",
+            "main:line:29"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:19",
+          "disposition": "span",
+          "node_key": "turn:turn_serial"
+        },
+        {
+          "event_id": "main:line:20",
+          "disposition": "span",
+          "node_key": "turn:turn_serial"
+        },
+        {
+          "event_id": "main:line:21",
+          "disposition": "span",
+          "node_key": "turn:turn_serial"
+        },
+        {
+          "event_id": "main:line:22",
+          "disposition": "span",
+          "node_key": "turn:turn_serial:tool:call_serial_1"
+        },
+        {
+          "event_id": "main:line:23",
+          "disposition": "span",
+          "node_key": "turn:turn_serial:model:fc_serial_1"
+        },
+        {
+          "event_id": "main:line:24",
+          "disposition": "span",
+          "node_key": "turn:turn_serial:tool:call_serial_1"
+        },
+        {
+          "event_id": "main:line:25",
+          "disposition": "span",
+          "node_key": "turn:turn_serial:tool:call_serial_2"
+        },
+        {
+          "event_id": "main:line:26",
+          "disposition": "span",
+          "node_key": "turn:turn_serial:model:ct_serial_2"
+        },
+        {
+          "event_id": "main:line:27",
+          "disposition": "span",
+          "node_key": "turn:turn_serial:tool:call_serial_2"
+        },
+        {
+          "event_id": "main:line:28",
+          "disposition": "span",
+          "node_key": "turn:turn_serial:model:msg_serial"
+        },
+        {
+          "event_id": "main:line:29",
+          "disposition": "span",
+          "node_key": "turn:turn_serial:model:msg_serial"
+        },
+        {
+          "event_id": "main:line:30",
+          "disposition": "span",
+          "node_key": "turn:turn_serial"
+        }
+      ]
+    },
+    {
+      "trace_id": "08364c988902d569c531d2e8aac9978e",
+      "turn_id": "turn_parallel",
+      "state": "ok",
+      "nodes": [
+        {
+          "key": "turn:turn_parallel",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_parallel",
+          "start_time_unix_nano": "1786676580000000000",
+          "end_time_unix_nano": "1786676583200000000",
+          "state": "ok",
+          "input": "[redacted] parallel tools",
+          "output": "[redacted] parallel complete",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_parallel",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_parallel",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:31",
+            "main:line:32",
+            "main:line:33",
+            "main:line:41"
+          ]
+        },
+        {
+          "key": "turn:turn_parallel:model:fc_parallel_1",
+          "parent_key": "turn:turn_parallel",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "fc_parallel_1",
+          "start_time_unix_nano": "1786676581000000000",
+          "end_time_unix_nano": "1786676581200000000",
+          "state": "ok",
+          "input": "[redacted] parallel tools",
+          "output": {
+            "tool_calls": [
+              {
+                "id": "call_parallel_1",
+                "name": "file_search",
+                "type": "file_search",
+                "arguments": {
+                  "query": "a"
+                }
+              },
+              {
+                "id": "call_parallel_2",
+                "name": "file_search",
+                "type": "file_search",
+                "arguments": {
+                  "query": "b"
+                }
+              }
+            ]
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 24,
+            "output_tokens": 12,
+            "total_tokens": 36
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:34",
+            "main:line:35",
+            "main:line:36"
+          ]
+        },
+        {
+          "key": "turn:turn_parallel:tool:call_parallel_1",
+          "parent_key": "turn:turn_parallel:model:fc_parallel_1",
+          "kind": "tool",
+          "name": "agent.tool.call file_search",
+          "runtime_id": "call_parallel_1",
+          "start_time_unix_nano": "1786676581000000000",
+          "end_time_unix_nano": "1786676582100000000",
+          "state": "ok",
+          "input": {
+            "query": "a"
+          },
+          "output": "[redacted] A",
+          "attributes": {
+            "gen_ai.tool.type": "file_search",
+            "gen_ai.tool.name": "file_search",
+            "gen_ai.tool.call.id": "call_parallel_1",
+            "codex.response_item.id": "fc_parallel_1"
+          },
+          "source_event_ids": [
+            "main:line:34",
+            "main:line:38"
+          ]
+        },
+        {
+          "key": "turn:turn_parallel:tool:call_parallel_2",
+          "parent_key": "turn:turn_parallel:model:fc_parallel_1",
+          "kind": "tool",
+          "name": "agent.tool.call file_search",
+          "runtime_id": "call_parallel_2",
+          "start_time_unix_nano": "1786676581100000000",
+          "end_time_unix_nano": "1786676582000000000",
+          "state": "ok",
+          "input": {
+            "query": "b"
+          },
+          "output": "[redacted] B",
+          "attributes": {
+            "gen_ai.tool.type": "file_search",
+            "gen_ai.tool.name": "file_search",
+            "gen_ai.tool.call.id": "call_parallel_2",
+            "codex.response_item.id": "fc_parallel_2"
+          },
+          "source_event_ids": [
+            "main:line:35",
+            "main:line:37"
+          ]
+        },
+        {
+          "key": "turn:turn_parallel:model:msg_parallel",
+          "parent_key": "turn:turn_parallel",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_parallel",
+          "start_time_unix_nano": "1786676583000000000",
+          "end_time_unix_nano": "1786676583100000000",
+          "state": "ok",
+          "input": [
+            {
+              "call_id": "call_parallel_1",
+              "name": "file_search",
+              "output": "[redacted] A"
+            },
+            {
+              "call_id": "call_parallel_2",
+              "name": "file_search",
+              "output": "[redacted] B"
+            }
+          ],
+          "output": {
+            "content": "[redacted] parallel complete"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 38,
+            "output_tokens": 7,
+            "total_tokens": 45
+          },
+          "attributes": {
+            "catena.model.step.index": 1
+          },
+          "source_event_ids": [
+            "main:line:39",
+            "main:line:40"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:31",
+          "disposition": "span",
+          "node_key": "turn:turn_parallel"
+        },
+        {
+          "event_id": "main:line:32",
+          "disposition": "span",
+          "node_key": "turn:turn_parallel"
+        },
+        {
+          "event_id": "main:line:33",
+          "disposition": "span",
+          "node_key": "turn:turn_parallel"
+        },
+        {
+          "event_id": "main:line:34",
+          "disposition": "span",
+          "node_key": "turn:turn_parallel:tool:call_parallel_1"
+        },
+        {
+          "event_id": "main:line:35",
+          "disposition": "span",
+          "node_key": "turn:turn_parallel:tool:call_parallel_2"
+        },
+        {
+          "event_id": "main:line:36",
+          "disposition": "span",
+          "node_key": "turn:turn_parallel:model:fc_parallel_1"
+        },
+        {
+          "event_id": "main:line:37",
+          "disposition": "span",
+          "node_key": "turn:turn_parallel:tool:call_parallel_2"
+        },
+        {
+          "event_id": "main:line:38",
+          "disposition": "span",
+          "node_key": "turn:turn_parallel:tool:call_parallel_1"
+        },
+        {
+          "event_id": "main:line:39",
+          "disposition": "span",
+          "node_key": "turn:turn_parallel:model:msg_parallel"
+        },
+        {
+          "event_id": "main:line:40",
+          "disposition": "span",
+          "node_key": "turn:turn_parallel:model:msg_parallel"
+        },
+        {
+          "event_id": "main:line:41",
+          "disposition": "span",
+          "node_key": "turn:turn_parallel"
+        }
+      ]
+    },
+    {
+      "trace_id": "2d0ab080413bebea3d83f02f190be80f",
+      "turn_id": "turn_web",
+      "state": "ok",
+      "nodes": [
+        {
+          "key": "turn:turn_web",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_web",
+          "start_time_unix_nano": "1786676640000000000",
+          "end_time_unix_nano": "1786676642200000000",
+          "state": "ok",
+          "input": "[redacted] web lookup",
+          "output": "[redacted] web response",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_web",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_web",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:42",
+            "main:line:43",
+            "main:line:44",
+            "main:line:51"
+          ]
+        },
+        {
+          "key": "turn:turn_web:model:step:1",
+          "parent_key": "turn:turn_web",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "start_time_unix_nano": "1786676640900000000",
+          "end_time_unix_nano": "1786676641200000000",
+          "state": "ok",
+          "input": "[redacted] web lookup",
+          "output": {
+            "tool_calls": [
+              {
+                "id": "call_web",
+                "name": "web_search",
+                "type": "web_search",
+                "arguments": {
+                  "query": "redacted query"
+                }
+              }
+            ]
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 18,
+            "output_tokens": 8,
+            "total_tokens": 26
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:45",
+            "main:line:48"
+          ]
+        },
+        {
+          "key": "turn:turn_web:tool:call_web",
+          "parent_key": "turn:turn_web:model:step:1",
+          "kind": "tool",
+          "name": "agent.tool.call web_search",
+          "runtime_id": "call_web",
+          "start_time_unix_nano": "1786676640900000000",
+          "end_time_unix_nano": "1786676641100000000",
+          "state": "ok",
+          "input": {
+            "query": "redacted query"
+          },
+          "attributes": {
+            "gen_ai.tool.type": "web_search",
+            "gen_ai.tool.name": "web_search",
+            "gen_ai.tool.call.id": "call_web"
+          },
+          "source_event_ids": [
+            "main:line:45",
+            "main:line:46",
+            "main:line:47"
+          ]
+        },
+        {
+          "key": "turn:turn_web:model:msg_web",
+          "parent_key": "turn:turn_web",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_web",
+          "start_time_unix_nano": "1786676642000000000",
+          "end_time_unix_nano": "1786676642100000000",
+          "state": "ok",
+          "input": [
+            {
+              "call_id": "call_web",
+              "name": "web_search"
+            }
+          ],
+          "output": {
+            "content": "[redacted] web response"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 30,
+            "output_tokens": 9,
+            "total_tokens": 39
+          },
+          "attributes": {
+            "catena.model.step.index": 1
+          },
+          "source_event_ids": [
+            "main:line:49",
+            "main:line:50"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:42",
+          "disposition": "span",
+          "node_key": "turn:turn_web"
+        },
+        {
+          "event_id": "main:line:43",
+          "disposition": "span",
+          "node_key": "turn:turn_web"
+        },
+        {
+          "event_id": "main:line:44",
+          "disposition": "span",
+          "node_key": "turn:turn_web"
+        },
+        {
+          "event_id": "main:line:45",
+          "disposition": "span",
+          "node_key": "turn:turn_web:tool:call_web"
+        },
+        {
+          "event_id": "main:line:46",
+          "disposition": "span",
+          "node_key": "turn:turn_web:tool:call_web"
+        },
+        {
+          "event_id": "main:line:47",
+          "disposition": "span",
+          "node_key": "turn:turn_web:tool:call_web"
+        },
+        {
+          "event_id": "main:line:48",
+          "disposition": "span",
+          "node_key": "turn:turn_web:model:step:1"
+        },
+        {
+          "event_id": "main:line:49",
+          "disposition": "span",
+          "node_key": "turn:turn_web:model:msg_web"
+        },
+        {
+          "event_id": "main:line:50",
+          "disposition": "span",
+          "node_key": "turn:turn_web:model:msg_web"
+        },
+        {
+          "event_id": "main:line:51",
+          "disposition": "span",
+          "node_key": "turn:turn_web"
+        }
+      ]
+    },
+    {
+      "trace_id": "1c3ae66d103f67e349588ca2980388a5",
+      "turn_id": "turn_failure",
+      "state": "error",
+      "nodes": [
+        {
+          "key": "turn:turn_failure",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_failure",
+          "start_time_unix_nano": "1786676700000000000",
+          "end_time_unix_nano": "1786676703200000000",
+          "state": "error",
+          "status_message": "turn contains failed or unmatched tool evidence",
+          "input": "[redacted] failing tool",
+          "output": "[redacted] failure reported",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_failure",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_failure",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:52",
+            "main:line:53",
+            "main:line:54",
+            "main:line:61"
+          ]
+        },
+        {
+          "key": "turn:turn_failure:model:ls_failure",
+          "parent_key": "turn:turn_failure",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "ls_failure",
+          "start_time_unix_nano": "1786676701000000000",
+          "end_time_unix_nano": "1786676701100000000",
+          "state": "ok",
+          "input": "[redacted] failing tool",
+          "output": {
+            "tool_calls": [
+              {
+                "id": "call_failure",
+                "name": "local_shell",
+                "type": "local_shell",
+                "arguments": {
+                  "type": "exec",
+                  "command": [
+                    "sh",
+                    "-lc",
+                    "exit 7"
+                  ]
+                }
+              }
+            ]
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 17,
+            "output_tokens": 7,
+            "total_tokens": 24
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:55",
+            "main:line:56"
+          ]
+        },
+        {
+          "key": "turn:turn_failure:tool:call_failure",
+          "parent_key": "turn:turn_failure:model:ls_failure",
+          "kind": "tool",
+          "name": "agent.tool.call local_shell",
+          "runtime_id": "call_failure",
+          "start_time_unix_nano": "1786676701000000000",
+          "end_time_unix_nano": "1786676702100000000",
+          "state": "error",
+          "status_message": "[redacted] exit 7",
+          "input": {
+            "type": "exec",
+            "command": [
+              "sh",
+              "-lc",
+              "exit 7"
+            ]
+          },
+          "output": "[redacted] exit 7",
+          "attributes": {
+            "gen_ai.tool.type": "local_shell",
+            "gen_ai.tool.name": "local_shell",
+            "gen_ai.tool.call.id": "call_failure",
+            "codex.response_item.id": "ls_failure"
+          },
+          "source_event_ids": [
+            "main:line:55",
+            "main:line:57",
+            "main:line:58"
+          ]
+        },
+        {
+          "key": "turn:turn_failure:model:msg_failure",
+          "parent_key": "turn:turn_failure",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_failure",
+          "start_time_unix_nano": "1786676703000000000",
+          "end_time_unix_nano": "1786676703100000000",
+          "state": "ok",
+          "input": [
+            {
+              "call_id": "call_failure",
+              "name": "local_shell",
+              "output": "[redacted] exit 7",
+              "error": "[redacted] exit 7"
+            }
+          ],
+          "output": {
+            "content": "[redacted] failure reported"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 28,
+            "output_tokens": 8,
+            "total_tokens": 36
+          },
+          "attributes": {
+            "catena.model.step.index": 1
+          },
+          "source_event_ids": [
+            "main:line:59",
+            "main:line:60"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:52",
+          "disposition": "span",
+          "node_key": "turn:turn_failure"
+        },
+        {
+          "event_id": "main:line:53",
+          "disposition": "span",
+          "node_key": "turn:turn_failure"
+        },
+        {
+          "event_id": "main:line:54",
+          "disposition": "span",
+          "node_key": "turn:turn_failure"
+        },
+        {
+          "event_id": "main:line:55",
+          "disposition": "span",
+          "node_key": "turn:turn_failure:tool:call_failure"
+        },
+        {
+          "event_id": "main:line:56",
+          "disposition": "span",
+          "node_key": "turn:turn_failure:model:ls_failure"
+        },
+        {
+          "event_id": "main:line:57",
+          "disposition": "span",
+          "node_key": "turn:turn_failure:tool:call_failure"
+        },
+        {
+          "event_id": "main:line:58",
+          "disposition": "span",
+          "node_key": "turn:turn_failure:tool:call_failure"
+        },
+        {
+          "event_id": "main:line:59",
+          "disposition": "span",
+          "node_key": "turn:turn_failure:model:msg_failure"
+        },
+        {
+          "event_id": "main:line:60",
+          "disposition": "span",
+          "node_key": "turn:turn_failure:model:msg_failure"
+        },
+        {
+          "event_id": "main:line:61",
+          "disposition": "span",
+          "node_key": "turn:turn_failure"
+        }
+      ]
+    },
+    {
+      "trace_id": "8fb68a08924b8412632ab7f0c03575d9",
+      "turn_id": "turn_retry",
+      "state": "ok",
+      "nodes": [
+        {
+          "key": "turn:turn_retry",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_retry",
+          "start_time_unix_nano": "1786676760000000000",
+          "end_time_unix_nano": "1786676762200000000",
+          "state": "ok",
+          "input": "[redacted] retry request",
+          "output": "[redacted] retry succeeded",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_retry",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_retry",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:62",
+            "main:line:63",
+            "main:line:64",
+            "main:line:69"
+          ]
+        },
+        {
+          "key": "turn:turn_retry:model:step:1",
+          "parent_key": "turn:turn_retry",
+          "kind": "retry",
+          "name": "gen_ai.model.retry",
+          "start_time_unix_nano": "1786676761000000000",
+          "end_time_unix_nano": "1786676761100000000",
+          "state": "retry",
+          "status_message": "[redacted] HTTP 503",
+          "input": "[redacted] retry request",
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:65",
+            "main:line:66"
+          ]
+        },
+        {
+          "key": "turn:turn_retry:model:msg_retry_success",
+          "parent_key": "turn:turn_retry",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_retry_success",
+          "start_time_unix_nano": "1786676762000000000",
+          "end_time_unix_nano": "1786676762100000000",
+          "state": "ok",
+          "output": {
+            "content": "[redacted] retry succeeded"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 16,
+            "output_tokens": 6,
+            "total_tokens": 22
+          },
+          "attributes": {
+            "catena.model.step.index": 1
+          },
+          "source_event_ids": [
+            "main:line:67",
+            "main:line:68"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:62",
+          "disposition": "span",
+          "node_key": "turn:turn_retry"
+        },
+        {
+          "event_id": "main:line:63",
+          "disposition": "span",
+          "node_key": "turn:turn_retry"
+        },
+        {
+          "event_id": "main:line:64",
+          "disposition": "span",
+          "node_key": "turn:turn_retry"
+        },
+        {
+          "event_id": "main:line:65",
+          "disposition": "span",
+          "node_key": "turn:turn_retry:model:step:1"
+        },
+        {
+          "event_id": "main:line:66",
+          "disposition": "span",
+          "node_key": "turn:turn_retry:model:step:1"
+        },
+        {
+          "event_id": "main:line:67",
+          "disposition": "span",
+          "node_key": "turn:turn_retry:model:msg_retry_success"
+        },
+        {
+          "event_id": "main:line:68",
+          "disposition": "span",
+          "node_key": "turn:turn_retry:model:msg_retry_success"
+        },
+        {
+          "event_id": "main:line:69",
+          "disposition": "span",
+          "node_key": "turn:turn_retry"
+        }
+      ]
+    },
+    {
+      "trace_id": "9d36ad2a4dc9ea61acaeacdd80339436",
+      "turn_id": "turn_abort",
+      "state": "aborted",
+      "nodes": [
+        {
+          "key": "turn:turn_abort",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_abort",
+          "start_time_unix_nano": "1786676820000000000",
+          "end_time_unix_nano": "1786676822000000000",
+          "state": "aborted",
+          "status_message": "turn aborted by Runtime",
+          "input": "[redacted] abort request",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_abort",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_abort",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": true,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:70",
+            "main:line:71",
+            "main:line:72",
+            "main:line:75"
+          ]
+        },
+        {
+          "key": "turn:turn_abort:model:fc_abort",
+          "parent_key": "turn:turn_abort",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "fc_abort",
+          "start_time_unix_nano": "1786676821000000000",
+          "end_time_unix_nano": "1786676821100000000",
+          "state": "ok",
+          "input": "[redacted] abort request",
+          "output": {
+            "tool_calls": [
+              {
+                "id": "call_abort",
+                "name": "exec_command",
+                "type": "local_shell",
+                "arguments": {
+                  "cmd": "sleep 999"
+                }
+              }
+            ]
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 15,
+            "output_tokens": 6,
+            "total_tokens": 21
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:73",
+            "main:line:74"
+          ]
+        },
+        {
+          "key": "turn:turn_abort:tool:call_abort",
+          "parent_key": "turn:turn_abort:model:fc_abort",
+          "kind": "tool",
+          "name": "agent.tool.call exec_command",
+          "runtime_id": "call_abort",
+          "start_time_unix_nano": "1786676821000000000",
+          "end_time_unix_nano": "1786676821100000000",
+          "state": "incomplete",
+          "status_message": "tool result not present in rollout",
+          "input": {
+            "cmd": "sleep 999"
+          },
+          "attributes": {
+            "gen_ai.tool.type": "local_shell",
+            "gen_ai.tool.name": "exec_command",
+            "gen_ai.tool.call.id": "call_abort",
+            "codex.response_item.id": "fc_abort"
+          },
+          "source_event_ids": [
+            "main:line:73"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:70",
+          "disposition": "span",
+          "node_key": "turn:turn_abort"
+        },
+        {
+          "event_id": "main:line:71",
+          "disposition": "span",
+          "node_key": "turn:turn_abort"
+        },
+        {
+          "event_id": "main:line:72",
+          "disposition": "span",
+          "node_key": "turn:turn_abort"
+        },
+        {
+          "event_id": "main:line:73",
+          "disposition": "span",
+          "node_key": "turn:turn_abort:tool:call_abort"
+        },
+        {
+          "event_id": "main:line:74",
+          "disposition": "span",
+          "node_key": "turn:turn_abort:model:fc_abort"
+        },
+        {
+          "event_id": "main:line:75",
+          "disposition": "span",
+          "node_key": "turn:turn_abort"
+        }
+      ]
+    },
+    {
+      "trace_id": "fb4a23226e5008cc018c084947d186a7",
+      "turn_id": "turn_compact",
+      "state": "ok",
+      "nodes": [
+        {
+          "key": "turn:turn_compact",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_compact",
+          "start_time_unix_nano": "1786676880000000000",
+          "end_time_unix_nano": "1786676882200000000",
+          "state": "ok",
+          "input": "[redacted] compact context",
+          "output": "[redacted] compacted response",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_compact",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_compact",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:76",
+            "main:line:77",
+            "main:line:78",
+            "main:line:82"
+          ]
+        },
+        {
+          "key": "turn:turn_compact:model:msg_compact",
+          "parent_key": "turn:turn_compact",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_compact",
+          "start_time_unix_nano": "1786676882000000000",
+          "end_time_unix_nano": "1786676882100000000",
+          "state": "ok",
+          "input": "[redacted] compact context",
+          "output": {
+            "content": "[redacted] compacted response"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 25000,
+            "output_tokens": 5,
+            "total_tokens": 25005
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:80",
+            "main:line:81"
+          ]
+        },
+        {
+          "key": "turn:turn_compact:compact:main:line:79",
+          "parent_key": "turn:turn_compact",
+          "kind": "context_compact",
+          "name": "agent.context.compact",
+          "start_time_unix_nano": "1786676881000000000",
+          "end_time_unix_nano": "1786676881000000000",
+          "state": "ok",
+          "input": {
+            "trigger": "auto",
+            "pre_tokens": 190000,
+            "post_tokens": 25000
+          },
+          "attributes": {
+            "codex.compaction.event_type": "compacted"
+          },
+          "source_event_ids": [
+            "main:line:79"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:76",
+          "disposition": "span",
+          "node_key": "turn:turn_compact"
+        },
+        {
+          "event_id": "main:line:77",
+          "disposition": "span",
+          "node_key": "turn:turn_compact"
+        },
+        {
+          "event_id": "main:line:78",
+          "disposition": "span",
+          "node_key": "turn:turn_compact"
+        },
+        {
+          "event_id": "main:line:79",
+          "disposition": "span",
+          "node_key": "turn:turn_compact:compact:main:line:79"
+        },
+        {
+          "event_id": "main:line:80",
+          "disposition": "span",
+          "node_key": "turn:turn_compact:model:msg_compact"
+        },
+        {
+          "event_id": "main:line:81",
+          "disposition": "span",
+          "node_key": "turn:turn_compact:model:msg_compact"
+        },
+        {
+          "event_id": "main:line:82",
+          "disposition": "span",
+          "node_key": "turn:turn_compact"
+        }
+      ]
+    },
+    {
+      "trace_id": "f23f37edd01893a0ba19a284d5882ef6",
+      "turn_id": "turn_same_1",
+      "state": "ok",
+      "nodes": [
+        {
+          "key": "turn:turn_same_1",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_same_1",
+          "start_time_unix_nano": "1786676940000000000",
+          "end_time_unix_nano": "1786676941200000000",
+          "state": "ok",
+          "input": "[redacted] identical input",
+          "output": "[redacted] first identical response",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_same_1",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_same_1",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:83",
+            "main:line:84",
+            "main:line:85",
+            "main:line:88"
+          ]
+        },
+        {
+          "key": "turn:turn_same_1:model:msg_same_1",
+          "parent_key": "turn:turn_same_1",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_same_1",
+          "start_time_unix_nano": "1786676941000000000",
+          "end_time_unix_nano": "1786676941100000000",
+          "state": "ok",
+          "input": "[redacted] identical input",
+          "output": {
+            "content": "[redacted] first identical response"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 12,
+            "output_tokens": 5,
+            "total_tokens": 17
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:86",
+            "main:line:87"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:83",
+          "disposition": "span",
+          "node_key": "turn:turn_same_1"
+        },
+        {
+          "event_id": "main:line:84",
+          "disposition": "span",
+          "node_key": "turn:turn_same_1"
+        },
+        {
+          "event_id": "main:line:85",
+          "disposition": "span",
+          "node_key": "turn:turn_same_1"
+        },
+        {
+          "event_id": "main:line:86",
+          "disposition": "span",
+          "node_key": "turn:turn_same_1:model:msg_same_1"
+        },
+        {
+          "event_id": "main:line:87",
+          "disposition": "span",
+          "node_key": "turn:turn_same_1:model:msg_same_1"
+        },
+        {
+          "event_id": "main:line:88",
+          "disposition": "span",
+          "node_key": "turn:turn_same_1"
+        },
+        {
+          "event_id": "main:line:89",
+          "disposition": "ignored",
+          "reason": "record event_msg:session_resumed has no canonical semantic node"
+        }
+      ]
+    },
+    {
+      "trace_id": "d38366e39fba5733b879c8e33b0eb78c",
+      "turn_id": "turn_same_2",
+      "state": "ok",
+      "nodes": [
+        {
+          "key": "turn:turn_same_2",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_same_2",
+          "start_time_unix_nano": "1786680600100000000",
+          "end_time_unix_nano": "1786680601200000000",
+          "state": "ok",
+          "input": "[redacted] identical input",
+          "output": "[redacted] second identical response",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_same_2",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_same_2",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:90",
+            "main:line:91",
+            "main:line:92",
+            "main:line:95"
+          ]
+        },
+        {
+          "key": "turn:turn_same_2:model:msg_same_2",
+          "parent_key": "turn:turn_same_2",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_same_2",
+          "start_time_unix_nano": "1786680601000000000",
+          "end_time_unix_nano": "1786680601100000000",
+          "state": "ok",
+          "input": "[redacted] identical input",
+          "output": {
+            "content": "[redacted] second identical response"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 12,
+            "output_tokens": 5,
+            "total_tokens": 17
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:93",
+            "main:line:94"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:90",
+          "disposition": "span",
+          "node_key": "turn:turn_same_2"
+        },
+        {
+          "event_id": "main:line:91",
+          "disposition": "span",
+          "node_key": "turn:turn_same_2"
+        },
+        {
+          "event_id": "main:line:92",
+          "disposition": "span",
+          "node_key": "turn:turn_same_2"
+        },
+        {
+          "event_id": "main:line:93",
+          "disposition": "span",
+          "node_key": "turn:turn_same_2:model:msg_same_2"
+        },
+        {
+          "event_id": "main:line:94",
+          "disposition": "span",
+          "node_key": "turn:turn_same_2:model:msg_same_2"
+        },
+        {
+          "event_id": "main:line:95",
+          "disposition": "span",
+          "node_key": "turn:turn_same_2"
+        }
+      ]
+    },
+    {
+      "trace_id": "47b09639f379829408e60797879ff075",
+      "turn_id": "turn_subagent",
+      "state": "ok",
+      "nodes": [
+        {
+          "key": "turn:turn_subagent",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_subagent",
+          "start_time_unix_nano": "1786680660000000000",
+          "end_time_unix_nano": "1786680665200000000",
+          "state": "ok",
+          "input": "[redacted] delegate",
+          "output": "[redacted] delegated result",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_subagent",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_subagent",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:96",
+            "main:line:97",
+            "main:line:98",
+            "main:line:105"
+          ]
+        },
+        {
+          "key": "turn:turn_subagent:model:fc_spawn",
+          "parent_key": "turn:turn_subagent",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "fc_spawn",
+          "start_time_unix_nano": "1786680661000000000",
+          "end_time_unix_nano": "1786680661100000000",
+          "state": "ok",
+          "input": "[redacted] delegate",
+          "output": {
+            "tool_calls": [
+              {
+                "id": "call_spawn",
+                "name": "spawn_agent",
+                "type": "function",
+                "arguments": {
+                  "message": "[redacted] delegated prompt"
+                }
+              }
+            ]
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 22,
+            "output_tokens": 10,
+            "total_tokens": 32
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:99",
+            "main:line:100"
+          ]
+        },
+        {
+          "key": "turn:turn_subagent:tool:call_spawn",
+          "parent_key": "turn:turn_subagent:model:fc_spawn",
+          "kind": "tool",
+          "name": "agent.tool.call spawn_agent",
+          "runtime_id": "call_spawn",
+          "start_time_unix_nano": "1786680661000000000",
+          "end_time_unix_nano": "1786680664000000000",
+          "state": "ok",
+          "input": {
+            "message": "[redacted] delegated prompt"
+          },
+          "output": "{\"agent_id\":\"thread-redacted-child\"}",
+          "attributes": {
+            "gen_ai.tool.type": "function",
+            "gen_ai.tool.name": "spawn_agent",
+            "gen_ai.tool.call.id": "call_spawn",
+            "codex.response_item.id": "fc_spawn"
+          },
+          "source_event_ids": [
+            "main:line:99",
+            "main:line:102"
+          ]
+        },
+        {
+          "key": "turn:turn_subagent:model:msg_subagent_parent",
+          "parent_key": "turn:turn_subagent",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_subagent_parent",
+          "start_time_unix_nano": "1786680665000000000",
+          "end_time_unix_nano": "1786680665100000000",
+          "state": "ok",
+          "input": [
+            {
+              "call_id": "call_spawn",
+              "name": "spawn_agent",
+              "output": "{\"agent_id\":\"thread-redacted-child\"}"
+            }
+          ],
+          "output": {
+            "content": "[redacted] delegated result"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 35,
+            "output_tokens": 8,
+            "total_tokens": 43
+          },
+          "attributes": {
+            "catena.model.step.index": 1
+          },
+          "source_event_ids": [
+            "main:line:103",
+            "main:line:104"
+          ]
+        },
+        {
+          "key": "turn:turn_subagent:subagent-thread:thread-redacted-child",
+          "parent_key": "turn:turn_subagent:tool:call_spawn",
+          "kind": "subagent",
+          "name": "agent.subagent.thread",
+          "runtime_id": "thread-redacted-child",
+          "start_time_unix_nano": "1786680661400000000",
+          "end_time_unix_nano": "1786680663200000000",
+          "state": "ok",
+          "attributes": {
+            "agent.subagent.thread.id": "thread-redacted-child",
+            "agent.subagent.spawn.call_id": "call_spawn"
+          },
+          "source_event_ids": [
+            "main:line:101"
+          ]
+        },
+        {
+          "key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child",
+          "parent_key": "turn:turn_subagent:subagent-thread:thread-redacted-child",
+          "kind": "subagent",
+          "name": "agent.subagent.turn",
+          "runtime_id": "turn_child",
+          "start_time_unix_nano": "1786680661400000000",
+          "end_time_unix_nano": "1786680663200000000",
+          "state": "ok",
+          "input": "[redacted] delegated prompt",
+          "output": "[redacted] subagent answer",
+          "attributes": {
+            "agent.subagent.thread.id": "thread-redacted-child",
+            "agent.turn.id": "turn_child",
+            "catena.trace.correlation": "thread-redacted-child:turn_child"
+          },
+          "source_event_ids": [
+            "subagent:thread-redacted-child:line:1",
+            "subagent:thread-redacted-child:line:2",
+            "subagent:thread-redacted-child:line:3",
+            "subagent:thread-redacted-child:line:4",
+            "subagent:thread-redacted-child:line:9"
+          ]
+        },
+        {
+          "key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child:model:call_child_search",
+          "parent_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "call_child_search",
+          "start_time_unix_nano": "1786680662000000000",
+          "end_time_unix_nano": "1786680662100000000",
+          "state": "ok",
+          "input": "[redacted] delegated prompt",
+          "output": {
+            "tool_calls": [
+              {
+                "id": "call_child_search",
+                "name": "file_search",
+                "type": "file_search",
+                "arguments": {
+                  "query": "redacted"
+                }
+              }
+            ]
+          },
+          "model": "gpt-5.4-mini",
+          "usage": {
+            "input_tokens": 8,
+            "output_tokens": 4,
+            "total_tokens": 12
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "subagent:thread-redacted-child:line:5",
+            "subagent:thread-redacted-child:line:6"
+          ]
+        },
+        {
+          "key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child:tool:call_child_search",
+          "parent_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child:model:call_child_search",
+          "kind": "tool",
+          "name": "agent.tool.call file_search",
+          "runtime_id": "call_child_search",
+          "start_time_unix_nano": "1786680662000000000",
+          "end_time_unix_nano": "1786680662000000000",
+          "state": "ok",
+          "input": {
+            "query": "redacted"
+          },
+          "output": [
+            "[redacted] child result"
+          ],
+          "attributes": {
+            "gen_ai.tool.type": "file_search",
+            "gen_ai.tool.name": "file_search",
+            "gen_ai.tool.call.id": "call_child_search",
+            "codex.response_item.id": "call_child_search"
+          },
+          "source_event_ids": [
+            "subagent:thread-redacted-child:line:5"
+          ]
+        },
+        {
+          "key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child:model:msg_child",
+          "parent_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_child",
+          "start_time_unix_nano": "1786680663000000000",
+          "end_time_unix_nano": "1786680663100000000",
+          "state": "ok",
+          "input": [
+            {
+              "call_id": "call_child_search",
+              "name": "file_search",
+              "output": [
+                "[redacted] child result"
+              ]
+            }
+          ],
+          "output": {
+            "content": "[redacted] subagent answer"
+          },
+          "model": "gpt-5.4-mini",
+          "usage": {
+            "input_tokens": 14,
+            "output_tokens": 5,
+            "total_tokens": 19
+          },
+          "attributes": {
+            "catena.model.step.index": 1
+          },
+          "source_event_ids": [
+            "subagent:thread-redacted-child:line:7",
+            "subagent:thread-redacted-child:line:8"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "subagent:thread-redacted-child:line:1",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child"
+        },
+        {
+          "event_id": "subagent:thread-redacted-child:line:2",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child"
+        },
+        {
+          "event_id": "subagent:thread-redacted-child:line:3",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child"
+        },
+        {
+          "event_id": "subagent:thread-redacted-child:line:4",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child"
+        },
+        {
+          "event_id": "subagent:thread-redacted-child:line:5",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child:tool:call_child_search"
+        },
+        {
+          "event_id": "subagent:thread-redacted-child:line:6",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child:model:call_child_search"
+        },
+        {
+          "event_id": "subagent:thread-redacted-child:line:7",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child:model:msg_child"
+        },
+        {
+          "event_id": "subagent:thread-redacted-child:line:8",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child:model:msg_child"
+        },
+        {
+          "event_id": "subagent:thread-redacted-child:line:9",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:subagent-thread:thread-redacted-child:turn:turn_child"
+        },
+        {
+          "event_id": "main:line:96",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent"
+        },
+        {
+          "event_id": "main:line:97",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent"
+        },
+        {
+          "event_id": "main:line:98",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent"
+        },
+        {
+          "event_id": "main:line:99",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:tool:call_spawn"
+        },
+        {
+          "event_id": "main:line:100",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:model:fc_spawn"
+        },
+        {
+          "event_id": "main:line:101",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:subagent-thread:thread-redacted-child"
+        },
+        {
+          "event_id": "main:line:102",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:tool:call_spawn"
+        },
+        {
+          "event_id": "main:line:103",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:model:msg_subagent_parent"
+        },
+        {
+          "event_id": "main:line:104",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent:model:msg_subagent_parent"
+        },
+        {
+          "event_id": "main:line:105",
+          "disposition": "span",
+          "node_key": "turn:turn_subagent"
+        }
+      ]
+    },
+    {
+      "trace_id": "5a6264ece9c01dc318c67514bfaa9d03",
+      "turn_id": "turn_unknown",
+      "state": "error",
+      "nodes": [
+        {
+          "key": "turn:turn_unknown",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_unknown",
+          "start_time_unix_nano": "1786680720000000000",
+          "end_time_unix_nano": "1786680722200000000",
+          "state": "error",
+          "status_message": "turn contains failed or unmatched tool evidence",
+          "input": "[redacted] unknown result audit",
+          "output": "[redacted] orphan observed",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_unknown",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_unknown",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:106",
+            "main:line:107",
+            "main:line:108",
+            "main:line:112"
+          ]
+        },
+        {
+          "key": "turn:turn_unknown:model:msg_unknown",
+          "parent_key": "turn:turn_unknown",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_unknown",
+          "start_time_unix_nano": "1786680722000000000",
+          "end_time_unix_nano": "1786680722100000000",
+          "state": "ok",
+          "input": "[redacted] unknown result audit",
+          "output": {
+            "content": "[redacted] orphan observed"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 15,
+            "output_tokens": 5,
+            "total_tokens": 20
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:110",
+            "main:line:111"
+          ]
+        },
+        {
+          "key": "turn:turn_unknown:unmatched:call_unknown_nonempty",
+          "parent_key": "turn:turn_unknown",
+          "kind": "unmatched_tool_result",
+          "name": "agent.tool.result.unmatched",
+          "runtime_id": "call_unknown_nonempty",
+          "start_time_unix_nano": "1786680721000000000",
+          "end_time_unix_nano": "1786680721000000000",
+          "state": "error",
+          "status_message": "unknown call_id call_unknown_nonempty",
+          "output": "[redacted] orphan result",
+          "attributes": {
+            "gen_ai.tool.result.type": "function_call_output",
+            "gen_ai.tool.call.id": "call_unknown_nonempty"
+          },
+          "source_event_ids": [
+            "main:line:109"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:106",
+          "disposition": "span",
+          "node_key": "turn:turn_unknown"
+        },
+        {
+          "event_id": "main:line:107",
+          "disposition": "span",
+          "node_key": "turn:turn_unknown"
+        },
+        {
+          "event_id": "main:line:108",
+          "disposition": "span",
+          "node_key": "turn:turn_unknown"
+        },
+        {
+          "event_id": "main:line:109",
+          "disposition": "span",
+          "node_key": "turn:turn_unknown:unmatched:call_unknown_nonempty"
+        },
+        {
+          "event_id": "main:line:110",
+          "disposition": "span",
+          "node_key": "turn:turn_unknown:model:msg_unknown"
+        },
+        {
+          "event_id": "main:line:111",
+          "disposition": "span",
+          "node_key": "turn:turn_unknown:model:msg_unknown"
+        },
+        {
+          "event_id": "main:line:112",
+          "disposition": "span",
+          "node_key": "turn:turn_unknown"
+        }
+      ]
+    },
+    {
+      "trace_id": "eeb31de966016d635ba2a34d672163ba",
+      "turn_id": "turn_mcp",
+      "state": "ok",
+      "nodes": [
+        {
+          "key": "turn:turn_mcp",
+          "kind": "turn",
+          "name": "agent.turn",
+          "runtime_id": "turn_mcp",
+          "start_time_unix_nano": "1786680780000000000",
+          "end_time_unix_nano": "1786680782200000000",
+          "state": "ok",
+          "input": "[redacted] invoke MCP tool",
+          "output": "[redacted] MCP response",
+          "attributes": {
+            "agent.session.id": "22222222-2222-4222-8222-222222222222",
+            "agent.turn.id": "turn_mcp",
+            "catena.trace.correlation": "22222222-2222-4222-8222-222222222222:turn_mcp",
+            "catena.trace.id.source": "runtime_session_turn_correlation",
+            "codex.cli.version": "0.147.0",
+            "codex.model.provider": "openai",
+            "codex.aborted": false,
+            "codex.completed": true
+          },
+          "source_event_ids": [
+            "main:line:113",
+            "main:line:114",
+            "main:line:115",
+            "main:line:122"
+          ]
+        },
+        {
+          "key": "turn:turn_mcp:model:step:1",
+          "parent_key": "turn:turn_mcp",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "start_time_unix_nano": "1786680781000000000",
+          "end_time_unix_nano": "1786680781902000000",
+          "state": "ok",
+          "input": "[redacted] invoke MCP tool",
+          "output": {
+            "tool_calls": [
+              {
+                "id": "call_mcp",
+                "name": "fixture_server.fixture_tool",
+                "type": "mcp",
+                "arguments": {
+                  "query": "[redacted]"
+                }
+              }
+            ]
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 20,
+            "output_tokens": 6,
+            "total_tokens": 26
+          },
+          "attributes": {
+            "catena.model.step.index": 0
+          },
+          "source_event_ids": [
+            "main:line:116",
+            "main:line:119"
+          ]
+        },
+        {
+          "key": "turn:turn_mcp:tool:call_mcp",
+          "parent_key": "turn:turn_mcp:model:step:1",
+          "kind": "tool",
+          "name": "agent.tool.call fixture_server.fixture_tool",
+          "runtime_id": "call_mcp",
+          "start_time_unix_nano": "1786680781000000000",
+          "end_time_unix_nano": "1786680781901000000",
+          "state": "ok",
+          "input": {
+            "query": "[redacted]"
+          },
+          "output": {
+            "Ok": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "[redacted] MCP result"
+                }
+              ],
+              "isError": false,
+              "_meta": {}
+            }
+          },
+          "attributes": {
+            "gen_ai.tool.type": "mcp",
+            "gen_ai.tool.name": "fixture_server.fixture_tool",
+            "gen_ai.tool.call.id": "call_mcp",
+            "mcp.server": "fixture_server",
+            "mcp.tool": "fixture_tool"
+          },
+          "source_event_ids": [
+            "main:line:116",
+            "main:line:117",
+            "main:line:118"
+          ]
+        },
+        {
+          "key": "turn:turn_mcp:model:msg_mcp",
+          "parent_key": "turn:turn_mcp",
+          "kind": "model",
+          "name": "gen_ai.model.call",
+          "runtime_id": "msg_mcp",
+          "start_time_unix_nano": "1786680782000000000",
+          "end_time_unix_nano": "1786680782100000000",
+          "state": "ok",
+          "input": [
+            {
+              "call_id": "call_mcp",
+              "name": "fixture_server.fixture_tool",
+              "output": {
+                "Ok": {
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "[redacted] MCP result"
+                    }
+                  ],
+                  "isError": false,
+                  "_meta": {}
+                }
+              }
+            }
+          ],
+          "output": {
+            "content": "[redacted] MCP response"
+          },
+          "model": "gpt-5.4",
+          "usage": {
+            "input_tokens": 25,
+            "output_tokens": 5,
+            "total_tokens": 30
+          },
+          "attributes": {
+            "catena.model.step.index": 1
+          },
+          "source_event_ids": [
+            "main:line:120",
+            "main:line:121"
+          ]
+        }
+      ],
+      "accounting": [
+        {
+          "event_id": "main:line:113",
+          "disposition": "span",
+          "node_key": "turn:turn_mcp"
+        },
+        {
+          "event_id": "main:line:114",
+          "disposition": "span",
+          "node_key": "turn:turn_mcp"
+        },
+        {
+          "event_id": "main:line:115",
+          "disposition": "span",
+          "node_key": "turn:turn_mcp"
+        },
+        {
+          "event_id": "main:line:116",
+          "disposition": "span",
+          "node_key": "turn:turn_mcp:tool:call_mcp"
+        },
+        {
+          "event_id": "main:line:117",
+          "disposition": "span",
+          "node_key": "turn:turn_mcp:tool:call_mcp"
+        },
+        {
+          "event_id": "main:line:118",
+          "disposition": "span",
+          "node_key": "turn:turn_mcp:tool:call_mcp"
+        },
+        {
+          "event_id": "main:line:119",
+          "disposition": "span",
+          "node_key": "turn:turn_mcp:model:step:1"
+        },
+        {
+          "event_id": "main:line:120",
+          "disposition": "span",
+          "node_key": "turn:turn_mcp:model:msg_mcp"
+        },
+        {
+          "event_id": "main:line:121",
+          "disposition": "span",
+          "node_key": "turn:turn_mcp:model:msg_mcp"
+        },
+        {
+          "event_id": "main:line:122",
+          "disposition": "span",
+          "node_key": "turn:turn_mcp"
+        }
+      ]
+    }
+  ]
+}

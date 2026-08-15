@@ -3,7 +3,9 @@ import test from "node:test";
 import {
   agentAssets,
   agentAssetDownloadURL,
+  agentAssetFiles,
   agentAssetFilename,
+  agentAssetPath,
   agentAssetText,
   evolutionTraceCounts,
   evolutionStages,
@@ -121,6 +123,10 @@ test("normalizes Agent Trace Set provenance for direct Agent assets", () => {
       title: "Check tool outcomes",
       source_agent_id: "codex-desktop",
       source_trace_ids: ["trace-1", "trace-2", "trace-3"],
+      content: {
+        root: "skills/check-tool-outcomes",
+        files: [{ path: "skills/check-tool-outcomes/SKILL.md", content: "---\nname: check-tool-outcomes\ndescription: Check tool outcomes.\n---\n\n# Check tool outcomes" }],
+      },
     },
   });
 
@@ -151,7 +157,7 @@ test("fills the fixed role timeline with explicit not-reported states", () => {
   ]);
 });
 
-test("exposes only portable Agent assets and XiaoBaOS-only Harness", () => {
+test("exposes only usable agent.md, Skill packages, and Role packages", () => {
   const codex = normalizeEvolutionJob({
     job_id: "job-assets",
     source_kind: "agent_trace_set",
@@ -160,9 +166,9 @@ test("exposes only portable Agent assets and XiaoBaOS-only Harness", () => {
     state: "completed",
     stages: [],
     candidates: [
-      { kind: "agent_md", title: "Operating rules", summary: "Portable instructions", content: { path: "agent.md", markdown: "# Rules\n\nCheck tool results." } },
-      { kind: "skill", title: "Check results", summary: "Reusable skill", content: { instruction: "Check results." } },
-      { kind: "role", title: "Reviewer", summary: "Reusable role", content: { mission: "Review output." } },
+      { kind: "agent_md", title: "Operating rules", summary: "Portable instructions", content: { root: "agent.md", files: [{ path: "agent.md", content: "# Rules\n\nCheck tool results." }] } },
+      { kind: "skill", title: "Check results", summary: "Reusable skill", content: { root: "skills/check-results", files: [{ path: "skills/check-results/SKILL.md", content: "---\nname: check-results\ndescription: Check results.\n---\n\n# Check results" }, { path: "skills/check-results/scripts/check.sh", content: "#!/bin/sh\necho check" }] } },
+      { kind: "role", title: "Reviewer", summary: "Reusable role", content: { root: "roles/reviewer", files: [{ path: "roles/reviewer/role.json", content: "{\"name\":\"reviewer\",\"promptFile\":\"reviewer.md\"}" }, { path: "roles/reviewer/prompts/reviewer.md", content: "# Reviewer" }] } },
       { kind: "harness", title: "Loop guard", summary: "Runtime change", content: { change: "limit loop" } },
       { kind: "memory", title: "User prefers short answers", summary: "Legacy memory" },
       { kind: "case", title: "Legacy case", summary: "Legacy case" },
@@ -170,17 +176,19 @@ test("exposes only portable Agent assets and XiaoBaOS-only Harness", () => {
   });
   assert.deepEqual(agentAssets(codex).map((candidate) => candidate.kind), ["agent_md", "skill", "role"]);
   assert.equal(agentAssetText(agentAssets(codex)[0]), "# Rules\n\nCheck tool results.");
-
-  const xiaoba = { ...codex, source_agent_id: "xiaobaos" };
-  assert.deepEqual(agentAssets(xiaoba).map((candidate) => candidate.kind), ["agent_md", "skill", "role", "harness"]);
+  assert.equal(agentAssetFiles(agentAssets(codex)[1]).length, 2);
+  assert.equal(agentAssetPath(agentAssets(codex)[2]), "roles/reviewer");
 });
 
 test("gives every deployable Agent asset a stable download filename", () => {
   assert.equal(agentAssetFilename({ kind: "agent_md", content: { path: "config/AGENTS.md", markdown: "# Rules" } }), "AGENTS.md");
   assert.equal(agentAssetFilename({ kind: "agent_md", content: { markdown: "# Rules" } }), "agent.md");
-  assert.equal(agentAssetFilename({ kind: "skill", content: {} }), "skill.json");
+  assert.equal(agentAssetFilename({ kind: "skill", content: {} }), "SKILL.md");
   assert.equal(agentAssetFilename({ kind: "role", content: {} }), "role.json");
-  assert.equal(agentAssetFilename({ kind: "harness", content: {} }), "harness.json");
+  assert.equal(agentAssetFilename({ kind: "skill", content: { path: "skills/check-results/SKILL.md", markdown: "# Check" } }), "SKILL.md");
+  assert.equal(agentAssetPath({ kind: "skill", content: { path: "skills/check-results/SKILL.md", markdown: "# Check" } }), "skills/check-results/SKILL.md");
+  assert.equal(agentAssetText({ kind: "skill", content: { path: "skills/check-results/SKILL.md", markdown: "# Check" } }), "# Check");
+  assert.equal(agentAssetFilename({ kind: "role", content: { root: "roles/reviewer", files: [{ path: "roles/reviewer/role.json", content: "{}" }] } }), "role.json");
   assert.match(agentAssetDownloadURL("agent.md", "# A\nB"), /^data:text\/markdown;charset=utf-8,/);
   assert.match(agentAssetDownloadURL("skill.json", '{"ok":true}'), /^data:application\/json;charset=utf-8,/);
   assert.equal(decodeURIComponent(agentAssetDownloadURL("skill.json", '{"ok":true}').split(",", 2)[1]), '{"ok":true}');

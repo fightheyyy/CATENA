@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -17,6 +19,101 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
+
+func TestCatenaRuntimeOTLPGoldensPreserveCanonicalHierarchyAndFailureState(t *testing.T) {
+	tests := []struct {
+		name          string
+		file          string
+		traceCount    int
+		expectedSpans int
+		sessionID     string
+		toolTypes     []string
+	}{
+		{
+			name: "codex", file: "codex.otlp.json", traceCount: 14, expectedSpans: 54,
+			sessionID: "22222222-2222-4222-8222-222222222222",
+			toolTypes: []string{"function", "custom", "local_shell", "web_search", "file_search", "mcp"},
+		},
+		{
+			name: "claude", file: "claude.otlp.json", traceCount: 14, expectedSpans: 52,
+			sessionID: "11111111-1111-4111-8111-111111111111",
+			toolTypes: []string{"custom", "local_shell", "web_search", "file_search"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fixturePath := filepath.Join("..", "..", "..", "tap", "fixtures", "golden", test.file)
+			body, err := os.ReadFile(fixturePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var payloads []json.RawMessage
+			if err := json.Unmarshal(body, &payloads); err != nil {
+				t.Fatal(err)
+			}
+			if len(payloads) != test.traceCount {
+				t.Fatalf("payload count = %d, want %d", len(payloads), test.traceCount)
+			}
+			spanCount := 0
+			failedTools := 0
+			abortedRoots := 0
+			webSearches := 0
+			unmatchedResults := 0
+			toolTypes := make(map[string]int)
+			for _, payload := range payloads {
+				decoded, encoding, err := decodeOTLPRequest(payload, "application/json")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if encoding != "json" || decoded.Rejected != 0 {
+					t.Fatalf("encoding/rejected = %q/%d", encoding, decoded.Rejected)
+				}
+				spanCount += len(decoded.Spans)
+				ids := make(map[string]struct{}, len(decoded.Spans))
+				for _, span := range decoded.Spans {
+					ids[span.SpanID] = struct{}{}
+					if traceSpanSessionID(span) != test.sessionID {
+						t.Fatalf("span %s session = %q", span.Name, traceSpanSessionID(span))
+					}
+					kind := toTraceString(span.Attributes["catena.node.kind"])
+					state := toTraceString(span.Attributes["catena.state"])
+					toolType := toTraceString(span.Attributes["gen_ai.tool.type"])
+					if kind == "tool" && toolType != "" {
+						toolTypes[toolType]++
+					}
+					if kind == "tool" && state == "error" && span.StatusCode == 2 {
+						failedTools++
+					}
+					if kind == "turn" && state == "aborted" && span.StatusCode == 2 {
+						abortedRoots++
+					}
+					if kind == "tool" && toolType == "web_search" {
+						webSearches++
+					}
+					if kind == "unmatched_tool_result" && span.StatusCode == 2 {
+						unmatchedResults++
+					}
+				}
+				for _, span := range decoded.Spans {
+					if span.ParentSpanID == "" {
+						continue
+					}
+					if _, ok := ids[span.ParentSpanID]; !ok {
+						t.Fatalf("span %s has missing parent %s", span.Name, span.ParentSpanID)
+					}
+				}
+			}
+			if spanCount != test.expectedSpans || failedTools == 0 || abortedRoots != 1 || webSearches == 0 || unmatchedResults != 1 {
+				t.Fatalf("spans=%d failedTools=%d abortedRoots=%d web=%d unmatched=%d", spanCount, failedTools, abortedRoots, webSearches, unmatchedResults)
+			}
+			for _, toolType := range test.toolTypes {
+				if toolTypes[toolType] == 0 {
+					t.Fatalf("missing %s tool evidence: %+v", toolType, toolTypes)
+				}
+			}
+		})
+	}
+}
 
 func TestDecodeOTLPRequestPreservesToolEvidence(t *testing.T) {
 	request := testOTLPRequest(true)
@@ -51,7 +148,7 @@ func TestDecodeOTLPRequestPreservesToolEvidence(t *testing.T) {
 			span := decoded.Spans[0]
 			if span.TraceID != "00112233445566778899aabbccddeeff" ||
 				span.SpanID != "0011223344556677" ||
-				span.ServiceName != "codex" ||
+				span.ServiceName != "catena-runtime-codex" ||
 				span.Model != "gpt-5.6-sol" ||
 				span.Input != `{"path":"README.md"}` ||
 				span.Output != "file contents" {
@@ -70,19 +167,20 @@ func TestSummarizeTracePreservesAgentSessionHierarchy(t *testing.T) {
 	spans := []TraceSpan{
 		{
 			TraceID: "00112233445566778899aabbccddeeff", SpanID: "0011223344556677",
-			Name: "agent.turn", ServiceName: "catena-tap-codex", StartTime: start, EndTime: start.Add(time.Second),
+			Name: "agent.turn", ServiceName: "catena-runtime-codex", StartTime: start, EndTime: start.Add(time.Second),
+			Input:      `{"type":"chat_messages","value":[{"role":"user","content":"帮我检查部署异常"}]}`,
 			Attributes: map[string]any{"agent.session.id": "session-from-root"}, ResourceAttributes: map[string]any{},
 		},
 		{
 			AgentID: "agent-codex", TraceID: "00112233445566778899aabbccddeeff", SpanID: "8899aabbccddeeff",
-			ParentSpanID: "0011223344556677", Name: "gen_ai.model.call", ServiceName: "catena-tap-codex",
+			ParentSpanID: "0011223344556677", Name: "gen_ai.model.call", ServiceName: "catena-runtime-codex",
 			StartTime: start.Add(100 * time.Millisecond), EndTime: start.Add(900 * time.Millisecond),
 			Attributes: map[string]any{}, ResourceAttributes: map[string]any{},
 		},
 	}
 	summary := summarizeTrace(spans, start.Add(2*time.Second))
 	if summary.AgentID != "agent-codex" || summary.SessionID != "session-from-root" ||
-		summary.TraceID != spans[0].TraceID || summary.SpanCount != 2 {
+		summary.TraceID != spans[0].TraceID || summary.SpanCount != 2 || summary.InputPreview != spans[0].Input {
 		t.Fatalf("unexpected hierarchy summary: %+v", summary)
 	}
 }
@@ -100,10 +198,10 @@ func TestTraceSpanSessionIDUsesSupportedAttributesWithoutGuessing(t *testing.T) 
 	}
 }
 
-func TestDecodeOTLPJSONAcceptsCatenaTapProtoJSONIDs(t *testing.T) {
+func TestDecodeOTLPJSONAcceptsCatenaRuntimeProtoJSONIDs(t *testing.T) {
 	body := []byte(`{
   "resourceSpans": [{
-    "resource": {"attributes": [{"key":"service.name","value":{"stringValue":"catena-tap-codex"}}]},
+    "resource": {"attributes": [{"key":"service.name","value":{"stringValue":"catena-runtime-codex"}}]},
     "scopeSpans": [{
       "scope": {"name":"catena.tap","version":"0.1.0"},
       "spans": [{
@@ -129,7 +227,7 @@ func TestDecodeOTLPJSONAcceptsCatenaTapProtoJSONIDs(t *testing.T) {
 	span := decoded.Spans[0]
 	if span.TraceID != "00112233445566778899aabbccddeeff" ||
 		span.SpanID != "0011223344556677" || span.Input != "hello" {
-		t.Fatalf("unexpected Catena Tap span: %+v", span)
+		t.Fatalf("unexpected Catena Runtime span: %+v", span)
 	}
 }
 
@@ -239,19 +337,20 @@ func TestOTLPHandlerAuthenticatesAndStoresByOwner(t *testing.T) {
 	}
 }
 
-func TestAgentTraceHandlerCanonicalizesCodexAliasAndPreservesTraceSource(t *testing.T) {
+func TestAgentTraceHandlerUsesCredentialBoundRuntimeIdentity(t *testing.T) {
 	now := time.Now().UTC()
 	traces := &recordingTraceStore{agentTraces: []TraceSummary{{
+		AgentID:     "agent-codex-runtime",
 		TraceID:     "00112233445566778899aabbccddeeff",
-		RootName:    "codex.turn",
-		ServiceName: "Codex Desktop",
+		RootName:    "agent.turn",
+		ServiceName: "catena-runtime-codex",
 		StartTime:   now.Add(-time.Minute),
 		EndTime:     now,
 		SpanCount:   1,
 	}}}
 	server := &HTTPServer{store: NewMemoryStore(), traces: traces}
-	request := httptest.NewRequest(http.MethodGet, "/v1/agents/Codex%20Desktop/traces", nil)
-	request.SetPathValue("agent_id", "  CoDeX DeSkToP  ")
+	request := httptest.NewRequest(http.MethodGet, "/v1/agents/agent-codex-runtime/traces", nil)
+	request.SetPathValue("agent_id", "agent-codex-runtime")
 	recorder := httptest.NewRecorder()
 
 	server.listAgentTraces(recorder, request)
@@ -259,8 +358,8 @@ func TestAgentTraceHandlerCanonicalizesCodexAliasAndPreservesTraceSource(t *test
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}
-	if traces.requestedAgentID != "codex" {
-		t.Fatalf("store agent_id = %q, want canonical codex", traces.requestedAgentID)
+	if traces.requestedAgentID != "agent-codex-runtime" {
+		t.Fatalf("store agent_id = %q, want credential-bound identity", traces.requestedAgentID)
 	}
 	var response struct {
 		AgentID string         `json:"agent_id"`
@@ -269,9 +368,9 @@ func TestAgentTraceHandlerCanonicalizesCodexAliasAndPreservesTraceSource(t *test
 	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
-	if response.AgentID != "codex" || len(response.Traces) != 1 ||
-		response.Traces[0].ServiceName != "Codex Desktop" {
-		t.Fatalf("canonical response lost raw Trace source: %#v", response)
+	if response.AgentID != "agent-codex-runtime" || len(response.Traces) != 1 ||
+		response.Traces[0].ServiceName != "catena-runtime-codex" {
+		t.Fatalf("response lost credential identity or parser source: %#v", response)
 	}
 }
 
@@ -357,7 +456,8 @@ func testOTLPRequest(includeInvalid bool) *collectortracev1.ExportTraceServiceRe
 	return &collectortracev1.ExportTraceServiceRequest{
 		ResourceSpans: []*tracev1.ResourceSpans{{
 			Resource: &resourcev1.Resource{Attributes: []*commonv1.KeyValue{
-				stringAttribute("service.name", "codex"),
+				stringAttribute("service.name", "catena-runtime-codex"),
+				stringAttribute("agent.runtime", "codex"),
 			}},
 			ScopeSpans: []*tracev1.ScopeSpans{{
 				Scope: &commonv1.InstrumentationScope{Name: "catena-test", Version: "1.0"},

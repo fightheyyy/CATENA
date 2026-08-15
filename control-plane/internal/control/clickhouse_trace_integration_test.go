@@ -90,22 +90,24 @@ func TestClickHouseTraceRoundTrip(t *testing.T) {
 		detail.Spans[1].Input != `{"path":"README.md"}` {
 		t.Fatalf("unexpected detail: %+v", detail)
 	}
-	codexServices := []string{"codex", "codex-app-server", "Codex Desktop"}
+	codexAgentID := "agent-codex-runtime"
+	codexService := "catena-runtime-codex"
 	codexTraceIDs := []string{
 		"11112233445566778899aabbccddeeff",
 		"22222233445566778899aabbccddeeff",
 		"33332233445566778899aabbccddeeff",
 	}
-	for index, serviceName := range codexServices {
+	for index := range codexTraceIDs {
 		span := TraceSpan{
+			AgentID:            codexAgentID,
 			TraceID:            codexTraceIDs[index],
 			SpanID:             fmt.Sprintf("%016d", index+1),
-			Name:               "codex.turn",
-			ServiceName:        serviceName,
+			Name:               "agent.turn",
+			ServiceName:        codexService,
 			StartTime:          start.Add(time.Duration(index+1) * time.Minute),
 			EndTime:            start.Add(time.Duration(index+1)*time.Minute + time.Second),
 			Attributes:         map[string]any{},
-			ResourceAttributes: map[string]any{"service.name": serviceName},
+			ResourceAttributes: map[string]any{"service.name": codexService, "agent.runtime": "codex"},
 			Events:             []TraceEvent{},
 			Links:              []TraceLink{},
 		}
@@ -123,19 +125,19 @@ func TestClickHouseTraceRoundTrip(t *testing.T) {
 	}
 	var codex AgentSummary
 	for _, agent := range agents {
-		if agent.AgentID == "codex" {
+		if agent.AgentID == codexAgentID {
 			codex = agent
 		}
 	}
-	if codex.AgentID != "codex" || codex.DisplayName != "Codex" ||
-		codex.IdentitySource != agentIdentitySourceAlias || codex.TraceCount != 3 ||
-		codex.SpanCount != 3 || len(codex.Sources) != 3 {
-		t.Fatalf("unexpected canonical Codex Agent: %+v", codex)
+	if codex.AgentID != codexAgentID || codex.IdentitySource != agentIdentitySourceCredential ||
+		codex.TraceCount != 3 || codex.SpanCount != 3 || len(codex.Sources) != 1 ||
+		codex.Sources[0].ServiceName != codexService || codex.Sources[0].Kind != agentSourceKindNativeLive {
+		t.Fatalf("unexpected credential-bound Codex Agent: %+v", codex)
 	}
 	codexTraces, err := store.ListAgentTraces(
 		ctx,
 		ownerID,
-		"  CoDeX DeSkToP  ",
+		codexAgentID,
 		start,
 		start.Add(10*time.Minute),
 		10,
@@ -144,15 +146,11 @@ func TestClickHouseTraceRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(codexTraces) != 3 {
-		t.Fatalf("canonical Codex filter returned %+v", codexTraces)
+		t.Fatalf("credential-bound Codex filter returned %+v", codexTraces)
 	}
-	seenSources := make(map[string]bool)
 	for _, summary := range codexTraces {
-		seenSources[summary.ServiceName] = true
-	}
-	for _, serviceName := range codexServices {
-		if !seenSources[serviceName] {
-			t.Fatalf("canonical Codex filter lost source %q: %+v", serviceName, codexTraces)
+		if summary.AgentID != codexAgentID || summary.ServiceName != codexService {
+			t.Fatalf("credential-bound Codex filter returned unrelated Trace: %+v", codexTraces)
 		}
 	}
 
@@ -252,9 +250,11 @@ func TestClickHouseTraceRoundTrip(t *testing.T) {
 	boundTraceID := "aaaa2233445566778899aabbccddeeff"
 	if err := store.InsertSpans(ctx, ownerID, []TraceSpan{{
 		AgentID: boundAgentID, TraceID: boundTraceID, SpanID: "aaaaaaaaaaaaaaaa",
-		Name: "claude.turn", ServiceName: "claude-code",
+		Name: "agent.turn", ServiceName: "catena-runtime-claude-code",
 		StartTime: start.Add(40 * time.Minute), EndTime: start.Add(40*time.Minute + time.Second),
-		Attributes: map[string]any{}, ResourceAttributes: map[string]any{"service.name": "claude-code"},
+		Attributes: map[string]any{}, ResourceAttributes: map[string]any{
+			"service.name": "catena-runtime-claude-code", "agent.runtime": "claude-code",
+		},
 		Events: []TraceEvent{}, Links: []TraceLink{},
 	}}); err != nil {
 		t.Fatal(err)

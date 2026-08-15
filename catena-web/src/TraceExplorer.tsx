@@ -16,18 +16,21 @@ import {
   traceSpanAttributeString,
   traceSpanToolName,
   traceSessionKey,
+  traceSessionTitle,
+  traceSummaryTitle,
   type TraceFilter,
   type TraceLens,
   type TraceSpanSemanticKind,
 } from "./traceView";
 import { useAgentTraceWindow } from "./useAgentTraceWindow";
+import { TraceNarrative } from "./TraceNarrative";
 
 type Locale = "zh" | "en";
 
 const traceCopy = {
   zh: {
     title: "Trace",
-    body: "先定位异常，再沿执行链找到原因。",
+    body: "从用户请求开始，顺着模型、工具和分支看完整执行过程。",
     recent: "最近 100 条",
     agentRecent: "所选 Agent · 最近 30 天",
     agentLoading: "正在读取这个 Agent 的 Trace",
@@ -63,6 +66,7 @@ const traceCopy = {
     execution: "Agent 执行链",
     selectSpan: "默认折叠 Runtime 内部噪声，选择一步查看证据",
     agentLens: "关键链路",
+    narrativeLens: "执行过程",
     toolsLens: "工具",
     errorsLens: "错误",
     rawLens: "原始 Span",
@@ -70,6 +74,7 @@ const traceCopy = {
     models: "模型调用",
     tools: "工具与产物",
     checks: "验证",
+    events: "分支与事件",
     rawSpans: "原始 Span",
     folded: "条 Runtime 内部 Span 已折叠",
     rawHint: "原始 OTel 视图用于排障，并按批次加载，避免超大 Trace 卡住浏览器。",
@@ -78,7 +83,7 @@ const traceCopy = {
     noErrors: "这条 Trace 没有错误 Span。",
     showMore: "继续显示 200 条",
     remaining: "条尚未显示",
-    kinds: { run: "RUN", turn: "TURN", model: "MODEL", tool: "TOOL", artifact: "ARTIFACT", check: "CHECK", error: "ERROR", internal: "OTEL" },
+    kinds: { run: "RUN", turn: "TURN", model: "MODEL", tool: "TOOL", artifact: "ARTIFACT", subagent: "SUBAGENT", retry: "RETRY", compact: "COMPACT", check: "CHECK", error: "ERROR", internal: "OTEL" },
     input: "输入",
     output: "输出",
     attributes: "属性",
@@ -98,11 +103,13 @@ const traceCopy = {
     checkRules: { contains_any: "至少包含一项", contains_all: "必须全部包含", excludes: "不得包含" },
     statusOk: "成功",
     statusError: "失败",
+    statusAborted: "已中止",
+    statusIncomplete: "未完成",
     backToList: "返回 Trace 列表",
   },
   en: {
     title: "Traces",
-    body: "Find the anomaly, then follow the execution chain to its cause.",
+    body: "Start with the request, then follow every model call, tool, and branch.",
     recent: "Latest 100",
     agentRecent: "Selected Agent · last 30 days",
     agentLoading: "Loading this Agent's Traces",
@@ -138,6 +145,7 @@ const traceCopy = {
     execution: "Agent execution chain",
     selectSpan: "Runtime internals are folded by default. Select a step to inspect evidence.",
     agentLens: "Critical path",
+    narrativeLens: "Execution",
     toolsLens: "Tools",
     errorsLens: "Errors",
     rawLens: "Raw Spans",
@@ -145,6 +153,7 @@ const traceCopy = {
     models: "Model calls",
     tools: "Tools & artifacts",
     checks: "Checks",
+    events: "Branches & events",
     rawSpans: "Raw Spans",
     folded: "Runtime-internal Spans folded",
     rawHint: "The raw OTel view loads in bounded batches so a large Trace cannot freeze the browser.",
@@ -153,7 +162,7 @@ const traceCopy = {
     noErrors: "This Trace contains no error Spans.",
     showMore: "Show 200 more",
     remaining: "not shown",
-    kinds: { run: "RUN", turn: "TURN", model: "MODEL", tool: "TOOL", artifact: "ARTIFACT", check: "CHECK", error: "ERROR", internal: "OTEL" },
+    kinds: { run: "RUN", turn: "TURN", model: "MODEL", tool: "TOOL", artifact: "ARTIFACT", subagent: "SUBAGENT", retry: "RETRY", compact: "COMPACT", check: "CHECK", error: "ERROR", internal: "OTEL" },
     input: "Input",
     output: "Output",
     attributes: "Attributes",
@@ -173,6 +182,8 @@ const traceCopy = {
     checkRules: { contains_any: "Contains any", contains_all: "Contains all", excludes: "Excludes" },
     statusOk: "Success",
     statusError: "Failed",
+    statusAborted: "Aborted",
+    statusIncomplete: "Incomplete",
     backToList: "Back to Trace list",
   },
 } as const;
@@ -327,6 +338,8 @@ export function TraceExplorer({
               {!agentWindow.loading && !agentWindow.error ? sessionGroups.map((group, groupIndex) => {
                 const expanded = expandedSessionKey === group.key;
                 const groupAgentName = agentNames.get(group.agentID) || group.agentID;
+                const sessionIdentity = group.sessionID ? shortTraceID(group.sessionID) : t.ungroupedSession;
+                const sessionTitle = traceSessionTitle(group);
                 const tracePanelID = `trace-session-panel-${groupIndex}`;
                 return (
                   <section className={expanded ? "trace-session expanded" : "trace-session"} key={group.key}>
@@ -346,9 +359,9 @@ export function TraceExplorer({
                       <span className="trace-session-identity">
                         <span className="trace-session-kicker">
                           <em>{t.sessionLevel}</em>
-                          {groupAgentName ? <small>{groupAgentName}</small> : null}
+                          {groupAgentName || sessionTitle ? <small>{[groupAgentName, sessionTitle ? sessionIdentity : ""].filter(Boolean).join(" · ")}</small> : null}
                         </span>
-                        <strong>{group.sessionID ? shortTraceID(group.sessionID) : t.ungroupedSession}</strong>
+                        <strong>{sessionTitle || sessionIdentity}</strong>
                       </span>
                       <span className="trace-session-facts">
                         <span>{group.traces.length} {t.traces}</span>
@@ -423,7 +436,7 @@ function TraceIndexRow({
       <span className="trace-index-heading">
         <span className="trace-index-title">
           <em>{labels.traceLevel} · {shortTraceID(trace.trace_id)}</em>
-          <strong>{trace.root_name || labels.traceLevel}</strong>
+          <strong>{traceSummaryTitle(trace, locale)}</strong>
         </span>
         <i className={trace.error_count > 0 ? "trace-state-dot error" : "trace-state-dot"} aria-label={trace.error_count > 0 ? labels.statusError : labels.statusOk} />
       </span>
@@ -456,7 +469,8 @@ function TraceDetailWorkspace({
   const t = traceCopy[locale];
   const spansByID = useMemo(() => new Map(detail.spans.map((span) => [span.span_id, span])), [detail.spans]);
   const semanticView = useMemo(() => buildTraceSemanticView(detail.spans), [detail.spans]);
-  const [lens, setLens] = useState<TraceLens>("agent");
+  const hasCanonicalNarrative = semanticView.canonicalNodeCount > 0;
+  const [lens, setLens] = useState<TraceLens>(hasCanonicalNarrative ? "narrative" : "agent");
   const [stepLimit, setStepLimit] = useState(TRACE_STEP_PAGE_SIZE);
   const visible = useMemo(
     () => boundedTraceSteps(semanticView, lens, stepLimit),
@@ -464,6 +478,18 @@ function TraceDetailWorkspace({
   );
   const traceStart = new Date(detail.summary.start_time).getTime();
   const traceDuration = Math.max(detail.summary.duration_ms, 1);
+  const primaryTurn = semanticView.agentSteps.find(({ span, kind }) => (
+    kind === "turn" && traceSpanAttributeString(span, "catena.node.kind") === "turn"
+  ))?.span ?? semanticView.agentSteps.find(({ kind }) => kind === "turn")?.span;
+  const traceState = primaryTurn ? traceSpanAttributeString(primaryTurn, "catena.state") || (primaryTurn.status_code === 2 ? "error" : "ok") : detail.summary.error_count > 0 ? "error" : "ok";
+  const traceStatus = traceState === "aborted"
+    ? t.statusAborted
+    : traceState === "incomplete"
+      ? t.statusIncomplete
+      : traceState === "error" || detail.summary.error_count > 0
+        ? t.statusError
+        : t.statusOk;
+  const traceHeadline = primaryTurn?.input ? compactTraceHeadline(primaryTurn.input) : "";
 
   function selectLens(nextLens: TraceLens) {
     setLens(nextLens);
@@ -493,11 +519,11 @@ function TraceDetailWorkspace({
         </nav>
         <div className="trace-detail-title-row">
           <div className="trace-detail-identity">
-            <h2>{t.traceLevel} {shortTraceID(detail.summary.trace_id)}</h2>
-            <span title={detail.summary.trace_id}>{detail.summary.root_name} · {detail.summary.service_name}{detail.summary.model ? ` · ${detail.summary.model}` : ""}</span>
+            <h2 title={primaryTurn?.input}>{traceHeadline || `${t.traceLevel} ${shortTraceID(detail.summary.trace_id)}`}</h2>
+            <span title={detail.summary.trace_id}>{detail.summary.service_name}{detail.summary.model ? ` · ${detail.summary.model}` : ""} · {shortTraceID(detail.summary.trace_id)}</span>
           </div>
-          <span className={detail.summary.error_count > 0 ? "trace-detail-status error" : "trace-detail-status"}>
-            {detail.summary.error_count > 0 ? t.statusError : t.statusOk}
+          <span className={traceState === "ok" && detail.summary.error_count === 0 ? "trace-detail-status" : "trace-detail-status error"}>
+            {traceStatus}
           </span>
         </div>
         <div className="trace-detail-facts">
@@ -511,18 +537,23 @@ function TraceDetailWorkspace({
         <div><strong>{semanticView.turnCount}</strong><span>{t.turns}</span></div>
         <div><strong>{semanticView.counts.model}</strong><span>{t.models}</span></div>
         <div><strong>{semanticView.counts.tool + semanticView.counts.artifact}</strong><span>{t.tools}</span></div>
-        <div><strong>{semanticView.counts.check}</strong><span>{t.checks}</span></div>
+        <div><strong>{hasCanonicalNarrative ? semanticView.counts.subagent + semanticView.counts.retry + semanticView.counts.compact : semanticView.counts.check}</strong><span>{hasCanonicalNarrative ? t.events : t.checks}</span></div>
         <div className={semanticView.counts.error > 0 ? "has-error" : ""}><strong>{semanticView.counts.error}</strong><span>{t.errors}</span></div>
       </section>
       <section className="trace-execution">
         <div className="trace-execution-heading"><h3>{t.execution}</h3><span>{t.selectSpan}</span></div>
         <div className="trace-lens-tabs" role="tablist" aria-label={t.execution}>
-          {([
+          {((hasCanonicalNarrative ? [
+            ["narrative", t.narrativeLens, semanticView.agentSteps.length],
+            ["tools", t.toolsLens, semanticView.toolSteps.length],
+            ["errors", t.errorsLens, semanticView.errorSteps.length],
+            ["raw", t.rawLens, semanticView.rawSteps.length],
+          ] : [
             ["agent", t.agentLens, semanticView.agentSteps.length],
             ["tools", t.toolsLens, semanticView.toolSteps.length],
             ["errors", t.errorsLens, semanticView.errorSteps.length],
             ["raw", t.rawLens, semanticView.rawSteps.length],
-          ] as Array<[TraceLens, string, number]>).map(([value, label, count]) => (
+          ]) as Array<[TraceLens, string, number]>).map(([value, label, count]) => (
             <button
               key={value}
               type="button"
@@ -537,8 +568,11 @@ function TraceDetailWorkspace({
           <p className="trace-folded-note"><strong>{semanticView.foldedInternalCount}</strong> {t.folded}</p>
         ) : null}
         {lens === "raw" ? <p className="trace-raw-note">{t.rawHint}</p> : null}
-        <TraceRuler duration={traceDuration} />
-        <div className="trace-span-list">
+        {lens === "narrative" ? (
+          <TraceNarrative detail={detail} locale={locale} selectedSpanID={selectedSpanID} onSelectSpan={onSelectSpan} />
+        ) : <>
+          <TraceRuler duration={traceDuration} />
+          <div className="trace-span-list">
           {visible.steps.length === 0 ? <div className="trace-lens-empty">{emptyMessage}</div> : null}
           {visible.steps.map(({ span, kind }) => {
             const start = new Date(span.start_time).getTime();
@@ -566,13 +600,14 @@ function TraceDetailWorkspace({
               </div>
             );
           })}
-        </div>
-        {visible.hiddenCount > 0 ? (
-          <div className="trace-more">
-            <span>{visible.hiddenCount} {t.remaining}</span>
-            <button type="button" className="text-button" onClick={() => setStepLimit((value) => value + TRACE_STEP_PAGE_SIZE)}>{t.showMore}</button>
           </div>
-        ) : null}
+          {visible.hiddenCount > 0 ? (
+            <div className="trace-more">
+              <span>{visible.hiddenCount} {t.remaining}</span>
+              <button type="button" className="text-button" onClick={() => setStepLimit((value) => value + TRACE_STEP_PAGE_SIZE)}>{t.showMore}</button>
+            </div>
+          ) : null}
+        </>}
       </section>
     </article>
   );
@@ -591,6 +626,12 @@ function traceSpanDisplayName(span: TraceSpan, kind: TraceSpanSemanticKind, loca
     const turn = traceSpanAttributeString(span, "barena.turn.index");
     if (turn) return `Turn ${turn}`;
   }
+  if (kind === "subagent") {
+    return traceSpanAttributeString(span, "agent.subagent.thread.id", "agent.turn.id")
+      || (locale === "zh" ? "Subagent 分支" : "Subagent branch");
+  }
+  if (kind === "retry") return locale === "zh" ? "模型重试" : "Model retry";
+  if (kind === "compact") return locale === "zh" ? "上下文压缩" : "Context compact";
   if (kind === "model") {
     return span.model
       || traceSpanAttributeString(span, "gen_ai.request.model", "gen_ai.response.model", "model")
@@ -598,6 +639,11 @@ function traceSpanDisplayName(span: TraceSpan, kind: TraceSpanSemanticKind, loca
       || (span.name === "xiaoba.model.call" ? (locale === "zh" ? "模型调用" : "Model call") : span.name);
   }
   return span.name;
+}
+
+function compactTraceHeadline(value: string) {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length > 88 ? `${normalized.slice(0, 88)}…` : normalized;
 }
 
 function SpanEvidence({

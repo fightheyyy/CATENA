@@ -1,7 +1,7 @@
 # Catena Product Specification
 
 Status: MVP1 architecture contract
-Updated: 2026-08-12
+Updated: 2026-08-14
 
 ## Problem
 
@@ -16,11 +16,12 @@ Catena owns:
 - XiaoBaOS user-visible Conversation ingestion;
 - canonical Agent grouping and Agent-scoped Trace windows;
 - durable Run, Evidence, Evolution Job and Candidate records;
-- an embedded XiaoBaOS Evolution Runtime that produces evidence-linked `agent.md`, Skill and Role assets, plus XiaoBaOS-only Harness proposals;
+- an embedded XiaoBaOS Evolution Runtime that produces evidence-linked `agent.md`, Skill packages and Role packages;
 - an owner-scoped gateway to the optional GauzMem memory service.
 
-Catena also ships a local `catena tap` companion that wraps supported Agent
-Runtimes with one capture engine and exports canonical Agent Turn Traces.
+Catena also ships local Codex and Claude Code Runtime plugins. They parse the
+authoritative rollout/transcript files into one Canonical Event Graph and
+export deterministic Agent Turn OTLP without proxying model traffic.
 
 Catena does not host the target Agent, execute Explore/Replay/Compare, automatically edit a target repository, or claim that a model review is a release decision. Those execution and verification responsibilities remain in local Barena.
 
@@ -30,11 +31,12 @@ Catena does not host the target Agent, execute Explore/Replay/Compare, automatic
 flowchart LR
     GitHub["GitHub OAuth"] --> Go
     Browser["Browser"] --> Go["Catena Server · Go<br/>React · Auth · OTLP · APIs"]
-    Developer["Developer"] --> Tap["catena tap"]
-    Tap -->|"wrap"| Runtime["External Agent"]
-    Runtime -->|"model traffic"| Tap
-    Tap -->|"API key + canonical Turn OTLP"| Go
-    Runtime -->|"native API key + OTLP"| Go
+    Codex["Codex rollout<br/>Stop hook · import"] --> CodexParser["Langfuse-derived parser"]
+    Claude["Claude transcript<br/>Stop · SessionEnd · import"] --> ClaudeParser["Langfuse-derived parser"]
+    CodexParser --> Graph["Canonical Event Graph v1"]
+    ClaudeParser --> Graph
+    Graph -->|"Agent key + deterministic OTLP"| Go
+    Runtime["Other OpenTelemetry Agent"] -->|"native API key + OTLP"| Go
     XiaoBa["XiaoBaOS"] -->|"API key + OTLP"| Go
     XiaoBa --> Conversation["User-visible Conversation"]
     Conversation -->|"API key + HTTPS"| Go
@@ -42,11 +44,16 @@ flowchart LR
     Go --> Runner["XiaoBaOS Evolution Runtime"]
     OwnerModel["Owner LLM config<br/>encrypted API Key"] --> Go
     Go -->|"per-job ephemeral model config"| Runner
-    Runner --> Asset["agent.md · Skill · Role · Harness"]
+    Runner --> Asset["agent.md · Skill package · Role package"]
+    Asset --> Library["Agent Asset Library<br/>file preview · copy · download · provenance"]
+    Library --> Browser
     Go --> PG[("PostgreSQL")]
     Go --> CH[("Official ClickHouse<br/>catena database")]
-    CH --> Hierarchy["Agent → Session → Trace → Span"]
-    Hierarchy --> Browser
+    CH --> Hierarchy["Agent → Session → Trace → Canonical nodes"]
+    Hierarchy --> Narrative["Turn narrative<br/>request → model → tool → answer"]
+    Hierarchy --> Diagnostics["Raw Span diagnostics<br/>attributes · timing"]
+    Narrative --> Browser
+    Diagnostics --> Browser
     Go -->|"Conversation"| Memory["GauzMem · optional"]
     Go --> TaskAPI["owner-scoped memory task API"]
     TaskAPI --> TaskLedger[("durable memory task ledger")]
@@ -69,8 +76,12 @@ XiaoBaOS follows an anthropomorphic coworker model, so its durable memory is gro
 
 ```mermaid
 flowchart LR
-    Developer --> Tap["catena tap<br/>Codex · Claude · Hermes · OpenClaw"]
-    Tap -->|"canonical Turn OTLP"| Core
+    Codex["Codex rollout<br/>Stop Hook · import"] --> CodexParser["Langfuse-derived Codex parser"]
+    Claude["Claude transcript<br/>Stop · SessionEnd · import"] --> ClaudeParser["Langfuse-derived Claude parser"]
+    CodexParser --> EventGraph["Catena Canonical Event Graph"]
+    ClaudeParser --> EventGraph
+    EventGraph --> Tap["Catena deterministic OTLP exporter"]
+    Tap -->|"Agent API key + canonical OTLP"| Core
     Developer["Developer"] -->|"Agent name"| Keys["API management"]
     Keys --> Binding["agent_id + Agent API key"]
     Binding --> Manage["Copy · revoke"]
@@ -83,12 +94,17 @@ flowchart LR
     Core --> Evidence[("Evidence Store")]
     Evidence --> Queue["durable Evolution queue"]
     Core --> CH[("Official ClickHouse<br/>catena database")]
-    CH --> Hierarchy["Agent → Session → Trace → Span"]
-    Hierarchy --> Workspace["Evidence workspace"]
+    CH --> Hierarchy["Agent → Session → Trace → Canonical nodes"]
+    Hierarchy --> Narrative["Turn narrative<br/>prompt → model → tool → answer"]
+    Hierarchy --> Diagnostics["Raw Span diagnostics"]
+    Narrative --> Workspace["Evidence workspace"]
+    Diagnostics --> Workspace
     Owner["Owner BYOK<br/>Provider · Base URL · Model · API Key"] --> Core
     Core -->|"decrypt only for job"| Runtime
     Queue --> Runtime["XiaoBaOS Evolution Runtime"]
-    Runtime --> Assets["agent.md · Skill · Role · Harness"]
+    Runtime --> Assets["agent.md · Skill package · Role package"]
+    Assets --> AssetLibrary["Asset-first Trace Farm<br/>Agent · kind · package · source analysis"]
+    AssetLibrary --> Developer
     Core --> ModelStatus["Authenticated LLM settings<br/>never returns API Key"]
     Evidence -->|"Conversation only"| GauzMem["GauzMem"]
     Core --> TaskAPI["owner-scoped memory task API"]
@@ -135,7 +151,20 @@ preferences and live only in Settings.
   the Runtime-provided conversation/task identity; Trace is one end-to-end
   Agent turn or request; Span is one model, tool or internal operation. Missing
   Session metadata is presented as ungrouped evidence and never inferred from
-  timing alone.
+  timing alone. Session display titles are deterministic UI projections of the
+  earliest retained user request; the exported Session ID remains authoritative.
+- **Coding Agent capture:** only Codex CLI and Claude Code are supported. Their
+  live hooks and historical import share the same pinned Langfuse-derived
+  Runtime parsers. Codex App, Hermes and OpenClaw remain unsupported until they
+  have independent parsers and real acceptance.
+- **Local Runtime credential:** the Codex plugin reads an environment override
+  or its Codex-provided private plugin-data file. The Agent key is never stored
+  in the repository, plugin bundle or Codex configuration; permissive key-file
+  modes are rejected.
+- **Canonical Event Graph:** a versioned local contract preserving Runtime
+  session/turn/trace/call correlation, source-event accounting, model attempts,
+  strict tool-result pairing, abort/retry/incomplete state, compaction and
+  subagent parentage before deterministic OTLP rendering.
 - **Trace:** OTLP/HTTP protobuf or JSON authenticated by Agent API key. Trace
   summaries expose their authenticated Agent and the first supported Session
   identity found in retained Span attributes.
@@ -158,7 +187,15 @@ preferences and live only in Settings.
   to populate the UI.
 - **Agent Trace Set:** immutable Agent + time-window snapshot containing at least two server-frozen Trace IDs.
 - **Evolution Job:** Inspector → Evolution → Reviewer analysis over one Agent Trace Set. Its owner may delete a completed or failed analysis and its generated assets; the immutable source Trace evidence remains intact.
-- **Agent Asset:** evidence-linked `agent.md`, Skill or Role; Harness is valid only for XiaoBaOS.
+- **Asset lifecycle:** deleting from either the Asset Library or Analysis view
+  removes the terminal Evolution Job and its generated asset together; source
+  Trace evidence remains intact.
+- **Agent Asset:** exactly one of `agent.md`, a Skill package (`SKILL.md` plus
+  optional support files), or a XiaoBaOS Role package (`role.json`, prompt and
+  optional role-local Skills).
+- **Asset language:** every Trace Farm Job persists `output_language`. Inspector,
+  Evolution and Reviewer use that same language for all human-readable output;
+  protocol keys, paths, commands and code identifiers remain unchanged.
 - **Run Bundle:** idempotent Barena terminal facts plus correlated OTLP evidence.
 - **Release truth:** only verifier-backed Barena output may say `cleared`, `held` or `rejected`.
 
@@ -172,6 +209,8 @@ preferences and live only in Settings.
 - Target credentials and arbitrary request templates are not persisted.
 - Evolution model credentials are encrypted at rest, never rendered after
   creation and never projected into Job records, logs or Candidate assets.
+- Coding Runtime Agent keys are not embedded in Hook commands or
+  `~/.codex/config.toml`.
 - GauzMem is private and receives an owner scope derived by Catena.
 - Evolution output is always a proposal and never mutates a target Agent automatically.
 - Queued and running Evolution Jobs cannot be deleted; terminal deletion is owner-scoped and never cascades to source Trace or Conversation evidence.

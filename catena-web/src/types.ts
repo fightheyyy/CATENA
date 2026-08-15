@@ -146,6 +146,7 @@ export type EvolutionJob = {
   window_start?: string;
   window_end?: string;
   objective?: string;
+  output_language?: "zh-CN" | "en";
   state: string;
   current_stage?: string;
   stages: EvolutionStage[];
@@ -205,6 +206,7 @@ export type TraceSummary = {
   session_id?: string;
   trace_id: string;
   root_name: string;
+  input_preview?: string;
   service_name: string;
   model?: string;
   start_time: string;
@@ -343,7 +345,7 @@ export type AgentSummary = {
   credential?: ApiToken;
   sources?: Array<{
     service_name: string;
-    kind: "native_live" | "history_backfill" | "otel";
+    kind: "native_live" | "otel";
   }>;
   trace_count: number;
   span_count: number;

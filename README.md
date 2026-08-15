@@ -10,7 +10,7 @@
   Observe what Agents actually did. Turn repeated evidence into better agent.md, Skills, Roles, and Harnesses.
 </p>
 
-Catena 汇聚 XiaoBaOS、Codex、Claude Code 和各类 Claw 的真实运行证据，从一段时间的 Trace 与对话中发现重复问题，生成可追溯、可人工采用的 Agent 进化候选。
+Catena 汇聚 XiaoBaOS、Codex、Claude Code 和通用 OTLP Agent 的真实运行证据，从一段时间的 Trace 与对话中发现重复问题，生成可追溯、可人工采用的 Agent 进化候选。
 
 ```text
 OTLP Trace ─┐
@@ -23,7 +23,7 @@ Barena Run ──┘
 - **Agent**：把同一 Runtime 的多个 telemetry source 聚合为一个可理解的 Agent。
 - **对话**：保存 XiaoBaOS 用户真正看到的消息，用于提炼记忆与角色知识。
 - **记忆**：从对话生成可追溯记忆，并支持语义、关系与时间召回。
-- **Trace**：用极简瀑布查看模型、Tool、Artifact、耗时和错误。
+- **Trace**：按用户 Turn 阅读请求、模型调用、严格配对的 Tool、分支、状态与最终回答；原始 Span 瀑布保留为诊断视图。
 - **Trace Farm**：按 Agent 与时间窗口分析多条 Trace，展示 Inspector、Evolution、Reviewer 三个阶段。
 - **进化产物**：输出标准 `agent.md`、Skill、Role，以及 XiaoBaOS 专属 Harness 建议。
 
@@ -36,8 +36,8 @@ flowchart LR
     GitHub["GitHub<br/>OAuth · 开发者身份"] -->|"登录"| Core
 
     subgraph Edge["用户环境 / CI"]
-        Tap["Catena Tap<br/>统一捕获 Turn · Model · Tool"]
-        Agent["目标 Agent<br/>Codex · Claude Code · Claw"]
+        Tap["Runtime Parser<br/>Codex · Claude Code"]
+        Agent["目标 Agent<br/>已验收：Codex · Claude Code"]
         XiaoBa["XiaoBaOS<br/>拟人化 Agent"]
         Barena["Barena<br/>Explore · Replay · Compare · Verifier"]
         Trace["运行证据<br/>OTLP Trace · Artifact"]
@@ -134,26 +134,35 @@ Catena 会从证据自动识别 XiaoBaOS、Codex、Claude Code；无法识别时
 ### 捕获完整的 Agent Turn
 
 部分 Runtime 的原生 OTLP 只导出一条顶层 Span，无法还原中间的模型请求、
-Tool Call 和 Tool Result。Catena Tap 复用固定版本的
-[`claude-tap`](https://github.com/liaohch3/claude-tap) 作为唯一捕获引擎，
-在本地把新运行标准化为 `Turn → Model → Tool` 后上传 Catena：
+Tool Call 和 Tool Result。Catena 复用固定版本的 Langfuse 开源 Codex/Claude
+Parser 与 Turn assembly，在本地将 rollout/transcript 转换为统一 Event Graph，
+再由 Catena 自己的 OTLP exporter 上传：
 
 ```bash
-python3 -m pip install ./tap
+cd tap
+python3.12 -m pip install -e .
+cd codex && pnpm install --frozen-lockfile && pnpm build
 
 export CATENA_URL="https://your-catena.example"
 export CATENA_API_KEY="catena_agent_..."
 
-catena tap codex
-catena tap claude
-catena tap hermes
-catena tap openclaw
+catena trace import codex /path/to/rollout.jsonl
+catena trace import claude /path/to/transcript.jsonl
 ```
 
-Runtime 参数放在 `--` 后，例如 `catena tap codex -- --full-auto`。
-捕获和上传均为 fail-open：Catena 暂时不可达时可能丢失观测数据，但不会改变
-Agent 的返回内容或退出码。当前只捕获通过该命令启动的新运行，不导入历史会话。
-详细说明见 [Catena Tap](./tap/README.md)。
+Live 采集由随仓库提交的 Codex `Stop` 与 Claude Code `Stop/SessionEnd` Hook
+完成；live 和 historical import 调用同一套 Parser。Hook 增量、可恢复且
+fail-open，重复触发复用确定性 Span ID。两者都以 Runtime 原生 Session/Turn
+相关键生成 OTLP Trace ID，不建立 Capture Session，也不比较 Prompt 文本；
+Codex Stop 后的有界 settle pass 会用相同 Parser 合并稍后落盘的
+`task_complete`。当前只对 Codex CLI `0.147.0` 与
+Claude Code `2.1.112` 完成真实验收；Codex App、Hermes、OpenClaw 没有独立
+Parser，因此不声明支持。详细说明见 [Runtime Capture](./tap/README.md)。
+
+这里的实时是“每个 Turn 停止后立即增量同步”，不是逐 Token 流式同步。
+Codex 的模型与 Tool 事件会在该 Turn 的 `Stop` Hook 触发后进入 Catena；若
+进程在 Hook 前异常退出，则由下一次 Hook 或 historical import 按相同稳定 ID
+恢复。
 
 ## 接入 XiaoBaOS 对话
 
@@ -198,8 +207,9 @@ MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、用户自带 
 
 ```bash
 cd catena-web && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm typecheck && pnpm build
-cd ../control-plane && go test ./... && go vet ./...
-cd ../tap && python3 -m pip install -e '.[dev]' && pytest
+cd ../control-plane && go test ./... && go vet ./... && go test -race ./internal/control
+cd ../tap && python3.12 -m pip install -e '.[dev]' && pytest
+cd codex && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test && pnpm build
 docker compose -f deploy/catena-mvp1/compose.yml config >/dev/null
 ```
 

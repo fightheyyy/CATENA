@@ -1,13 +1,11 @@
 [project]
 name = "catena-tap"
-version = "0.1.0"
-description = "Capture coding-agent model traffic and export canonical Agent Turn traces to Catena."
-requires-python = ">=3.11"
+version = "0.2.0"
+description = "Parse Codex and Claude Code runtime evidence into Catena canonical OTLP traces."
+requires-python = ">=3.9"
 license = "Apache-2.0"
 readme = "README.md"
-dependencies = [
-  "claude-tap==0.1.142",
-]
+dependencies = []
 
 [project.scripts]
 catena = "catena_tap.cli:main_entry"
@@ -21,7 +19,9 @@ packages = ["catena_tap"]
 
 [project.optional-dependencies]
 dev = [
+  "jsonschema>=4.23",
   "pytest>=8.0",
+  "ruff>=0.12",
 ]
 
 [tool.pytest.ini_options]
@@ -29,8 +29,9 @@ testpaths = ["tests"]
 addopts = ["-q", "--strict-markers"]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py39"
 line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
+ignore = ["E501"]

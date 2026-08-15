@@ -1,39 +1,14 @@
-import sys
-from types import SimpleNamespace
-
-from catena_tap import cli
-from catena_tap.cli import upstream_argv
+from catena_tap.cli import build_parser, main
 
 
-def test_upstream_argv_disables_redundant_viewer():
-    assert upstream_argv("codex", ["--", "--full-auto"], tap_ui=False) == [
-        "claude-tap",
-        "--tap-client",
-        "codex",
-        "--tap-no-open",
-        "--tap-no-live",
-        "--",
-        "--full-auto",
-    ]
+def test_only_accepted_runtimes_are_advertised():
+    help_text = build_parser().format_help()
+    assert "codexapp" not in help_text
+    assert "hermes" not in help_text
+    assert "openclaw" not in help_text
 
 
-def test_upstream_argv_can_keep_debug_viewer():
-    assert upstream_argv("hermes", [], tap_ui=True) == ["claude-tap", "--tap-client", "hermes"]
-
-
-def test_wrapped_runtime_exit_code_is_preserved(monkeypatch):
-    class Exporter:
-        def __init__(self, *_args, **_kwargs):
-            pass
-
-        def close(self):
-            return SimpleNamespace(captured_records=0, uploaded_traces=0, failed_uploads=0)
-
-    def runtime_main():
-        raise SystemExit(7)
-
-    monkeypatch.setattr(cli, "BackgroundTraceExporter", Exporter)
-    monkeypatch.setattr(cli, "_install_trace_hook", lambda _exporter: lambda: None)
-    monkeypatch.setitem(sys.modules, "claude_tap.cli", SimpleNamespace(main_entry=runtime_main))
-
-    assert cli.main(["tap", "codex", "--api-key", "catena_agent_test"]) == 7
+def test_hook_fail_open_on_empty_input(monkeypatch):
+    monkeypatch.setattr("sys.stdin.read", lambda: "")
+    # json.load raises at the hook boundary and the CLI deliberately returns 0.
+    assert main(["trace", "hook", "claude"]) == 0

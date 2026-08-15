@@ -1,0 +1,32 @@
+{
+  "name": "catena-observability",
+  "description": "Export authoritative Claude Code transcript evidence to Catena.",
+  "version": "0.2.0",
+  "author": {
+    "name": "Catena"
+  },
+  "repository": "https://github.com/Barena-Network/CATENA",
+  "license": "Apache-2.0",
+  "hooks": "./hooks/hooks.json",
+  "userConfig": {
+    "CATENA_API_KEY": {
+      "type": "string",
+      "title": "Catena Agent API Key",
+      "description": "Bearer token for Catena's OTLP receiver.",
+      "sensitive": true,
+      "required": true
+    },
+    "CATENA_URL": {
+      "type": "string",
+      "title": "Catena URL",
+      "description": "Catena origin; defaults to http://127.0.0.1:5670.",
+      "default": "http://127.0.0.1:5670"
+    },
+    "CATENA_TRACE_DEBUG": {
+      "type": "boolean",
+      "title": "Debug logging",
+      "description": "Write fail-open parser and OTLP diagnostics to stderr.",
+      "default": false
+    }
+  }
+}

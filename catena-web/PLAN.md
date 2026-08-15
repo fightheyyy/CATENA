@@ -1,6 +1,6 @@
 # Catena Web Plan
 
-Updated: 2026-08-12
+Updated: 2026-08-15
 
 ## Current state
 
@@ -8,9 +8,34 @@ Updated: 2026-08-12
 - [x] Agent, Conversation, Memory, Trace and Trace Farm journeys.
 - [x] GitHub identity, Agent-bound credential management and bilingual UI.
 - [x] Agent Trace-window selection and role-stage progress.
-- [x] Span waterfall and memory graph rendering.
+- [x] Turn narrative, diagnostic Span waterfall and memory graph rendering.
 
-## Next
+## Completed milestone — readable Coding Agent traces
+
+- [x] Replace the default semantic Span waterfall with a Turn narrative built
+      from canonical node kind, state, parent ID and accurate timestamps.
+- [x] Render parallel Tool groups, nested Subagent threads, Retry, Compact,
+      Abort and Incomplete without losing strict Tool call evidence.
+- [x] Move raw Span timing and attributes into a diagnostics lens and keep
+      model history collapsed behind step evidence.
+- [x] Validate the new presentation against freshly imported Codex and Claude
+      Runtime traces at desktop and narrow widths.
+
+- [x] Replace the analysis-first Trace Farm overview with an accumulated Agent
+      Asset Library and keep analysis history as a secondary view.
+- [x] Render generated assets as readable files with kind/Agent filters,
+      provenance, copy and download actions.
+- [x] Render Skill and Role as package trees rather than fictional single files.
+- [x] Bind generated asset language to the selected Catena interface language.
+- [x] Expose direct two-step deletion from the selected asset document.
+- [x] Keep the global account menu in the sidebar utility/account area so
+      identity and navigation share one predictable shell.
+- [x] Separate durable Agent identity from revocable ingestion credentials;
+      a revoked key preserves history without claiming the Agent is connected.
+- [x] Title every Trace row from its user request evidence instead of exposing
+      Runtime fallback labels such as “Codex user turn”.
+- [x] Derive each Session's scan title from its earliest retained user request
+      without an LLM, while keeping Session ID visible as secondary identity.
 
 - [x] Replace Settings API-key management with Agent-first onboarding.
 - [x] Render registered-but-not-yet-connected Agents and inferred Runtime.
@@ -33,8 +58,8 @@ Updated: 2026-08-12
       visual hierarchy without changing stored evidence or API contracts.
 - [x] Replace the Conversation “submitted” dead end with step progress,
       terminal failure/retry, and a completed link to Memory.
-- [x] Add a persistent top-right GitHub account menu with direct account switch,
-      account settings and sign-out actions.
+- [x] Add a sidebar GitHub account area with direct account switch, account
+      settings and sign-out actions.
 - [x] Keep the account menu labeled at narrow widths instead of exposing an
       unexplained avatar-only control.
 - [x] Add a Memory task center backed by server-listed extraction tasks.
@@ -47,6 +72,8 @@ Updated: 2026-08-12
       compact child list with an independent selected state.
 - [x] Render the Barena/XiaoBaOS chain as Run → Turn → Model → Check;
       fold session wrappers and select the first evidence-bearing Turn by default.
+- [x] Render Canonical Event Graph Tool, Retry and Subagent kinds without
+      losing failed tools from the Tool lens.
 - [ ] Add responsive browser acceptance to CI.
 - [ ] Improve accessibility and keyboard navigation.
 - [ ] Add durable optimistic/retry states for long-running jobs.
@@ -60,6 +87,36 @@ desktop widths. At 720px and below, opening a record must replace the index with
 the detail and expose a working back action without horizontal overflow.
 
 ## Verification log
+
+- 2026-08-15: Session headers now use the earliest retained valid user request
+  as a deterministic title with no LLM call; the exported Session ID remains
+  visible beside the Agent name and stays authoritative. Local retained Codex
+  evidence rendered `还是没懂。整个算法的逻辑` for Session
+  `019fefa2…913529`; browser acceptance reported no console warnings or errors.
+  All 52 Web tests, TypeScript typecheck and production build passed.
+
+- 2026-08-15: Agent connection rows now distinguish durable Agent identity from
+  revocable ingestion credentials: revoked keys render `ingest paused` while
+  retained history remains explicit. Trace summaries derive their scan title
+  from existing Turn input evidence, so retained Codex rows display the real
+  user request without re-upload. The global identity control moved into the
+  sidebar utility/account area. Browser acceptance verified all three changes
+  against local retained data with no console warnings or errors; all 51 Web
+  tests, TypeScript typecheck, production build, Go tests and `go vet` passed.
+
+- 2026-08-14: Fresh, complete Codex CLI `0.147.0` and Claude Code `2.1.112`
+  runs were imported through the new Runtime parsers without post-capture
+  content rewriting. The default view now reads request → Model → exact Tool
+  call/result → Model → final answer, with Token, duration and state evidence.
+  Desktop, constrained 1200px and 390px browser acceptance passed with no
+  horizontal overflow and zero console errors or warnings. All 50 Web tests,
+  TypeScript typecheck, production build and embedded-bundle parity passed.
+
+- 2026-08-14: Both real Runtime traces were opened in the Web Trace View.
+  Codex and Claude each rendered one Turn, two Model calls, one exact Tool,
+  four total spans and zero errors; expanding each Tool displayed its real
+  command argument and result. Golden-driven Web coverage increased to 48
+  tests, and typecheck plus production build passed.
 
 - 2026-08-11: Trace navigation now renders Session as a bordered group surface
   with an inset Trace child list. Trace root names lead scanning while opaque
@@ -90,7 +147,7 @@ the detail and expose a working back action without horizontal overflow.
 - 2026-08-10: The Memory page gained a durable recent-task center and visibly
   distinct provenance graph edges. Browser acceptance verified a real failed
   extraction remains visible after leaving Conversation, refreshing and
-  restarting Core. The fixed account control remains labeled at the 842px audit
+  restarting Core. The account control remains labeled at the 842px audit
   viewport. All 39 Web tests, typecheck and production build passed.
 
 - 2026-08-09: The authenticated shell gained a responsive account menu that

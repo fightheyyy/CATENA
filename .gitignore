@@ -6,6 +6,8 @@
 
 node_modules/
 dist/
+!tap/codex/plugins/tracing/dist/
+!tap/codex/plugins/tracing/dist/index.mjs
 coverage/
 
 *.log
@@ -14,6 +16,7 @@ browser-tests/
 test-results/
 playwright-report/
 .playwright-mcp/
+.playwright-cli/
 
 .venv/
 __pycache__/

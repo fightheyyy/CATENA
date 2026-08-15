@@ -1,7 +1,7 @@
 # Catena Web Specification
 
 Status: implemented MVP1 contract
-Updated: 2026-08-12
+Updated: 2026-08-15
 
 ## Responsibilities
 
@@ -14,14 +14,21 @@ flowchart LR
     Routes["React routes"] --> API["Typed fetch client"]
     API --> Go["Catena Go API"]
     Routes --> Views["Agent · Conversation · Memory · Trace · Farm"]
-    Views --> Flat["Trace index<br/>Session and Trace share similar row chrome"]
+    Views --> TraceIndex["Agent → Session → Trace index"]
+    TraceIndex --> Narrative["Turn narrative<br/>request · final answer"]
+    Narrative --> CausalSpine["causal spine<br/>Model · Tool · state events"]
+    CausalSpine --> InlineEvidence["selected-step evidence<br/>input · output · exact call ID"]
+    Narrative --> Diagnostics["raw Span waterfall<br/>attributes · timing"]
+    Views --> Farm["Trace Farm analysis history"]
+    Farm --> JobDetail["one analysis detail"]
+    JobDetail --> EmbeddedAsset["asset embedded below job metadata"]
     Views --> MemoryTask["Memory task<br/>step progress · retry · result"]
     MemoryTask --> API
     Routes --> Keys["API Management"]
     Keys --> API
     Routes --> Settings["Language · Theme · Account"]
     Settings --> API
-    Routes --> AccountMenu["Global account menu<br/>identity · switch · sign out"]
+    Routes --> AccountMenu["Sidebar account area<br/>identity · switch · sign out"]
     AccountMenu --> API
 ```
 
@@ -33,7 +40,10 @@ flowchart LR
     AgentTrace["Agent selector"] --> Session["Session index"]
     Session --> SessionGroup["Session group header"]
     SessionGroup --> Trace["Inset Trace child list"]
-    Trace --> TraceDetail["Trace summary · Span chain · Evidence"]
+    Trace --> TraceDetail["Turn narrative<br/>request → execution → outcome"]
+    TraceDetail --> CausalSpine["causal spine<br/>Model · Tool · state events"]
+    CausalSpine --> Branches["parallel Tool · Subagent branches"]
+    TraceDetail --> Diagnostics["raw Span waterfall<br/>attributes · timing"]
     ConversationDetail --> Responsive["Desktop split view<br/>Narrow-screen master/detail"]
     ConversationDetail --> Submit["Distill to memory"]
     Submit --> Poll["poll owner-scoped task status"]
@@ -50,8 +60,14 @@ flowchart LR
     Credential --> Ingest["OTLP · Conversation ingest"]
     Ingest --> Stats
     Settings["Settings"] --> Preferences["Language · Theme · account details"]
-    Shell["Global shell"] --> AccountMenu["fixed labeled identity<br/>switch · sign out"]
+    Shell["Global shell"] --> Sidebar["Product navigation · utilities"]
+    Sidebar --> AccountMenu["labeled identity<br/>switch · sign out"]
     AccountMenu --> Go
+    Farm["Trace Farm"] --> AssetLibrary["asset-first library<br/>Agent · kind · package"]
+    AssetLibrary --> AssetDocument["package tree · readable files · copy · download"]
+    AssetDocument --> Provenance["source analysis · Trace evidence"]
+    Farm --> AnalysisHistory["secondary analysis history"]
+    AnalysisHistory --> JobProgress["Inspector · Evolution · Reviewer"]
 ```
 
 The Agent page is observation-only. `/api-keys` owns Agent identity and
@@ -71,6 +87,9 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - API management keeps one visible row per Agent with status, masked key and
   copy/revoke actions. Copy recovers the secret only for the clipboard and
   never renders a second plaintext credential card.
+- Revoking the last credential stops future ingestion but does not delete the
+  Agent or retained evidence. The row must say that ingestion is paused and
+  history is retained; historical evidence must never be labeled connected.
 - Evidence-dependent actions such as Trace Farm are disabled until the Agent
   has enough retained evidence.
 - Agent lists prioritize registered product identities. Historical unbound
@@ -78,7 +97,20 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - Agent ID, identity source and raw service aliases live under advanced details.
 - Empty states explain the next action rather than exposing internal engine names.
 - The empty Agent workspace offers one direct path to API Management for first-time connection.
-- Trace detail prioritizes Span waterfall, tool calls, input/output and errors.
+- Trace detail prioritizes a human-readable Turn narrative: user request,
+  model attempts, exact Tool calls/results and final answer. The Span
+  waterfall remains complete but is a diagnostics lens, not the default view.
+- Catena Canonical Event Graph spans use `catena.node.kind` as their semantic
+  source of truth. `subagent`, `retry`, `context_compact` and
+  `unmatched_tool_result` keep distinct presentation kinds. Failed Tools remain
+  Tool evidence while carrying their error/incomplete state.
+- Parallel Tools share one visible branch group. A Subagent opens a nested
+  thread with its own Turn, Model and Tool chain while preserving parentage.
+- Retry, Context Compact, Abort and Incomplete are visible narrative events;
+  none may be reduced to a generic Model row or a successful trace badge.
+- Model steps show model, token and timing facts by default. Full request
+  history is secondary evidence so repeated context does not drown the causal
+  delta between model attempts.
 - Cross-process Barena/XiaoBaOS traces are semantic product evidence, not raw
   telemetry noise: `barena.simulation`, `barena.turn`, `xiaoba.model.call` and
   `barena.assertion` render as Run, Turn, Model and Check steps. Runtime wrapper
@@ -93,10 +125,16 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - Trace navigation preserves the evidence hierarchy: Agent → Session → Trace →
   Span. Session groups use exported identity only; missing identity appears in
   one explicit ungrouped bucket rather than a fabricated session.
+- A Session's scan label is derived locally from its earliest retained valid
+  user request. It uses no model call; the exported Session ID remains visible
+  as evidence identity and is the fallback when no request text is available.
 - Session is rendered as a group container, not as a sibling of Trace. Its
   expanded state is communicated by the group surface and disclosure; the
   selected Trace alone receives the accent selection treatment. Trace root
   names are primary scan labels while opaque Trace IDs remain secondary.
+- Each Trace row is one execution from a user request to a terminal answer.
+  Its primary title comes from the request evidence; protocol labels such as
+  `agent.turn` and Runtime-specific fallback names remain secondary metadata.
 - Conversation and Trace use the same master/detail hierarchy: the index selects
   a record, while the detail owns a distinct header, summary and evidence surface.
 - At narrow widths, index and detail are separate states with an explicit back
@@ -112,10 +150,21 @@ field; the UI only displays the server's inferred result after evidence arrives.
   semantic edge, the graph shows only provenance-backed Conversation, Agent or
   same-Conversation context, and labels that context distinctly from semantic
   relations.
-- Trace metrics stay compact; Span selection and its input/output evidence read
-  as one selected inspection unit.
+- Trace metrics stay compact; narrative steps preserve a stable reading
+  position while selected raw Span evidence remains one diagnostic inspection
+  unit.
 - Trace Farm starts from an Agent and bounded time window, never one isolated Trace.
-- Completed and failed analyses expose a destructive two-step delete action.
+- Starting an analysis sends the current UI language as an explicit asset-output
+  language; Chinese UI produces Chinese assets and English UI produces English assets.
+- Trace Farm opens on accumulated Agent assets, not analysis jobs. A completed
+  Job is implementation provenance for an asset, not the primary product object.
+- Every asset exposes its stable package root, file tree, readable selected
+  file, Agent, kind, source Trace count, copy/download, direct deletion and
+  source analysis.
+- Analysis history, role progress, raw outputs and deletion remain available as
+  a secondary audit view without competing with the Asset Library.
+- Completed and failed analyses and their generated assets expose a destructive
+  two-step delete action in their own context.
   The confirmation states that generated assets are removed while source Trace
   evidence remains; queued and running analyses expose no delete action.
 - Candidate content is copyable and clearly labeled as a proposal.
@@ -125,6 +174,6 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - The saved model API Key is never rendered or returned; an empty key while
   editing preserves the current credential.
 - Language and theme appear only in Settings, not in the global navigation.
-- The current GitHub identity is always reachable from a fixed, visibly labeled
-  top-right account menu; switching account and signing out never require opening
-  Settings.
+- The current identity lives in the sidebar's utility/account area alongside
+  API Management and Settings. It stays visibly labeled at desktop and compact
+  widths; switching account and signing out never require opening Settings.

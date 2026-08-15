@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONPATH=\"${CLAUDE_PLUGIN_ROOT}/..${PYTHONPATH:+:$PYTHONPATH}\" python3 -m catena_tap.cli trace hook claude",
+            "timeout": 30,
+            "statusMessage": "Uploading Claude Code trace to Catena"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONPATH=\"${CLAUDE_PLUGIN_ROOT}/..${PYTHONPATH:+:$PYTHONPATH}\" python3 -m catena_tap.cli trace hook claude",
+            "timeout": 30,
+            "statusMessage": "Finalizing Claude Code trace in Catena"
+          }
+        ]
+      }
+    ]
+  }
+}

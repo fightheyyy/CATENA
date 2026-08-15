@@ -86,6 +86,7 @@ type TraceSummary struct {
 	SessionID    string    `json:"session_id,omitempty"`
 	TraceID      string    `json:"trace_id"`
 	RootName     string    `json:"root_name"`
+	InputPreview string    `json:"input_preview,omitempty"`
 	ServiceName  string    `json:"service_name"`
 	Model        string    `json:"model,omitempty"`
 	StartTime    time.Time `json:"start_time"`
@@ -321,25 +322,17 @@ func (s *HTTPServer) mergeRegisteredAgentSummaries(
 }
 
 func inferObservedAgentRuntime(summary AgentSummary) string {
-	values := []string{summary.AgentID, summary.DisplayName}
 	for _, source := range summary.Sources {
-		values = append(values, source.ServiceName)
+		switch normalizedAgentSource(source.ServiceName) {
+		case "xiaobaos", "barena-xiaoba-target":
+			return "xiaobaos"
+		case "catena-runtime-codex":
+			return "codex"
+		case "catena-runtime-claude-code":
+			return "claude_code"
+		}
 	}
-	joined := strings.ToLower(strings.Join(values, " "))
-	switch {
-	case strings.Contains(joined, "xiaoba"):
-		return "xiaobaos"
-	case strings.Contains(joined, "codex"):
-		return "codex"
-	case strings.Contains(joined, "claude") || strings.Contains(joined, "anthropic"):
-		return "claude_code"
-	case strings.Contains(joined, "hermes"):
-		return "hermes"
-	case strings.Contains(joined, "openclaw"):
-		return "openclaw"
-	default:
-		return "otel"
-	}
+	return "otel"
 }
 
 func (s *HTTPServer) listAgentTraces(w http.ResponseWriter, r *http.Request) {

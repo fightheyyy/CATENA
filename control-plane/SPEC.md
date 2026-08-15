@@ -1,7 +1,7 @@
 # Catena Control Plane Specification
 
 Status: implemented MVP1 contract
-Updated: 2026-08-09
+Updated: 2026-08-14
 
 ## Responsibilities
 
@@ -59,6 +59,8 @@ flowchart LR
     ModelAPI --> Encrypted["owner-scoped encrypted credential"]
     Encrypted --> Job["Evolution Job dispatch"]
     Job -->|"ephemeral only"| Runner["XiaoBaOS Evolution Runner"]
+    Runner --> Candidate["portable asset<br/>agent.md · Skill package · Role package"]
+    Candidate --> Job
     Conversation --> MemorySubmit["POST memory extraction"]
     MemorySubmit --> Ledger[("memory extraction tasks")]
     Ledger --> MemoryTask["GET /v1/memories/tasks<br/>GET /v1/memories/tasks/{task_id}"]
@@ -83,6 +85,11 @@ The durable worker queue remains the next control-plane reliability milestone.
 - ClickHouse: raw Trace, Span and event evidence.
 - ClickHouse Trace summaries derive `agent_id` from authenticated ingestion and
   `session_id` from supported OTel attributes without rewriting raw evidence.
+- Coding-Agent Runtime inference recognizes accepted Codex and Claude Code
+  evidence only: `catena-runtime-codex` + `agent.runtime=codex`, or
+  `catena-runtime-claude-code` + `agent.runtime=claude-code`. Codex App, Hermes
+  and OpenClaw are not aliases; unknown OpenTelemetry evidence remains `otel`.
+  XiaoBaOS is a separate native product source.
 - Runner filesystem: temporary workspaces only.
 - GauzMem stores: optional memory facts and indexes behind the private gateway.
 
@@ -96,6 +103,13 @@ The durable worker queue remains the next control-plane reliability milestone.
 - Stage events move state forward only; terminal state cannot be overwritten by stale events.
 - Only an owning user may delete a completed or failed Evolution Job. Deletion removes its embedded Candidate assets but never cascades to source Trace or Conversation evidence.
 - Candidate provenance contains the exact Evidence Pack and Trace IDs.
+- Evolution output has exactly three asset kinds: one-file `agent.md`, a Skill
+  package rooted at `skills/<name>`, or a Role package rooted at `roles/<name>`.
+- Skill packages require valid `SKILL.md` frontmatter and may include text
+  scripts, references or assets. Role packages require `role.json`, its prompt,
+  and may include role-local Skills, matching the XiaoBaOS loader contract.
+- Agent Trace Set Jobs persist `output_language` (`zh-CN` or `en`, defaulting to
+  `zh-CN`) and inject it into InspectorCat, EvolutionCat and ReviewerCat.
 - OAuth state/PKCE, API-key hashing and token recovery remain fail-closed.
 - Owner LLM APIs may expose Provider, Base URL, Model and key presence, but
   never return the Evolution model API Key.
@@ -132,5 +146,7 @@ The durable worker queue remains the next control-plane reliability milestone.
   model configuration; GET never returns the API Key.
 
 OTLP normalization accepts Catena and standard OpenTelemetry/GenAI attributes.
+Canonical `catena.node.kind` is preserved so Turn, Model, Tool, Subagent,
+Retry and error evidence retain their parser-assigned semantics in Trace reads.
 Product-specific aliases from the retired platform are not part of the public
 contract.

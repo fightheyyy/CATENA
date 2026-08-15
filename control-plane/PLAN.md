@@ -1,6 +1,6 @@
 # Catena Control Plane Plan
 
-Updated: 2026-08-11
+Updated: 2026-08-14
 
 ## Current state
 
@@ -14,6 +14,15 @@ Updated: 2026-08-11
 - [x] React is built into and served by the Go binary.
 - [x] GauzMem is private and tenant scope is derived by Go.
 
+## Active milestone — deployable Agent assets
+
+- [x] Limit EvolutionCat output to `agent_md`, Skill and Role.
+- [x] Require one-file `agent.md` or a XiaoBaOS-compatible package file set.
+- [x] Validate Skill `SKILL.md` frontmatter and Role `role.json` plus prompt.
+- [x] Persist and enforce a single output language across the complete evolution Job.
+- [x] Reject Memory, Case, Harness and arbitrary optimization JSON as assets.
+- [x] Cover prompt contract, validation and fallback behavior with Go tests.
+
 ## Completed milestone — Trace hierarchy projection
 
 - [x] Add authenticated Agent and exported Session identity to Trace summaries.
@@ -26,6 +35,16 @@ Updated: 2026-08-11
 - The public retained Codex set projects exported Session identity directly
   from Span attributes. Go unit/integration contracts, `go vet` and the race
   suite pass without adding a storage migration.
+
+## Completed milestone — canonical Runtime ingestion
+
+- [x] Decode the committed Codex and Claude Canonical OTLP goldens.
+- [x] Preserve every parent Span ID, failure/abort status and Runtime Session.
+- [x] Recognize accepted Codex/Claude sources without Codex App, Hermes or
+      OpenClaw aliases.
+- [x] Require exact Catena parser service/runtime markers instead of product-name
+      substring inference.
+- [x] Verify stable-ID replacement through `catena_spans FINAL`.
 
 ## Completed milestone — observable memory extraction
 
@@ -64,6 +83,12 @@ Updated: 2026-08-11
 - [x] Prove cross-owner isolation and secret non-disclosure.
 
 ## Verification log
+
+- 2026-08-14: Go decoded both Runtime golden payloads into 28 traces and 106
+  spans with complete parent references. Real Codex and Claude hook uploads
+  each produced four rows and zero errors in `catena.catena_spans FINAL`;
+  duplicate hooks produced no additional write. Full Go tests, vet and race
+  passed.
 
 - 2026-08-11: Local mode now provisions the implicit `local` workspace for
   human control-plane actions while preserving Agent-key authentication on

@@ -40,11 +40,13 @@ export function agentEvolutionRequestSignature(
   agentID: string,
   window: AgentEvolutionWindow,
   objective: string,
+  outputLanguage: "zh-CN" | "en" = "zh-CN",
 ) {
   return JSON.stringify({
     agent_id: agentID.trim(),
     window_start: window.window_start,
     window_end: window.window_end,
     objective: objective.trim(),
+    output_language: outputLanguage,
   });
 }
