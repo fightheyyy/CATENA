@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  agentAssetArchive,
   agentAssets,
   agentAssetDownloadURL,
   agentAssetFiles,
@@ -157,7 +158,7 @@ test("fills the fixed role timeline with explicit not-reported states", () => {
   ]);
 });
 
-test("exposes only usable agent.md, Skill packages, and Role packages", () => {
+test("exposes usable Agent assets and Runtime-bound DSH Plugin packages", () => {
   const codex = normalizeEvolutionJob({
     job_id: "job-assets",
     source_kind: "agent_trace_set",
@@ -169,6 +170,7 @@ test("exposes only usable agent.md, Skill packages, and Role packages", () => {
       { kind: "agent_md", title: "Operating rules", summary: "Portable instructions", content: { root: "agent.md", files: [{ path: "agent.md", content: "# Rules\n\nCheck tool results." }] } },
       { kind: "skill", title: "Check results", summary: "Reusable skill", content: { root: "skills/check-results", files: [{ path: "skills/check-results/SKILL.md", content: "---\nname: check-results\ndescription: Check results.\n---\n\n# Check results" }, { path: "skills/check-results/scripts/check.sh", content: "#!/bin/sh\necho check" }] } },
       { kind: "role", title: "Reviewer", summary: "Reusable role", content: { root: "roles/reviewer", files: [{ path: "roles/reviewer/role.json", content: "{\"name\":\"reviewer\",\"promptFile\":\"reviewer.md\"}" }, { path: "roles/reviewer/prompts/reviewer.md", content: "# Reviewer" }] } },
+      { kind: "dsh_plugin", title: "Wrong Runtime", summary: "Must stay hidden", source_runtime_kind: "codex", content: { root: "dsh-plugins/evidence-guard", files: [{ path: "dsh-plugins/evidence-guard/package.json", content: "{}" }, { path: "dsh-plugins/evidence-guard/cordis.patch.yml", content: "- id: system-prompt\n  disabled: false" }] } },
       { kind: "harness", title: "Loop guard", summary: "Runtime change", content: { change: "limit loop" } },
       { kind: "memory", title: "User prefers short answers", summary: "Legacy memory" },
       { kind: "case", title: "Legacy case", summary: "Legacy case" },
@@ -178,6 +180,54 @@ test("exposes only usable agent.md, Skill packages, and Role packages", () => {
   assert.equal(agentAssetText(agentAssets(codex)[0]), "# Rules\n\nCheck tool results.");
   assert.equal(agentAssetFiles(agentAssets(codex)[1]).length, 2);
   assert.equal(agentAssetPath(agentAssets(codex)[2]), "roles/reviewer");
+
+  const dsh = normalizeEvolutionJob({
+    job_id: "job-dsh-assets",
+    source_kind: "agent_trace_set",
+    source_agent_id: "dsh-local",
+    source_runtime_kind: "dsh",
+    source_trace_ids: ["trace-a", "trace-b"],
+    state: "completed",
+    stages: [],
+    candidates: [{
+      kind: "dsh_plugin",
+      title: "Evidence guard",
+      summary: "Ground every claim",
+      source_runtime_kind: "dsh",
+      content: {
+        root: "dsh-plugins/evidence-guard",
+        files: [
+          { path: "dsh-plugins/evidence-guard/package.json", content: "{\"name\":\"dsh-plugin-evidence-guard\",\"version\":\"0.1.0\",\"private\":true,\"dsh\":{\"bundle\":{\"patch\":\"./cordis.patch.yml\"}}}" },
+          { path: "dsh-plugins/evidence-guard/cordis.patch.yml", content: "- id: system-prompt\n  config:\n    persona: Ground claims in retained evidence.\n" },
+        ],
+      },
+    }],
+  });
+  const plugins = agentAssets(dsh);
+  assert.deepEqual(plugins.map((candidate) => candidate.kind), ["dsh_plugin"]);
+  assert.equal(agentAssetFilename(plugins[0]), "package.json");
+  const archive = agentAssetArchive(plugins[0]);
+  assert.equal(archive?.filename, "evidence-guard.tar");
+  assert.equal((archive?.bytes.length || 1) % 512, 0);
+  assert.match(new TextDecoder().decode(archive?.bytes.slice(0, 100)), /dsh-plugins\/evidence-guard\/package\.json/);
+
+  const wrongRowCandidate = {
+    ...dsh.candidates[0],
+    content: {
+      root: "dsh-plugins/evidence-guard",
+      files: [
+        { path: "dsh-plugins/evidence-guard/package.json", content: "{\"name\":\"dsh-plugin-evidence-guard\",\"version\":\"0.1.0\",\"private\":true,\"dsh\":{\"bundle\":{\"patch\":\"./cordis.patch.yml\"}}}" },
+        { path: "dsh-plugins/evidence-guard/cordis.patch.yml", content: "- id: agent-runtime-id\n  config:\n    persona: Unsafe row.\n" },
+      ],
+    },
+  };
+  const wrongRow = normalizeEvolutionJob({
+    ...dsh,
+    job_id: "job-dsh-wrong-row",
+    candidates: [wrongRowCandidate],
+    candidate: wrongRowCandidate,
+  });
+  assert.deepEqual(agentAssets(wrongRow), []);
 });
 
 test("gives every deployable Agent asset a stable download filename", () => {
@@ -185,6 +235,7 @@ test("gives every deployable Agent asset a stable download filename", () => {
   assert.equal(agentAssetFilename({ kind: "agent_md", content: { markdown: "# Rules" } }), "agent.md");
   assert.equal(agentAssetFilename({ kind: "skill", content: {} }), "SKILL.md");
   assert.equal(agentAssetFilename({ kind: "role", content: {} }), "role.json");
+  assert.equal(agentAssetFilename({ kind: "dsh_plugin", content: {} }), "cordis.patch.yml");
   assert.equal(agentAssetFilename({ kind: "skill", content: { path: "skills/check-results/SKILL.md", markdown: "# Check" } }), "SKILL.md");
   assert.equal(agentAssetPath({ kind: "skill", content: { path: "skills/check-results/SKILL.md", markdown: "# Check" } }), "skills/check-results/SKILL.md");
   assert.equal(agentAssetText({ kind: "skill", content: { path: "skills/check-results/SKILL.md", markdown: "# Check" } }), "# Check");

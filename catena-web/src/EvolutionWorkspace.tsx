@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AgentEvolutionLauncher } from "./AgentEvolutionLauncher";
 import { api } from "./api";
 import {
+  agentAssetArchive,
   agentAssets,
   agentAssetDownloadURL,
   agentAssetFiles,
@@ -25,7 +26,7 @@ const workspaceCopy = {
     jobs: "分析记录",
     assets: "资产",
     assetLibrary: "Agent 资产",
-    assetLibraryBody: "这里只保存三类可用产物：agent.md、Skill 包与 Role 包。选择一项即可阅读文件并回查来源 Trace。",
+    assetLibraryBody: "这里保存 agent.md、Skill 包与 Role 包；DeepSeek Harness Agent 会额外生成可直接安装的 DSH Plugin。",
     assetLibraryEmpty: "还没有生成可复用资产。新建一次分析，Catena 会把最值得修复的问题写成文件。",
     assetLibraryEmptyTitle: "Trace 还没有变成资产",
     allAssets: "全部",
@@ -114,9 +115,11 @@ const workspaceCopy = {
     copiedAsset: "已复制",
     copyAssetFailed: "复制失败，请检查浏览器剪贴板权限。",
     downloadAsset: "下载",
+    downloadPackage: "下载整个包",
     agentMD: "agent.md",
     skill: "Skill",
     role: "Role",
+    dshPlugin: "DSH Plugin",
     harness: "XiaoBaOS Harness",
     review: "质量检查",
     reviewMissing: "质量检查尚未完成。",
@@ -149,7 +152,7 @@ const workspaceCopy = {
     jobs: "Analysis history",
     assets: "Assets",
     assetLibrary: "Agent assets",
-    assetLibraryBody: "Exactly three usable outputs: agent.md, Skill packages, and Role packages. Read every file and trace it back to evidence.",
+    assetLibraryBody: "Catena stores agent.md, Skill, and Role packages. DeepSeek Harness Agents additionally produce installable DSH Plugins.",
     assetLibraryEmpty: "No reusable asset exists yet. Start an analysis and Catena will turn the highest-impact problem into a file.",
     assetLibraryEmptyTitle: "No Trace has become an asset yet",
     allAssets: "All",
@@ -238,9 +241,11 @@ const workspaceCopy = {
     copiedAsset: "Copied",
     copyAssetFailed: "Could not copy. Check browser clipboard permission.",
     downloadAsset: "Download",
+    downloadPackage: "Download package",
     agentMD: "agent.md",
     skill: "Skill",
     role: "Role",
+    dshPlugin: "DSH Plugin",
     harness: "XiaoBaOS Harness",
     review: "Quality check",
     reviewMissing: "The quality check is not complete yet.",
@@ -594,6 +599,7 @@ function assetKindLabel(t: Copy, kind: EvolutionCandidate["kind"]) {
   if (kind === "agent_md") return t.agentMD;
   if (kind === "skill") return t.skill;
   if (kind === "role") return t.role;
+  if (kind === "dsh_plugin") return t.dshPlugin;
   return t.harness;
 }
 
@@ -624,7 +630,7 @@ function AssetLibrary({
   const [kind, setKind] = useState<"all" | EvolutionCandidate["kind"]>("all");
   const [agentID, setAgentID] = useState("all");
   const [selectedID, setSelectedID] = useState(assetRecordID(records[0]));
-  const availableKinds = ["agent_md", "skill", "role"] as const;
+  const availableKinds = ["agent_md", "skill", "role", "dsh_plugin"] as const;
   const availableAgents = agents.filter((agent) => records.some((record) => (
     record.job.source_agent_id === agent.agent_id || record.agentName === agent.display_name
   )));
@@ -743,6 +749,7 @@ function AssetDocument({
   const selectedFile = files.find((file) => file.path === selectedFilePath) || files[0];
   const content = selectedFile?.content || agentAssetText(candidate);
   const filename = selectedFile?.path.split("/").at(-1) || agentAssetFilename(candidate);
+  const archive = agentAssetArchive(candidate);
   const traceCount = candidate.source_trace_ids?.length
     || (candidate.source_trace_id ? 1 : 0)
     || job?.source_trace_ids?.length
@@ -792,6 +799,11 @@ function AssetDocument({
             download={filename}
             onClick={(event) => { if (!content) event.preventDefault(); }}
           >{t.downloadAsset}</a>
+          {archive ? (
+            <button className="asset-copy-button" type="button" onClick={() => downloadAssetArchive(archive)}>
+              {t.downloadPackage}
+            </button>
+          ) : null}
           {onDeleteAsset ? (
             <button className="asset-delete-button" type="button" onClick={() => setDeleteConfirming(true)}>{t.deleteAsset}</button>
           ) : null}
@@ -1212,6 +1224,7 @@ function AssetWorkspace({ assets, t }: { assets: EvolutionCandidate[]; t: Copy }
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const content = agentAssetText(candidate);
   const filename = agentAssetFilename(candidate);
+  const archive = agentAssetArchive(candidate);
 
   const assetLabel = (asset: EvolutionCandidate) => asset.kind === "agent_md"
     ? t.agentMD
@@ -1219,6 +1232,8 @@ function AssetWorkspace({ assets, t }: { assets: EvolutionCandidate[]; t: Copy }
       ? t.skill
       : asset.kind === "role"
         ? t.role
+        : asset.kind === "dsh_plugin"
+          ? t.dshPlugin
         : t.harness;
   const kind = assetLabel(candidate);
 
@@ -1268,6 +1283,11 @@ function AssetWorkspace({ assets, t }: { assets: EvolutionCandidate[]; t: Copy }
             download={filename}
             onClick={(event) => { if (!content) event.preventDefault(); }}
           >{t.downloadAsset}</a>
+          {archive ? (
+            <button className="asset-copy-button" type="button" onClick={() => downloadAssetArchive(archive)}>
+              {t.downloadPackage}
+            </button>
+          ) : null}
         </div>
       </header>
       {copyState === "error" ? <span className="asset-copy-error" role="alert">{t.copyAssetFailed}</span> : null}
@@ -1283,6 +1303,17 @@ function AssetWorkspace({ assets, t }: { assets: EvolutionCandidate[]; t: Copy }
       </article>
     </div>
   );
+}
+
+function downloadAssetArchive(archive: ReturnType<typeof agentAssetArchive>) {
+  if (!archive) return;
+  const bytes = archive.bytes.slice().buffer;
+  const url = URL.createObjectURL(new Blob([bytes], { type: "application/x-tar" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = archive.filename;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function ProposalCode({ label, value }: { label: string; value: unknown }) {

@@ -137,9 +137,15 @@ func detectOTLPRuntime(spans []TraceSpan) string {
 		if value, ok := span.ResourceAttributes["agent.runtime"]; ok {
 			runtime = normalizedAgentSource(toTraceString(value))
 		}
+		genAISystem := ""
+		if value, ok := span.ResourceAttributes["gen_ai.system"]; ok {
+			genAISystem = normalizedAgentSource(toTraceString(value))
+		}
 		switch {
 		case serviceName == "xiaobaos" || serviceName == "barena-xiaoba-target":
 			return "xiaobaos"
+		case runtime == "dsh" && genAISystem == "deepseek-harness":
+			return "dsh"
 		case serviceName == "catena-runtime-codex" && runtime == "codex":
 			return "codex"
 		case serviceName == "catena-runtime-claude-code" && runtime == "claude-code":

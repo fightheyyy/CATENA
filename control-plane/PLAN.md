@@ -1,6 +1,6 @@
 # Catena Control Plane Plan
 
-Updated: 2026-08-14
+Updated: 2026-08-19
 
 ## Current state
 
@@ -13,6 +13,16 @@ Updated: 2026-08-14
 - [x] Candidate assets retain exact evidence provenance.
 - [x] React is built into and served by the Go binary.
 - [x] GauzMem is private and tenant scope is derived by Go.
+
+## Active milestone — DSH Runtime and Plugin contract
+
+- [x] Detect exact DSH bridge OTLP and expose Runtime `dsh` on the bound Agent.
+- [x] Freeze `source_runtime_kind` into Agent Trace Set evidence and Jobs.
+- [x] Add `dsh_plugin` to the current Candidate contract without reviving the
+      legacy generic Harness candidate.
+- [x] Reject DSH Plugin output for non-DSH sources, executable manifests,
+      unsafe paths, invalid package names and executable YAML tags.
+- [x] Cover prompt selection, validation, persistence and historical reads.
 
 ## Active milestone — deployable Agent assets
 
@@ -83,6 +93,14 @@ Updated: 2026-08-14
 - [x] Prove cross-owner isolation and secret non-disclosure.
 
 ## Verification log
+
+- 2026-08-19: exact Barena bridge attributes classified four retained Traces
+  as Runtime `dsh`; the Agent Trace Set Job preserved that Runtime through its
+  Evidence Pack and Candidate. Strict JSON/YAML validation accepted only one
+  two-file configuration Plugin and rejected non-DSH provenance, lifecycle
+  scripts, arbitrary profile rows, insertion directives, aliases and custom
+  tags. A real three-role Job produced `dsh_plugin` and proposal-scope `pass`;
+  `go test ./...` passed.
 
 - 2026-08-14: Go decoded both Runtime golden payloads into 28 traces and 106
   spans with complete parent references. Real Codex and Claude hook uploads

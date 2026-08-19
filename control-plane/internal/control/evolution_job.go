@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"go.yaml.in/yaml/v3"
 )
 
 const (
@@ -230,7 +232,7 @@ func (s *HTTPServer) createAgentEvolutionJob(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	fingerprint, err := agentEvolutionSourceRequestFingerprint(
-		agentID, request.WindowStart, request.WindowEnd, request.Objective, request.OutputLanguage,
+		agentID, pack.SourceRuntimeKind, request.WindowStart, request.WindowEnd, request.Objective, request.OutputLanguage,
 	)
 	if err != nil {
 		writeProblem(w, http.StatusInternalServerError, "Evolution request could not be fingerprinted")
@@ -246,6 +248,7 @@ func (s *HTTPServer) createAgentEvolutionJob(w http.ResponseWriter, r *http.Requ
 		SourceKind:         EvolutionSourceAgentTraceSet,
 		SourceTraceIDs:     append([]string(nil), pack.SourceTraceIDs...),
 		SourceAgentID:      agentID,
+		SourceRuntimeKind:  pack.SourceRuntimeKind,
 		WindowStart:        &windowStart,
 		WindowEnd:          &windowEnd,
 		Objective:          request.Objective,
@@ -323,6 +326,7 @@ func (s *HTTPServer) createEvolutionJobFromEvidence(
 		SourceKind:         sourceKind,
 		SourceRunID:        sourceRunID,
 		SourceTraceID:      traceID,
+		SourceRuntimeKind:  pack.SourceRuntimeKind,
 		Objective:          objective,
 		IdempotencyKey:     idempotencyKey,
 		RequestFingerprint: fingerprint,
@@ -484,7 +488,7 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 	if !ok {
 		return
 	}
-	candidate := candidateOutput(candidateRaw, job.SourceAgentID)
+	candidate := candidateOutput(candidateRaw, job.SourceAgentID, job.SourceRuntimeKind)
 	enrichEvolutionCandidate(&candidate, job)
 	job.Candidate = &candidate
 	job.UpdatedAt = time.Now().UTC()
@@ -580,18 +584,20 @@ func evolutionSourceRequestFingerprint(
 
 func agentEvolutionSourceRequestFingerprint(
 	agentID string,
+	sourceRuntimeKind string,
 	windowStart time.Time,
 	windowEnd time.Time,
 	objective string,
 	outputLanguage string,
 ) (string, error) {
 	encoded, err := json.Marshal(map[string]any{
-		"source_kind":     EvolutionSourceAgentTraceSet,
-		"source_agent_id": agentID,
-		"window_start":    windowStart.UTC(),
-		"window_end":      windowEnd.UTC(),
-		"objective":       objective,
-		"output_language": outputLanguage,
+		"source_kind":         EvolutionSourceAgentTraceSet,
+		"source_agent_id":     agentID,
+		"source_runtime_kind": sourceRuntimeKind,
+		"window_start":        windowStart.UTC(),
+		"window_end":          windowEnd.UTC(),
+		"objective":           objective,
+		"output_language":     outputLanguage,
 	})
 	if err != nil {
 		return "", err
@@ -708,6 +714,7 @@ func buildEvolutionEvidencePack(
 		if len(trace.Spans) == 0 {
 			return EvolutionEvidencePack{}, fmt.Errorf("stored Trace contains no spans")
 		}
+		pack.SourceRuntimeKind = detectOTLPRuntime(trace.Spans)
 		pack.TraceSummary = trace.Summary
 		pack.TraceSummary.RootName = bounded(redactMemoryText(pack.TraceSummary.RootName), 1000)
 		pack.TraceSummary.ServiceName = bounded(redactMemoryText(pack.TraceSummary.ServiceName), 1000)
@@ -827,17 +834,18 @@ func buildAgentTraceSetEvidencePack(
 	windowStart = windowStart.UTC()
 	windowEnd = windowEnd.UTC()
 	pack := EvolutionEvidencePack{
-		Schema:          evolutionAgentEvidenceSchema,
-		SourceKind:      EvolutionSourceAgentTraceSet,
-		SourceAgentID:   agentID,
-		WindowStart:     &windowStart,
-		WindowEnd:       &windowEnd,
-		SourceTraceIDs:  []string{},
-		Spans:           []EvolutionEvidenceSpan{},
-		Traces:          []EvolutionEvidenceTrace{},
-		RunEvents:       []EngineEvent{},
-		TotalTraceCount: totalTraceCount,
-		Redacted:        true,
+		Schema:            evolutionAgentEvidenceSchema,
+		SourceKind:        EvolutionSourceAgentTraceSet,
+		SourceAgentID:     agentID,
+		SourceRuntimeKind: detectEvolutionRuntime(traces),
+		WindowStart:       &windowStart,
+		WindowEnd:         &windowEnd,
+		SourceTraceIDs:    []string{},
+		Spans:             []EvolutionEvidenceSpan{},
+		Traces:            []EvolutionEvidenceTrace{},
+		RunEvents:         []EngineEvent{},
+		TotalTraceCount:   totalTraceCount,
+		Redacted:          true,
 		Boundary: EvolutionEvidenceBoundary{
 			TargetAgentExecutedByCatena: false,
 			CreatesRelease:              false,
@@ -923,6 +931,24 @@ func buildAgentTraceSetEvidencePack(
 	}
 }
 
+func detectEvolutionRuntime(traces []TraceDetail) string {
+	detected := ""
+	for _, trace := range traces {
+		runtimeKind := detectOTLPRuntime(trace.Spans)
+		if runtimeKind == "otel" || runtimeKind == "" {
+			return "otel"
+		}
+		if detected != "" && detected != runtimeKind {
+			return "otel"
+		}
+		detected = runtimeKind
+	}
+	if detected == "" {
+		return "otel"
+	}
+	return detected
+}
+
 func selectAgentEvidenceSpans(values []EvolutionEvidenceSpan, limit int) []EvolutionEvidenceSpan {
 	selected := append([]EvolutionEvidenceSpan(nil), values...)
 	sort.SliceStable(selected, func(i, j int) bool {
@@ -984,6 +1010,7 @@ func evolutionEvidenceDigestInput(pack EvolutionEvidencePack) ([]byte, error) {
 
 func validEvolutionEvidencePack(pack EvolutionEvidencePack, job EvolutionJob) bool {
 	if pack.SourceKind != job.SourceKind ||
+		pack.SourceRuntimeKind != job.SourceRuntimeKind ||
 		pack.Boundary.TargetAgentExecutedByCatena || pack.Boundary.CreatesRelease ||
 		pack.Boundary.ReleaseAuthority != evolutionReleaseAuthority ||
 		pack.Boundary.CandidateStatus != evolutionCandidateStatus ||
@@ -1104,22 +1131,36 @@ Return one JSON object only with this exact shape:
 
 func buildCandidatePrompt(job EvolutionJob) string {
 	inputs, _ := json.Marshal(map[string]any{
-		"finding":         job.Finding,
-		"source_agent_id": job.SourceAgentID,
+		"finding":             job.Finding,
+		"source_agent_id":     job.SourceAgentID,
+		"source_runtime_kind": job.SourceRuntimeKind,
 	})
+	candidateKinds := "agent_md|skill|role"
+	assetContracts := `Use exactly one of these XiaoBaOS-compatible contracts:
+	- agent_md: root is "agent.md" and files contains exactly one file whose path is "agent.md". Its Markdown heading and instructions must use the requested output language.
+	- skill: root is "skills/<kebab-name>" and files must contain "skills/<kebab-name>/SKILL.md" with YAML frontmatter name and description. It may also contain text files under scripts/, references/, or assets/ when they are necessary for the capability.
+	- role: root is "roles/<kebab-name>". A Role is a complete specialist package above Skills, not a Markdown persona. Files must contain role.json and prompts/<prompt-file>.md; role.json must declare name, displayName, description and promptFile. It may define evidence-supported tool policy, confirmation gates and role-local skills/<skill-name>/SKILL.md. All Roles reuse the XiaoBaOS Agent Runtime.`
+	if job.SourceRuntimeKind == "dsh" {
+		candidateKinds = "dsh_plugin"
+		assetContracts = `The source Runtime is DeepSeek Harness. Return exactly one configuration-only DSH Plugin package:
+	- kind is "dsh_plugin".
+	- root is "dsh-plugins/<kebab-name>".
+	- files contains exactly "dsh-plugins/<kebab-name>/package.json" and "dsh-plugins/<kebab-name>/cordis.patch.yml".
+	- package.json contains exactly name, version, private and dsh. name is "dsh-plugin-<kebab-name>", version is "0.1.0", private is true, and dsh.bundle.patch is "./cordis.patch.yml". Do not add scripts or dependencies.
+	- cordis.patch.yml contains exactly one YAML item with id "system-prompt" and config.persona as one non-empty string. Use this exact shape: "- id: system-prompt\n  config:\n    persona: |-\n      <instructions>".
+	- Never use another id, disabled, insert, name, plugin, aliases, custom YAML tags or !!js expressions.
+	- The system-prompt patch replaces the row's entire config. Keep the persona concrete, configuration-only and narrow enough for Barena to install with lifecycle scripts disabled and validate through DSH Profile composition.`
+	}
 	return fmt.Sprintf(`You are EvolutionCat in Catena's XiaoBaOS Evolution Runtime. Produce one small, reusable Agent asset that directly prevents the accepted failure mode.
 	Output language: %s
 	Return one JSON object only with this exact shape:
-	{"candidate":{"kind":"agent_md|skill|role","title":"...","summary":"...","content":{"root":"...","files":[{"path":"...","content":"..."}]}}}
+	{"candidate":{"kind":"%s","title":"...","summary":"...","content":{"root":"...","files":[{"path":"...","content":"..."}]}}}
 	The asset must be an immediately usable repository file or package, not an optimization report.
-	Use exactly one of these XiaoBaOS-compatible contracts:
-	- agent_md: root is "agent.md" and files contains exactly one file whose path is "agent.md". Its Markdown heading and instructions must use the requested output language.
-	- skill: root is "skills/<kebab-name>" and files must contain "skills/<kebab-name>/SKILL.md" with YAML frontmatter name and description. It may also contain text files under scripts/, references/, or assets/ when they are necessary for the capability.
-	- role: root is "roles/<kebab-name>". A Role is a complete specialist package above Skills, not a Markdown persona. Files must contain role.json and prompts/<prompt-file>.md; role.json must declare name, displayName, description and promptFile. It may define evidence-supported tool policy, confirmation gates and role-local skills/<skill-name>/SKILL.md. All Roles reuse the XiaoBaOS Agent Runtime.
+	%s
 	Every file path must stay below the declared root. Write concrete instructions, triggers, expected behavior, and failure guards. Keep the package narrow enough to review in one sitting. Do not paste Trace IDs or analysis prose into file bodies. Never invent tool names: omit optional tool policy fields when the retained evidence does not justify them.
 	Never emit Memory or Case: Conversation owns memory, and Trace Farm owns Agent assets. Do not claim the asset was installed, applied, replayed, verified, or released.
 Analysis:
-%s`, evolutionOutputLanguageInstruction(job), inputs)
+%s`, evolutionOutputLanguageInstruction(job), candidateKinds, assetContracts, inputs)
 }
 
 func buildReviewerPrompt(job EvolutionJob, evidence json.RawMessage) string {
@@ -1157,6 +1198,7 @@ func enrichEvolutionCandidate(candidate *EvolutionCandidate, job EvolutionJob) {
 	candidate.SourceTraceID = job.SourceTraceID
 	candidate.SourceTraceIDs = evolutionJobTraceIDs(job)
 	candidate.SourceAgentID = job.SourceAgentID
+	candidate.SourceRuntimeKind = job.SourceRuntimeKind
 	if job.EvidencePack != nil {
 		candidate.EvidencePackSHA256 = job.EvidencePack.SHA256
 	}
@@ -1196,9 +1238,13 @@ func evolutionJobSourceKey(job EvolutionJob) string {
 	return "trace:" + job.SourceTraceID
 }
 
-func candidateOutput(raw json.RawMessage, sourceAgentID string) EvolutionCandidate {
+func candidateOutput(raw json.RawMessage, sourceAgentID string, sourceRuntimeKinds ...string) EvolutionCandidate {
+	sourceRuntimeKind := ""
+	if len(sourceRuntimeKinds) > 0 {
+		sourceRuntimeKind = sourceRuntimeKinds[0]
+	}
 	var parsed candidateTurnOutput
-	if decodeRoleJSON(raw, &parsed) && validCurrentEvolutionCandidate(parsed.Candidate, sourceAgentID) {
+	if decodeRoleJSON(raw, &parsed) && validCurrentEvolutionCandidate(parsed.Candidate, sourceAgentID, sourceRuntimeKind) {
 		parsed.Candidate.ID = newID("candidate")
 		parsed.Candidate.Title = bounded(redactMemoryText(strings.TrimSpace(parsed.Candidate.Title)), 160)
 		parsed.Candidate.Summary = bounded(redactMemoryText(strings.TrimSpace(parsed.Candidate.Summary)), 4000)
@@ -1253,7 +1299,70 @@ func decodeRoleJSON(raw json.RawMessage, destination any) bool {
 	if start, end := strings.Index(content, "{"), strings.LastIndex(content, "}"); start >= 0 && end >= start {
 		content = content[start : end+1]
 	}
-	return json.Unmarshal([]byte(content), destination) == nil
+	if json.Unmarshal([]byte(content), destination) == nil {
+		return true
+	}
+	repaired, ok := closeTruncatedRoleJSON(content)
+	return ok && json.Unmarshal([]byte(repaired), destination) == nil
+}
+
+func closeTruncatedRoleJSON(value string) (string, bool) {
+	if len(value) == 0 || value[0] != '{' || len(value) > 256*1024 {
+		return "", false
+	}
+	stack := make([]byte, 0, 8)
+	inString := false
+	escaped := false
+	for index := 0; index < len(value); index++ {
+		char := value[index]
+		if inString {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if char == '\\' {
+				escaped = true
+				continue
+			}
+			if char == '"' {
+				inString = false
+			}
+			continue
+		}
+		switch char {
+		case '"':
+			inString = true
+		case '{', '[':
+			stack = append(stack, char)
+			if len(stack) > 16 {
+				return "", false
+			}
+		case '}', ']':
+			if len(stack) == 0 {
+				return "", false
+			}
+			expected := byte('{')
+			if char == ']' {
+				expected = '['
+			}
+			if stack[len(stack)-1] != expected {
+				return "", false
+			}
+			stack = stack[:len(stack)-1]
+		}
+	}
+	if inString || escaped || len(stack) == 0 {
+		return "", false
+	}
+	var suffix strings.Builder
+	for index := len(stack) - 1; index >= 0; index-- {
+		if stack[index] == '{' {
+			suffix.WriteByte('}')
+		} else {
+			suffix.WriteByte(']')
+		}
+	}
+	return value + suffix.String(), true
 }
 
 func validEvolutionFinding(value EvolutionFinding) bool {
@@ -1290,8 +1399,14 @@ func validEvolutionCandidate(value EvolutionCandidate) bool {
 		len(value.Content) > 0 && json.Valid(value.Content)
 }
 
-func validCurrentEvolutionCandidate(value EvolutionCandidate, _ string) bool {
+func validCurrentEvolutionCandidate(value EvolutionCandidate, _ string, sourceRuntimeKind string) bool {
 	if !validEvolutionCandidate(value) {
+		return false
+	}
+	if value.Kind == EvolutionCandidateDSHPlugin {
+		return sourceRuntimeKind == "dsh" && validDSHPluginPackage(value.Content)
+	}
+	if sourceRuntimeKind == "dsh" {
 		return false
 	}
 	switch value.Kind {
@@ -1387,6 +1502,115 @@ func validRolePackage(raw json.RawMessage) bool {
 	}
 	_, promptExists := files[content.Root+"/prompts/"+role.PromptFile]
 	return promptExists
+}
+
+func validDSHPluginPackage(raw json.RawMessage) bool {
+	content, files, ok := decodePortableAssetPackage(raw)
+	parts := strings.Split(content.Root, "/")
+	if !ok || len(parts) != 2 || parts[0] != "dsh-plugins" ||
+		!validAssetName(parts[1]) || len(files) != 2 {
+		return false
+	}
+	manifestPath := content.Root + "/package.json"
+	patchPath := content.Root + "/cordis.patch.yml"
+	manifestBody, manifestExists := files[manifestPath]
+	patchBody, patchExists := files[patchPath]
+	if !manifestExists || !patchExists {
+		return false
+	}
+	var manifestFields map[string]json.RawMessage
+	if json.Unmarshal([]byte(manifestBody), &manifestFields) != nil || len(manifestFields) != 4 {
+		return false
+	}
+	for _, key := range []string{"name", "version", "private", "dsh"} {
+		if _, exists := manifestFields[key]; !exists {
+			return false
+		}
+	}
+	var manifest struct {
+		Name    string `json:"name"`
+		Version string `json:"version"`
+		Private bool   `json:"private"`
+		DSH     struct {
+			Bundle struct {
+				Patch string `json:"patch"`
+			} `json:"bundle"`
+		} `json:"dsh"`
+	}
+	if json.Unmarshal([]byte(manifestBody), &manifest) != nil ||
+		manifest.Name != "dsh-plugin-"+parts[1] || manifest.Version != "0.1.0" ||
+		!manifest.Private || manifest.DSH.Bundle.Patch != "./cordis.patch.yml" {
+		return false
+	}
+	return validDSHCordisPatch(patchBody)
+}
+
+func validDSHCordisPatch(value string) bool {
+	var document yaml.Node
+	if yaml.Unmarshal([]byte(value), &document) != nil || len(document.Content) != 1 {
+		return false
+	}
+	sequence := document.Content[0]
+	if sequence.Kind != yaml.SequenceNode || len(sequence.Content) != 1 ||
+		!safeDSHYAMLNode(sequence, 0, new(int)) {
+		return false
+	}
+	for _, item := range sequence.Content {
+		if item.Kind != yaml.MappingNode || len(item.Content)%2 != 0 {
+			return false
+		}
+		hasID := false
+		hasPersona := false
+		if len(item.Content) != 4 {
+			return false
+		}
+		for index := 0; index < len(item.Content); index += 2 {
+			key := item.Content[index]
+			field := item.Content[index+1]
+			if key.Kind != yaml.ScalarNode || key.ShortTag() != "!!str" {
+				return false
+			}
+			switch key.Value {
+			case "id":
+				hasID = field.Kind == yaml.ScalarNode && field.ShortTag() == "!!str" && field.Value == "system-prompt"
+			case "config":
+				if field.Kind != yaml.MappingNode || len(field.Content) != 2 ||
+					field.Content[0].Kind != yaml.ScalarNode || field.Content[0].Value != "persona" ||
+					field.Content[1].Kind != yaml.ScalarNode || field.Content[1].ShortTag() != "!!str" ||
+					strings.TrimSpace(field.Content[1].Value) == "" {
+					return false
+				}
+				hasPersona = true
+			default:
+				return false
+			}
+		}
+		if !hasID || !hasPersona {
+			return false
+		}
+	}
+	return true
+}
+
+func safeDSHYAMLNode(node *yaml.Node, depth int, count *int) bool {
+	(*count)++
+	if depth > 16 || *count > 512 || node.Kind == yaml.AliasNode ||
+		strings.Contains(strings.ToLower(node.ShortTag()), "js") {
+		return false
+	}
+	tag := node.ShortTag()
+	allowedTag := tag == "" || tag == "!!map" || tag == "!!seq" ||
+		tag == "!!str" || tag == "!!bool" || tag == "!!int" ||
+		tag == "!!float" || tag == "!!null" || tag == "!!timestamp"
+	if !allowedTag {
+		return false
+	}
+	for _, child := range node.Content {
+		if !safeDSHYAMLNode(child, depth+1, count) {
+			return false
+		}
+	}
+	return true
 }
 
 func validAssetName(value string) bool {

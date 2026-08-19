@@ -1,6 +1,6 @@
 # Catena Implementation Plan
 
-Updated: 2026-08-14
+Updated: 2026-08-19
 
 ## Current status
 
@@ -9,6 +9,17 @@ Agent-bound API keys, OTLP/Conversation ingestion, Trace queries and Evolution
 Job orchestration. The embedded XiaoBaOS Runtime consumes retained Evidence
 Packs and produces reviewable Agent assets. Target Agent execution remains
 local.
+
+## Active milestone — DeepSeek Harness compatibility
+
+- [x] Recognize Barena's exact DSH bridge markers as Runtime `dsh` without
+      broad product-name heuristics.
+- [x] Persist the frozen source Runtime on an Agent Trace Set Evolution Job.
+- [x] Let EvolutionCat emit a reviewable `dsh_plugin` bundle only for DSH
+      evidence, with `package.json` and `cordis.patch.yml` validation.
+- [x] Render and download DSH Plugin bundles from the existing Asset Library.
+- [x] Verify one DSH → Barena Explore → Catena Trace Farm → Barena Plugin
+      acceptance loop without moving target execution into Catena.
 
 ## Active milestone — asset-first Evolution
 
@@ -162,6 +173,16 @@ local.
 5. Web tests/build, Go tests/vet/race, and both Compose configurations pass.
 
 ## Verification log
+
+- 2026-08-19: Barena ran a DSH Explore through the public Runtime adapter and
+  uploaded one 26-Span boundary Trace to Catena. Catena froze four exact DSH
+  Traces, Inspector identified a repeated premature-platform-assumption issue,
+  Evolution produced the two-file `dsh-plugin-open-scope-first-response`
+  package, and Reviewer returned `pass` at proposal scope. DeepSeek Harness
+  `0.1.0-rc.7` then installed the generated package with lifecycle scripts
+  disabled and exposed its `system-prompt/config.persona` patch through
+  `--dump-config`. Go tests, all 52 Web tests and the production Web build
+  passed.
 
 - 2026-08-14: configured the official Codex plugin lifecycle locally with an
   owner-only Agent credential and persisted Hook trust through Codex's own

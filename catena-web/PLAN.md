@@ -1,6 +1,6 @@
 # Catena Web Plan
 
-Updated: 2026-08-15
+Updated: 2026-08-19
 
 ## Current state
 
@@ -9,6 +9,15 @@ Updated: 2026-08-15
 - [x] GitHub identity, Agent-bound credential management and bilingual UI.
 - [x] Agent Trace-window selection and role-stage progress.
 - [x] Turn narrative, diagnostic Span waterfall and memory graph rendering.
+
+## Active milestone — DSH asset experience
+
+- [x] Render Runtime `dsh` as DeepSeek Harness in Agent surfaces.
+- [x] Normalize `dsh_plugin` as a usable two-file Agent asset.
+- [x] Add DSH Plugin filtering, bilingual labels, readable YAML and one-click
+      whole-package download.
+- [x] Verify existing agent.md/Skill/Role assets and historical kinds remain
+      readable.
 
 ## Completed milestone — readable Coding Agent traces
 
@@ -87,6 +96,11 @@ desktop widths. At 720px and below, opening a record must replace the index with
 the detail and expose a working back action without horizontal overflow.
 
 ## Verification log
+
+- 2026-08-19: the DSH Agent and generated Plugin render as first-class Runtime
+  and Asset types. The Asset Library exposes both files, exact provenance and
+  a complete tar download while filtering unsafe or Runtime-mismatched legacy
+  records. All 52 Web tests and the production Vite build passed.
 
 - 2026-08-15: Session headers now use the earliest retained valid user request
   as a deterministic title with no LLM call; the exported Session ID remains

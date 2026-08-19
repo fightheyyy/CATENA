@@ -45,7 +45,7 @@ function firstRecord(source: Record<string, unknown>, ...keys: string[]): Record
 
 function candidateKind(value: unknown): EvolutionCandidateKind {
   const kind = stringValue(value).toLowerCase();
-  if (kind === "agent_md" || kind === "memory" || kind === "skill" || kind === "role" || kind === "harness" || kind === "case") {
+  if (kind === "agent_md" || kind === "memory" || kind === "skill" || kind === "role" || kind === "dsh_plugin" || kind === "harness" || kind === "case") {
     return kind;
   }
   return "unknown";
@@ -127,6 +127,7 @@ function normalizeCandidate(value: unknown, fallbackStatus: string): EvolutionCa
     source_trace_id: stringValue(source.source_trace_id) || undefined,
     source_trace_ids: stringArray(source.source_trace_ids),
     source_agent_id: stringValue(source.source_agent_id) || undefined,
+    source_runtime_kind: stringValue(source.source_runtime_kind) || undefined,
     source_run_id: stringValue(source.source_run_id) || undefined,
     evidence_pack_sha256: stringValue(firstValue(source, "evidence_pack_sha256", "evidence_digest")) || undefined,
   };
@@ -228,6 +229,7 @@ export function normalizeEvolutionJob(value: unknown): EvolutionJob {
     source_trace_id: stringValue(firstValue(source, "source_trace_id", "trace_id")) || undefined,
     source_trace_ids: stringArray(source.source_trace_ids),
     source_agent_id: stringValue(source.source_agent_id) || undefined,
+    source_runtime_kind: stringValue(source.source_runtime_kind) || undefined,
     window_start: stringValue(source.window_start) || undefined,
     window_end: stringValue(source.window_end) || undefined,
     objective: stringValue(source.objective) || undefined,
@@ -307,7 +309,7 @@ export function prettyJSON(value: unknown): string {
 
 export function agentAssets(job: EvolutionJob): EvolutionCandidate[] {
   return job.candidates.filter((candidate) => (
-    (candidate.kind === "agent_md" || candidate.kind === "skill" || candidate.kind === "role")
+    (candidate.kind === "agent_md" || candidate.kind === "skill" || candidate.kind === "role" || candidate.kind === "dsh_plugin")
     && isUsableAgentAsset(candidate)
   ));
 }
@@ -333,6 +335,7 @@ export function agentAssetFiles(candidate: EvolutionCandidate): AgentAssetFile[]
     const defaultPath = candidate.kind === "agent_md" ? "agent.md"
       : candidate.kind === "skill" ? "SKILL.md"
         : candidate.kind === "role" ? "role.json"
+          : candidate.kind === "dsh_plugin" ? "cordis.patch.yml"
           : "agent-asset.json";
     if (markdown) return [{ path: path || defaultPath, content: markdown }];
   }
@@ -353,6 +356,33 @@ export function isUsableAgentAsset(candidate: EvolutionCandidate): boolean {
     if (!/^roles\/[a-z0-9][a-z0-9-]*$/.test(root)) return false;
     return files.some((file) => file.path === `${root}/role.json`)
       && files.some((file) => file.path.startsWith(`${root}/prompts/`) && file.path.endsWith(".md"));
+  }
+  if (candidate.kind === "dsh_plugin") {
+    if (candidate.source_runtime_kind !== "dsh" || !/^dsh-plugins\/[a-z0-9][a-z0-9-]*$/.test(root) || files.length !== 2) return false;
+    const manifestFile = files.find((file) => file.path === `${root}/package.json`);
+    const patchFile = files.find((file) => file.path === `${root}/cordis.patch.yml`);
+    if (!manifestFile || !patchFile) return false;
+    try {
+      const manifest = record(JSON.parse(manifestFile.content));
+      const dsh = record(manifest?.dsh);
+      const bundle = record(dsh?.bundle);
+      const name = root.split("/").at(-1);
+      const patchLines = patchFile.content.replace(/\r\n/g, "\n").trimEnd().split("\n");
+      const exactPersonaPatch = patchLines.length >= 3
+        && /^- id:\s*system-prompt\s*$/.test(patchLines[0])
+        && /^ {2}config:\s*$/.test(patchLines[1])
+        && /^ {4}persona:\s*\S.*$/.test(patchLines[2])
+        && patchLines.slice(3).every((line) => line === "" || /^ {6,}\S?/.test(line));
+      return Object.keys(manifest ?? {}).length === 4
+        && manifest?.name === `dsh-plugin-${name}`
+        && manifest?.version === "0.1.0"
+        && manifest?.private === true
+        && bundle?.patch === "./cordis.patch.yml"
+        && exactPersonaPatch
+        && !/(^|\n)\s*-?\s*(disabled|insert|name|plugin)\s*:|!!js|[&*][A-Za-z0-9_-]+/.test(patchFile.content);
+    } catch {
+      return false;
+    }
   }
   return false;
 }
@@ -381,6 +411,7 @@ export function agentAssetFilename(candidate: EvolutionCandidate): string {
   if (candidate.kind === "agent_md") return "agent.md";
   if (candidate.kind === "skill") return "SKILL.md";
   if (candidate.kind === "role") return "role.json";
+  if (candidate.kind === "dsh_plugin") return "cordis.patch.yml";
   return "agent-asset.json";
 }
 
@@ -399,4 +430,69 @@ export function agentAssetDownloadURL(filename: string, content: string): string
     : filename.endsWith(".json") ? "application/json"
       : "text/plain";
   return `data:${type};charset=utf-8,${encodeURIComponent(content)}`;
+}
+
+export type AgentAssetArchive = {
+  filename: string;
+  bytes: Uint8Array;
+};
+
+export function agentAssetArchive(candidate: EvolutionCandidate): AgentAssetArchive | undefined {
+  if (!isUsableAgentAsset(candidate)) return undefined;
+  const files = agentAssetFiles(candidate);
+  if (files.length < 2) return undefined;
+  const root = agentAssetPath(candidate).split("/").filter(Boolean).at(-1) || "agent-asset";
+  return {
+    filename: `${root}.tar`,
+    bytes: tarArchive(files),
+  };
+}
+
+function tarArchive(files: AgentAssetFile[]): Uint8Array {
+  const encoder = new TextEncoder();
+  const chunks: Uint8Array[] = [];
+  for (const file of files) {
+    const body = encoder.encode(file.content);
+    const header = new Uint8Array(512);
+    writeTarText(header, 0, 100, file.path);
+    writeTarOctal(header, 100, 8, 0o644);
+    writeTarOctal(header, 108, 8, 0);
+    writeTarOctal(header, 116, 8, 0);
+    writeTarOctal(header, 124, 12, body.length);
+    writeTarOctal(header, 136, 12, 0);
+    header.fill(0x20, 148, 156);
+    header[156] = "0".charCodeAt(0);
+    writeTarText(header, 257, 6, "ustar");
+    writeTarText(header, 263, 2, "00");
+    let checksum = 0;
+    for (const byte of header) checksum += byte;
+    const checksumText = checksum.toString(8).padStart(6, "0");
+    writeTarText(header, 148, 6, checksumText);
+    header[154] = 0;
+    header[155] = 0x20;
+    chunks.push(header, body);
+    const padding = (512 - (body.length % 512)) % 512;
+    if (padding) chunks.push(new Uint8Array(padding));
+  }
+  chunks.push(new Uint8Array(1024));
+  const total = chunks.reduce((size, chunk) => size + chunk.length, 0);
+  const archive = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    archive.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return archive;
+}
+
+function writeTarText(target: Uint8Array, offset: number, length: number, value: string) {
+  const encoded = new TextEncoder().encode(value);
+  if (encoded.length > length) throw new Error(`Tar path is too long: ${value}`);
+  target.set(encoded, offset);
+}
+
+function writeTarOctal(target: Uint8Array, offset: number, length: number, value: number) {
+  const encoded = value.toString(8).padStart(length - 1, "0");
+  writeTarText(target, offset, length - 1, encoded);
+  target[offset + length - 1] = 0;
 }

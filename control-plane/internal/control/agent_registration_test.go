@@ -210,11 +210,16 @@ func TestDetectOTLPRuntimeUsesEvidenceAndFallsBackToGenericOTel(t *testing.T) {
 	tests := []struct {
 		service string
 		scope   string
+		runtime string
+		system  string
 		want    string
 	}{
 		{service: "xiaobaos", want: "xiaobaos"},
-		{service: "catena-runtime-codex", want: "codex"},
-		{service: "catena-runtime-claude-code", want: "claude_code"},
+		{service: "barena-dsh-target", runtime: "dsh", system: "deepseek-harness", want: "dsh"},
+		{service: "barena-dsh-target", runtime: "dsh", want: "otel"},
+		{service: "deepseek-harness", system: "deepseek-harness", want: "otel"},
+		{service: "catena-runtime-codex", runtime: "codex", want: "codex"},
+		{service: "catena-runtime-claude-code", runtime: "claude-code", want: "claude_code"},
 		{service: "codex-app-server", want: "otel"},
 		{service: "claude-code", want: "otel"},
 		{service: "hermes-codex", want: "otel"},
@@ -224,11 +229,9 @@ func TestDetectOTLPRuntimeUsesEvidenceAndFallsBackToGenericOTel(t *testing.T) {
 	for _, test := range tests {
 		got := detectOTLPRuntime([]TraceSpan{{
 			ServiceName: test.service, ScopeName: test.scope, ResourceAttributes: map[string]any{
-				"service.name": test.service,
-				"agent.runtime": map[string]string{
-					"catena-runtime-codex":       "codex",
-					"catena-runtime-claude-code": "claude-code",
-				}[test.service],
+				"service.name":  test.service,
+				"agent.runtime": test.runtime,
+				"gen_ai.system": test.system,
 			},
 		}})
 		if got != test.want {

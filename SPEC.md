@@ -16,7 +16,7 @@ Catena owns:
 - XiaoBaOS user-visible Conversation ingestion;
 - canonical Agent grouping and Agent-scoped Trace windows;
 - durable Run, Evidence, Evolution Job and Candidate records;
-- an embedded XiaoBaOS Evolution Runtime that produces evidence-linked `agent.md`, Skill packages and Role packages;
+- an embedded XiaoBaOS Evolution Runtime that produces evidence-linked `agent.md`, Skill packages, Role packages and Runtime-bound DSH Plugin packages;
 - an owner-scoped gateway to the optional GauzMem memory service.
 
 Catena also ships local Codex and Claude Code Runtime plugins. They parse the
@@ -44,7 +44,7 @@ flowchart LR
     Go --> Runner["XiaoBaOS Evolution Runtime"]
     OwnerModel["Owner LLM config<br/>encrypted API Key"] --> Go
     Go -->|"per-job ephemeral model config"| Runner
-    Runner --> Asset["agent.md · Skill package · Role package"]
+    Runner --> Asset["agent.md · Skill package · Role package<br/>DSH Plugin package"]
     Asset --> Library["Agent Asset Library<br/>file preview · copy · download · provenance"]
     Library --> Browser
     Go --> PG[("PostgreSQL")]
@@ -102,7 +102,7 @@ flowchart LR
     Owner["Owner BYOK<br/>Provider · Base URL · Model · API Key"] --> Core
     Core -->|"decrypt only for job"| Runtime
     Queue --> Runtime["XiaoBaOS Evolution Runtime"]
-    Runtime --> Assets["agent.md · Skill package · Role package"]
+    Runtime --> Assets["agent.md · Skill package · Role package<br/>DSH Plugin bundle"]
     Assets --> AssetLibrary["Asset-first Trace Farm<br/>Agent · kind · package · source analysis"]
     AssetLibrary --> Developer
     Core --> ModelStatus["Authenticated LLM settings<br/>never returns API Key"]
@@ -191,8 +191,11 @@ preferences and live only in Settings.
   removes the terminal Evolution Job and its generated asset together; source
   Trace evidence remains intact.
 - **Agent Asset:** exactly one of `agent.md`, a Skill package (`SKILL.md` plus
-  optional support files), or a XiaoBaOS Role package (`role.json`, prompt and
-  optional role-local Skills).
+  optional support files), a XiaoBaOS Role package (`role.json`, prompt and
+  optional role-local Skills), or a DeepSeek Harness Plugin bundle. A DSH
+  Plugin is emitted only for evidence identified as `dsh`; it is rooted at
+  `dsh-plugins/<name>` and contains a non-executable `package.json` plus
+  `cordis.patch.yml` that Barena can install into a run-private DSH Profile.
 - **Asset language:** every Trace Farm Job persists `output_language`. Inspector,
   Evolution and Reviewer use that same language for all human-readable output;
   protocol keys, paths, commands and code identifiers remain unchanged.

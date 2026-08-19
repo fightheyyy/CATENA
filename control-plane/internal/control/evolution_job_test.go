@@ -794,7 +794,7 @@ func TestEvolutionJobUsesConservativeEnvelopeForUnstructuredRoleOutput(t *testin
 	}
 }
 
-func TestTraceFarmAcceptsOnlyPortableAgentMDAndXiaoBaPackages(t *testing.T) {
+func TestTraceFarmAcceptsPortableAgentAssetsAndRuntimeBoundDSHPlugins(t *testing.T) {
 	agentMD := candidateOutput(json.RawMessage(`{"candidate":{"kind":"agent_md","title":"Operating rules","summary":"Portable instructions.","content":{"root":"agent.md","files":[{"path":"agent.md","content":"# Rules\n\nCheck tool results."}]}}}`), "codex")
 	if agentMD.Kind != EvolutionCandidateAgentMD {
 		t.Fatalf("valid agent.md asset was rejected: %#v", agentMD)
@@ -806,6 +806,77 @@ func TestTraceFarmAcceptsOnlyPortableAgentMDAndXiaoBaPackages(t *testing.T) {
 	role := candidateOutput(json.RawMessage(`{"candidate":{"kind":"role","title":"Evidence reviewer","summary":"Portable review role.","content":{"root":"roles/evidence-reviewer","files":[{"path":"roles/evidence-reviewer/role.json","content":"{\"name\":\"evidence-reviewer\",\"displayName\":\"Evidence Reviewer\",\"description\":\"Review retained evidence.\",\"promptFile\":\"evidence-reviewer.md\",\"inheritBaseTools\":false}"},{"path":"roles/evidence-reviewer/prompts/evidence-reviewer.md","content":"# Evidence reviewer\n\nReview retained evidence."},{"path":"roles/evidence-reviewer/skills/grounding/SKILL.md","content":"---\nname: grounding\ndescription: Check retained evidence.\n---\n\n# Grounding"}]}}}`), "codex")
 	if role.Kind != EvolutionCandidateRole {
 		t.Fatalf("valid Role package was rejected: %#v", role)
+	}
+
+	manifest := `{"name":"dsh-plugin-evidence-guard","version":"0.1.0","private":true,"dsh":{"bundle":{"patch":"./cordis.patch.yml"}}}`
+	pluginContent, err := json.Marshal(portableAssetPackage{
+		Root: "dsh-plugins/evidence-guard",
+		Files: []portableAssetFile{
+			{Path: "dsh-plugins/evidence-guard/package.json", Content: manifest},
+			{Path: "dsh-plugins/evidence-guard/cordis.patch.yml", Content: "- id: system-prompt\n  config:\n    persona: Always ground claims in retained evidence.\n"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginRaw, err := json.Marshal(map[string]any{"candidate": map[string]any{
+		"kind": "dsh_plugin", "title": "Evidence guard", "summary": "Ground every claim.",
+		"content": json.RawMessage(pluginContent),
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	plugin := candidateOutput(pluginRaw, "dsh-agent", "dsh")
+	if plugin.Kind != EvolutionCandidateDSHPlugin {
+		t.Fatalf("valid DSH Plugin package was rejected: %#v", plugin)
+	}
+	truncatedEnvelope, err := json.Marshal(map[string]any{
+		"assistant": map[string]any{"content": string(pluginRaw[:len(pluginRaw)-1])},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if candidate := candidateOutput(truncatedEnvelope, "dsh-agent", "dsh"); candidate.Kind != EvolutionCandidateDSHPlugin {
+		t.Fatalf("a DSH Plugin with only its final JSON delimiter truncated was not recovered: %#v", candidate)
+	}
+	if candidate := candidateOutput(pluginRaw, "codex", "codex"); candidate.Kind != EvolutionCandidateAgentMD || candidate.Title != "Unclassified EvolutionCat draft" {
+		t.Fatalf("DSH Plugin escaped its source Runtime boundary: %#v", candidate)
+	}
+
+	invalidDSHPlugin := func(manifestBody string, patchBody string) json.RawMessage {
+		t.Helper()
+		content, marshalErr := json.Marshal(portableAssetPackage{
+			Root: "dsh-plugins/evidence-guard",
+			Files: []portableAssetFile{
+				{Path: "dsh-plugins/evidence-guard/package.json", Content: manifestBody},
+				{Path: "dsh-plugins/evidence-guard/cordis.patch.yml", Content: patchBody},
+			},
+		})
+		if marshalErr != nil {
+			t.Fatal(marshalErr)
+		}
+		raw, marshalErr := json.Marshal(map[string]any{"candidate": map[string]any{
+			"kind": "dsh_plugin", "title": "Unsafe", "summary": "Must be rejected.",
+			"content": json.RawMessage(content),
+		}})
+		if marshalErr != nil {
+			t.Fatal(marshalErr)
+		}
+		return raw
+	}
+	for name, raw := range map[string]json.RawMessage{
+		"lifecycle scripts": invalidDSHPlugin(
+			`{"name":"dsh-plugin-evidence-guard","version":"0.1.0","private":true,"scripts":{"postinstall":"curl example.invalid"},"dsh":{"bundle":{"patch":"./cordis.patch.yml"}}}`,
+			"- id: system-prompt\n  config:\n    persona: safe\n",
+		),
+		"new plugin insertion": invalidDSHPlugin(manifest, "- insert:\n    - id: unsafe\n      name: attacker-package\n"),
+		"unknown profile row":  invalidDSHPlugin(manifest, "- id: agent-runtime-id\n  config:\n    persona: unsafe\n"),
+		"executable yaml tag":  invalidDSHPlugin(manifest, "- id: tools\n  config:\n    mode: !!js process.env.DSH_TOOLS_MODE\n"),
+		"alias":                invalidDSHPlugin(manifest, "- id: tools\n  config: &shared\n    mode: code\n- id: system-prompt\n  config: *shared\n"),
+	} {
+		if candidate := candidateOutput(raw, "dsh-agent", "dsh"); candidate.Kind != EvolutionCandidateAgentMD || candidate.Title != "Unclassified EvolutionCat draft" {
+			t.Fatalf("unsafe DSH Plugin %q was accepted: %#v", name, candidate)
+		}
 	}
 
 	for _, raw := range []json.RawMessage{
@@ -832,12 +903,30 @@ func TestEvolutionCandidateKindsCoverAllDraftArtifactTypes(t *testing.T) {
 		EvolutionCandidateMemory,
 		EvolutionCandidateRole,
 		EvolutionCandidateSkill,
+		EvolutionCandidateDSHPlugin,
 		EvolutionCandidateHarness,
 		EvolutionCandidateCase,
 	} {
 		if !kind.Valid() {
 			t.Fatalf("Evolution candidate kind %q is not queryable", kind)
 		}
+	}
+}
+
+func TestEvolutionRuntimeRequiresUnanimousExactDSHEvidence(t *testing.T) {
+	dshTrace := TraceDetail{Spans: []TraceSpan{{
+		ServiceName: "barena-dsh-target",
+		ResourceAttributes: map[string]any{
+			"agent.runtime": "dsh",
+			"gen_ai.system": "deepseek-harness",
+		},
+	}}}
+	genericTrace := TraceDetail{Spans: []TraceSpan{{ServiceName: "custom-agent"}}}
+	if got := detectEvolutionRuntime([]TraceDetail{dshTrace, dshTrace}); got != "dsh" {
+		t.Fatalf("exact DSH trace set was not detected: %q", got)
+	}
+	if got := detectEvolutionRuntime([]TraceDetail{dshTrace, genericTrace}); got != "otel" {
+		t.Fatalf("mixed trace set unlocked a Runtime-specific asset: %q", got)
 	}
 }
 
@@ -1058,6 +1147,20 @@ func TestEvolutionOutputLanguageIsExplicitAcrossEveryRole(t *testing.T) {
 	job.OutputLanguage = "en"
 	if prompt := buildCandidatePrompt(job); !strings.Contains(prompt, "in English") {
 		t.Fatalf("English asset prompt does not preserve its output language: %s", prompt)
+	}
+
+	job.SourceRuntimeKind = "dsh"
+	prompt := buildCandidatePrompt(job)
+	for _, contract := range []string{
+		`"kind":"dsh_plugin"`,
+		`root is "dsh-plugins/<kebab-name>"`,
+		`Do not add scripts or dependencies`,
+		`id "system-prompt" and config.persona`,
+		`Never use another id, disabled, insert, name, plugin, aliases, custom YAML tags or !!js expressions`,
+	} {
+		if !strings.Contains(prompt, contract) {
+			t.Fatalf("DSH Plugin prompt is missing %q: %s", contract, prompt)
+		}
 	}
 }
 

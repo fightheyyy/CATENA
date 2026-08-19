@@ -186,6 +186,7 @@ function runtimeLabel(value: string | undefined, locale: Locale, generic: string
   if (value === "xiaobaos") return "XiaoBaOS";
   if (value === "codex") return "Codex";
   if (value === "claude_code") return "Claude Code";
+  if (value === "dsh") return "DeepSeek Harness";
   if (value === "otel") return generic;
   return value;
 }

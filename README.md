@@ -7,7 +7,7 @@
 <p align="center"><strong>以 Trace 为燃料的 Agent 持续进化平台</strong></p>
 
 <p align="center">
-  Observe what Agents actually did. Turn repeated evidence into better agent.md, Skills, Roles, and Harnesses.
+  Observe what Agents actually did. Turn repeated evidence into better agent.md, Skills, Roles, and DSH Plugins.
 </p>
 
 Catena 汇聚 XiaoBaOS、Codex、Claude Code 和通用 OTLP Agent 的真实运行证据，从一段时间的 Trace 与对话中发现重复问题，生成可追溯、可人工采用的 Agent 进化候选。
@@ -25,7 +25,7 @@ Barena Run ──┘
 - **记忆**：从对话生成可追溯记忆，并支持语义、关系与时间召回。
 - **Trace**：按用户 Turn 阅读请求、模型调用、严格配对的 Tool、分支、状态与最终回答；原始 Span 瀑布保留为诊断视图。
 - **Trace Farm**：按 Agent 与时间窗口分析多条 Trace，展示 Inspector、Evolution、Reviewer 三个阶段。
-- **进化产物**：输出标准 `agent.md`、Skill、Role，以及 XiaoBaOS 专属 Harness 建议。
+- **进化产物**：输出标准 `agent.md`、Skill、Role；当证据来自 DeepSeek Harness 时，输出可由 Barena 本地验收的 DSH Plugin 包。
 
 Catena 不托管或冒充用户的目标 Agent。平台内置的 XiaoBaOS Runtime 只消费 Evidence，不执行被测 Agent。Catena 也不提供公共 LLM；每位用户在 **API 管理** 中配置自己的 Provider、Base URL、Model 与 API Key。密钥加密保存，只在该用户的 Trace Farm 任务执行时临时解密。
 
@@ -59,7 +59,7 @@ flowchart LR
         Facts["Evidence Store<br/>Trace · Conversation · Run"]
         Farm["Trace Farm<br/>跨 Run 问题发现"]
         Runtime["XiaoBaOS Evolution Runtime<br/>Inspector · Evolution · Reviewer"]
-        Assets["候选产物<br/>agent.md · Skill · Role · Harness"]
+        Assets["候选产物<br/>agent.md · Skill · Role · DSH Plugin"]
         GauzMem["GauzMem<br/>记忆编译 · 召回 · 图谱"]
         Memories["长期记忆<br/>语义 · 关系 · 时间"]
 
@@ -184,7 +184,7 @@ XiaoBaOS 走的是“拟人化工作同事”路线：用户关心的不只是�
 系统 Prompt、隐藏推理、Tool 调用和失败重试仍然进入 Trace，用来诊断 Runtime 与 Harness；它们不应被当成用户经历直接写入长期记忆。Catena 因而保留两条独立的数据路径：
 
 ```text
-OTLP Trace          → Trace Farm → agent.md / Skill / Role / Harness
+OTLP Trace          → Trace Farm → agent.md / Skill / Role / DSH Plugin
 XiaoBaOS Conversation → GauzMem   → semantic / graph / temporal memory
 ```
 
@@ -203,7 +203,7 @@ cp deploy/catena-mvp1/.env.public.example deploy/catena-mvp1/.env
 
 ## 状态与开发
 
-MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、用户自带 LLM、OTLP 导入、Runtime 自动识别、Agent 聚合、Span 瀑布、XiaoBaOS Conversation、Trace Farm、进化候选与中英文 UI。当前定位是 single-node Beta；多 Worker lease、备份恢复、配额与完整 RBAC 尚未完成。
+MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、用户自带 LLM、OTLP 导入、Runtime 自动识别、Agent 聚合、Span 瀑布、XiaoBaOS Conversation、Trace Farm、进化候选与中英文 UI。DeepSeek Harness 已打通 DSH → Barena Explore → Catena Trace Farm → DSH Plugin 产出与本地安装验收。当前定位是 single-node Beta；多 Worker lease、备份恢复、配额与完整 RBAC 尚未完成。
 
 ```bash
 cd catena-web && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm typecheck && pnpm build

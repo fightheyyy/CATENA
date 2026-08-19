@@ -530,9 +530,10 @@ type EvolutionCaseProposal struct {
 type EvolutionCandidateKind string
 
 const (
-	EvolutionCandidateAgentMD EvolutionCandidateKind = "agent_md"
-	EvolutionCandidateRole    EvolutionCandidateKind = "role"
-	EvolutionCandidateSkill   EvolutionCandidateKind = "skill"
+	EvolutionCandidateAgentMD   EvolutionCandidateKind = "agent_md"
+	EvolutionCandidateRole      EvolutionCandidateKind = "role"
+	EvolutionCandidateSkill     EvolutionCandidateKind = "skill"
+	EvolutionCandidateDSHPlugin EvolutionCandidateKind = "dsh_plugin"
 	// Memory and Case remain readable for historical Evolution Jobs only.
 	EvolutionCandidateMemory  EvolutionCandidateKind = "memory"
 	EvolutionCandidateHarness EvolutionCandidateKind = "harness"
@@ -543,6 +544,7 @@ func (k EvolutionCandidateKind) Valid() bool {
 	return k == EvolutionCandidateAgentMD ||
 		k == EvolutionCandidateRole ||
 		k == EvolutionCandidateSkill ||
+		k == EvolutionCandidateDSHPlugin ||
 		k == EvolutionCandidateMemory ||
 		k == EvolutionCandidateHarness ||
 		k == EvolutionCandidateCase
@@ -559,6 +561,7 @@ type EvolutionCandidate struct {
 	SourceTraceID      string                 `json:"source_trace_id,omitempty"`
 	SourceTraceIDs     []string               `json:"source_trace_ids,omitempty"`
 	SourceAgentID      string                 `json:"source_agent_id,omitempty"`
+	SourceRuntimeKind  string                 `json:"source_runtime_kind,omitempty"`
 	EvidencePackSHA256 string                 `json:"evidence_pack_sha256"`
 }
 
@@ -620,6 +623,7 @@ type EvolutionEvidencePack struct {
 	SourceTraceID      string                    `json:"source_trace_id,omitempty"`
 	SourceTraceIDs     []string                  `json:"source_trace_ids,omitempty"`
 	SourceAgentID      string                    `json:"source_agent_id,omitempty"`
+	SourceRuntimeKind  string                    `json:"source_runtime_kind,omitempty"`
 	WindowStart        *time.Time                `json:"window_start,omitempty"`
 	WindowEnd          *time.Time                `json:"window_end,omitempty"`
 	Run                *EvolutionEvidenceRun     `json:"run,omitempty"`
@@ -647,6 +651,7 @@ type EvolutionJob struct {
 	SourceTraceID      string                    `json:"source_trace_id,omitempty"`
 	SourceTraceIDs     []string                  `json:"source_trace_ids,omitempty"`
 	SourceAgentID      string                    `json:"source_agent_id,omitempty"`
+	SourceRuntimeKind  string                    `json:"source_runtime_kind,omitempty"`
 	WindowStart        *time.Time                `json:"window_start,omitempty"`
 	WindowEnd          *time.Time                `json:"window_end,omitempty"`
 	Objective          string                    `json:"objective,omitempty"`

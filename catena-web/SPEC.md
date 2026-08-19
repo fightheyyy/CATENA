@@ -65,6 +65,7 @@ flowchart LR
     AccountMenu --> Go
     Farm["Trace Farm"] --> AssetLibrary["asset-first library<br/>Agent · kind · package"]
     AssetLibrary --> AssetDocument["package tree · readable files · copy · download"]
+    AssetDocument --> DSH["DSH Plugin bundle<br/>package.json · Cordis patch"]
     AssetDocument --> Provenance["source analysis · Trace evidence"]
     Farm --> AnalysisHistory["secondary analysis history"]
     AnalysisHistory --> JobProgress["Inspector · Evolution · Reviewer"]
@@ -161,6 +162,9 @@ field; the UI only displays the server's inferred result after evidence arrives.
 - Every asset exposes its stable package root, file tree, readable selected
   file, Agent, kind, source Trace count, copy/download, direct deletion and
   source analysis.
+- DSH Agents display `DeepSeek Harness`, and `dsh_plugin` appears as a distinct
+  Asset Library kind with a whole-package download suitable for local Barena
+  acceptance.
 - Analysis history, role progress, raw outputs and deletion remain available as
   a secondary audit view without competing with the Asset Library.
 - Completed and failed analyses and their generated assets expose a destructive

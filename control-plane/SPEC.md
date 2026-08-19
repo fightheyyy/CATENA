@@ -59,7 +59,7 @@ flowchart LR
     ModelAPI --> Encrypted["owner-scoped encrypted credential"]
     Encrypted --> Job["Evolution Job dispatch"]
     Job -->|"ephemeral only"| Runner["XiaoBaOS Evolution Runner"]
-    Runner --> Candidate["portable asset<br/>agent.md · Skill package · Role package"]
+    Runner --> Candidate["portable asset<br/>agent.md · Skill · Role · DSH Plugin"]
     Candidate --> Job
     Conversation --> MemorySubmit["POST memory extraction"]
     MemorySubmit --> Ledger[("memory extraction tasks")]
@@ -90,6 +90,9 @@ The durable worker queue remains the next control-plane reliability milestone.
   `catena-runtime-claude-code` + `agent.runtime=claude-code`. Codex App, Hermes
   and OpenClaw are not aliases; unknown OpenTelemetry evidence remains `otel`.
   XiaoBaOS is a separate native product source.
+- DeepSeek Harness inference recognizes only Barena's exact bridge evidence:
+  `agent.runtime=dsh` together with `gen_ai.system=deepseek-harness`. DSH has no
+  Catena Tap parser and unknown lookalike service names remain `otel`.
 - Runner filesystem: temporary workspaces only.
 - GauzMem stores: optional memory facts and indexes behind the private gateway.
 
@@ -103,8 +106,11 @@ The durable worker queue remains the next control-plane reliability milestone.
 - Stage events move state forward only; terminal state cannot be overwritten by stale events.
 - Only an owning user may delete a completed or failed Evolution Job. Deletion removes its embedded Candidate assets but never cascades to source Trace or Conversation evidence.
 - Candidate provenance contains the exact Evidence Pack and Trace IDs.
-- Evolution output has exactly three asset kinds: one-file `agent.md`, a Skill
-  package rooted at `skills/<name>`, or a Role package rooted at `roles/<name>`.
+- Evolution output has four current asset kinds: one-file `agent.md`, a Skill
+  package rooted at `skills/<name>`, a Role package rooted at `roles/<name>`,
+  or a DSH Plugin rooted at `dsh-plugins/<name>`. `dsh_plugin` is valid only
+  when the frozen source Runtime is `dsh` and contains exactly a safe manifest
+  plus a non-executable Cordis patch.
 - Skill packages require valid `SKILL.md` frontmatter and may include text
   scripts, references or assets. Role packages require `role.json`, its prompt,
   and may include role-local Skills, matching the XiaoBaOS loader contract.

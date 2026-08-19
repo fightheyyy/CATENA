@@ -104,7 +104,7 @@ export type EvolutionCaseProposal = {
   evidence_pack_sha256?: string;
 };
 
-export type EvolutionCandidateKind = "agent_md" | "memory" | "skill" | "role" | "harness" | "case" | "unknown";
+export type EvolutionCandidateKind = "agent_md" | "memory" | "skill" | "role" | "dsh_plugin" | "harness" | "case" | "unknown";
 
 export type EvolutionCandidate = {
   candidate_id: string;
@@ -116,6 +116,7 @@ export type EvolutionCandidate = {
   source_trace_id?: string;
   source_trace_ids?: string[];
   source_agent_id?: string;
+  source_runtime_kind?: string;
   source_run_id?: string;
   evidence_pack_sha256?: string;
 };
@@ -143,6 +144,7 @@ export type EvolutionJob = {
   source_trace_id?: string;
   source_trace_ids: string[];
   source_agent_id?: string;
+  source_runtime_kind?: string;
   window_start?: string;
   window_end?: string;
   objective?: string;
