@@ -1,7 +1,7 @@
 # Catena Tap Specification
 
 Status: implemented Runtime parser contract
-Updated: 2026-08-14
+Updated: 2026-09-15
 
 ## Problem
 
@@ -24,15 +24,16 @@ The Runtime capture module owns:
 
 It does not proxy model HTTP traffic, use a Langfuse SDK/backend/API key,
 provide a second dashboard, execute Barena workflows, or claim support for a
-Runtime without a dedicated parser and real acceptance. Codex App, Hermes and
-OpenClaw are explicitly unsupported.
+Runtime without a dedicated parser and real acceptance. Codex App live-hook
+integration, Hermes and OpenClaw are explicitly unsupported. Persisted Codex
+history with native lifecycle metadata has separate historical acceptance.
 
 ## Current Architecture
 
 ```mermaid
 flowchart LR
     CodexLive["Codex Stop hook"] --> CodexParser["Langfuse-derived<br/>rollout parser"]
-    CodexHistory["Codex rollout import"] --> CodexParser
+    CodexHistory["Codex rollout import<br/>native lifecycle · migrated history · first header identity"] --> CodexParser
     ClaudeLive["Claude Stop · SessionEnd hooks"] --> ClaudeParser["Langfuse-derived<br/>transcript parser + state"]
     ClaudeHistory["Claude transcript import"] --> ClaudeParser
     CodexParser --> Graph["Catena Canonical Event Graph v1"]
@@ -54,7 +55,7 @@ path.
 
 ```mermaid
 flowchart LR
-    Codex["Codex rollout<br/>Stop hook · historical import"] --> CodexParser["Pinned Langfuse-derived<br/>Codex parser"]
+    Codex["Codex rollout<br/>Stop hook · historical import"] --> CodexParser["Pinned Langfuse-derived Codex parser<br/>native lifecycle boundaries · migrated history"]
     Claude["Claude transcript<br/>Stop · SessionEnd · historical import"] --> ClaudeParser["Pinned Langfuse-derived<br/>Claude parser"]
     CodexParser --> Graph["Canonical Event Graph v1"]
     ClaudeParser --> Graph
@@ -70,6 +71,16 @@ flowchart LR
 This target is reached for the accepted Codex CLI and Claude Code versions.
 Future Runtime support adds a dedicated parser to the same graph boundary; it
 does not add a proxy, shared normalizer or Langfuse backend.
+
+Historical import must account for bootstrap messages and restored context
+outside native `task_started` / terminal boundaries without creating an extra
+anonymous turn. Runtime `item_completed` UserMessage records and terminal
+`last_agent_message` provide authoritative visible input/output when present.
+The first native session header owns a rollout; copied parent metadata in a
+fork is source-accounted without overwriting the child session identity.
+This compatibility work covers persisted rollouts, not a new App live-hook
+integration. Import acceptance includes every snapshot file, exact native IDs,
+partial/retry handling and counts verified against local ClickHouse.
 
 ## Canonical Event Graph contract
 

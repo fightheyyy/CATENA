@@ -1,0 +1,15 @@
+{"timestamp":"2026-09-15T01:00:00.000Z","type":"session_meta","payload":{"id":"migration-fixture-session","cli_version":"0.107.0"}}
+{"timestamp":"2026-09-15T01:00:00.100Z","type":"response_item","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"[redacted] boot instructions"}]}}
+{"timestamp":"2026-09-15T01:00:00.200Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"[redacted] restored environment"}]}}
+{"timestamp":"2026-09-15T01:00:01.000Z","type":"event_msg","payload":{"type":"task_started","turn_id":"rollout-6","started_at":"2026-09-15T01:00:01.000Z"}}
+{"timestamp":"2026-09-15T01:00:01.100Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"[redacted] context wrapper"}]}}
+{"timestamp":"2026-09-15T01:00:01.200Z","type":"event_msg","payload":{"type":"item_completed","turn_id":"rollout-6","item":{"type":"UserMessage","id":"item-1","content":[{"type":"text","text":"[redacted] real request","text_elements":[]}]}}}
+{"timestamp":"2026-09-15T01:00:01.300Z","type":"event_msg","payload":{"type":"item_completed","turn_id":"different-turn","item":{"type":"UserMessage","id":"other-item","content":[{"type":"text","text":"[redacted] unrelated request"}]}}}
+{"timestamp":"2026-09-15T01:00:01.400Z","type":"turn_context","payload":{"turn_id":"rollout-6","model":"fixture-model"}}
+{"timestamp":"2026-09-15T01:00:02.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"[redacted] interim commentary"}]}}
+{"timestamp":"2026-09-15T01:00:03.000Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"rollout-6","last_agent_message":"[redacted] exact final answer","completed_at":"2026-09-15T01:00:03.000Z"}}
+{"timestamp":"2026-09-15T01:00:04.000Z","type":"compacted","payload":{"message":"[redacted] restored compacted context"}}
+{"timestamp":"2026-09-15T01:00:04.100Z","type":"turn_context","payload":{"turn_id":"rollout-6","model":"fixture-model"}}
+{"timestamp":"2026-09-15T01:00:05.000Z","type":"event_msg","payload":{"type":"task_started","turn_id":"native-next-turn"}}
+{"timestamp":"2026-09-15T01:00:05.100Z","type":"event_msg","payload":{"type":"item_completed","turn_id":"native-next-turn","item":{"type":"UserMessage","id":"item-2","content":[{"type":"text","text":"[redacted] next request"}]}}}
+{"timestamp":"2026-09-15T01:00:06.000Z","type":"event_msg","payload":{"type":"turn_aborted","turn_id":"native-next-turn"}}

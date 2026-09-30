@@ -140,6 +140,9 @@ export function parseSession(lines: RolloutLine[]): {
   let step: ModelStep | null = null;
   let toolCallsById = new Map<string, ToolCall>();
   let lastTimestamp = Date.now();
+  const hasLifecycle = lines.some((line) =>
+    line.type === "event_msg" && line.payload.type === "task_started",
+  );
 
   function newStep(startTime: number): ModelStep {
     return { startTime, endTime: startTime, toolCalls: [], sourceEventIds: [] };
@@ -202,6 +205,12 @@ export function parseSession(lines: RolloutLine[]): {
         parent_thread_id?: string | null;
         thread_source?: string | null;
       };
+      // A fork can contain its parent's copied metadata after its own header.
+      // The first native header owns this file; inherited headers cannot
+      // reassign child evidence to the parent session.
+      if (sessionMeta.sessionId !== "unknown" && typeof p.id === "string" && p.id !== sessionMeta.sessionId) {
+        continue;
+      }
       sessionMeta = {
         sessionId: typeof p.id === "string" ? p.id : sessionMeta.sessionId,
         cliVersion: p.cli_version,
@@ -215,6 +224,9 @@ export function parseSession(lines: RolloutLine[]): {
     }
 
     if (line.type === "turn_context") {
+      // Migrated history and forked sessions restore context before a native
+      // turn starts. Account for those rows without inventing another turn.
+      if (!turn && hasLifecycle) continue;
       const t = ensureTurn(ts);
       const p = line.payload as { model?: string };
       t.model = p.model ?? t.model;
@@ -224,6 +236,7 @@ export function parseSession(lines: RolloutLine[]): {
     }
 
     if (line.type === "response_item") {
+      if (!turn && hasLifecycle) continue;
       // `payload.type` is an open string set across Codex versions, so we
       // switch on it and cast into the concrete shape per branch rather than
       // relying on discriminated-union narrowing.
@@ -384,6 +397,7 @@ export function parseSession(lines: RolloutLine[]): {
     }
 
     if (line.type === "compacted") {
+      if (!turn && hasLifecycle) continue;
       const t = ensureTurn(ts);
       t.contextCompactions.push({
         timestamp: ts,
@@ -414,7 +428,17 @@ export function parseSession(lines: RolloutLine[]): {
       // task_started event.
       if (!turn) continue;
 
-      if (et === "user_message" && typeof p.message === "string") {
+      if (et === "item_completed") {
+        if (typeof p.turn_id === "string" && p.turn_id !== turn!.turnId) continue;
+        const item = p.item as { type?: unknown; content?: MessageContentPart[] } | undefined;
+        if (item?.type === "UserMessage") {
+          const text = extractMessageText(item.content);
+          if (text) {
+            appendSource(turn!, eventId);
+            turn!.userInput = text;
+          }
+        }
+      } else if (et === "user_message" && typeof p.message === "string") {
         appendSource(turn!, eventId);
         if (!turn!.userInput) turn!.userInput = p.message;
       } else if (et === "agent_message" && typeof p.message === "string") {
@@ -426,6 +450,9 @@ export function parseSession(lines: RolloutLine[]): {
         closeStep(ts, p.info?.last_token_usage ?? undefined);
       } else if (et === "task_complete") {
         appendSource(turn!, eventId);
+        if (typeof p.last_agent_message === "string" && p.last_agent_message) {
+          turn!.lastAgentMessage = p.last_agent_message;
+        }
         finishTurn(runtimeTimestamp(p.completed_at, ts), { completed: true, aborted: false });
       } else if (et === "turn_aborted") {
         appendSource(turn!, eventId);

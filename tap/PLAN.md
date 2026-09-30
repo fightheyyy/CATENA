@@ -1,6 +1,25 @@
 # Catena Runtime Capture Plan
 
-Updated: 2026-08-14
+Updated: 2026-09-15
+
+## Completed milestone — local Codex history import
+
+- [x] Inventory and snapshot active and archived local rollout files.
+- [x] Handle bootstrap/restored context without anonymous turns, and preserve
+      native visible message events; verify parser regressions.
+- [x] Start the local Go/PostgreSQL/ClickHouse stack and create an Agent key.
+- [x] Import all supported snapshot turns with bounded OTLP batches; record
+      every empty or failed file and retry without duplicate logical spans.
+- [x] Verify database counts, exact trace details and the real Web workspace.
+
+Owner: this local import task. Original rollout files remain unchanged; private
+snapshots, credentials and import receipts remain in ignored local storage.
+
+Acceptance: 303 files inspected, 301 non-empty sessions, 2,582 logical traces
+and 83,837 spans retained. Final per-trace counts match the prepared evidence;
+missing/extra records are zero, replay preserves counts, and both oversized
+tool outputs match source SHA-256. Typecheck, 11 parser tests and bundle build
+passed. See `docs/CODEX_LOCAL_IMPORT_20260915.md` at repository root.
 
 ## Current Status
 

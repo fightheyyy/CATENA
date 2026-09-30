@@ -120,6 +120,7 @@ function parseSession(lines) {
 	let step = null;
 	let toolCallsById = /* @__PURE__ */ new Map();
 	let lastTimestamp = Date.now();
+	const hasLifecycle = lines.some((line) => line.type === "event_msg" && line.payload.type === "task_started");
 	function newStep(startTime) {
 		return {
 			startTime,
@@ -171,6 +172,7 @@ function parseSession(lines) {
 		const eventId = sourceEventId(line);
 		if (line.type === "session_meta") {
 			const p = line.payload;
+			if (sessionMeta.sessionId !== "unknown" && typeof p.id === "string" && p.id !== sessionMeta.sessionId) continue;
 			sessionMeta = {
 				sessionId: typeof p.id === "string" ? p.id : sessionMeta.sessionId,
 				cliVersion: p.cli_version,
@@ -183,6 +185,7 @@ function parseSession(lines) {
 			continue;
 		}
 		if (line.type === "turn_context") {
+			if (!turn && hasLifecycle) continue;
 			const t = ensureTurn(ts);
 			t.model = line.payload.model ?? t.model;
 			t.invocationParams = line.payload;
@@ -190,6 +193,7 @@ function parseSession(lines) {
 			continue;
 		}
 		if (line.type === "response_item") {
+			if (!turn && hasLifecycle) continue;
 			const p = line.payload;
 			ensureTurn(ts);
 			if (p.type === "message") {
@@ -329,6 +333,7 @@ function parseSession(lines) {
 			continue;
 		}
 		if (line.type === "compacted") {
+			if (!turn && hasLifecycle) continue;
 			ensureTurn(ts).contextCompactions.push({
 				timestamp: ts,
 				eventType: "compacted",
@@ -352,7 +357,17 @@ function parseSession(lines) {
 				continue;
 			}
 			if (!turn) continue;
-			if (et === "user_message" && typeof p.message === "string") {
+			if (et === "item_completed") {
+				if (typeof p.turn_id === "string" && p.turn_id !== turn.turnId) continue;
+				const item = p.item;
+				if (item?.type === "UserMessage") {
+					const text = extractMessageText(item.content);
+					if (text) {
+						appendSource(turn, eventId);
+						turn.userInput = text;
+					}
+				}
+			} else if (et === "user_message" && typeof p.message === "string") {
 				appendSource(turn, eventId);
 				if (!turn.userInput) turn.userInput = p.message;
 			} else if (et === "agent_message" && typeof p.message === "string") {
@@ -364,6 +379,7 @@ function parseSession(lines) {
 				closeStep(ts, p.info?.last_token_usage ?? void 0);
 			} else if (et === "task_complete") {
 				appendSource(turn, eventId);
+				if (typeof p.last_agent_message === "string" && p.last_agent_message) turn.lastAgentMessage = p.last_agent_message;
 				finishTurn(runtimeTimestamp(p.completed_at, ts), {
 					completed: true,
 					aborted: false

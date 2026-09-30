@@ -40,3 +40,9 @@ The checked-in histories did not contain a real Computer tool invocation.
 Codex's upstream `computer_call` shape therefore has a separate parser
 conformance test for exact `call_id`, action and result retention; it is not
 reported as a real Computer-tool acceptance run.
+
+`codex/migrated-history.jsonl` is a minimal, sanitized regression fixture for
+the persisted history shapes observed during the 2026-09-15 local import. It
+covers bootstrap messages, restored compaction/context between native turns,
+visible `item_completed` UserMessage input, exact terminal answer and abort.
+Its values and timestamps are synthetic; it is not a new live-hook acceptance.

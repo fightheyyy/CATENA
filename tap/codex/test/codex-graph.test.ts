@@ -18,6 +18,36 @@ const fixture = path.join(fixtureDirectory, "rollout-redacted-main.jsonl");
 const golden = path.join(root, "fixtures/golden/codex.canonical.json");
 const temporaryDirectories: string[] = [];
 
+describe("migrated Codex history", () => {
+  it("retains the fork identity when copied history contains a parent header", async () => {
+    const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "catena-codex-fork-"));
+    temporaryDirectories.push(temporary);
+    const rows = (await fs.readFile(path.join(root, "fixtures/codex/migrated-history.jsonl"), "utf-8")).trim().split("\n");
+    rows.splice(1, 0, JSON.stringify({timestamp: "2026-09-15T01:00:00.050Z", type: "session_meta", payload: {id: "parent-session"}}));
+    const file = path.join(temporary, "fork.jsonl");
+    await fs.writeFile(file, rows.join("\n") + "\n");
+    const graph = await parseCodexRollout(file);
+    expect(graph.session_id).toBe("migration-fixture-session");
+    expect(graph.traces[0].trace_id).toBe(correlationTraceId("migration-fixture-session", "rollout-6"));
+    expect(graph.traces.flatMap((item) => item.accounting)).toHaveLength(16);
+    expect(graph.traces.flatMap((item) => item.accounting).find((item) => item.event_id === "main:line:2")?.disposition).toBe("ignored");
+  });
+
+  it("keeps native turns and visible messages while accounting for restored context", async () => {
+    const graph = await parseCodexRollout(path.join(root, "fixtures/codex/migrated-history.jsonl"));
+    expect(graph.traces.map((item) => item.turn_id)).toEqual(["rollout-6", "native-next-turn"]);
+    expect(graph.traces[0].nodes[0]).toMatchObject({
+      input: "[redacted] real request", output: "[redacted] exact final answer", state: "ok",
+    });
+    expect(graph.traces[1].state).toBe("aborted");
+    expect(graph.traces.flatMap((item) => item.accounting)).toHaveLength(15);
+    for (const row of ["main:line:2", "main:line:3", "main:line:11", "main:line:12"]) {
+      expect(graph.traces.flatMap((item) => item.accounting).find((item) => item.event_id === row)?.disposition).toBe("ignored");
+    }
+    expect(graph.traces[0].trace_id).toBe(correlationTraceId(graph.session_id, "rollout-6"));
+  });
+});
+
 afterEach(async () => {
   await Promise.all(temporaryDirectories.splice(0).map((directory) => fs.rm(directory, { recursive: true, force: true })));
 });
@@ -167,7 +197,9 @@ describe("Codex live hook", () => {
         url: `http://127.0.0.1:${address.port}`,
         apiKey: "plugin-data-key",
       });
-      expect((await fs.stat(credentials)).mode & 0o777).toBe(0o600);
+      if (process.platform !== "win32") {
+        expect((await fs.stat(credentials)).mode & 0o777).toBe(0o600);
+      }
       expect((await fs.readdir(pluginData)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
 
       expect(await runCodexHook(

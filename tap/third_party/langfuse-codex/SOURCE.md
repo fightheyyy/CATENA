@@ -28,3 +28,8 @@ Catena modifications:
   only after successful OTLP upload;
 - add a bounded post-Stop settle pass because Codex persists `task_complete`
   only after the synchronous hook returns.
+- account for bootstrap/restored context outside native turn lifecycles
+  without anonymous turns, and read the visible UserMessage / terminal answer
+  carried by migrated rollout lifecycle records.
+- keep a fork's first native session header authoritative when its copied
+  history contains a later parent-session header.

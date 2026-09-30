@@ -11,8 +11,11 @@ Supported and acceptance-tested runtimes:
 - Codex CLI `0.147.0` rollout JSONL
 - Claude Code `2.1.112` transcript JSONL
 
-Codex App, Hermes and OpenClaw are not supported. A runtime is added only after
-it has a dedicated parser, redacted real fixture, golden graph and real E2E.
+Codex App live-hook integration, Hermes and OpenClaw are not supported.
+Persisted Codex rollout history, including migrated native lifecycle records,
+has separate [historical import acceptance](../docs/CODEX_LOCAL_IMPORT_20260915.md).
+A new live runtime requires its own parser, redacted fixture, golden graph
+and real E2E.
 
 ## Configuration
 
