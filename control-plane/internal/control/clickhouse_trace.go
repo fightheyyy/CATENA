@@ -167,7 +167,17 @@ func (s *ClickHouseTraceStore) ListTraces(
 	ownerID string,
 	limit int,
 ) ([]TraceSummary, error) {
+	// Select the page using narrow columns before reading potentially multi-MB
+	// inputs and attributes. Both reads retain FINAL replacement semantics.
 	rows, err := s.conn.Query(ctx, `
+WITH recent_traces AS (
+  SELECT trace_id
+  FROM catena_spans FINAL
+  WHERE owner_id = ?
+  GROUP BY trace_id
+  ORDER BY max(end_time) DESC, trace_id
+  LIMIT ?
+)
 SELECT
   anyIf(agent_id, agent_id != '') AS agent_id,
   coalesce(
@@ -185,7 +195,7 @@ SELECT
   ) AS session_id,
   trace_id,
   argMin(name, tuple(parent_span_id != '', start_time)) AS root_name,
-  leftUTF8(argMinIf(input, start_time, input != ''), 512) AS input_preview,
+  argMinIf(leftUTF8(input, 512), start_time, input != '') AS input_preview,
   argMin(service_name, start_time) AS service_name,
   anyIf(model, model != '') AS model,
   min(start_time) AS started_at,
@@ -195,10 +205,9 @@ SELECT
   countIf(status_code = 2) AS error_count,
   max(inserted_at) AS last_ingested_at
 FROM catena_spans FINAL
-WHERE owner_id = ?
+PREWHERE owner_id = ? AND trace_id IN (SELECT trace_id FROM recent_traces)
 GROUP BY trace_id
-ORDER BY ended_at DESC
-LIMIT ?`, ownerID, limit)
+ORDER BY ended_at DESC, trace_id`, ownerID, limit, ownerID)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +246,25 @@ func (s *ClickHouseTraceStore) ListAgentTraces(
 	limit int,
 ) ([]TraceSummary, error) {
 	legacyFilter, legacyFilterArgs := agentServiceNameFilter(agentID)
+	// Apply Agent and window selection before LIMIT, and keep timestamps out of
+	// PREWHERE: only owner_id/trace_id are immutable replacement sorting keys.
 	query := fmt.Sprintf(`
+WITH recent_traces AS (
+  SELECT trace_id
+  FROM (
+    SELECT
+      trace_id,
+      anyIf(agent_id, agent_id != '') AS agent_id,
+      argMin(service_name, tuple(parent_span_id != '', start_time)) AS service_name,
+      max(end_time) AS ended_at
+    FROM catena_spans FINAL
+    WHERE owner_id = ? AND end_time >= ? AND start_time <= ?
+    GROUP BY trace_id
+  )
+  WHERE agent_id = ? OR (agent_id = '' AND %s)
+  ORDER BY ended_at DESC, trace_id
+  LIMIT ?
+)
 SELECT
   agent_id, session_id, trace_id, root_name, input_preview, service_name, model, started_at, ended_at,
   duration_ms, span_count, error_count, last_ingested_at
@@ -259,7 +286,7 @@ FROM (
 	      ''
 	    ) AS session_id,
     argMin(name, tuple(parent_span_id != '', start_time)) AS root_name,
-    leftUTF8(argMinIf(input, start_time, input != ''), 512) AS input_preview,
+    argMinIf(leftUTF8(input, 512), start_time, input != '') AS input_preview,
     argMin(service_name, tuple(parent_span_id != '', start_time)) AS service_name,
     anyIf(model, model != '') AS model,
     min(start_time) AS started_at,
@@ -269,16 +296,15 @@ FROM (
     countIf(status_code = 2) AS error_count,
     max(inserted_at) AS last_ingested_at
   FROM catena_spans FINAL
-  WHERE owner_id = ? AND end_time >= ? AND start_time <= ?
+  PREWHERE owner_id = ? AND trace_id IN (SELECT trace_id FROM recent_traces)
+  WHERE end_time >= ? AND start_time <= ?
   GROUP BY trace_id
 )
-WHERE agent_id = ? OR (agent_id = '' AND %s)
-ORDER BY ended_at DESC
-LIMIT ?`, legacyFilter)
+ORDER BY ended_at DESC, trace_id`, legacyFilter)
 	args := []any{ownerID, windowStart, windowEnd}
 	args = append(args, agentID)
 	args = append(args, legacyFilterArgs...)
-	args = append(args, limit)
+	args = append(args, limit, ownerID, windowStart, windowEnd)
 	rows, err := s.conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err

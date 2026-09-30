@@ -108,7 +108,7 @@ func TestHTTPRunLifecycleAndSSEReconnect(t *testing.T) {
 	if bundleResponse.StatusCode != http.StatusOK ||
 		len(bundle) < 1_000 ||
 		!strings.Contains(bundle, "Catena") ||
-		!strings.Contains(bundle, "Trace Farm") {
+		!strings.Contains(bundleResponse.Header.Get("Content-Type"), "javascript") {
 		t.Fatalf("embedded Web bundle is unavailable: %d", bundleResponse.StatusCode)
 	}
 
