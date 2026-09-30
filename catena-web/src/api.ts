@@ -1,31 +1,25 @@
 import type {
   ApiToken,
   AgentTraceWindow,
-  AgentSummary,
   RegisteredAgent,
   RegisteredAgentConnection,
   ConversationDocument,
   ConversationSummary,
   EvolutionJob,
   EvolutionModelSettings,
-  Issue,
-  RegressionCase,
-  Release,
   MemoryIngestReceipt,
   MemoryTaskStatus,
   MemoryTaskRecord,
   MemoryFactGraph,
   MemoryList,
   MemoryRecallBundle,
-  Run,
-  Runtime,
   Session,
-  SystemStatus,
   TraceDetail,
-  TraceSummary,
   WorkspaceData,
 } from "./types";
 import { normalizeEvolutionJob, normalizeEvolutionJobs } from "./evolution";
+import { routeResources, workspaceResources } from "./workspace";
+import type { Route } from "./navigation";
 
 type Problem = {
   detail?: string;
@@ -44,9 +38,12 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const read = !init?.method || init.method === "GET";
+  const timeout = read ? AbortSignal.timeout(15000) : undefined;
   const response = await fetch(path, {
     credentials: "same-origin",
     ...init,
+    signal: init?.signal && timeout ? AbortSignal.any([init.signal, timeout]) : init?.signal ?? timeout,
     headers: {
       Accept: "application/json",
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
@@ -70,55 +67,59 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   session: () => request<Session>("/v1/auth/session"),
   logout: () => request<void>("/v1/auth/logout", { method: "POST" }),
-  workspace: async (): Promise<WorkspaceData> => {
-    const [system, runtimes, runs, jobs, issues, cases, releases, traces, agents] = await Promise.all([
-      request<SystemStatus>("/v1/system/status"),
-      request<{ runtimes: Runtime[] }>("/v1/runtimes"),
-      request<{ runs: Run[] }>("/v1/runs?limit=40"),
-      request<{ evolution_jobs: EvolutionJob[] }>("/v1/evolution-jobs?limit=40"),
-      request<{ issues: Issue[] }>("/v1/issues?limit=40"),
-      request<{ cases: RegressionCase[] }>("/v1/cases?limit=40"),
-      request<{ releases: Release[] }>("/v1/releases?limit=40"),
-      request<{ available: boolean; traces: TraceSummary[] }>("/v1/traces?limit=100"),
-      request<{ available: boolean; agents: AgentSummary[] }>("/v1/agents?limit=100"),
-    ]);
-    return {
-      system,
-      runtimes: runtimes.runtimes,
-      runs: runs.runs,
-      evolutionJobs: normalizeEvolutionJobs(jobs.evolution_jobs),
-      issues: issues.issues,
-      cases: cases.cases,
-      releases: releases.releases,
-      traceAvailable: traces.available,
-      agentAvailable: agents.available,
-      traces: traces.traces,
-      agents: agents.agents,
-    };
+  workspace: async (route: Route, signal: AbortSignal): Promise<Partial<WorkspaceData>> => {
+    const resources = routeResources[route];
+    const reads = resources.map(async (resource) => {
+      const result = await request<Record<string, unknown>>(workspaceResources[resource], { signal });
+      if (resource === "system") return { system: result };
+      if (resource === "evolutionJobs") return { evolutionJobs: normalizeEvolutionJobs(result.evolution_jobs) };
+      if (resource === "agents") return { agents: result.agents, agentAvailable: result.available };
+      if (resource === "traces") return { traces: result.traces, traceAvailable: result.available };
+      return { [resource]: result[resource] };
+    });
+    if (route === "home") {
+      const parts = await Promise.allSettled(reads);
+      signal.throwIfAborted();
+      const patch: Partial<WorkspaceData> = { overviewErrors: {} };
+      parts.forEach((part, index) => {
+        if (part.status === "fulfilled") Object.assign(patch, part.value);
+        else {
+          const resource = resources[index] as "agents" | "traces" | "evolutionJobs";
+          patch.overviewErrors![resource] = part.reason instanceof Error ? part.reason.message : "Request failed";
+        }
+      });
+      return patch;
+    }
+    const parts = await Promise.all(reads);
+    return Object.assign({}, ...parts) as Partial<WorkspaceData>;
   },
-  trace: (traceID: string) => request<TraceDetail>(`/v1/traces/${encodeURIComponent(traceID)}`),
-  agentTraces: (agentID: string, windowStart: string, windowEnd: string, limit = 100) => {
+  trace: (traceID: string, signal?: AbortSignal) => request<TraceDetail>(`/v1/traces/${encodeURIComponent(traceID)}`, { signal }),
+  agentTraces: (agentID: string, windowStart: string, windowEnd: string, limit = 100, signal?: AbortSignal) => {
     const query = new URLSearchParams({
       from: windowStart,
       to: windowEnd,
       limit: String(limit),
     });
-    return request<AgentTraceWindow>(`/v1/agents/${encodeURIComponent(agentID)}/traces?${query}`);
+    return request<AgentTraceWindow>(`/v1/agents/${encodeURIComponent(agentID)}/traces?${query}`, { signal });
   },
   createAgent: (displayName: string) =>
     request<{ agent: RegisteredAgent; api_token: ApiToken; token: string }>("/v1/agents", {
       method: "POST",
       body: JSON.stringify({ display_name: displayName }),
     }),
-  registeredAgent: (agentID: string) =>
-    request<RegisteredAgentConnection>(`/v1/agents/${encodeURIComponent(agentID)}`),
+  registeredAgent: (agentID: string, signal?: AbortSignal) =>
+    request<RegisteredAgentConnection>(`/v1/agents/${encodeURIComponent(agentID)}`, { signal }),
   createAgentConnectionKey: (agentID: string) =>
     request<{ api_token: ApiToken; token: string }>(
       `/v1/agents/${encodeURIComponent(agentID)}/api-key`,
       { method: "POST" },
     ),
-  evolutionJob: async (jobID: string) => normalizeEvolutionJob(
-    await request<unknown>(`/v1/evolution-jobs/${encodeURIComponent(jobID)}`),
+  evolutionJobs: async (signal?: AbortSignal) => {
+    const result = await request<{ evolution_jobs: EvolutionJob[] }>(workspaceResources.evolutionJobs, { signal });
+    return normalizeEvolutionJobs(result.evolution_jobs);
+  },
+  evolutionJob: async (jobID: string, signal?: AbortSignal) => normalizeEvolutionJob(
+    await request<unknown>(`/v1/evolution-jobs/${encodeURIComponent(jobID)}`, { signal }),
   ),
   deleteEvolutionJob: (jobID: string) => request<void>(
     `/v1/evolution-jobs/${encodeURIComponent(jobID)}`,

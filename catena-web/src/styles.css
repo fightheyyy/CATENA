@@ -82,6 +82,27 @@ a { color: inherit; }
 
 .main-canvas { min-width: 0; min-height: 100dvh; background: var(--surface); }
 
+.workspace-refresh { width: min(1180px, calc(100% - 64px)); margin: 0 auto; padding-top: 14px; display: flex; justify-content: flex-end; align-items: center; gap: 14px; color: var(--muted); font-size: 12px; }
+.agent-connection-guide { min-width: 0; margin-top: 28px; padding: 24px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--canvas); }
+.agent-connection-guide > header { display: flex; gap: 20px; justify-content: space-between; align-items: flex-start; }
+.agent-connection-guide h2 { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
+.agent-connection-guide p { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.agent-connection-guide a { text-underline-offset: 3px; }
+.connection-config-actions { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 18px; }
+.connection-config-actions label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }
+.connection-config-actions select { max-width: 100%; padding: 9px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; }
+.connection-config-preview { max-width: 100%; overflow: auto; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-strong); color: var(--ink); font: 12px/1.75 var(--font-mono); }
+.connection-check { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; line-height: 1.65; }
+.connection-check.connected { color: var(--good); }
+.connection-check.failed { color: var(--bad); }
+.api-key-section + .llm-config-section { margin-top: 48px; }
+@media (max-width: 720px) {
+  .agent-connection-guide { padding: 16px; }
+  .agent-connection-guide, .trace-detail-shell { scroll-margin-top: 132px; }
+  .agent-connection-guide > header { flex-wrap: wrap; gap: 8px; }
+  .workspace-refresh { width: calc(100% - 36px); }
+}
+
 .account-menu { position: relative; z-index: 100; display: flex; flex-direction: column-reverse; gap: 8px; }
 .account-trigger { width: 100%; min-height: 44px; padding: 5px 9px 5px 5px; border: 1px solid var(--line); border-radius: 9px; display: flex; align-items: center; gap: 9px; background: var(--surface-strong); color: var(--ink); cursor: pointer; }
 .account-trigger:hover, .account-trigger[aria-expanded="true"] { border-color: var(--line-strong); background: var(--surface-strong); }
@@ -1234,6 +1255,11 @@ a { color: inherit; }
   .token-identity { width: 100%; grid-template-columns: 1fr; }
   .token-state { grid-column: auto; }
   .token-actions { width: 100%; justify-content: flex-end; }
+}
+
+@media (max-width: 420px) {
+  .sidebar nav { grid-template-columns: repeat(5, auto); }
+  .sidebar nav .nav-item { padding-inline: 4px; font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

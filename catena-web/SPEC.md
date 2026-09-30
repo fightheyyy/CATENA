@@ -1,31 +1,47 @@
 # Catena Web Specification
 
 Status: implemented MVP1 contract
-Updated: 2026-08-15
+Updated: 2026-09-16
 
 ## Responsibilities
 
-The React client presents five primary journeys: Agent, Conversation, Memory, Trace and Trace Farm. It calls same-origin Go APIs only and contains no authentication or workflow source of truth.
+The React client presents Overview, History, Memory and Outputs, with Agent
+inspection, connections and settings as supporting routes. History includes
+Trace and Conversation reading. It calls same-origin Go APIs only and contains
+no authentication or workflow source of truth.
 
 ## Current Architecture
 
 ```mermaid
 flowchart LR
-    Routes["React routes"] --> API["Typed fetch client"]
+    Routes["URL route · exact evidence identity"] --> Data["Journey-scoped cache<br/>cancel · refresh · retry"]
+    Data --> API["Typed fetch client · bounded reads"]
     API --> Go["Catena Go API"]
-    Routes --> Views["Agent · Conversation · Memory · Trace · Farm"]
+    Routes --> Shell["Warm light/dark shell<br/>single heading · sidebar refresh · mobile bottom nav"]
+    Shell --> Views["Overview · History · Memory · Outputs"]
+    Data --> Overview["Recent history · compact outputs<br/>partial errors · search · exact links"]
+    Views --> Overview
+    Views --> History["Trace · Conversation tabs"]
     Views --> TraceIndex["Agent → Session → Trace index"]
     TraceIndex --> Narrative["Turn narrative<br/>request · final answer"]
     Narrative --> CausalSpine["causal spine<br/>Model · Tool · state events"]
     CausalSpine --> InlineEvidence["selected-step evidence<br/>input · output · exact call ID"]
     Narrative --> Diagnostics["raw Span waterfall<br/>attributes · timing"]
-    Views --> Farm["Trace Farm analysis history"]
-    Farm --> JobDetail["one analysis detail"]
-    JobDetail --> EmbeddedAsset["asset embedded below job metadata"]
-    Views --> MemoryTask["Memory task<br/>step progress · retry · result"]
+    Views --> Farm["Readable output library · analysis history"]
+    Farm --> JobDetail["selected analysis · bounded polling"]
+    JobDetail --> JobState["shared updated Job records"]
+    Farm --> Background["active Job refresh in library"]
+    Background --> JobState
+    JobState --> EmbeddedAsset["fresh asset library · analysis history"]
+    Views --> MemoryCards["Memory collection · full-text reader<br/>mixed-result search · reset · retry"]
+    MemoryCards --> Graph["Optional relationship graph"]
+    MemoryCards --> MemoryTask["Extraction tasks when present or failed<br/>step progress · retry · result"]
     MemoryTask --> API
-    Routes --> Keys["API Management"]
+    Routes --> Keys["Connections"]
     Keys --> API
+    Keys --> Guide["POSIX · PowerShell configuration<br/>clipboard-only credential"]
+    Guide --> FirstData["first-data check · retry · Agent handoff"]
+    FirstData --> API
     Routes --> Settings["Language · Theme · Account"]
     Settings --> API
     Routes --> AccountMenu["Sidebar account area<br/>identity · switch · sign out"]
@@ -36,6 +52,19 @@ flowchart LR
 
 ```mermaid
 flowchart LR
+    Route["URL route · Agent · exact Trace"] --> RouteData["Journey-scoped loading<br/>cancel · cache · refresh · retry"]
+    Route --> Shell["Quiet sidebar · four primary destinations<br/>single page heading · accessible refresh · no persistent slogans"]
+    Shell --> Overview["Content-first overview<br/>searchable recent history · compact outputs<br/>no metric tiles or promotional cards"]
+    RouteData --> Overview
+    Overview --> EvidenceLinks["Exact Trace · Agent · analysis links"]
+    Shell --> History["History tabs<br/>Trace · Conversation"]
+    Shell --> MemoryCollection["Memory cards first<br/>search · source context · optional graph"]
+    Shell --> Outputs["Readable asset library<br/>generation history as secondary view"]
+    RouteData --> Views["Independent workspaces"]
+    Views --> JobState["Shared updated Job records"]
+    JobState --> FreshAssets["Progress → completed asset library"]
+    Keys --> Guide["Shell config · clipboard-only key"]
+    Guide --> FirstData["Bounded first-data polling<br/>retry · open Agent"]
     Conversation["Conversation index"] --> ConversationDetail["User-visible transcript detail"]
     AgentTrace["Agent selector"] --> Session["Session index"]
     Session --> SessionGroup["Session group header"]
@@ -60,14 +89,14 @@ flowchart LR
     Credential --> Ingest["OTLP · Conversation ingest"]
     Ingest --> Stats
     Settings["Settings"] --> Preferences["Language · Theme · account details"]
-    Shell["Global shell"] --> Sidebar["Product navigation · utilities"]
+    Shell --> Sidebar["Product navigation · utilities"]
     Sidebar --> AccountMenu["labeled identity<br/>switch · sign out"]
     AccountMenu --> Go
-    Farm["Trace Farm"] --> AssetLibrary["asset-first library<br/>Agent · kind · package"]
+    Outputs --> AssetLibrary["asset-first library<br/>Agent · kind · package"]
     AssetLibrary --> AssetDocument["package tree · readable files · copy · download"]
     AssetDocument --> DSH["DSH Plugin bundle<br/>package.json · Cordis patch"]
     AssetDocument --> Provenance["source analysis · Trace evidence"]
-    Farm --> AnalysisHistory["secondary analysis history"]
+    Outputs --> AnalysisHistory["secondary analysis history"]
     AnalysisHistory --> JobProgress["Inspector · Evolution · Reviewer"]
 ```
 
@@ -77,10 +106,47 @@ field; the UI only displays the server's inferred result after evidence arrives.
 
 ## UX invariants
 
-- The primary navigation is Agent → Conversation → Memory → Trace → Trace Farm.
-- At tablet and mobile widths, API Management and Settings stay visible in a
-  utility row above the five product destinations; navigation never relies on
-  horizontal scrolling.
+- Connections use a restrained, readable type scale: 14px labels, values and
+  actions, 13px status text, and 18px section headings. URLs and masked keys
+  use the UI font; monospaced type is reserved for executable configuration.
+  Endpoint rows give values the available width and wrap on narrow screens
+  without shrinking the type. No explanatory copy or credential behavior is
+  added by this typography refinement.
+
+- Routine screens put real content before explanatory copy. Each page has
+  one main heading; avoid slogans, eyebrow subtitles, duplicate counts and
+  generic instructions next to self-explanatory controls. Empty states retain
+  one useful next step, errors retain recovery, and source/credential/delete
+  information remains available where it affects a decision.
+
+- A route requests only its own data. An unrelated API failure cannot block
+  navigation or Settings; failed reads show retry without silently claiming
+  that evidence is empty. Obsolete route reads are cancelled.
+- The authenticated root opens Overview using existing Agent, Trace and Job
+  endpoints. A failed Overview section shows a recoverable error while the
+  other sections remain usable. Legacy Run, Issue, Case and Release APIs are
+  not part of startup. Overview opens on recent evidence without metric tiles
+  or promotional cards; no activity or analysis finding is invented.
+- Agent and Trace deep links preserve the exact selection on reload and back.
+  Opening one recent Trace must never silently select a different Trace.
+- Evolution detail polling updates the shared Job record. Active analyses
+  continue refreshing while the library is visible, so completed assets appear
+  without reloading the browser. Polling is bounded and pauses in hidden tabs.
+- Agent connection guidance offers POSIX and PowerShell configuration, with a
+  placeholder in the preview. The actual credential is recovered only when
+  copying. First-data checks stop on success, failure, timeout or unmount.
+
+- The primary navigation is Overview → History → Memory → Outputs. Agents,
+  connections and settings are utilities. Existing deep links stay valid;
+  Trace and Conversation are tabs inside History.
+- At mobile widths, four labeled destinations remain visible without
+  horizontal scrolling, and utility/account actions remain discoverable.
+- Warm neutral surfaces, one restrained accent, consistent icons and a compact
+  heading scale define the shared visual system. Long technical explanations,
+  raw attributes and process diagnostics are secondary disclosures.
+- Memory opens on readable cards with search, clear empty/error states and
+  a return-to-all action. Graph inspection is an explicit optional view. No
+  hidden graph or extraction list should overwhelm the first screen.
 - API management asks only for an Agent name when creating a credential.
 - A generated key is presented as that Agent's credential, never as an
   independent settings object.

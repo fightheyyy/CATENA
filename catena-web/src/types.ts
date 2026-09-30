@@ -428,6 +428,7 @@ export type ConversationDocument = {
 };
 
 export type WorkspaceData = {
+  overviewErrors?: Partial<Record<"agents" | "traces" | "evolutionJobs", string>>;
   system: SystemStatus;
   runtimes: Runtime[];
   runs: Run[];

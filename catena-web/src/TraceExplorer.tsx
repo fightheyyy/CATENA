@@ -29,7 +29,7 @@ type Locale = "zh" | "en";
 
 const traceCopy = {
   zh: {
-    title: "Trace",
+    title: "经历",
     body: "从用户请求开始，顺着模型、工具和分支看完整执行过程。",
     recent: "最近 100 条",
     agentRecent: "所选 Agent · 最近 30 天",
@@ -61,7 +61,7 @@ const traceCopy = {
     traceUnavailable: "Trace 存储尚未配置",
     traceUnavailableBody: "为 Catena Server 配置 ClickHouse 后，即可直接接收和查询 OTLP Trace。",
     noTraces: "等待第一条 Trace",
-    noTracesBody: "从 Agent 页复制专属接入配置，把 OTLP/HTTP exporter 指向这个地址。",
+    noTracesBody: "前往「连接」复制 Agent 专属配置，开始上传 Trace。",
     endpoint: "OTLP Endpoint",
     execution: "Agent 执行链",
     selectSpan: "默认折叠 Runtime 内部噪声，选择一步查看证据",
@@ -108,7 +108,7 @@ const traceCopy = {
     backToList: "返回 Trace 列表",
   },
   en: {
-    title: "Traces",
+    title: "History",
     body: "Start with the request, then follow every model call, tool, and branch.",
     recent: "Latest 100",
     agentRecent: "Selected Agent · last 30 days",
@@ -140,7 +140,7 @@ const traceCopy = {
     traceUnavailable: "Trace storage is not configured",
     traceUnavailableBody: "Configure ClickHouse for Catena Server to receive and query OTLP Traces directly.",
     noTraces: "Waiting for the first Trace",
-    noTracesBody: "Copy the dedicated connection configuration from Agents and point the OTLP/HTTP exporter to this endpoint.",
+    noTracesBody: "Open Connections to copy your Agent configuration and start uploading Traces.",
     endpoint: "OTLP Endpoint",
     execution: "Agent execution chain",
     selectSpan: "Runtime internals are folded by default. Select a step to inspect evidence.",
@@ -192,36 +192,44 @@ export function TraceExplorer({
   locale,
   workspace,
   initialAgentID,
+  initialTraceID,
+  onSelectTrace,
+  refreshVersion,
+  navigation,
 }: {
   locale: Locale;
   workspace: WorkspaceData;
   initialAgentID?: string;
+  initialTraceID?: string;
+  onSelectTrace: (agentID: string, traceID?: string) => void;
+  refreshVersion: string;
+  navigation?: React.ReactNode;
 }) {
   const t = traceCopy[locale];
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<TraceFilter>("all");
   const [agentID, setAgentID] = useState(initialAgentID ?? "");
-  const [selectedTraceID, setSelectedTraceID] = useState(workspace.traces[0]?.trace_id ?? "");
+  const [selectedTraceID, setSelectedTraceID] = useState(initialTraceID || (initialAgentID ? "" : workspace.traces[0]?.trace_id) || "");
   const [detail, setDetail] = useState<TraceDetail | null>(null);
   const [detailError, setDetailError] = useState("");
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedSpanID, setSelectedSpanID] = useState("");
   const [detailRequestVersion, setDetailRequestVersion] = useState(0);
-  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(Boolean(initialTraceID));
   const [expandedSessionKey, setExpandedSessionKey] = useState(
     workspace.traces[0] ? traceSessionKey(workspace.traces[0], initialAgentID) : "",
   );
-  const agentWindow = useAgentTraceWindow(agentID, 500);
+  const agentWindow = useAgentTraceWindow(agentID, 500, workspace.agents);
   const sourceTraces = useMemo(
     () => tracesForAgentSelection(workspace.traces, agentID, agentWindow.traces),
     [agentID, agentWindow.traces, workspace.traces],
   );
 
   useEffect(() => {
-    if (initialAgentID && workspace.agents.some((agent) => agent.agent_id === initialAgentID)) {
-      setAgentID(initialAgentID);
-    }
-  }, [initialAgentID, workspace.agents]);
+    setAgentID(initialAgentID || "");
+    setSelectedTraceID(initialTraceID || "");
+    setMobileDetailOpen(Boolean(initialTraceID));
+  }, [initialAgentID, initialTraceID]);
 
   const filteredTraces = useMemo(
     () => filterTraceSummaries(sourceTraces, query, filter),
@@ -237,6 +245,8 @@ export function TraceExplorer({
   );
 
   useEffect(() => {
+    if (initialTraceID && selectedTraceID === initialTraceID) return;
+    if (agentID && (agentWindow.loading || agentWindow.error)) return;
     if (filteredTraces.length === 0) {
       setSelectedTraceID("");
       setDetail(null);
@@ -245,7 +255,7 @@ export function TraceExplorer({
     if (!filteredTraces.some((trace) => trace.trace_id === selectedTraceID)) {
       setSelectedTraceID(filteredTraces[0].trace_id);
     }
-  }, [filteredTraces, selectedTraceID]);
+  }, [filteredTraces, selectedTraceID, initialTraceID, agentID, agentWindow.loading, agentWindow.error]);
 
   useEffect(() => {
     const selected = filteredTraces.find((trace) => trace.trace_id === selectedTraceID);
@@ -253,11 +263,12 @@ export function TraceExplorer({
   }, [agentID, filteredTraces, selectedTraceID]);
 
   useEffect(() => {
-    if (!selectedTraceID) return;
+    if (!selectedTraceID) { setDetail(null); setDetailLoading(false); setDetailError(""); return; }
     let active = true;
+    const controller = new AbortController();
     setDetailError("");
     setDetailLoading(true);
-    void api.trace(selectedTraceID).then((nextDetail) => {
+    void api.trace(selectedTraceID, controller.signal).then((nextDetail) => {
       if (!active) return;
       setDetail(nextDetail);
       const firstUsefulSpan = preferredTraceSpan(buildTraceSemanticView(nextDetail.spans));
@@ -276,18 +287,19 @@ export function TraceExplorer({
     }).finally(() => {
       if (active) setDetailLoading(false);
     });
-    return () => { active = false; };
-  }, [selectedTraceID, detailRequestVersion, t.detailFailed]);
+    return () => { active = false; controller.abort(); };
+  }, [selectedTraceID, detailRequestVersion, t.detailFailed, refreshVersion]);
 
   return (
     <section className="page trace-page">
       <header className="trace-page-header">
-        <div><h1>{t.title}</h1><p>{t.body}</p></div>
+        <h1>{t.title}</h1>
         <span>{agentID ? t.agentRecent : t.recent}</span>
       </header>
+      {navigation}
       {!workspace.traceAvailable ? (
         <TraceConnectState title={t.traceUnavailable} body={t.traceUnavailableBody} endpointLabel={t.endpoint} />
-      ) : workspace.traces.length === 0 ? (
+      ) : workspace.traces.length === 0 && !agentID && !initialTraceID ? (
         <TraceConnectState title={t.noTraces} body={t.noTracesBody} endpointLabel={t.endpoint} />
       ) : (
         <div className={mobileDetailOpen ? "trace-browser detail-open" : "trace-browser"}>
@@ -298,6 +310,7 @@ export function TraceExplorer({
                 <select value={agentID} onChange={(event) => {
                   setAgentID(event.target.value);
                   setMobileDetailOpen(false);
+                  onSelectTrace(event.target.value);
                 }}>
                   <option value="">{t.allAgents}</option>
                   {workspace.agents.map((agent) => <option value={agent.agent_id} key={agent.agent_id}>{agent.display_name}</option>)}
@@ -353,6 +366,7 @@ export function TraceExplorer({
                         setExpandedSessionKey(nextExpanded ? group.key : "");
                         if (nextExpanded && !group.traces.some((trace) => trace.trace_id === selectedTraceID)) {
                           setSelectedTraceID(group.traces[0].trace_id);
+                          onSelectTrace(agentID, group.traces[0].trace_id);
                         }
                       }}
                     >
@@ -381,6 +395,7 @@ export function TraceExplorer({
                         onSelect={() => {
                           setSelectedTraceID(trace.trace_id);
                           setMobileDetailOpen(true);
+                          onSelectTrace(agentID, trace.trace_id);
                         }}
                       />
                     ))}</div> : null}
@@ -390,6 +405,7 @@ export function TraceExplorer({
             </div>
           </aside>
           <main className="trace-detail-shell" id="selected-trace-detail">
+            {mobileDetailOpen && (!detail || detailLoading) ? <button className="trace-back-button" type="button" onClick={() => setMobileDetailOpen(false)}>{t.backToList}</button> : null}
             {detailLoading ? <TraceDetailLoading label={t.loading} /> : null}
             {!detailLoading && detailError ? (
               <div className="trace-detail-state" role="alert"><p>{detailError}</p><button className="text-button" type="button" onClick={() => setDetailRequestVersion((value) => value + 1)}>{t.retry}</button></div>
@@ -533,15 +549,7 @@ function TraceDetailWorkspace({
           <TraceTime value={detail.summary.end_time} locale={locale} />
         </div>
       </header>
-      <section className="trace-semantic-overview" aria-label={t.execution}>
-        <div><strong>{semanticView.turnCount}</strong><span>{t.turns}</span></div>
-        <div><strong>{semanticView.counts.model}</strong><span>{t.models}</span></div>
-        <div><strong>{semanticView.counts.tool + semanticView.counts.artifact}</strong><span>{t.tools}</span></div>
-        <div><strong>{hasCanonicalNarrative ? semanticView.counts.subagent + semanticView.counts.retry + semanticView.counts.compact : semanticView.counts.check}</strong><span>{hasCanonicalNarrative ? t.events : t.checks}</span></div>
-        <div className={semanticView.counts.error > 0 ? "has-error" : ""}><strong>{semanticView.counts.error}</strong><span>{t.errors}</span></div>
-      </section>
       <section className="trace-execution">
-        <div className="trace-execution-heading"><h3>{t.execution}</h3><span>{t.selectSpan}</span></div>
         <div className="trace-lens-tabs" role="tablist" aria-label={t.execution}>
           {((hasCanonicalNarrative ? [
             ["narrative", t.narrativeLens, semanticView.agentSteps.length],

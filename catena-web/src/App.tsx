@@ -1,42 +1,33 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import type { MemoryVisualNode } from "./memoryGraph";
-import { primaryNavigationRoutes } from "./navigation";
+import { primaryNavigationRoutes, readNavigation, navigationURL, type Route, type EvidenceSelection } from "./navigation";
+import { useWorkspace } from "./useWorkspace";
+import { Icon, type IconName } from "./Icons";
 import { isMemoryTaskActive, memoryTaskDisplayPercent } from "./memoryTaskView";
 import type { EvolutionJob, MemoryFactGraph, MemoryRecallBundle, MemoryRecallItem, MemoryRecord, MemoryTaskRecord, Session, WorkspaceData } from "./types";
 
 const AgentWorkspace = lazy(() => import("./AgentWorkspace").then((module) => ({ default: module.AgentWorkspace })));
+const OverviewWorkspace = lazy(() => import("./OverviewWorkspace").then((module) => ({ default: module.OverviewWorkspace })));
 const ApiManagementPage = lazy(() => import("./ApiManagementPage").then((module) => ({ default: module.ApiManagementPage })));
 const ConversationWorkspace = lazy(() => import("./ConversationWorkspace").then((module) => ({ default: module.ConversationWorkspace })));
 const EvolutionWorkspace = lazy(() => import("./EvolutionWorkspace").then((module) => ({ default: module.EvolutionWorkspace })));
 const MemoryGraphCanvas = lazy(() => import("./MemoryGraphCanvas").then((module) => ({ default: module.MemoryGraphCanvas })));
 const TraceExplorer = lazy(() => import("./TraceExplorer").then((module) => ({ default: module.TraceExplorer })));
 
-type Route = "home" | "agents" | "apiKeys" | "conversations" | "traces" | "evolution" | "memory" | "settings";
 type Locale = "zh" | "en";
 type Theme = "system" | "light" | "dark";
 
-const routePaths: Record<Route, string> = {
-  home: "/",
-  agents: "/agents",
-  apiKeys: "/api-keys",
-  conversations: "/conversations",
-  traces: "/traces",
-  evolution: "/evolution",
-  memory: "/memory",
-  settings: "/settings",
-};
-
 const copy = {
   zh: {
-    nav: { home: "首页", agents: "Agent", apiKeys: "API 管理", conversations: "对话", traces: "Trace", evolution: "Trace Farm", memory: "记忆", settings: "设置" },
+    nav: { home: "总览", agents: "Agent", apiKeys: "连接", conversations: "对话", traces: "经历", evolution: "产出", memory: "记忆", settings: "设置" },
     signIn: "使用 GitHub 登录",
     oauthFlowExpired: "登录流程已过期或从另一个地址发起。请重新登录，Catena 会自动使用正确的回调地址。",
     oauthUpstreamUnavailable: "GitHub 连接暂时超时，请重新登录。Catena 不会保留失败的授权流程。",
     oauthCancelled: "GitHub 授权已取消，你可以随时重新登录。",
-    landingTitle: "让 Agent 的每次变化，都有证据。",
-    landingBody: "汇聚不同 Agent 的 Trace，用内置 XiaoBaOS 持续提炼 agent.md、Skill、Role 与 Harness 优化。",
-    landingNote: "跨 Agent 证据。持续提炼。可复用资产。",
+    landingTitle: "让每一段经历，有所积累。",
+    landingBody: "把散落在不同 Agent 中的工作连起来。回看经历，留下记忆，提炼可复用的成果。",
+    landingNote: "你的 Agent 在端侧工作，经历在这里汇合。",
     homeTitle: "今天的 Agent 状态",
     homeBody: "汇聚不同 Agent 的 Trace，由 XiaoBaOS 提炼可复用的 Agent 资产。",
     agentsTitle: "Agent",
@@ -44,7 +35,7 @@ const copy = {
     tracesTitle: "Trace",
     tracesBody: "Trace 是运行证据，不是日志堆。工具调用、结果与产物会保留同一条因果链。",
     memoryTitle: "记忆",
-    memoryBody: "把 XiaoBaOS 的用户可见对话提炼为可追溯记忆，并通过语义、关系与时间三条路径召回。",
+    memoryBody: "保留重要的事实、决定与经验，每一条都能回看来源。",
     memoryConnected: "记忆能力已就绪",
     memoryConnectedBody: "记忆按当前空间独立保存，并保留来源对话。",
     memoryTasks: "提炼任务",
@@ -63,18 +54,18 @@ const copy = {
     temporalRecallBody: "恢复相邻轮次和事件顺序。",
     memoryUnavailable: "记忆能力尚未就绪",
     memoryUnavailableBody: "对话记录会继续保存；记忆服务配置完成后，即可从对话中提炼并召回长期记忆。",
-    memoryQuery: "你想让 Agent 回忆什么？",
+    memoryQuery: "找回一段记忆",
     memoryPlaceholder: "例如：上次发布为什么失败？",
-    memorySearch: "召回",
-    memorySearching: "正在召回",
-    memoryResults: "召回结果",
+    memorySearch: "搜索记忆",
+    memorySearching: "正在寻找",
+    memoryResults: "找到的记忆",
     recentMemories: "最近记忆",
     memoryCount: "条长期记忆",
     noMemories: "还没有长期记忆。打开一段对话，选择“提炼为记忆”。",
     memoryLoadFailed: "无法读取记忆",
     memoryRecallFailed: "暂时无法召回，请稍后重试或联系管理员检查记忆配置。",
     memoryGraph: "记忆关系图",
-    memoryGraphHint: "点击 Fact 查看它和实体、相关事实的真实关系。",
+    memoryGraphHint: "选择一条记忆，看看它和其他信息如何相连。",
     memoryGraphFailed: "暂时无法读取这条记忆的关系图。",
     memoryGraphEmpty: "从一段对话提炼记忆后，这里会出现可探索的关系图。",
     memoryInspector: "当前节点",
@@ -93,11 +84,11 @@ const copy = {
     searchTime: "查询耗时",
     sourceConversation: "来源对话",
     noMemoryResults: "没有找到相关记忆。",
-    recallFact: "Fact",
+    recallFact: "事实",
     recallConversation: "原始对话",
-    recallTopic: "Topic",
+    recallTopic: "主题",
     settingsTitle: "设置",
-    settingsBody: "管理界面语言、显示主题与当前登录会话。Agent 和 LLM 接入统一在 API 管理中维护。",
+    settingsBody: "让 Catena 更符合你的阅读习惯。",
     language: "语言",
     languageBody: "选择 Catena 的界面语言。",
     theme: "主题",
@@ -144,14 +135,14 @@ const copy = {
     latest: "最近更新",
   },
   en: {
-    nav: { home: "Home", agents: "Agents", apiKeys: "API Management", conversations: "Conversations", traces: "Traces", evolution: "Trace Farm", memory: "Memory", settings: "Settings" },
+    nav: { home: "Overview", agents: "Agents", apiKeys: "Connections", conversations: "Conversations", traces: "History", evolution: "Outputs", memory: "Memory", settings: "Settings" },
     signIn: "Continue with GitHub",
     oauthFlowExpired: "This sign-in flow expired or started on another address. Restart it and Catena will use the canonical callback origin.",
     oauthUpstreamUnavailable: "GitHub temporarily timed out. Restart sign-in; Catena does not retain the failed authorization flow.",
     oauthCancelled: "GitHub authorization was cancelled. You can restart sign-in at any time.",
-    landingTitle: "Evidence for every Agent change.",
-    landingBody: "Unify Traces across Agents and let built-in XiaoBaOS continuously distill agent.md, Skill, Role, and Harness improvements.",
-    landingNote: "Cross-Agent evidence. Continuous distillation. Reusable assets.",
+    landingTitle: "Good work leaves a trail.",
+    landingBody: "Bring your Agents' work together. Revisit the journey, keep useful memories, and create something you can use again.",
+    landingNote: "Your Agents work locally. Their history comes together here.",
     homeTitle: "Your Agent state today",
     homeBody: "Unify Traces across Agents and distill reusable Agent assets with XiaoBaOS.",
     agentsTitle: "Agents",
@@ -159,7 +150,7 @@ const copy = {
     tracesTitle: "Traces",
     tracesBody: "A Trace is causal evidence, not a log pile. Tool calls, results, and artifacts stay linked.",
     memoryTitle: "Memory",
-    memoryBody: "Distill user-visible XiaoBaOS Conversations into provenance-bearing memory and recall it through semantic, graph, and temporal paths.",
+    memoryBody: "Keep useful facts, decisions, and experience, with their sources close by.",
     memoryConnected: "Memory is ready",
     memoryConnectedBody: "Memory is isolated to the current space and keeps its source Conversation.",
     memoryTasks: "Distillation tasks",
@@ -178,9 +169,9 @@ const copy = {
     temporalRecallBody: "Recover adjacent turns and event order.",
     memoryUnavailable: "Memory is not ready",
     memoryUnavailableBody: "Conversations will keep syncing. Complete the memory setup to distill and recall long-term memory from them.",
-    memoryQuery: "What should your Agent remember?",
+    memoryQuery: "Find a memory",
     memoryPlaceholder: "Example: Why did the last release fail?",
-    memorySearch: "Recall",
+    memorySearch: "Search memory",
     memorySearching: "Recalling",
     memoryResults: "Recall results",
     recentMemories: "Recent memory",
@@ -212,7 +203,7 @@ const copy = {
     recallConversation: "Conversation",
     recallTopic: "Topic",
     settingsTitle: "Settings",
-    settingsBody: "Manage language, appearance, and the current session. Agent and LLM connections live in API Management.",
+    settingsBody: "Make Catena feel comfortable to read and use.",
     language: "Language",
     languageBody: "Choose the language used by Catena.",
     theme: "Theme",
@@ -260,24 +251,21 @@ const copy = {
   },
 } as const;
 
-function currentRoute(): Route {
-  const match = (Object.entries(routePaths) as [Route, string][]).find(([, path]) => path === window.location.pathname);
-  return match?.[0] ?? "home";
-}
-
 function useRoute() {
-  const [route, setRoute] = useState<Route>(currentRoute);
+  const [selection, setSelection] = useState(() => readNavigation(window.location));
   useEffect(() => {
-    const onPopState = () => setRoute(currentRoute());
+    const onPopState = () => setSelection(readNavigation(window.location));
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
-  const navigate = useCallback((next: Route) => {
-    window.history.pushState({}, "", routePaths[next]);
-    setRoute(next);
+  const navigate = useCallback((next: Route, evidence: EvidenceSelection = {}) => {
+    const url = navigationURL(next, evidence);
+    if (url === window.location.pathname + window.location.search) return;
+    window.history.pushState({}, "", url);
+    setSelection(readNavigation(window.location));
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
-  return { route, navigate };
+  return { route: selection.route, selection, navigate };
 }
 
 export function App() {
@@ -287,13 +275,12 @@ export function App() {
     return saved === "light" || saved === "dark" ? saved : "system";
   });
   const [session, setSession] = useState<Session | null>(null);
-  const [workspace, setWorkspace] = useState<WorkspaceData | null>(null);
-  const [selectedEvolutionJobID, setSelectedEvolutionJobID] = useState("");
-  const [selectedEvolutionAgentID, setSelectedEvolutionAgentID] = useState("");
-  const [selectedTraceAgentID, setSelectedTraceAgentID] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const { route, navigate } = useRoute();
+  const { route, selection, navigate } = useRoute();
+  const workspaceState = useWorkspace(route, session?.authenticated ? `${session.mode}:${session.user?.id ?? "local"}` : "");
+  const workspace = workspaceState.data;
+  const { updateJobs, removeJob } = workspaceState;
   const t = copy[locale];
 
   const changeLocale = () => {
@@ -322,11 +309,6 @@ export function App() {
     try {
       const nextSession = await api.session();
       setSession(nextSession);
-      if (nextSession.authenticated) {
-        setWorkspace(await api.workspace());
-      } else {
-        setWorkspace(null);
-      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unknown request error");
     } finally {
@@ -339,43 +321,28 @@ export function App() {
   }, [load]);
 
   const openEvolutionJob = useCallback((job: EvolutionJob) => {
-    setWorkspace((current) => current ? {
-      ...current,
-      evolutionJobs: [job, ...current.evolutionJobs.filter((item) => item.job_id !== job.job_id)],
-    } : current);
-    setSelectedEvolutionJobID(job.job_id);
-    if (job.source_agent_id) setSelectedEvolutionAgentID(job.source_agent_id);
-    navigate("evolution");
-  }, [navigate]);
+    updateJobs([job]);
+    navigate("evolution", { agentID: job.source_agent_id, jobID: job.job_id });
+  }, [navigate, updateJobs]);
 
   const analyzeAgent = useCallback((agentID: string) => {
-    setSelectedEvolutionAgentID(agentID);
-    setSelectedEvolutionJobID("");
-    navigate("evolution");
+    navigate("evolution", { agentID });
   }, [navigate]);
 
   const selectEvolutionJob = useCallback((jobID: string) => {
-    setSelectedEvolutionJobID(jobID);
-  }, []);
+    navigate("evolution", { agentID: selection.agentID, jobID });
+  }, [navigate, selection.agentID]);
 
   const removeEvolutionJob = useCallback((jobID: string) => {
-    setWorkspace((current) => current ? {
-      ...current,
-      evolutionJobs: current.evolutionJobs.filter((item) => item.job_id !== jobID),
-    } : current);
-    setSelectedEvolutionJobID("");
-  }, []);
+    removeJob(jobID);
+    navigate("evolution", { agentID: selection.agentID });
+  }, [navigate, removeJob, selection.agentID]);
 
-  const openAgentTraces = useCallback((agentID: string) => {
-    setSelectedTraceAgentID(agentID);
-    navigate("traces");
+  const openAgentTraces = useCallback((agentID: string, traceID?: string) => {
+    navigate("traces", { agentID, traceID });
   }, [navigate]);
 
   const navigateFromSidebar = useCallback((next: Route) => {
-    if (next === "evolution") {
-      setSelectedEvolutionJobID("");
-      setSelectedEvolutionAgentID("");
-    }
     navigate(next);
   }, [navigate]);
 
@@ -410,42 +377,52 @@ export function App() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#workspace-content">{locale === "zh" ? "跳转至内容" : "Skip to content"}</a>
       <Sidebar
-        route={route}
+        route={route === "conversations" ? "traces" : route}
         locale={locale}
         session={session}
         onNavigate={navigateFromSidebar}
         onSettings={() => navigate("settings")}
         onSwitchAccount={switchAccount}
         onLogout={logout}
+        onRefresh={["home", "agents", "apiKeys", "traces", "evolution"].includes(route) ? workspaceState.refresh : undefined}
+        refreshing={workspaceState.loading}
       />
-      <main className="main-canvas">
+      <main className="main-canvas" id="workspace-content" tabIndex={-1}>
         {error ? <InlineError message={error} action={t.retry} onRetry={load} /> : null}
-        {workspace ? (
+        {workspaceState.error ? <InlineError message={workspaceState.error} action={t.retry} onRetry={workspaceState.refresh} /> : null}
+        {workspaceState.ready || route === "settings" ? (
           <RouteView
             route={route}
             locale={locale}
             workspace={workspace}
             session={session}
-            selectedEvolutionJobID={selectedEvolutionJobID}
-            selectedEvolutionAgentID={selectedEvolutionAgentID}
-            selectedTraceAgentID={selectedTraceAgentID}
+            onNavigate={navigateFromSidebar}
+            selectedEvolutionJobID={selection.jobID}
+            selectedEvolutionAgentID={selection.agentID}
+            selectedTraceAgentID={selection.agentID}
+            selectedTraceID={selection.traceID}
+            selectedAgentID={selection.agentID}
+            refreshVersion={workspaceState.updatedAt}
             onOpenEvolutionJob={openEvolutionJob}
             onSelectEvolutionJob={selectEvolutionJob}
             onDeleteEvolutionJob={removeEvolutionJob}
+            onJobsUpdated={updateJobs}
             onAnalyzeAgent={analyzeAgent}
             onOpenAgentTraces={openAgentTraces}
             onConnectAgent={() => navigate("apiKeys")}
+            onOpenAgent={(agentID) => navigate("agents", { agentID })}
             onOpenMemory={() => navigate("memory")}
-            onRefresh={load}
+            onRefresh={workspaceState.refresh}
             theme={theme}
             onLocale={selectLocale}
             onTheme={selectTheme}
             onLogout={logout}
           />
-        ) : (
+        ) : workspaceState.loading ? (
           <LoadingPanel label={t.loading} />
-        )}
+        ) : null}
       </main>
     </div>
   );
@@ -563,7 +540,7 @@ function Landing({ locale, onLocale, loginURL, oauthError }: { locale: Locale; o
       </header>
       <section className="landing-hero">
         <div className="landing-copy">
-          <h1>{t.landingTitle}</h1>
+          <h1>{locale === "zh" ? t.landingTitle.split("，").map((line, index) => <span key={line}>{line}{index === 0 ? "，" : ""}</span>) : t.landingTitle}</h1>
           <p>{t.landingBody}</p>
           {oauthErrorMessage ? <p className="landing-auth-error" role="alert">{oauthErrorMessage}</p> : null}
           <a className="primary-button" href={loginURL}>{t.signIn}</a>
@@ -584,7 +561,7 @@ function Brand() {
   return (
     <a className="brand" href="/" aria-label="Catena home">
       <img src="/catena-mark.svg" alt="" />
-      <span>CATENA</span>
+      <span>catena</span>
     </a>
   );
 }
@@ -597,6 +574,8 @@ function Sidebar({
   onSettings,
   onSwitchAccount,
   onLogout,
+  onRefresh,
+  refreshing,
 }: {
   route: Route;
   locale: Locale;
@@ -605,27 +584,30 @@ function Sidebar({
   onSettings: () => void;
   onSwitchAccount: () => Promise<void>;
   onLogout: () => Promise<void>;
+  onRefresh?: () => Promise<void>;
+  refreshing: boolean;
 }) {
   const t = copy[locale];
+  const icons: Record<Route, IconName> = { home: "home", traces: "history", memory: "memory", evolution: "outputs", agents: "agents", apiKeys: "plug", settings: "settings", conversations: "book" };
   return (
     <aside className="sidebar">
-      <Brand />
-      <nav aria-label="Product">
+      <div className="sidebar-brand"><Brand />{onRefresh && <button className="text-button icon-button" type="button" aria-label={locale === "zh" ? "刷新" : "Refresh"} title={locale === "zh" ? "刷新" : "Refresh"} disabled={refreshing} onClick={() => void onRefresh()}><Icon name="refresh" /></button>}</div>
+      <nav aria-label={locale === "zh" ? "工作空间" : "Workspace"}>
         {primaryNavigationRoutes.map((item) => (
           <button
             className={route === item ? "nav-item active" : "nav-item"}
             key={item}
             type="button"
+            aria-current={route === item ? "page" : undefined}
             onClick={() => onNavigate(item)}
           >
-            {t.nav[item]}
+            <Icon name={icons[item]} /><span>{t.nav[item]}</span>
           </button>
         ))}
       </nav>
       <div className="sidebar-footer">
         <div className="sidebar-utilities">
-          <button className={route === "apiKeys" ? "nav-item active" : "nav-item"} type="button" onClick={() => onNavigate("apiKeys")}>{t.nav.apiKeys}</button>
-          <button className={route === "settings" ? "nav-item active" : "nav-item"} type="button" onClick={() => onNavigate("settings")}>{t.nav.settings}</button>
+          {(["agents", "apiKeys", "settings"] as const).map((item) => <button key={item} className={route === item ? "nav-item active" : "nav-item"} type="button" aria-current={route === item ? "page" : undefined} onClick={() => onNavigate(item)}><Icon name={icons[item]} /><span>{t.nav[item]}</span></button>)}
         </div>
         <AccountMenu
           locale={locale}
@@ -644,15 +626,21 @@ function RouteView({
   locale,
   workspace,
   session,
+  onNavigate,
   selectedEvolutionJobID,
   selectedEvolutionAgentID,
   selectedTraceAgentID,
+  selectedTraceID,
+  selectedAgentID,
+  refreshVersion,
   onOpenEvolutionJob,
   onSelectEvolutionJob,
   onDeleteEvolutionJob,
+  onJobsUpdated,
   onAnalyzeAgent,
   onOpenAgentTraces,
   onConnectAgent,
+  onOpenAgent,
   onOpenMemory,
   onRefresh,
   theme,
@@ -664,15 +652,21 @@ function RouteView({
   locale: Locale;
   workspace: WorkspaceData;
   session: Session;
+  onNavigate: (route: Route) => void;
   selectedEvolutionJobID: string;
   selectedEvolutionAgentID: string;
   selectedTraceAgentID: string;
+  selectedTraceID: string;
+  selectedAgentID: string;
+  refreshVersion: string;
   onOpenEvolutionJob: (job: EvolutionJob) => void;
   onSelectEvolutionJob: (jobID: string) => void;
   onDeleteEvolutionJob: (jobID: string) => void;
+  onJobsUpdated: (jobs: EvolutionJob[]) => void;
   onAnalyzeAgent: (agentID: string) => void;
-  onOpenAgentTraces: (agentID: string) => void;
+  onOpenAgentTraces: (agentID: string, traceID?: string) => void;
   onConnectAgent: () => void;
+  onOpenAgent: (agentID: string) => void;
   onOpenMemory: () => void;
   onRefresh: () => Promise<void>;
   theme: Theme;
@@ -681,10 +675,12 @@ function RouteView({
   onLogout: () => void;
 }) {
   let content: React.ReactNode;
-  if (route === "agents") content = <AgentWorkspace locale={locale} workspace={workspace} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} onConnect={onConnectAgent} />;
-  else if (route === "apiKeys") content = <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} />;
-  else if (route === "conversations") content = <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} onOpenMemory={onOpenMemory} />;
-  else if (route === "traces") content = <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} />;
+  const historyTabs = <div className="history-tabs" role="group" aria-label={locale === "zh" ? "经历视图" : "History view"}><button className={route === "traces" ? "active" : ""} type="button" aria-pressed={route === "traces"} onClick={() => onNavigate("traces")}><Icon name="history" />Trace</button><button className={route === "conversations" ? "active" : ""} type="button" aria-pressed={route === "conversations"} onClick={() => onNavigate("conversations")}><Icon name="book" />{locale === "zh" ? "对话" : "Conversations"}</button></div>;
+  if (route === "home") content = <OverviewWorkspace locale={locale} workspace={workspace} onNavigate={onNavigate} onOpenTrace={onOpenAgentTraces} onOpenJob={onOpenEvolutionJob} onRetry={onRefresh} />;
+  else if (route === "agents") content = <AgentWorkspace locale={locale} workspace={workspace} initialAgentID={selectedAgentID} onSelectAgent={onOpenAgent} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} onConnect={onConnectAgent} />;
+  else if (route === "apiKeys") content = <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} onOpenAgent={onOpenAgent} />;
+  else if (route === "conversations") content = <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} onOpenMemory={onOpenMemory} navigation={historyTabs} />;
+  else if (route === "traces") content = <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} initialTraceID={selectedTraceID} onSelectTrace={onOpenAgentTraces} refreshVersion={refreshVersion} navigation={historyTabs} />;
   else if (route === "evolution") content = (
     <EvolutionWorkspace
       locale={locale}
@@ -695,46 +691,19 @@ function RouteView({
       onJobStarted={onOpenEvolutionJob}
       onJobSelected={onSelectEvolutionJob}
       onJobDeleted={onDeleteEvolutionJob}
+      onJobsUpdated={onJobsUpdated}
+      refreshVersion={refreshVersion}
     />
   );
   else if (route === "memory") content = <Memory locale={locale} workspace={workspace} />;
   else if (route === "settings") content = <Settings locale={locale} session={session} theme={theme} onLocale={onLocale} onTheme={onTheme} onLogout={onLogout} />;
-  else content = <Home locale={locale} workspace={workspace} />;
+  else content = null;
 
   return <Suspense fallback={<LoadingPanel label={copy[locale].loading} />}>{content}</Suspense>;
 }
 
-function PageHeader({ title, body }: { title: string; body: string }) {
-  return <header className="page-header"><h1>{title}</h1><p>{body}</p></header>;
-}
-
-function Home({ locale, workspace }: { locale: Locale; workspace: WorkspaceData }) {
-  const t = copy[locale];
-  const latestRun = workspace.runs[0];
-  return (
-    <section className="page">
-      <PageHeader title={t.homeTitle} body={t.homeBody} />
-      <div className="metric-grid">
-        <Metric label={t.agentMetric} value={String(workspace.agents.length)} />
-        <Metric label={t.runs} value={String(workspace.runs.length)} />
-        <Metric label={t.issues} value={String(workspace.issues.length)} />
-        <Metric label={t.cases} value={String(workspace.cases.length)} />
-        <Metric label={t.releases} value={String(workspace.releases.length)} />
-      </div>
-      <section className="focus-block">
-        <div>
-          <p className="section-label">{t.latest}</p>
-          <h2>{latestRun ? `${runOperationLabel(latestRun.operation, locale)} · ${runStateLabel(latestRun.state, locale)}` : t.noRuns}</h2>
-        </div>
-        {latestRun ? <Time value={latestRun.updated_at} locale={locale} /> : null}
-      </section>
-      <RunList title={t.recentRuns} empty={t.noRuns} runs={workspace.runs.slice(0, 6)} locale={locale} />
-    </section>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="metric"><strong>{value}</strong><span>{label}</span></div>;
+function PageHeader({ title }: { title: string }) {
+  return <header className="page-header"><h1>{title}</h1></header>;
 }
 
 function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceData }) {
@@ -743,6 +712,8 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [loadingRecent, setLoadingRecent] = useState(false);
+  const [recentError, setRecentError] = useState("");
+  const [recentReload, setRecentReload] = useState(0);
   const [message, setMessage] = useState("");
   const [recent, setRecent] = useState<MemoryRecord[]>([]);
   const [total, setTotal] = useState(0);
@@ -754,6 +725,27 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
   const [selectedNode, setSelectedNode] = useState<MemoryVisualNode | null>(null);
   const [tasks, setTasks] = useState<MemoryTaskRecord[]>([]);
   const [taskError, setTaskError] = useState("");
+  const [memoryView, setMemoryView] = useState<"collection" | "graph">("collection");
+  const [expandedMemory, setExpandedMemory] = useState<{ kind: string; item: MemoryRecallItem } | null>(null);
+  const readerRef = useRef<HTMLElement>(null);
+  const graphSequence = useRef(0);
+
+  useEffect(() => {
+    if (expandedMemory && memoryView === "collection") {
+      readerRef.current?.focus({ preventScroll: true });
+      readerRef.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [expandedMemory, memoryView]);
+
+  useEffect(() => () => { graphSequence.current += 1; }, []);
+
+  const resetGraph = useCallback(() => {
+    graphSequence.current += 1;
+    setGraph(null);
+    setSelectedNode(null);
+    setGraphError("");
+    setGraphLoading(false);
+  }, []);
 
   const loadTasks = useCallback(async () => {
     try {
@@ -777,10 +769,14 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
 
   const loadGraph = useCallback(async (factID: string) => {
     if (!/^\d+$/.test(factID)) return;
+    const sequence = ++graphSequence.current;
+    setGraph(null);
+    setSelectedNode(null);
     setGraphLoading(true);
     setGraphError("");
     try {
       const nextGraph = await api.memoryGraph(factID);
+      if (sequence !== graphSequence.current) return;
       setGraph(nextGraph);
       setSelectedNode({
         id: `fact:${nextGraph.fact_id}`,
@@ -792,9 +788,9 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
         position: { x: 0, y: 0 },
       });
     } catch {
-      setGraphError(t.memoryGraphFailed);
+      if (sequence === graphSequence.current) setGraphError(t.memoryGraphFailed);
     } finally {
-      setGraphLoading(false);
+      if (sequence === graphSequence.current) setGraphLoading(false);
     }
   }, [t.memoryGraphFailed]);
 
@@ -802,20 +798,19 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
     if (!ready) return;
     let active = true;
     setLoadingRecent(true);
+    setRecentError("");
     void api.memories(30).then((response) => {
       if (!active) return;
       setRecent(response.memories);
       setTotal(response.total);
-      const defaultFact = [...response.memories].reverse().find((item) => /^\d+$/.test(item.id));
-      if (defaultFact) void loadGraph(defaultFact.id);
     }).catch(() => {
       if (!active) return;
-      setMessage(t.memoryLoadFailed);
+      setRecentError(t.memoryLoadFailed);
     }).finally(() => {
       if (active) setLoadingRecent(false);
     });
     return () => { active = false; };
-  }, [ready, t.memoryLoadFailed, loadGraph]);
+  }, [ready, t.memoryLoadFailed, recentReload]);
 
   useEffect(() => {
     if (!ready) return;
@@ -854,8 +849,7 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
   return (
     <section className="page memory-page">
       <header className="memory-page-header">
-        <div><p className="section-label">XIAOBAOS CONVERSATION MEMORY</p><h1>{t.memoryTitle}</h1><p>{t.memoryBody}</p></div>
-        {ready ? <div className="memory-ready-summary"><Status value="available" locale={locale} /><strong>{total}</strong><span>{t.memoryCount}</span></div> : null}
+        <h1>{t.memoryTitle}</h1>
       </header>
       {!ready ? (
         <section className="memory-unavailable">
@@ -864,7 +858,7 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
         </section>
       ) : (
         <>
-          <MemoryTaskCenter tasks={tasks} locale={locale} error={taskError} />
+          <div className="memory-controls">
           <form className="memory-search" onSubmit={async (event) => {
             event.preventDefault();
             if (!query.trim()) return;
@@ -879,7 +873,9 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
                 ...bundle.topics.map((item) => ({ kind: t.recallTopic, item })),
               ]);
               const firstFact = bundle.facts.find((item) => /^\d+$/.test(item.id));
-              if (firstFact) await loadGraph(firstFact.id);
+              setExpandedMemory(null);
+              resetGraph();
+              if (firstFact && memoryView === "graph") await loadGraph(firstFact.id);
             } catch {
               setResults(null);
               setBundle(null);
@@ -888,11 +884,21 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
               setBusy(false);
             }
           }}>
-            <label><span>{t.memoryQuery}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.memoryPlaceholder} /></label>
-            <button className="primary-button compact" type="submit" disabled={busy || !query.trim()}>{busy ? t.memorySearching : t.memorySearch}</button>
+            <label><span className="sr-only">{t.memoryQuery}</span><span className="memory-search-input"><Icon name="search" /><input value={query} disabled={busy} onChange={(event) => setQuery(event.target.value)} placeholder={locale === "zh" ? "搜索记忆" : "Search memories"} /></span></label>
+            <button className="text-button icon-button" type="submit" aria-label={busy ? t.memorySearching : t.memorySearch} title={t.memorySearch} disabled={busy || !query.trim()}><Icon name="arrow" /></button>
           </form>
+          <div className="memory-view-toolbar">
+            <div className="history-tabs" role="group" aria-label={locale === "zh" ? "记忆视图" : "Memory view"}>
+              <button type="button" className={memoryView === "collection" ? "active" : ""} aria-pressed={memoryView === "collection"} onClick={() => setMemoryView("collection")}><Icon name="book" />{locale === "zh" ? "卡片" : "Collection"}</button>
+              <button type="button" className={memoryView === "graph" ? "active" : ""} aria-pressed={memoryView === "graph"} onClick={() => { setMemoryView("graph"); if (!graph && visibleFacts[0]) void loadGraph(visibleFacts[0].item.id); }}><Icon name="graph" />{locale === "zh" ? "关系图" : "Connections"}</button>
+            </div>
+            {results !== null && <button className="text-button" type="button" disabled={busy} onClick={() => {
+              setQuery(""); setResults(null); setBundle(null); setExpandedMemory(null); setMemoryView("collection"); resetGraph();
+            }}>{locale === "zh" ? "返回全部记忆" : "Back to all memories"}<Icon name="close" /></button>}
+          </div>
+          </div>
           {message ? <InlineNote tone="error">{message}</InlineNote> : null}
-          <div className="memory-graph-workspace">
+          {memoryView === "graph" ? <div className="memory-graph-workspace">
             <section className="memory-graph-panel">
               <header><div><h2>{t.memoryGraph}</h2><p>{t.memoryGraphHint}</p></div>{graph ? <dl><div><dt>{t.memoryEntities}</dt><dd>{graph.total_entities}</dd></div><div><dt>{t.memoryRelations}</dt><dd>{graph.total_relations}</dd></div></dl> : null}</header>
               {graphLoading && !graph ? <LoadingPanel label={t.loading} /> : graph ? (
@@ -919,17 +925,29 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
                 </>
               ) : <p>{t.memorySelectHint}</p>}
             </aside>
-          </div>
+          </div> : <>
+          {expandedMemory && <section className="memory-reader" ref={readerRef} tabIndex={-1} aria-label={locale === "zh" ? "记忆详情" : "Memory detail"}>
+            <header><span className="output-kind">{expandedMemory.kind}</span><button className="text-button" type="button" aria-label={locale === "zh" ? "关闭记忆详情" : "Close memory detail"} onClick={() => setExpandedMemory(null)}><Icon name="close" /></button></header>
+            {expandedMemory.item.title && <h2>{expandedMemory.item.title}</h2>}
+            <p>{expandedMemory.item.content}</p>
+            <footer>
+              {typeof expandedMemory.item.metadata?.conversation_id === "string" && <span>{t.sourceConversation} · {expandedMemory.item.metadata.conversation_id}</span>}
+              {/^\d+$/.test(expandedMemory.item.id) && expandedMemory.kind === t.recallFact && <button className="text-button" type="button" onClick={() => { setMemoryView("graph"); void loadGraph(expandedMemory.item.id); }}>{locale === "zh" ? "查看相关记忆" : "Explore connections"}<Icon name="arrow" /></button>}
+            </footer>
+          </section>}
           <section className="memory-index">
-            <header><div><h2>{results === null ? t.recentMemories : t.memoryResults}</h2><span>{results === null ? `${total} ${t.memoryCount}` : `${visibleEntries.length}`}</span></div></header>
-            {loadingRecent && results === null ? <LoadingPanel label={t.loading} /> : visibleFacts.length === 0 ? <EmptyState title={results === null ? t.noMemories : t.noMemoryResults} /> : (
+            <header><h2 className="sr-only">{results === null ? t.recentMemories : t.memoryResults}</h2><span>{results === null ? `${recentError || loadingRecent ? "—" : total} ${locale === "zh" ? "条记忆" : "memories"}` : `${visibleEntries.length} ${locale === "zh" ? "条结果" : "results"}`}</span></header>
+            {recentError && results === null ? <InlineError message={recentError} action={t.retry} onRetry={() => setRecentReload((value) => value + 1)} /> : null}
+            {loadingRecent && results === null ? <LoadingPanel label={t.loading} /> : visibleEntries.length === 0 ? (recentError && results === null ? null : <EmptyState title={results === null ? t.noMemories : t.noMemoryResults} />) : (
               <div className="memory-index-list">
-                {visibleFacts.slice(0, 12).map(({ kind, item, createdAt }, index) => (
-                  <MemoryEntry key={`${kind}-${item.id}-${index}`} kind={kind} item={item} createdAt={createdAt} locale={locale} active={graph?.fact_id === Number(item.id)} onSelect={() => { void loadGraph(item.id); }} />
+                {visibleEntries.map(({ kind, item, createdAt }, index) => (
+                  <MemoryEntry key={`${kind}-${item.id}-${index}`} kind={kind} item={item} createdAt={createdAt} showKind={results !== null} locale={locale} active={expandedMemory?.item.id === item.id && expandedMemory.kind === kind} onSelect={() => setExpandedMemory({ kind, item })} />
                 ))}
               </div>
             )}
           </section>
+          </>}
+          {(tasks.length > 0 || taskError) && <details className="memory-task-disclosure"><summary><Icon name="clock" />{t.memoryTasks}<span>{tasks.filter(isMemoryTaskActive).length ? `${tasks.filter(isMemoryTaskActive).length} ${t.memoryTaskProcessing}` : taskError ? (locale === "zh" ? "读取失败" : "Unavailable") : tasks.length}</span></summary><MemoryTaskCenter tasks={tasks} locale={locale} error={taskError} /></details>}
         </>
       )}
     </section>
@@ -983,6 +1001,7 @@ function MemoryEntry({
   kind,
   item,
   createdAt,
+  showKind,
   locale,
   active,
   onSelect,
@@ -990,76 +1009,22 @@ function MemoryEntry({
   kind: string;
   item: MemoryRecallItem;
   createdAt?: string;
+  showKind: boolean;
   locale: Locale;
   active: boolean;
   onSelect: () => void;
 }) {
-  const t = copy[locale];
-  const conversationID = typeof item.metadata?.conversation_id === "string" ? item.metadata.conversation_id : "";
-  const agent = typeof item.metadata?.agent_id === "string" ? item.metadata.agent_id : "";
   const score = item.score > 0 ? `${Math.round(item.score * 100)}%` : "";
   return (
     <button className={`memory-result ${active ? "active" : ""}`} type="button" onClick={onSelect}>
-      <span className="memory-result-header"><span>{kind}</span>{score ? <strong>{score}</strong> : createdAt ? <Time value={createdAt} locale={locale} /> : null}</span>
       <span className="memory-result-title">{item.title || item.content}</span>
-      {agent || conversationID ? (
-        <span className="memory-result-footer">
-          {agent ? <span>{agent}</span> : null}
-          {conversationID ? <code><b>{t.sourceConversation}</b>{conversationID}</code> : null}
-        </span>
-      ) : null}
+      <span className="memory-result-footer"><span>{showKind ? kind : null}{score ? ` · ${score}` : createdAt ? <Time value={createdAt} locale={locale} /> : null}</span><Icon name="arrow" /></span>
     </button>
   );
 }
 
 function MemoryContextFact({ label, value }: { label: string; value: string }) {
   return <div><dt>{label}</dt><dd>{value}</dd></div>;
-}
-
-function RunList({ title, empty, runs, locale }: { title: string; empty: string; runs: WorkspaceData["runs"]; locale: Locale }) {
-  return (
-    <RecordSection title={title} empty={empty}>
-      {runs.map((run) => <RecordRow key={run.run_id} title={runOperationLabel(run.operation, locale)} meta={`${runOriginLabel(run.origin, locale)} · ${runStateLabel(run.state, locale)}`} time={run.updated_at} locale={locale} />)}
-    </RecordSection>
-  );
-}
-
-function runOperationLabel(value: string, locale: Locale) {
-  const labels: Record<string, [string, string]> = {
-    explore: ["探索", "Explore"],
-    replay: ["回归", "Replay"],
-    compare: ["对比", "Compare"],
-  };
-  return labels[value]?.[locale === "zh" ? 0 : 1] ?? value;
-}
-
-function runStateLabel(value: string, locale: Locale) {
-  const labels: Record<string, [string, string]> = {
-    queued: ["等待中", "Queued"],
-    running: ["运行中", "Running"],
-    completed: ["已完成", "Completed"],
-    failed: ["失败", "Failed"],
-    cancelled: ["已取消", "Cancelled"],
-  };
-  return labels[value]?.[locale === "zh" ? 0 : 1] ?? value;
-}
-
-function runOriginLabel(value: string, locale: Locale) {
-  const labels: Record<string, [string, string]> = {
-    platform: ["平台", "Platform"],
-    edge: ["端侧", "Edge"],
-    local: ["本地", "Local"],
-  };
-  return labels[value]?.[locale === "zh" ? 0 : 1] ?? value;
-}
-
-function RecordSection({ title, empty, children }: { title: string; empty: string; children: React.ReactNode }) {
-  const count = useMemo(() => Array.isArray(children) ? children.length : children ? 1 : 0, [children]);
-  return <section className="record-section"><h2>{title}</h2>{count ? <div className="record-list">{children}</div> : <EmptyState title={empty} />}</section>;
-}
-
-function RecordRow({ title, meta, time, locale }: { title: string; meta: string; time: string; locale: Locale }) {
-  return <article className="record-row"><div><strong>{title}</strong><span>{meta}</span></div><Time value={time} locale={locale} /></article>;
 }
 
 function Time({ value, locale }: { value: string; locale: Locale }) {
@@ -1076,16 +1041,16 @@ function Settings({ locale, session, theme, onLocale, onTheme, onLogout }: { loc
   const t = copy[locale];
   return (
     <section className="page settings-page">
-      <PageHeader title={t.settingsTitle} body={t.settingsBody} />
+      <PageHeader title={t.settingsTitle} />
       <section className="settings-section preference-section">
-        <div><h2>{t.language}</h2><p>{t.languageBody}</p></div>
+        <h2>{t.language}</h2>
         <div className="segmented-control" role="group" aria-label={t.language}>
           <button className={locale === "zh" ? "active" : ""} type="button" onClick={() => onLocale("zh")}>中文</button>
           <button className={locale === "en" ? "active" : ""} type="button" onClick={() => onLocale("en")}>English</button>
         </div>
       </section>
       <section className="settings-section preference-section">
-        <div><h2>{t.theme}</h2><p>{t.themeBody}</p></div>
+        <h2>{t.theme}</h2>
         <div className="segmented-control" role="group" aria-label={t.theme}>
           <button className={theme === "system" ? "active" : ""} type="button" onClick={() => onTheme("system")}>{t.themeSystem}</button>
           <button className={theme === "light" ? "active" : ""} type="button" onClick={() => onTheme("light")}>{t.themeLight}</button>
@@ -1094,8 +1059,7 @@ function Settings({ locale, session, theme, onLocale, onTheme, onLogout }: { loc
       </section>
       <section className="settings-section">
         <h2>{locale === "zh" ? "账户" : "Account"}</h2>
-        <p>{locale === "zh" ? "这里显示当前登录身份。Agent 接入密钥和 LLM 配置统一在 API 管理页面维护。" : "This is your current identity. Agent credentials and LLM configuration live in API Management."}</p>
-        {session.user ? <InlineNote>{session.user.display_name}</InlineNote> : null}
+        <p>{session.user?.display_name || (locale === "zh" ? "本地账户" : "Local account")}</p>
         {session.mode === "github" ? <button className="text-button danger" type="button" onClick={onLogout}>{t.signOut}</button> : null}
       </section>
     </section>

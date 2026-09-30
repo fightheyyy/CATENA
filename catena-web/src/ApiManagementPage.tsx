@@ -2,16 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import { registeredAgentSummaries } from "./agentConnection";
 import { copyText } from "./clipboard";
+import { AgentConnectionGuide } from "./AgentConnectionGuide";
 import type { AgentSummary, ApiToken, EvolutionModelSettings, WorkspaceData } from "./types";
 
 type Locale = "zh" | "en";
 
 const apiCopy = {
   zh: {
-    title: "API 管理",
-    body: "每个 Agent 使用一个独立密钥上传 Trace 或对话。密钥会自动决定数据归属。",
-    llmTitle: "LLM 配置",
-    llmBody: "Trace Farm 使用你的模型运行 Inspector、Evolution 与 Reviewer。Catena 不提供公共模型，也不会在保存后展示 API Key。",
+    title: "连接",
+    body: "把日常使用的 Agent 连接到这里，让经历开始积累。",
+    llmTitle: "分析模型",
+    llmBody: "连接你自己的模型，用于分析 Trace、提炼产出。API Key 保存后不再展示。",
     llmProvider: "Provider",
     llmBaseURL: "Base URL",
     llmModel: "Model",
@@ -23,7 +24,7 @@ const apiCopy = {
     llmAPIKeySaved: "已安全保存；留空不会修改",
     llmSave: "保存配置",
     llmSaving: "正在保存",
-    llmSaved: "LLM 配置已保存。下一次 Trace Farm 任务会立即使用。",
+    llmSaved: "模型配置已保存，将用于下一次分析。",
     llmConfigured: "已配置",
     llmMissing: "未配置",
     llmClear: "清除配置",
@@ -31,7 +32,7 @@ const apiCopy = {
     llmCleared: "LLM 配置已清除。",
     createTitle: "接入新 Agent",
     agentName: "Agent 名称",
-    placeholder: "例如：大狗",
+    placeholder: "例如：我的 Codex",
     create: "生成接入密钥",
     creating: "正在生成",
     created: "密钥已生成，可从对应行复制。",
@@ -56,10 +57,10 @@ const apiCopy = {
     recreate: "重新生成",
   },
   en: {
-    title: "API Management",
-    body: "Each Agent uses one dedicated key to upload Trace or conversation data. The key determines data ownership.",
-    llmTitle: "LLM configuration",
-    llmBody: "Trace Farm runs Inspector, Evolution, and Reviewer with your model. Catena does not provide a shared model and never reveals the API key after saving.",
+    title: "Connections",
+    body: "Connect the Agents you work with and give their history a home.",
+    llmTitle: "Analysis model",
+    llmBody: "Connect your own model to analyze Traces and create reusable outputs. API keys are never shown after saving.",
     llmProvider: "Provider",
     llmBaseURL: "Base URL",
     llmModel: "Model",
@@ -71,7 +72,7 @@ const apiCopy = {
     llmAPIKeySaved: "Stored securely; leave blank to keep it",
     llmSave: "Save configuration",
     llmSaving: "Saving",
-    llmSaved: "LLM configuration saved. The next Trace Farm job will use it.",
+    llmSaved: "Model configuration saved for the next analysis.",
     llmConfigured: "Configured",
     llmMissing: "Not configured",
     llmClear: "Clear configuration",
@@ -79,7 +80,7 @@ const apiCopy = {
     llmCleared: "LLM configuration cleared.",
     createTitle: "Connect a new Agent",
     agentName: "Agent name",
-    placeholder: "For example: Big Dog",
+    placeholder: "For example: My Codex",
     create: "Generate ingest key",
     creating: "Generating",
     created: "Key generated. Copy it from the corresponding row.",
@@ -110,7 +111,7 @@ type LocalAgent = {
   credential: ApiToken;
 };
 
-export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Locale; workspace: WorkspaceData; onRefresh: () => Promise<void> }) {
+export function ApiManagementPage({ locale, workspace, onRefresh, onOpenAgent }: { locale: Locale; workspace: WorkspaceData; onRefresh: () => Promise<void>; onOpenAgent: (agentID: string) => void }) {
   const t = apiCopy[locale];
   const nameField = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
@@ -118,6 +119,8 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [localAgent, setLocalAgent] = useState<LocalAgent | null>(null);
+  const [setupAgentID, setSetupAgentID] = useState("");
+  const [credentialBusy, setCredentialBusy] = useState(false);
   const [localCredentials, setLocalCredentials] = useState<Record<string, ApiToken>>({});
   const [copiedID, setCopiedID] = useState("");
   const [copiedEndpoint, setCopiedEndpoint] = useState<"otlp" | "conversation" | "">("");
@@ -197,6 +200,7 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
   const copyEndpoint = async (kind: "otlp" | "conversation", value: string) => {
     const ok = await copyText(value);
     setCopiedEndpoint(ok ? kind : "");
+    if (!ok) setError(locale === "zh" ? "复制失败，请允许剪贴板访问后重试。" : "Copy failed. Allow clipboard access and retry.");
   };
 
   const agents = useMemo(() => {
@@ -209,6 +213,8 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
     if (revokedAgentIDs.has(agent.agent_id)) return undefined;
     return localCredentials[agent.agent_id] ?? (localAgent?.summary.agent_id === agent.agent_id ? localAgent.credential : agent.credential);
   };
+  const setupAgent = agents.find((agent) => agent.agent_id === setupAgentID);
+  const setupCredential = setupAgent ? credentialFor(setupAgent) : undefined;
 
   const createAgent = async () => {
     if (!name.trim() || busy) return;
@@ -232,6 +238,7 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
         last_seen_at: "",
       };
       setLocalAgent({ summary, credential: result.api_token });
+      setSetupAgentID(summary.agent_id);
       setName("");
       setMessage(t.created);
       void onRefresh();
@@ -239,39 +246,46 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
       setError(cause instanceof Error ? cause.message : "Request failed");
     } finally {
       setBusy(false);
-      nameField.current?.focus();
     }
   };
 
   const copyKey = async (agent: AgentSummary, credential: ApiToken) => {
+    if (credentialBusy) return;
+    setCredentialBusy(true);
     setError("");
     try {
       const result = await api.revealApiToken(credential.id);
       const copied = await copyText(result.token);
       setCopiedID(copied ? agent.agent_id : "");
+      if (!copied) setError(locale === "zh" ? "复制失败，请允许剪贴板访问后重试。" : "Copy failed. Allow clipboard access and retry.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Request failed");
-    }
+    } finally { setCredentialBusy(false); }
   };
 
   const createKey = async (agent: AgentSummary) => {
+    if (credentialBusy) return;
+    setCredentialBusy(true);
     setError("");
     try {
       const result = await api.createAgentConnectionKey(agent.agent_id);
       setLocalCredentials((current) => ({ ...current, [agent.agent_id]: result.api_token }));
       setRevokedAgentIDs((current) => { const next = new Set(current); next.delete(agent.agent_id); return next; });
+      setSetupAgentID(agent.agent_id);
       void onRefresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Request failed");
-    }
+    } finally { setCredentialBusy(false); }
   };
 
   const revokeKey = async (agent: AgentSummary, credential: ApiToken) => {
+    if (credentialBusy) return;
     if (confirmID !== credential.id) {
       setConfirmID(credential.id);
       return;
     }
     setError("");
+    setCredentialBusy(true);
     try {
       await api.deleteApiToken(credential.id);
       setConfirmID("");
@@ -280,31 +294,12 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
       void onRefresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Request failed");
-    }
+    } finally { setCredentialBusy(false); }
   };
 
   return (
     <section className="page api-page">
-      <header className="page-header"><h1>{t.title}</h1><p>{t.body}</p></header>
-
-      <section className="llm-config-section">
-        <header>
-          <div><h2>{t.llmTitle}</h2><p>{t.llmBody}</p></div>
-          <span className={llm.configured ? "config-state ready" : "config-state"}>{llm.configured ? t.llmConfigured : t.llmMissing}</span>
-        </header>
-        <form className="llm-form" onSubmit={(event) => { event.preventDefault(); void saveLLM(); }}>
-          <label><span>{t.llmProvider}</span><input list="llm-provider-options" value={llmProvider} maxLength={128} autoComplete="off" placeholder={t.llmProviderPlaceholder} onChange={(event) => setLLMProvider(event.target.value)} /></label>
-          <datalist id="llm-provider-options"><option value="openai" /><option value="anthropic" /><option value="google" /></datalist>
-          <label className="llm-base-url-field"><span>{t.llmBaseURL}</span><input type="url" value={llmBaseURL} maxLength={1000} autoComplete="url" placeholder={t.llmBaseURLPlaceholder} onChange={(event) => setLLMBaseURL(event.target.value)} /></label>
-          <label><span>{t.llmModel}</span><input value={llmModel} maxLength={240} autoComplete="off" placeholder={t.llmModelPlaceholder} onChange={(event) => setLLMModel(event.target.value)} /></label>
-          <label><span>{t.llmAPIKey}</span><input type="password" value={llmAPIKey} maxLength={16384} autoComplete="new-password" placeholder={llm.api_key_configured ? t.llmAPIKeySaved : t.llmAPIKeyPlaceholder} onChange={(event) => setLLMAPIKey(event.target.value)} /></label>
-          <div className="llm-form-actions">
-            <button className="primary-button compact" type="submit" disabled={llmBusy || !llmProvider.trim() || !llmBaseURL.trim() || !llmModel.trim() || (!llm.api_key_configured && !llmAPIKey.trim())}>{llmBusy ? t.llmSaving : t.llmSave}</button>
-            {llm.configured ? <button className={confirmLLMClear ? "text-button danger" : "text-button"} type="button" disabled={llmBusy} onClick={() => void clearLLM()}>{confirmLLMClear ? t.llmConfirmClear : t.llmClear}</button> : null}
-          </div>
-          <p className={llmError ? "llm-feedback error" : "llm-feedback"} role={llmError ? "alert" : "status"}>{llmError || llmMessage || " "}</p>
-        </form>
-      </section>
+      <header className="page-header"><h1>{t.title}</h1></header>
 
       <section className="api-create-section">
         <h2>{t.createTitle}</h2>
@@ -315,13 +310,15 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
         </form>
       </section>
 
+      {setupAgent && setupCredential ? <AgentConnectionGuide key={setupAgent.agent_id} agent={setupAgent} credential={setupCredential} locale={locale} onRefresh={onRefresh} onOpen={onOpenAgent} onClose={() => setSetupAgentID("")} /> : null}
+
       <section className="api-endpoints">
         <h2>{t.endpoints}</h2>
         <dl>
           <div>
             <dt>{t.otlp}</dt>
             <dd>
-              <code>{otlpEndpoint}</code>
+              <EndpointAddress value={otlpEndpoint} />
               <button className="endpoint-copy-button" type="button" aria-label={t.copyOtlp} onClick={() => void copyEndpoint("otlp", otlpEndpoint)}>
                 {copiedEndpoint === "otlp" ? t.copied : t.copy}
               </button>
@@ -330,7 +327,7 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
           <div>
             <dt>{t.conversation}</dt>
             <dd>
-              <code>{conversationEndpoint}</code>
+              <EndpointAddress value={conversationEndpoint} />
               <button className="endpoint-copy-button" type="button" aria-label={t.copyConversation} onClick={() => void copyEndpoint("conversation", conversationEndpoint)}>
                 {copiedEndpoint === "conversation" ? t.copied : t.copy}
               </button>
@@ -355,14 +352,41 @@ export function ApiManagementPage({ locale, workspace, onRefresh }: { locale: Lo
               </div>
               <div className="token-actions">
                 {credential ? <>
-                  <button className="text-button" type="button" onClick={() => void copyKey(agent, credential)}>{copiedID === agent.agent_id ? t.copied : t.copy}</button>
-                  <button className="text-button danger" type="button" onClick={() => void revokeKey(agent, credential)}>{confirmID === credential.id ? t.confirmRevoke : t.revoke}</button>
-                </> : <button className="text-button" type="button" onClick={() => void createKey(agent)}>{t.recreate}</button>}
+                  <button className="text-button" type="button" onClick={() => setSetupAgentID(agent.agent_id)}>{locale === "zh" ? "接入配置" : "Setup"}</button>
+                  <button className="text-button" type="button" disabled={credentialBusy} onClick={() => void copyKey(agent, credential)}>{copiedID === agent.agent_id ? t.copied : t.copy}</button>
+                  <button className="text-button danger" type="button" disabled={credentialBusy} onClick={() => void revokeKey(agent, credential)}>{confirmID === credential.id ? t.confirmRevoke : t.revoke}</button>
+                  {confirmID === credential.id ? <button className="text-button" type="button" disabled={credentialBusy} onClick={() => setConfirmID("")}>{locale === "zh" ? "取消" : "Cancel"}</button> : null}
+                </> : <button className="text-button" type="button" disabled={credentialBusy} onClick={() => void createKey(agent)}>{t.recreate}</button>}
               </div>
             </article>;
           })}
         </div>}
       </section>
+
+      <section className="llm-config-section">
+        <header>
+          <div><h2>{t.llmTitle}</h2><p>{t.llmBody}</p></div>
+          <span className={llm.configured ? "config-state ready" : "config-state"}>{llm.configured ? t.llmConfigured : t.llmMissing}</span>
+        </header>
+        <form className="llm-form" onSubmit={(event) => { event.preventDefault(); void saveLLM(); }}>
+          <label><span>{t.llmProvider}</span><input list="llm-provider-options" value={llmProvider} maxLength={128} autoComplete="off" placeholder={t.llmProviderPlaceholder} onChange={(event) => setLLMProvider(event.target.value)} /></label>
+          <datalist id="llm-provider-options"><option value="openai" /><option value="anthropic" /><option value="google" /></datalist>
+          <label className="llm-base-url-field"><span>{t.llmBaseURL}</span><input type="url" value={llmBaseURL} maxLength={1000} autoComplete="url" placeholder={t.llmBaseURLPlaceholder} onChange={(event) => setLLMBaseURL(event.target.value)} /></label>
+          <label><span>{t.llmModel}</span><input value={llmModel} maxLength={240} autoComplete="off" placeholder={t.llmModelPlaceholder} onChange={(event) => setLLMModel(event.target.value)} /></label>
+          <label><span>{t.llmAPIKey}</span><input type="password" value={llmAPIKey} maxLength={16384} autoComplete="new-password" placeholder={llm.api_key_configured ? t.llmAPIKeySaved : t.llmAPIKeyPlaceholder} onChange={(event) => setLLMAPIKey(event.target.value)} /></label>
+          <div className="llm-form-actions">
+            <button className="primary-button compact" type="submit" disabled={llmBusy || !llmProvider.trim() || !llmBaseURL.trim() || !llmModel.trim() || (!llm.api_key_configured && !llmAPIKey.trim())}>{llmBusy ? t.llmSaving : t.llmSave}</button>
+            {llm.configured ? <button className={confirmLLMClear ? "text-button danger" : "text-button"} type="button" disabled={llmBusy} onClick={() => void clearLLM()}>{confirmLLMClear ? t.llmConfirmClear : t.llmClear}</button> : null}
+          </div>
+          <p className={llmError ? "llm-feedback error" : "llm-feedback"} role={llmError ? "alert" : "status"}>{llmError || llmMessage || " "}</p>
+        </form>
+      </section>
+
     </section>
   );
+}
+
+function EndpointAddress({ value }: { value: string }) {
+  const origin = new URL(value).origin;
+  return <code>{origin}<wbr />{value.slice(origin.length)}</code>;
 }

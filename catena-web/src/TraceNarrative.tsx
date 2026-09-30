@@ -151,11 +151,10 @@ export function TraceNarrative({
         </div>
       </article>
 
-      <div className="trace-narrative-layout">
+      {flowRoots.length > 0 ? <div className="trace-narrative-layout">
         <section className="trace-causal-flow">
           <header>
             <h3>{t.execution}</h3>
-            <p>{t.executionHint}</p>
           </header>
           <div className="trace-causal-list">
             {flowRoots.map((node) => (
@@ -173,7 +172,7 @@ export function TraceNarrative({
           <header><span>{t.selectedEvidence}</span>{selectedNode ? <code>{shortTraceID(selectedNode.span.span_id)}</code> : null}</header>
           {selectedNode ? <NarrativeInspector node={selectedNode} locale={locale} /> : <p>{t.evidenceHint}</p>}
         </aside>
-      </div>
+      </div> : null}
     </section>
   );
 }

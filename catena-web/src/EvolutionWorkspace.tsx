@@ -21,14 +21,14 @@ type Locale = "zh" | "en";
 
 const workspaceCopy = {
   zh: {
-    title: "Trace Farm",
-    body: "选择一个 Agent，找出近期反复出现的问题，并生成可以直接使用的改进资产。",
+    title: "产出",
+    body: "从经历中提炼方法，把有用的发现带回下一次工作。",
     jobs: "分析记录",
-    assets: "资产",
-    assetLibrary: "Agent 资产",
-    assetLibraryBody: "这里保存 agent.md、Skill 包与 Role 包；DeepSeek Harness Agent 会额外生成可直接安装的 DSH Plugin。",
-    assetLibraryEmpty: "还没有生成可复用资产。新建一次分析，Catena 会把最值得修复的问题写成文件。",
-    assetLibraryEmptyTitle: "Trace 还没有变成资产",
+    assets: "作品库",
+    assetLibrary: "可复用的方法",
+    assetLibraryBody: "阅读、复制或下载，每份产出都有可回查的来源。",
+    assetLibraryEmpty: "从近期 Trace 中提炼一份方法。",
+    assetLibraryEmptyTitle: "还没有产出",
     allAssets: "全部",
     allAgents: "全部 Agent",
     assetFilter: "资产类型",
@@ -47,10 +47,10 @@ const workspaceCopy = {
     traceSources: "条来源 Trace",
     recentJobs: "最近分析",
     recentJobsBody: "选择一条结果后，再查看生成的资产和来源证据。",
-    newAnalysis: "新建分析",
+    newAnalysis: "提炼新产出",
     close: "关闭",
-    noJobs: "还没有分析结果。选择一个 Agent，让 Catena 从近期 Trace 中提炼第一项资产。",
-    noJobsTitle: "从一次 Agent 分析开始",
+    noJobs: "选择一个 Agent，开始分析。",
+    noJobsTitle: "还没有分析记录",
     loading: "正在读取分析记录",
     loadFailed: "无法读取分析记录",
     retry: "重试",
@@ -69,7 +69,7 @@ const workspaceCopy = {
     analyzing: "正在分析",
     analysisCompleted: "分析完成",
     analysisFailed: "分析失败",
-    resultReady: "已生成可用资产",
+    resultReady: "产出已生成，等待你确认",
     resultPending: "完成质量检查后，资产会出现在这里。",
     assetCount: "项资产",
     objective: "分析目标",
@@ -107,7 +107,7 @@ const workspaceCopy = {
     findingMissing: "暂时还没有形成明确的问题结论。",
     evidenceItems: "关键证据",
     proposals: "生成的资产",
-    proposalsBody: "复制后即可应用到对应 Agent。每项资产都保留来源 Trace，方便回查。",
+    proposalsBody: "先阅读并核对，再应用到你的 Agent。每份产出都保留来源 Trace，方便回查。",
     proposalMissing: "这次分析还没有生成资产。",
     content: "资产内容",
     copyAsset: "复制资产",
@@ -147,14 +147,14 @@ const workspaceCopy = {
     },
   },
   en: {
-    title: "Trace Farm",
-    body: "Choose an Agent, find recurring problems in recent behavior, and generate improvements you can use directly.",
+    title: "Outputs",
+    body: "Turn useful discoveries into something you can take into your next task.",
     jobs: "Analysis history",
-    assets: "Assets",
-    assetLibrary: "Agent assets",
-    assetLibraryBody: "Catena stores agent.md, Skill, and Role packages. DeepSeek Harness Agents additionally produce installable DSH Plugins.",
-    assetLibraryEmpty: "No reusable asset exists yet. Start an analysis and Catena will turn the highest-impact problem into a file.",
-    assetLibraryEmptyTitle: "No Trace has become an asset yet",
+    assets: "Library",
+    assetLibrary: "Methods to keep",
+    assetLibraryBody: "Read, copy, or download. Every output leads back to its source.",
+    assetLibraryEmpty: "Distill a useful method from recent Traces.",
+    assetLibraryEmptyTitle: "No outputs yet",
     allAssets: "All",
     allAgents: "All Agents",
     assetFilter: "Asset kind",
@@ -173,10 +173,10 @@ const workspaceCopy = {
     traceSources: "source Traces",
     recentJobs: "Recent analyses",
     recentJobsBody: "Select a result to inspect its generated assets and source evidence.",
-    newAnalysis: "New analysis",
+    newAnalysis: "Create an output",
     close: "Close",
-    noJobs: "No result yet. Choose an Agent and let Catena distill the first asset from recent Traces.",
-    noJobsTitle: "Start with an Agent analysis",
+    noJobs: "Choose an Agent to start an analysis.",
+    noJobsTitle: "No analyses yet",
     loading: "Reading analysis",
     loadFailed: "Could not read the analysis",
     retry: "Retry",
@@ -195,7 +195,7 @@ const workspaceCopy = {
     analyzing: "Analyzing",
     analysisCompleted: "Analysis complete",
     analysisFailed: "Analysis failed",
-    resultReady: "Usable assets are ready",
+    resultReady: "Outputs are ready for your review",
     resultPending: "Assets will appear here after the quality check.",
     assetCount: "assets",
     objective: "Analysis objective",
@@ -233,7 +233,7 @@ const workspaceCopy = {
     findingMissing: "No clear problem has been identified yet.",
     evidenceItems: "Key evidence",
     proposals: "Generated assets",
-    proposalsBody: "Copy an asset into the target Agent. Every asset keeps its source Trace provenance for review.",
+    proposalsBody: "Read and review each output before applying it to your Agent. Source Traces stay available for reference.",
     proposalMissing: "This analysis has not generated an asset yet.",
     content: "Asset content",
     copyAsset: "Copy asset",
@@ -351,6 +351,8 @@ export function EvolutionWorkspace({
   onJobStarted,
   onJobSelected,
   onJobDeleted,
+  onJobsUpdated,
+  refreshVersion,
 }: {
   locale: Locale;
   jobs: EvolutionJob[];
@@ -360,6 +362,8 @@ export function EvolutionWorkspace({
   onJobStarted: (job: EvolutionJob) => void;
   onJobSelected: (jobID: string) => void;
   onJobDeleted: (jobID: string) => void;
+  onJobsUpdated: (jobs: EvolutionJob[]) => void;
+  refreshVersion: string;
 }) {
   const t = workspaceCopy[locale];
   const [selectedID, setSelectedID] = useState(initialJobID || "");
@@ -372,10 +376,19 @@ export function EvolutionWorkspace({
   const [view, setView] = useState<"assets" | "analyses" | "analysis">(
     initialJobID ? "analysis" : "assets",
   );
-  const [drawer, setDrawer] = useState<"new" | "">("");
+  const [drawer, setDrawer] = useState<"new" | "">(initialAgentID && !initialJobID ? "new" : "");
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [listError, setListError] = useState("");
+  const jobsRef = useRef(jobs);
+  jobsRef.current = jobs;
+  const backgroundJobs = jobs.filter((item) => item.job_id !== selectedID && !isEvolutionJobTerminal(item))
+    .map((item) => item.job_id).sort().join(",");
+
+  useEffect(() => {
+    if (initialAgentID && !initialJobID) setDrawer("new");
+  }, [initialAgentID]);
 
   useEffect(() => {
     setSelectedID(initialJobID || "");
@@ -395,18 +408,21 @@ export function EvolutionWorkspace({
     }
     let active = true;
     let timer = 0;
-    const summary = jobs.find((item) => item.job_id === selectedID);
+    const controller = new AbortController();
+    const summary = jobsRef.current.find((item) => item.job_id === selectedID);
     setJob(summary ?? null);
     setLoading(!summary);
     setError("");
 
     const refresh = async () => {
+      if (document.hidden) { timer = window.setTimeout(() => void refresh(), 1600); return; }
       try {
-        const next = await api.evolutionJob(selectedID);
+        const next = await api.evolutionJob(selectedID, controller.signal);
         if (!active) return;
         setJob(next);
         setLoading(false);
         setError("");
+        onJobsUpdated([next]);
         if (!isEvolutionJobTerminal(next)) timer = window.setTimeout(() => void refresh(), 1600);
       } catch (cause) {
         if (!active) return;
@@ -418,8 +434,31 @@ export function EvolutionWorkspace({
     return () => {
       active = false;
       window.clearTimeout(timer);
+      controller.abort();
     };
-  }, [jobs, reload, selectedID, t.loadFailed]);
+  }, [reload, selectedID, t.loadFailed, onJobsUpdated, refreshVersion]);
+
+  useEffect(() => {
+    if (!backgroundJobs) return;
+    const controller = new AbortController();
+    let timer = 0;
+    const refresh = async () => {
+      if (document.hidden) { timer = window.setTimeout(() => void refresh(), 4000); return; }
+      try {
+        const next = await api.evolutionJobs(controller.signal);
+        if (controller.signal.aborted) return;
+        setListError("");
+        onJobsUpdated(next.filter((item) => item.job_id !== selectedID));
+        if (next.some((item) => item.job_id !== selectedID && !isEvolutionJobTerminal(item))) {
+          timer = window.setTimeout(() => void refresh(), 4000);
+        }
+      } catch (cause) {
+        if (!controller.signal.aborted) setListError(cause instanceof Error ? cause.message : t.loadFailed);
+      }
+    };
+    void refresh();
+    return () => { controller.abort(); window.clearTimeout(timer); };
+  }, [backgroundJobs, selectedID, reload, onJobsUpdated, t.loadFailed, refreshVersion]);
 
   const handleJobStarted = (next: EvolutionJob) => {
     setSelectedID(next.job_id);
@@ -484,7 +523,6 @@ export function EvolutionWorkspace({
       <header className="page-header evolution-page-header">
         <div>
           <h1>{t.title}</h1>
-          <p>{t.body}</p>
         </div>
         <div className="evolution-page-actions">
           <div className="farm-view-switch" role="group" aria-label={t.title}>
@@ -499,9 +537,10 @@ export function EvolutionWorkspace({
               onJobSelected("");
             }}>{t.jobs}<span>{jobs.length}</span></button>
           </div>
-          <button className="primary-button compact" type="button" onClick={() => setDrawer("new")}>{t.newAnalysis}</button>
+          {((view === "assets" && assetRecords.length > 0) || (view === "analyses" && jobs.length > 0) || view === "analysis") ? <button className="primary-button compact" type="button" onClick={() => setDrawer("new")}>{t.newAnalysis}</button> : null}
         </div>
       </header>
+      {listError ? <div className="job-error" role="alert"><span>{listError}</span><button className="text-button" type="button" onClick={() => setReload((value) => value + 1)}>{t.retry}</button></div> : null}
       {view === "assets" && assetRecords.length > 0 ? (
         <AssetLibrary
           records={assetRecords}
@@ -528,7 +567,6 @@ export function EvolutionWorkspace({
           <header>
             <div>
               <h2 id="farm-recent-title">{t.recentJobs}</h2>
-              <p>{t.recentJobsBody}</p>
             </div>
             <span>{jobs.length}</span>
           </header>
@@ -648,10 +686,9 @@ function AssetLibrary({
 
   return (
     <section className="asset-library" aria-labelledby="asset-library-title">
-      <header className="asset-library-header">
+      <header className="sr-only">
         <div>
           <h2 id="asset-library-title">{t.assetLibrary}</h2>
-          <p>{t.assetLibraryBody}</p>
         </div>
         <strong>{records.length}</strong>
       </header>
@@ -849,14 +886,14 @@ function AssetDocument({
         ) : null}
         <section className="asset-file-viewer">
           <header className="asset-file-toolbar">
-            <span><b>{t.selectedFile}</b>{selectedFile?.path || path}</span>
+            <span>{selectedFile?.path || path}</span>
             <div className="asset-document-toolbar" role="tablist" aria-label={t.assetDocument}>
               <button className={mode === "read" ? "active" : ""} type="button" role="tab" aria-selected={mode === "read"} onClick={() => setMode("read")}>{t.readAsset}</button>
               <button className={mode === "source" ? "active" : ""} type="button" role="tab" aria-selected={mode === "source"} onClick={() => setMode("source")}>{t.sourceAsset}</button>
             </div>
           </header>
           <div className="asset-document-body" role="tabpanel">
-            {mode === "source" ? <pre>{content}</pre> : <AgentAssetFileDocument filename={filename} content={content} />}
+            {mode === "source" ? <pre>{content}</pre> : <AgentAssetFileDocument filename={filename} content={content} title={candidate.title} />}
           </div>
         </section>
       </div>
@@ -890,8 +927,8 @@ function AssetDocument({
   );
 }
 
-function AgentAssetFileDocument({ filename, content }: { filename: string; content: string }) {
-  if (/\.md$/i.test(filename)) return <MarkdownDocument value={content} />;
+function AgentAssetFileDocument({ filename, content, title }: { filename: string; content: string; title?: string }) {
+  if (/\.md$/i.test(filename)) return <MarkdownDocument value={content} title={title} />;
   if (/\.json$/i.test(filename)) {
     try {
       return <StructuredAssetDocument value={JSON.parse(content)} />;
@@ -902,7 +939,7 @@ function AgentAssetFileDocument({ filename, content }: { filename: string; conte
   return <pre className="asset-code-file">{content}</pre>;
 }
 
-function MarkdownDocument({ value }: { value: string }) {
+function MarkdownDocument({ value, title }: { value: string; title?: string }) {
   const normalized = value.replace(/\r\n/g, "\n").trim();
   const frontmatterMatch = normalized.match(/^---\n([\s\S]*?)\n---\n?/);
   const metadata = frontmatterMatch?.[1].split("\n").map((line) => {
@@ -918,6 +955,7 @@ function MarkdownDocument({ value }: { value: string }) {
         const heading = block.match(/^(#{1,4})\s+(.+)$/s);
         if (heading && !heading[2].includes("\n")) {
           const level = heading[1].length;
+          if (index === 0 && level === 1 && heading[2].trim() === title?.trim()) return null;
           if (level === 1) return <h1 key={index}>{heading[2]}</h1>;
           if (level === 2) return <h2 key={index}>{heading[2]}</h2>;
           return <h3 key={index}>{heading[2]}</h3>;

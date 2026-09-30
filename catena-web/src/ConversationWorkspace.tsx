@@ -8,8 +8,8 @@ type Locale = "zh" | "en";
 
 const copy = {
   zh: {
-    title: "对话",
-    body: "查看 XiaoBaOS 用户真正看到的消息。系统提示词、思考过程和工具内部数据不会出现在这里。",
+    title: "经历",
+    body: "回看对话，把值得保留的内容提炼成记忆。",
     list: "最近对话",
     refresh: "刷新",
     loading: "正在读取对话",
@@ -21,7 +21,7 @@ const copy = {
     agent: "XiaoBaOS",
     messages: "条消息",
     trace: "关联 Trace",
-    exclusive: "XiaoBaOS 原生 Conversation",
+    exclusive: "对话来源 · XiaoBaOS",
     remember: "提炼为记忆",
     submitting: "正在提交",
     memoryWaiting: "等待开始",
@@ -34,8 +34,8 @@ const copy = {
     backToList: "返回对话列表",
   },
   en: {
-    title: "Conversations",
-    body: "See what XiaoBaOS users actually saw. System prompts, reasoning, and tool internals never appear here.",
+    title: "History",
+    body: "Revisit conversations and keep the context worth remembering.",
     list: "Recent conversations",
     refresh: "Refresh",
     loading: "Loading conversations",
@@ -47,7 +47,7 @@ const copy = {
     agent: "XiaoBaOS",
     messages: "messages",
     trace: "Trace",
-    exclusive: "XiaoBaOS native Conversation",
+    exclusive: "Conversation source · XiaoBaOS",
     remember: "Distill to memory",
     submitting: "Submitting",
     memoryWaiting: "Waiting to start",
@@ -65,10 +65,12 @@ export function ConversationWorkspace({
   locale,
   memoryReady,
   onOpenMemory,
+  navigation,
 }: {
   locale: Locale;
   memoryReady: boolean;
   onOpenMemory: () => void;
+  navigation?: React.ReactNode;
 }) {
   const t = copy[locale];
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
@@ -133,9 +135,11 @@ export function ConversationWorkspace({
   return (
     <section className="page conversation-page">
       <header className="conversation-page-header">
-        <div><p>{t.exclusive}</p><h1>{t.title}</h1><span>{t.body}</span></div>
+        <h1>{t.title}</h1>
         <button className="text-button" type="button" onClick={() => void load()} disabled={loading}>{t.refresh}</button>
       </header>
+      {navigation}
+      <p className="conversation-source-note">{t.exclusive}</p>
       <div className={mobileDetailOpen ? "conversation-browser detail-open" : "conversation-browser"}>
         <aside className="conversation-index">
           <header><h2>{t.list}</h2><span>{conversations.length}</span></header>

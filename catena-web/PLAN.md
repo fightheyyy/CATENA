@@ -1,8 +1,83 @@
 # Catena Web Plan
 
-Updated: 2026-08-19
+Updated: 2026-09-16
 
 ## Current state
+
+The calm cloud workspace is implemented. Deployment remains deferred.
+
+## Completed milestone — connection typography
+
+- [x] Inspect the annotated live page and identify 10px endpoint text/default
+      monospace plus inconsistent 11–13px labels and controls.
+- [x] Apply the shared readable scale, aligned endpoint rows and section rhythm.
+- [x] Check desktop/mobile layout, configuration disclosure and light/dark mode.
+- [x] Build, synchronize the embedded bundle and refresh the local service.
+
+Owner: local Web task. Scope is presentation; credentials and backend APIs
+retain their existing behavior. No new explanatory copy is needed.
+
+Validation (2026-09-16): TypeScript and production build passed; embedded
+files match the build by hash. The live 1081px page uses 14px UI type for
+addresses, labels and actions, 13px status type and 18px section headings.
+At 390px, inputs remain 16px, addresses wrap at the origin/path boundary,
+and the complete endpoint text is preserved. Light/dark views and expanded
+configuration were inspected with no horizontal overflow or script errors.
+The original system theme and browser viewport were restored. Local Core
+was rebuilt and refreshed at `http://127.0.0.1:5570/api-keys`.
+
+## Completed milestone — reduce visual and verbal clutter
+
+- [x] Remove repeated headings, slogans, metric tiles and promotional cards.
+- [x] Put history and memory content earlier; keep source details and recovery.
+- [x] Verify existing journeys, inspect desktop/mobile screenshots, sync bundle.
+
+Owner: local Web task. User feedback requests fewer competing elements and
+less explanatory copy, while preserving the existing workflows.
+
+Validation (2026-09-15 refinement): 54 unit tests, 16 browser journeys,
+TypeScript and production build passed. Final Overview, Memory, Outputs and
+Trace screenshots were reviewed at desktop and mobile sizes; 320px English
+dark mode has no horizontal overflow. All 16 embedded files match the build.
+Screenshots are in the ignored `.local/minimal-refinement/` directory.
+
+## Completed milestone — calm cloud workspace
+
+- [x] Four primary destinations; History subviews; utility Agent connections.
+- [x] Overview based on real Agent, Trace and asset records, with partial-error
+      recovery and exact evidence links.
+- [x] Shared typography, icons, warm light/dark surfaces and mobile navigation.
+- [x] Memory collection first, graph on demand, simple search reset; clearer
+      Trace and output presentation and empty states.
+- [x] Meaningful browser coverage for new navigation, partial failures, memory
+      switching and output handoffs; visual review and embedded build parity.
+
+Owner: local Web task. Preserve API contracts, candidate provenance, bounded
+loading, credential handling and current live-integration support boundaries.
+
+Validation (2026-09-15): 54 unit tests, 16 browser journeys, TypeScript and Vite
+build passed. Screenshots were inspected for Overview, Memory, Outputs,
+Trace detail, connections, Settings and landing, including 390px and dark
+English layouts. Reader focus, failed-memory retry and stale-graph reset are
+covered. Local browser runs used installed Chrome through
+`CATENA_BROWSER_EXECUTABLE`; CI installs the matching Playwright Chromium.
+Reproduce the synthetic design preview after building with
+`node tests/browser/preview.mjs`. It never connects to a live backend.
+
+## Active milestone — reliable core journeys
+
+- [x] Replace global startup fan-out with journey-scoped loading, cancellation,
+      refresh and recoverable errors.
+- [x] Connect recent Trace rows to exact, reloadable Trace URLs.
+- [x] Synchronize polled Job details and background analysis completion with
+      the asset library.
+- [x] Add Agent connection guidance, shell-specific copy and first-data checks.
+- [x] Cover regression scenarios, desktop/mobile layout and embedded build parity.
+
+Owner: this local Web task. Backend contracts stay unchanged. Browser fixtures
+verify UI behavior only; they do not certify live ingestion or model execution.
+
+## Baseline
 
 - [x] Standalone React/Vite application served by Go.
 - [x] Agent, Conversation, Memory, Trace and Trace Farm journeys.
@@ -83,7 +158,7 @@ Updated: 2026-08-19
       fold session wrappers and select the first evidence-bearing Turn by default.
 - [x] Render Canonical Event Graph Tool, Retry and Subagent kinds without
       losing failed tools from the Tool lens.
-- [ ] Add responsive browser acceptance to CI.
+- [x] Add responsive browser acceptance to CI.
 - [ ] Improve accessibility and keyboard navigation.
 - [ ] Add durable optimistic/retry states for long-running jobs.
 
@@ -96,6 +171,20 @@ desktop widths. At 720px and below, opening a record must replace the index with
 the detail and expose a working back action without horizontal overflow.
 
 ## Verification log
+
+- 2026-09-15: 54 unit tests, 9 browser regressions, TypeScript/build and all
+  14 embedded-file hashes passed. Authenticated `/` opens Agents. Workspace
+  bootstrap reads fell from nine shared requests to one for Agents/API
+  Management, two for Trace/Farm, and none for Settings (session and detail
+  reads are separate). Failures preserve navigation and retry, and changing
+  routes aborts obsolete reads. Trace URLs retain exact identity, including
+  records outside the current list and mobile failure/back states. Job detail
+  and active-library polling update the shared asset records without a fetch
+  loop. Setup offers shell-safe copying, a masked preview and two-minute
+  first-data detection with retry. Desktop and 390px screenshots were inspected;
+  English mobile labels no longer overlap. CI now runs the browser suite.
+  `index.html` uses LF to keep Windows builds byte-compatible with CI.
+  Fixtures prove UI behavior, not live ingestion or candidate effectiveness.
 
 - 2026-08-19: the DSH Agent and generated Plugin render as first-class Runtime
   and Asset types. The Asset Library exposes both files, exact provenance and

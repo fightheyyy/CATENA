@@ -17,7 +17,7 @@ const emptyState: AgentTraceState = {
   error: "",
 };
 
-export function useAgentTraceWindow(agentID: string, limit: number, evidenceVersion = 0) {
+export function useAgentTraceWindow(agentID: string, limit: number, evidenceVersion: unknown = 0) {
   const [state, setState] = useState<AgentTraceState>(emptyState);
   const [requestVersion, setRequestVersion] = useState(0);
   const retry = useCallback(() => setRequestVersion((value) => value + 1), []);
@@ -28,6 +28,7 @@ export function useAgentTraceWindow(agentID: string, limit: number, evidenceVers
       return;
     }
     let active = true;
+    const controller = new AbortController();
     const evidenceWindow = agentEvolutionWindow(new Date(), "30d");
     setState({ agentID, traces: [], loading: true, error: "" });
     void api.agentTraces(
@@ -35,6 +36,7 @@ export function useAgentTraceWindow(agentID: string, limit: number, evidenceVers
       evidenceWindow.window_start,
       evidenceWindow.window_end,
       Math.max(1, Math.min(500, Math.trunc(limit))),
+      controller.signal,
     ).then((result) => {
       if (active) setState({ agentID, traces: result.traces, loading: false, error: "" });
     }).catch((cause) => {
@@ -46,7 +48,7 @@ export function useAgentTraceWindow(agentID: string, limit: number, evidenceVers
         error: cause instanceof Error ? cause.message : "Agent Trace query failed",
       });
     });
-    return () => { active = false; };
+    return () => { active = false; controller.abort(); };
   }, [agentID, limit, requestVersion, evidenceVersion]);
 
   if (!agentID) return { ...emptyState, retry };
