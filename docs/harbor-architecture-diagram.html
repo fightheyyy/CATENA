@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Harbor 框架全景</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0d1117; color:#e6edf3; font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif; padding:36px 40px; width:1320px; }
+  h1 { font-size:26px; text-align:center; letter-spacing:1px; }
+  .sub { text-align:center; color:#8b949e; font-size:13px; margin:8px 0 26px; }
+  .sub code { color:#79c0ff; background:#161b22; padding:2px 6px; border-radius:4px; }
+  .layer { border:1px solid #30363d; border-radius:10px; background:#161b22; padding:14px 18px 16px; }
+  .layer h2 { font-size:15px; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .tag { font-size:11px; color:#0d1117; font-weight:700; padding:2px 8px; border-radius:10px; }
+  .cards { display:flex; gap:12px; flex-wrap:wrap; }
+  .card { flex:1; min-width:230px; border:1px solid #30363d; border-radius:8px; padding:10px 12px; background:#0d1117; }
+  .card b { font-size:13px; display:block; margin-bottom:5px; }
+  .card p, .card li { font-size:12px; color:#8b949e; line-height:1.55; }
+  .card ul { list-style:none; }
+  .card li::before { content:"· "; color:#58a6ff; }
+  code { font-family:Consolas,monospace; font-size:11.5px; color:#79c0ff; background:#161b22; padding:1px 5px; border-radius:4px; }
+  .arrow { text-align:center; color:#484f58; font-size:18px; line-height:1.2; padding:4px 0; }
+  .b1 { border-left:4px solid #1f6feb; } .b1 h2 { color:#58a6ff; } .b1 .tag { background:#1f6feb; }
+  .b2 { border-left:4px solid #8957e5; } .b2 h2 { color:#d2a8ff; } .b2 .tag { background:#8957e5; }
+  .b3 { border-left:4px solid #238636; } .b3 h2 { color:#3fb950; } .b3 .tag { background:#238636; }
+  .b4 { border-left:4px solid #bf3989; } .b4 h2 { color:#ff9bce; } .b4 .tag { background:#bf3989; }
+  .b5 { border-left:4px solid #d29922; } .b5 h2 { color:#e3b341; } .b5 .tag { background:#d29922; }
+  .b6 { border-left:4px solid #3fb950; } .b6 h2 { color:#56d364; } .b6 .tag { background:#3fb950; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .chip { font-size:11px; color:#8b949e; border:1px solid #30363d; border-radius:12px; padding:2px 9px; background:#0d1117; }
+  .footer { margin-top:16px; border:1px dashed #d29922; border-radius:10px; padding:12px 16px; background:#161b22; }
+  .footer b { color:#e3b341; font-size:13px; }
+  .footer p { font-size:12px; color:#8b949e; line-height:1.6; margin-top:4px; }
+</style>
+</head>
+<body>
+  <h1>Harbor 框架全景</h1>
+  <div class="sub">harbor-framework/harbor · Apache-2.0 · Laude Institute · Terminal-Bench 2.x 官方 harness &nbsp;|&nbsp; 一次评测的完整数据流:<code>任务</code> → <code>编排</code> → <code>环境</code> → <code>Agent</code> → <code>验证</code> → <code>分析</code></div>
+
+  <div class="layer b1">
+    <h2><span class="tag">L1</span>输入层 · 任务从哪来</h2>
+    <div class="cards">
+      <div class="card"><b>Dataset Registry / Hub</b><p><code>registry.json</code> 分发式数据集注册,<code>harbor datasets list</code> 即装即用;adapters/ 内 <b>70+ 基准适配器</b>:terminal-bench@2.x、swebench 全家、tau3、gaia2、osworld、theagentcompany、hle、livecodebench…</p></div>
+      <div class="card"><b>本地任务目录(Task)</b><p>一个任务 = 一个目录:<code>environment/</code>(Dockerfile)+ <code>task.toml</code>(指令)+ <b>oracle</b>(参考解,验证环境可解)+ <b>verifier</b>(评分逻辑)。可版本化、可离线复现。</p></div>
+      <div class="card"><b>Skills 自举</b><p>agent skills:<code>create-task</code> / <code>create-adapter</code> / <code>publish</code> / <code>upload-parity-experiments</code> —— 让 Claude Code / Codex 帮你写任务、写适配器、跑对齐实验。</p></div>
+    </div>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="layer b2">
+    <h2><span class="tag">L2</span>编排层 · Job / Trial</h2>
+    <div class="cards">
+      <div class="card" style="flex:2"><b>CLI 入口</b><p><code>harbor run --dataset terminal-bench@2.0 --agent claude-code -m &lt;model&gt; --env docker --n-concurrent 100</code></p></div>
+      <div class="card"><b>执行模型</b><p><code>job_plan.py</code> 解析数据集 × agent × 环境 → <b>Job</b> 拆成并发 <b>Trial</b>(每 task×agent 一个独立试验,trial.log 全程留痕)→ <code>storage</code>/<code>db</code> 存结果。</p></div>
+    </div>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="layer b3">
+    <h2><span class="tag">L3</span>环境层 · 25 种沙箱 provider(--env 可插拔)</h2>
+    <div class="cards">
+      <div class="card"><b>本地</b><p><code>docker</code>(默认)· podman · dind_compose · apple_container · singularity · ssh</p></div>
+      <div class="card"><b>云沙箱</b><p>daytona · modal · <b>e2b</b> · ec2 · gke · openshift · runloop · blaxel · vercel · novita · beam · langsmith · hyperbrowser · skypilot · cua_cloud · hf_sandbox · kata(microVM)…</p></div>
+      <div class="card"><b>治理</b><p><code>capabilities</code>(网络/权限能力声明)+ <code>resource_policies</code>(资源配额)——同一任务在不同 provider 上行为一致。</p></div>
+    </div>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="layer b4">
+    <h2><span class="tag">L4</span>Agent 层 · 谁来干活</h2>
+    <div class="cards">
+      <div class="card"><b>installed 40+ 真实编码 agent</b><p>claude_code · codex · cursor_cli · gemini_cli · copilot_cli · goose · kimi_code · qwen_code · opencode · openhands · mini_swe_agent · swe_agent · devin · junie · trae_agent · vibe · cline · strands …</p></div>
+      <div class="card"><b>协议与桥接</b><p><b>ACP</b>(acp_registry,兼容协议免写 adapter)· <b>bridges</b>(外部脚手架原样评测)· 自研参考 agent <code>terminus_2</code>(tmux 最小循环)· <code>llms</code>/<code>models</code> 多模型接入。</p></div>
+    </div>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="layer b5">
+    <h2><span class="tag">L5</span>验证层 · 分数从哪来</h2>
+    <div class="cards">
+      <div class="card"><b>Task Verifier + Oracle</b><p>容器内跑 verifier 评分,oracle 参考解保证任务本身可解;agent 非 root、评测器可隐藏。</p></div>
+      <div class="card"><b>Rewardkit(独立可用)</b><p>声明式 criteria DSL:<code>criteria.file_exists()</code> / <code>file_contains()</code> … → <code>reward.toml</code> 按文件加权 → 输出 <code>/logs/verifier/reward.json</code>(即 RL reward 格式,<code>uvx</code> 可脱离 Harbor 单跑)。</p></div>
+      <div class="card"><b>Metrics 聚合</b><p><code>mean</code> / <code>max</code> / <code>min</code> / <code>sum</code> + 自定义 <code>uv_script</code>,多 trial 结果汇总成 job 分数。</p></div>
+    </div>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="layer b6">
+    <h2><span class="tag">L6</span>产物与分析层</h2>
+    <div class="cards">
+      <div class="card"><b>Viewer</b><p>本地 Web 查看器:逐 trial 回看轨迹、命令、评分。</p></div>
+      <div class="card"><b>Analyzer(LLM 归因)</b><p>rubric(<code>analyze-rubric.toml</code>)驱动 LLM 逐 trial 产出 <code>analysis.json</code>:失败原因、行为定性。</p></div>
+      <div class="card"><b>job_diff(对比)</b><p>跨 Job 对比、结果复用(REUSE)、重判定(regrade)——版本间"哪些任务过了/挂了"。</p></div>
+      <div class="card"><b>出口</b><p>榜单/报告 · <b>RL rollouts</b>(任务环境即训练环境)· <b>atif2otel</b>:ATIF 轨迹转 OTel span,可直连 Laminar 等观测后端。</p></div>
+    </div>
+    <div class="chips">
+      <span class="chip">hosted 云服务</span><span class="chip">publisher / upload 发布</span><span class="chip">telemetry 自身遥测</span><span class="chip">packages: rewardkit · atif2otel · langsmith</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    <b>Barena 收编点(1→100 分工)</b>
+    <p>直接采用:任务格式 + 40+ agent adapter + rewardkit(verifier 载体)+ job_diff(Compare 原型)+ environments 抽象(Docker 默认,Seatbelt/Bubblewrap 保留为进程级收紧层)。<b>自研层:release truth 门禁(cleared/held/rejected)与 Run Bundle 契约</b> —— Harbor 只出分数,不做发布决策。</p>
+  </div>
+</body>
+</html>

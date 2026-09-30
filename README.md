@@ -4,13 +4,15 @@
 
 <h1 align="center">Catena</h1>
 
-<p align="center"><strong>以 Trace 为燃料的 Agent 持续进化平台</strong></p>
+<p align="center"><strong>让每一段 Agent 经历，有所积累。</strong></p>
 
 <p align="center">
-  Observe what Agents actually did. Turn repeated evidence into better agent.md, Skills, Roles, and DSH Plugins.
+  A calm workspace for your Agents, working history, traceable memory, and reusable outputs.
 </p>
 
-Catena 汇聚 XiaoBaOS、Codex、Claude Code 和通用 OTLP Agent 的真实运行证据，从一段时间的 Trace 与对话中发现重复问题，生成可追溯、可人工采用的 Agent 进化候选。
+Catena 是一个基于 Trace 的云端工作空间：汇集端侧 Agent 的经历，回看工作过程，保留重要信息，再提炼可带走的方法。界面围绕 **总览、经历、记忆、产出** 四个入口展开，接入配置和运行详情按需查看。
+
+当前支持 Codex、Claude Code 的本地采集插件，以及通用 OTLP 接收；可读取的信息取决于来源实际导出的内容。记忆提炼目前基于 XiaoBaOS 用户可见对话，产出使用现有分析流程生成候选文件。跨 Agent 的个人/团队长期剖析仍是后续产品能力。
 
 ```text
 OTLP Trace ─┐
@@ -20,14 +22,13 @@ Barena Run ──┘
 
 ## 核心能力
 
-- **Agent**：把同一 Runtime 的多个 telemetry source 聚合为一个可理解的 Agent。
-- **对话**：保存 XiaoBaOS 用户真正看到的消息，用于提炼记忆与角色知识。
-- **记忆**：从对话生成可追溯记忆，并支持语义、关系与时间召回。
-- **Trace**：按用户 Turn 阅读请求、模型调用、严格配对的 Tool、分支、状态与最终回答；原始 Span 瀑布保留为诊断视图。
-- **Trace Farm**：按 Agent 与时间窗口分析多条 Trace，展示 Inspector、Evolution、Reviewer 三个阶段。
-- **进化产物**：输出标准 `agent.md`、Skill、Role；当证据来自 DeepSeek Harness 时，输出可由 Barena 本地验收的 DSH Plugin 包。
+- **总览**：打开即见最近经历与产出；支持搜索、Agent 筛选及准确回到来源，局部加载失败可以单独重试。
+- **经历**：Trace 与对话放在一个入口。按 Turn 阅读请求、调用与最终回答，详细 Span 与原始字段按需展开。
+- **记忆**：默认阅读卡片，点击查看全文与来源；搜索涵盖事实、对话和主题，关系图与提炼任务作为辅助视图。
+- **产出**：阅读、复制或下载 `agent.md`、Skill、Role 和 DSH Plugin 候选包；保留来源 Trace、分析过程与审查信息。
+- **连接**：为每个 Agent 创建独立凭证，复制 POSIX/PowerShell 配置，检测第一条数据；在这里配置自己的分析模型。
 
-Catena 不托管或冒充用户的目标 Agent。平台内置的 XiaoBaOS Runtime 只消费 Evidence，不执行被测 Agent。Catena 也不提供公共 LLM；每位用户在 **API 管理** 中配置自己的 Provider、Base URL、Model 与 API Key。密钥加密保存，只在该用户的 Trace Farm 任务执行时临时解密。
+平台内置的 XiaoBaOS Runtime 消费 Evidence 并生成候选方法；目标 Agent 的执行与验证留在端侧。每位用户在 **连接** 中配置自己的 Provider、Base URL、Model 与 API Key。密钥加密保存，只在该用户的分析任务执行时临时解密。
 
 ## 产品边界
 
@@ -117,6 +118,11 @@ Agent connection key → agent_id → display name
 
 创建后，接入面板会直接生成下面这段可复制配置，并自动等待第一条数据：
 
+面板支持 macOS/Linux shell 和 Windows PowerShell。预览中的密钥是占位符，
+点击“复制完整配置”时才会填入真实密钥。执行配置后，需要重启支持 OTLP 的
+Agent 并实际运行一次任务；复制本身不会上传数据。检测失败或两分钟未收到
+数据时，可以修正配置后重新检测，收到数据后可直接进入该 Agent。
+
 ```bash
 export CATENA_URL='http://127.0.0.1:5570'
 export CATENA_API_KEY='catena_agent_...'
@@ -203,10 +209,16 @@ cp deploy/catena-mvp1/.env.public.example deploy/catena-mvp1/.env
 
 ## 状态与开发
 
+本地优化优先于再次上线。登录后的默认入口是 Agent；各页面按需读取数据，
+Trace 链接保留精确记录，Trace Farm 的任务完成状态会同步到资产库。
+这些界面行为有独立的浏览器回归测试；模拟数据测试不代替真实接入、模型执行
+或生成产物的效果验收。
+
 MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、用户自带 LLM、OTLP 导入、Runtime 自动识别、Agent 聚合、Span 瀑布、XiaoBaOS Conversation、Trace Farm、进化候选与中英文 UI。DeepSeek Harness 已打通 DSH → Barena Explore → Catena Trace Farm → DSH Plugin 产出与本地安装验收。当前定位是 single-node Beta；多 Worker lease、备份恢复、配额与完整 RBAC 尚未完成。
 
 ```bash
 cd catena-web && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm typecheck && pnpm build
+pnpm exec playwright install chromium && pnpm test:browser
 cd ../control-plane && go test ./... && go vet ./... && go test -race ./internal/control
 cd ../tap && python3.12 -m pip install -e '.[dev]' && pytest
 cd codex && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test && pnpm build

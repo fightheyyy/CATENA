@@ -1,8 +1,32 @@
 # Catena Control Plane Plan
 
-Updated: 2026-08-19
+Updated: 2026-09-16
 
 ## Current state
+
+## Completed milestone — bounded Trace summary reads
+
+- [x] Reproduce cold-load timeouts with the 83,837 imported spans.
+- [x] Select bounded global/Agent Trace IDs before reading wide evidence.
+- [x] Retain owner isolation, time windows, Session precedence and FINAL dedup.
+- [x] Run ClickHouse regression checks and benchmark the real local dataset.
+- [x] Rebuild local Core and verify browser history and detail loading.
+
+Owner: local control-plane task. Baseline: global list cold HTTP 23.1s;
+warm direct query 9.37s/7.65GB read. A read-only bounded-query experiment
+returned the identical 100 summaries in 1.12s/1.14GB read. Both final global
+and 500-row Agent query results match the previous implementation field by
+field. Updated live HTTP requests took 1.01s and 3.75s respectively.
+
+Validation (2026-09-16): Go tests and vet passed in a Node-equipped build
+container; live ClickHouse round-trip, paging/replacement and canonical OTLP
+checks passed against `catena_load_regression_20260916`. The Web smoke test
+now verifies JavaScript MIME type instead of requiring a removed navigation
+label in a split bundle. The local image was rebuilt and the actual browser
+displayed history and the selected Trace narrative without script errors.
+No source evidence or database schema was changed. All import counts match.
+
+## Baseline
 
 - [x] Go owns public auth, Registered Agents, bound credentials and project isolation.
 - [x] Go ingests OTLP and queries Catena-owned ClickHouse tables.

@@ -1,8 +1,92 @@
 # Catena Implementation Plan
 
-Updated: 2026-08-19
+Updated: 2026-09-16
 
 ## Current status
+
+Connection-page typography is refined from the owner's browser annotation:
+readable 14px labels/addresses/actions, aligned endpoint rows and natural
+mobile URL wrapping. Typecheck/build, embedded file parity and live
+desktop/mobile/light/dark inspection passed; the local bundle is updated.
+
+The 2026-09-16 Trace-list timeout is fixed locally. The old cold request took
+23.1 seconds, beyond the Web client's 15-second read deadline. Recent IDs are
+now selected before large input/attribute columns are read. The updated live
+global list returned 100 summaries in 1.01s; the 500-row Agent list in 3.75s.
+
+## Completed milestone — imported history loading
+
+- [x] Reproduce the failure against the real local browser and imported data.
+- [x] Bound global and Agent Trace summary reads before parsing wide columns.
+- [x] Verify result parity, replacement semantics, ownership and time windows.
+- [x] Rebuild the local service and verify Overview, History and exact details.
+
+Owner: local control-plane task. Acceptance: real lists load within the
+existing client deadline and all 301 imported sessions remain intact.
+Go tests and vet passed, including live ClickHouse paging/identity regression
+checks in a separate test database. Browser verification displayed seven real
+Overview records, 500 Agent traces and the exact selected narrative without
+script errors. Retained counts remain 301 sessions / 2,582 traces / 83,837 spans.
+Evidence: [local loading fix](docs/CATENA_TRACE_LOADING_FIX_20260916.md).
+
+## Previous status
+
+Local Codex history import is complete: 303 active/archived files inspected,
+301 non-empty sessions, 2,582 traces and 83,837 spans verified in local storage.
+The task repaired native lifecycle/fork parsing and Windows database-init line
+endings. Docker's data disk was moved to E after C filled during ingestion;
+a verified rollback copy was preserved. The real Web workspace is available
+at `http://127.0.0.1:5570`. Public deployment remains deferred.
+
+Public deployment is deferred by the owner. The focused cloud workspace
+redesign and local reliability pass are complete. The reset server was not
+used as an acceptance environment for this pass.
+
+The refinement is complete: repeated headings, slogans, metric tiles and
+promotional cards were removed. Recent history and memory content appear
+earlier, with navigation, evidence links, error recovery and exports intact.
+The refined build passed the same 54 unit tests and 16 browser journeys,
+desktop/mobile visual review, 320px English dark layout and embedded parity.
+
+## Completed milestone — focused cloud workspace
+
+- [x] Introduce Overview, History, Memory and Outputs navigation with preserved
+      Agent, credential and exact-evidence routes.
+- [x] Add a real-data Overview with independent failures and direct handoffs.
+- [x] Apply a coherent warm visual system and simplify memory/Trace/output
+      reading with progressive disclosure.
+- [x] Verify populated, empty and failed journeys, desktop/mobile, bilingual
+      and dark appearance; run Web checks and synchronize the embedded bundle.
+
+Owner: this local Web task. Acceptance requires useful working interactions,
+not a static mockup. New memory ingestion and personal-analysis backend
+capabilities remain separate work and must not be advertised as implemented.
+
+Validation: 54 unit tests and 16 browser journeys passed, with TypeScript and
+production build checks. Browser fixtures cover section failures, exact
+handoffs, collection/graph/search recovery, desktop and 390px layouts,
+English and dark appearance. A separate 320px layout check passed. The final
+generated files are synchronized with the Go embedded Web directory. This is
+UI acceptance using synthetic data; live ingestion, models and backend
+performance require their own acceptance.
+
+## Active milestone — local product reliability
+
+- [x] Load journey data independently; keep navigation and Settings usable on
+      API failure, cancel obsolete reads, and expose refresh/retry.
+- [x] Preserve the exact Agent/Trace selection across navigation and reload.
+- [x] Update analysis history and the asset library as active Jobs finish.
+- [x] Restore configuration guidance and first-evidence detection in API
+      Management without rendering plaintext credentials.
+- [x] Verify these flows with browser fixtures at desktop and 390px, Web tests,
+      typecheck/build, and parity with Go's embedded Web bundle.
+
+Owner: Web implementation and verification in this local task. Acceptance is
+the four observable journeys above; no deployment or database initialization.
+Later product work still includes asset adoption/verification handoff, memory
+usability, broader accessibility, and measured backend performance under load.
+
+## Product baseline
 
 Catena is a standalone Go + React product. Go owns OAuth, Agent registration,
 Agent-bound API keys, OTLP/Conversation ingestion, Trace queries and Evolution
@@ -173,6 +257,18 @@ local.
 5. Web tests/build, Go tests/vet/race, and both Compose configurations pass.
 
 ## Verification log
+
+- 2026-09-15: local product reliability passed 54 Web unit tests, 9 browser
+  regressions, TypeScript/build, and byte parity for all 14 embedded Web files.
+  Browser coverage includes route failure/retry/cancellation, the Agent-first
+  root, exact and out-of-window Trace links, reload/back/mobile inspection,
+  selected and background Job completion, clipboard-only configuration,
+  first-data retry/success, and English/dark mobile navigation. Browser checks
+  use explicit fixtures; live ingestion/model execution and backend load were
+  not re-certified. No server deployment occurred. Go source is unchanged;
+  the Go toolchain is unavailable on this Windows host, so Go checks remain CI.
+  The next product milestone is adoption and verifier-backed effect comparison;
+  see [local UX review](docs/CATENA_LOCAL_UX_REVIEW_20260915.md).
 
 - 2026-08-19: Barena ran a DSH Explore through the public Runtime adapter and
   uploaded one 26-Span boundary Trace to Catena. Catena froze four exact DSH

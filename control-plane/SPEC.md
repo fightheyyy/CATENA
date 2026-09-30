@@ -1,7 +1,7 @@
 # Catena Control Plane Specification
 
 Status: implemented MVP1 contract
-Updated: 2026-08-14
+Updated: 2026-09-16
 
 ## Responsibilities
 
@@ -30,6 +30,9 @@ flowchart LR
     HTTP --> Domain["Domain + state machines"]
     Domain --> PG[("PostgreSQL")]
     HTTP --> CH[("Official ClickHouse<br/>catena.catena_spans")]
+    HTTP --> Recent["Narrow Trace selection<br/>owner · Agent · window · limit"]
+    Recent --> Summaries["Selected Trace summaries<br/>FINAL · bounded input preview"]
+    Summaries --> CH
     Domain --> Worker["Evolution Runner"]
     LLM["Owner LLM config<br/>encrypted at rest"] --> Domain
     Domain -->|"per-job ephemeral config"| Worker
@@ -54,6 +57,9 @@ flowchart LR
     Normalize --> Evidence[("Trace · Conversation")]
     Evidence --> Hierarchy["derive Agent · Session · Trace · Span"]
     Evidence --> CH[("Official ClickHouse<br/>catena.catena_spans")]
+    TraceList["Global · Agent-window Trace list"] --> Recent["Narrow metadata query<br/>owner · Agent · window · limit"]
+    Recent --> Summaries["Selected Trace IDs → summaries<br/>FINAL · bounded input preview"]
+    Summaries --> CH
     Detect --> Registry
     Web["API management"] --> ModelAPI["GET · PUT · DELETE /v1/me/llm-config"]
     ModelAPI --> Encrypted["owner-scoped encrypted credential"]
@@ -85,6 +91,13 @@ The durable worker queue remains the next control-plane reliability milestone.
 - ClickHouse: raw Trace, Span and event evidence.
 - ClickHouse Trace summaries derive `agent_id` from authenticated ingestion and
   `session_id` from supported OTel attributes without rewriting raw evidence.
+- Trace lists select recent IDs from narrow metadata before reading large
+  input/attribute columns. Both selection and summaries use `FINAL`; only
+  sorting-key columns (`owner_id`, `trace_id`) enter explicit `PREWHERE`.
+  Agent identity and overlap-window filters are applied before the limit;
+  the same overlap window applies to the selected summary spans. Equal end
+  times use Trace ID as a stable secondary ordering key. Raw evidence and
+  Session-attribute precedence stay unchanged; no storage migration is needed.
 - Coding-Agent Runtime inference recognizes accepted Codex and Claude Code
   evidence only: `catena-runtime-codex` + `agent.runtime=codex`, or
   `catena-runtime-claude-code` + `agent.runtime=claude-code`. Codex App, Hermes
