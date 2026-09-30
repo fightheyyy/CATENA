@@ -19,5 +19,6 @@ test-results
 playwright-report
 .playwright-mcp
 .worktrees
+.local
 output
 *.log

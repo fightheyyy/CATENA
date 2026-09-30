@@ -1,0 +1,3 @@
+catena-web/index.html text eol=lf
+control-plane/internal/control/web/index.html text eol=lf
+deploy/catena-mvp1/postgres-init.sh text eol=lf
