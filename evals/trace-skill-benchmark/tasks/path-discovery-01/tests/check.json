@@ -1,0 +1,13 @@
+{
+  "answer": {
+    "path": "services/atlas/config/active.json",
+    "port": 7101,
+    "handler": "handle_1"
+  },
+  "protected": {
+    "services/atlas/config/active.json": "c9656831d877c6349656388ea6cfd246e295dd18b244b893f015c7bd9c0f8e33",
+    "archive/services/atlas/config/active.json": "be43a1482c92eaf9e8095f5b089668bc47a3e9d3d318f7cdcd94aabe7fe83546",
+    "services/atlas/config/example.json": "d0fd834d89fed28c5480c63286f11578f29bfb4344beac33a972027ef8076479",
+    "README.md": "de103dc1622c074264db390d72e4ca80073a42b1318b4944e0ad4a8e2acbaec3"
+  }
+}

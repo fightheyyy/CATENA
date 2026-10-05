@@ -1,0 +1,14 @@
+{
+  "answer": {
+    "total": 96,
+    "version": "2.0.0"
+  },
+  "evidence": "2.0.0",
+  "required_command": "report\\.py",
+  "protected": {
+    "report.py": "19d1faf2deb53c0c8116d3b99fbd664e31c16e6877222c90265cc6877c804620",
+    "data.json": "36f309fea96c93f417126eddf27121f1ecb5cfa6bd6b812b47fb49cd22e2c77f",
+    "pyproject.toml": "76d701b6900a922028f829a1a62f3eca92e01094b70bfb1a217aea38c94a2b4a",
+    "README.md": "ff19221685760ec128a307c279ae16ca88d7496e366fc6265d67541072c1cab1"
+  }
+}

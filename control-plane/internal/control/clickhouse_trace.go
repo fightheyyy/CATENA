@@ -42,6 +42,9 @@ func (s *ClickHouseTraceStore) migrate(ctx context.Context) error {
 CREATE TABLE IF NOT EXISTS catena_spans (
   owner_id String,
 	  agent_id String,
+	  session_id String,
+	  session_priority UInt8,
+	  input_preview String,
   trace_id String,
   span_id String,
   parent_span_id String,
@@ -75,7 +78,16 @@ ORDER BY (owner_id, trace_id, span_id)
 `); err != nil {
 		return err
 	}
-	return s.conn.Exec(ctx, `ALTER TABLE catena_spans ADD COLUMN IF NOT EXISTS agent_id String AFTER owner_id`)
+	if err := s.conn.Exec(ctx, `ALTER TABLE catena_spans ADD COLUMN IF NOT EXISTS agent_id String AFTER owner_id`); err != nil {
+		return err
+	}
+	if err := s.conn.Exec(ctx, `ALTER TABLE catena_spans ADD COLUMN IF NOT EXISTS session_id String AFTER agent_id`); err != nil {
+		return err
+	}
+	if err := s.conn.Exec(ctx, `ALTER TABLE catena_spans ADD COLUMN IF NOT EXISTS session_priority UInt8 AFTER session_id`); err != nil {
+		return err
+	}
+	return s.conn.Exec(ctx, `ALTER TABLE catena_spans ADD COLUMN IF NOT EXISTS input_preview String AFTER session_id`)
 }
 
 func (s *ClickHouseTraceStore) Ping(ctx context.Context) error {
@@ -95,7 +107,7 @@ func (s *ClickHouseTraceStore) InsertSpans(ctx context.Context, ownerID string, 
 	}
 	batch, err := s.conn.PrepareBatch(ctx, `
 INSERT INTO catena_spans (
-  owner_id, agent_id, trace_id, span_id, parent_span_id, trace_state, name, kind,
+  owner_id, agent_id, session_id, session_priority, input_preview, trace_id, span_id, parent_span_id, trace_state, name, kind,
   service_name, scope_name, scope_version, resource_schema_url,
   scope_schema_url, start_time, end_time, status_code, status_message,
   attributes_json, resource_attributes_json, events_json, links_json, flags,
@@ -127,6 +139,9 @@ INSERT INTO catena_spans (
 		if err := batch.Append(
 			ownerID,
 			span.AgentID,
+			traceSpanSessionID(span),
+			traceSpanSessionPriority(span),
+			boundedRunes(strings.TrimSpace(span.Input), 512),
 			span.TraceID,
 			span.SpanID,
 			span.ParentSpanID,
@@ -167,8 +182,8 @@ func (s *ClickHouseTraceStore) ListTraces(
 	ownerID string,
 	limit int,
 ) ([]TraceSummary, error) {
-	// Select the page using narrow columns before reading potentially multi-MB
-	// inputs and attributes. Both reads retain FINAL replacement semantics.
+	// Select the page using narrow columns. Session IDs and input previews are
+	// stored separately so list queries never load potentially multi-MB text.
 	rows, err := s.conn.Query(ctx, `
 WITH recent_traces AS (
   SELECT trace_id
@@ -180,22 +195,10 @@ WITH recent_traces AS (
 )
 SELECT
   anyIf(agent_id, agent_id != '') AS agent_id,
-  coalesce(
-    nullIf(argMinIf(JSONExtractString(attributes_json, 'agent.session.id'), start_time, JSONExtractString(attributes_json, 'agent.session.id') != ''), ''),
-    nullIf(argMinIf(JSONExtractString(attributes_json, 'gen_ai.conversation.id'), start_time, JSONExtractString(attributes_json, 'gen_ai.conversation.id') != ''), ''),
-    nullIf(argMinIf(JSONExtractString(attributes_json, 'gen_ai.session.id'), start_time, JSONExtractString(attributes_json, 'gen_ai.session.id') != ''), ''),
-    nullIf(argMinIf(JSONExtractString(attributes_json, 'session.id'), start_time, JSONExtractString(attributes_json, 'session.id') != ''), ''),
-    nullIf(argMinIf(JSONExtractString(attributes_json, 'conversation.id'), start_time, JSONExtractString(attributes_json, 'conversation.id') != ''), ''),
-    nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'agent.session.id'), start_time, JSONExtractString(resource_attributes_json, 'agent.session.id') != ''), ''),
-    nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'gen_ai.conversation.id'), start_time, JSONExtractString(resource_attributes_json, 'gen_ai.conversation.id') != ''), ''),
-    nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'gen_ai.session.id'), start_time, JSONExtractString(resource_attributes_json, 'gen_ai.session.id') != ''), ''),
-    nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'session.id'), start_time, JSONExtractString(resource_attributes_json, 'session.id') != ''), ''),
-    nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'conversation.id'), start_time, JSONExtractString(resource_attributes_json, 'conversation.id') != ''), ''),
-    ''
-  ) AS session_id,
+  argMinIf(session_id, tuple(session_priority, start_time), session_id != '') AS session_id,
   trace_id,
   argMin(name, tuple(parent_span_id != '', start_time)) AS root_name,
-  argMinIf(leftUTF8(input, 512), start_time, input != '') AS input_preview,
+  argMinIf(input_preview, start_time, input_preview != '') AS input_preview,
   argMin(service_name, start_time) AS service_name,
   anyIf(model, model != '') AS model,
   min(start_time) AS started_at,
@@ -272,21 +275,9 @@ FROM (
   SELECT
     trace_id,
 	    anyIf(agent_id, agent_id != '') AS agent_id,
-	    coalesce(
-	      nullIf(argMinIf(JSONExtractString(attributes_json, 'agent.session.id'), start_time, JSONExtractString(attributes_json, 'agent.session.id') != ''), ''),
-	      nullIf(argMinIf(JSONExtractString(attributes_json, 'gen_ai.conversation.id'), start_time, JSONExtractString(attributes_json, 'gen_ai.conversation.id') != ''), ''),
-	      nullIf(argMinIf(JSONExtractString(attributes_json, 'gen_ai.session.id'), start_time, JSONExtractString(attributes_json, 'gen_ai.session.id') != ''), ''),
-	      nullIf(argMinIf(JSONExtractString(attributes_json, 'session.id'), start_time, JSONExtractString(attributes_json, 'session.id') != ''), ''),
-	      nullIf(argMinIf(JSONExtractString(attributes_json, 'conversation.id'), start_time, JSONExtractString(attributes_json, 'conversation.id') != ''), ''),
-	      nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'agent.session.id'), start_time, JSONExtractString(resource_attributes_json, 'agent.session.id') != ''), ''),
-	      nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'gen_ai.conversation.id'), start_time, JSONExtractString(resource_attributes_json, 'gen_ai.conversation.id') != ''), ''),
-	      nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'gen_ai.session.id'), start_time, JSONExtractString(resource_attributes_json, 'gen_ai.session.id') != ''), ''),
-	      nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'session.id'), start_time, JSONExtractString(resource_attributes_json, 'session.id') != ''), ''),
-	      nullIf(argMinIf(JSONExtractString(resource_attributes_json, 'conversation.id'), start_time, JSONExtractString(resource_attributes_json, 'conversation.id') != ''), ''),
-	      ''
-	    ) AS session_id,
+	    argMinIf(session_id, tuple(session_priority, start_time), session_id != '') AS session_id,
     argMin(name, tuple(parent_span_id != '', start_time)) AS root_name,
-    argMinIf(leftUTF8(input, 512), start_time, input != '') AS input_preview,
+    argMinIf(input_preview, start_time, input_preview != '') AS input_preview,
     argMin(service_name, tuple(parent_span_id != '', start_time)) AS service_name,
     anyIf(model, model != '') AS model,
     min(start_time) AS started_at,
@@ -502,6 +493,7 @@ func agentServiceNameFilter(agentID string) (string, []any) {
 }
 
 func summarizeTrace(spans []TraceSpan, lastIngested time.Time) TraceSummary {
+	sessionPriority := traceSpanSessionPriority(spans[0])
 	summary := TraceSummary{
 		AgentID:      spans[0].AgentID,
 		SessionID:    traceSpanSessionID(spans[0]),
@@ -518,8 +510,9 @@ func summarizeTrace(spans []TraceSpan, lastIngested time.Time) TraceSummary {
 		if summary.AgentID == "" && span.AgentID != "" {
 			summary.AgentID = span.AgentID
 		}
-		if summary.SessionID == "" {
+		if priority := traceSpanSessionPriority(span); priority < sessionPriority {
 			summary.SessionID = traceSpanSessionID(span)
+			sessionPriority = priority
 		}
 		if span.ParentSpanID == "" {
 			summary.RootName = span.Name
@@ -562,21 +555,34 @@ func traceInputPreview(spans []TraceSpan) string {
 }
 
 func traceSpanSessionID(span TraceSpan) string {
-	for _, key := range []string{
+	id, _ := traceSpanSessionIdentity(span)
+	return id
+}
+
+func traceSpanSessionPriority(span TraceSpan) uint8 {
+	_, priority := traceSpanSessionIdentity(span)
+	return priority
+}
+
+func traceSpanSessionIdentity(span TraceSpan) (string, uint8) {
+	keys := []string{
 		"agent.session.id",
 		"gen_ai.conversation.id",
 		"gen_ai.session.id",
 		"session.id",
 		"conversation.id",
-	} {
+	}
+	for index, key := range keys {
 		if value, ok := span.Attributes[key].(string); ok && strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value)
-		}
-		if value, ok := span.ResourceAttributes[key].(string); ok && strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value)
+			return strings.TrimSpace(value), uint8(index)
 		}
 	}
-	return ""
+	for index, key := range keys {
+		if value, ok := span.ResourceAttributes[key].(string); ok && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value), uint8(len(keys) + index)
+		}
+	}
+	return "", 255
 }
 
 func marshalTraceJSON(value any) (string, error) {

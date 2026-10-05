@@ -1,0 +1,15 @@
+# syntax=docker/dockerfile:1.7
+
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /opt/catena-engine
+COPY engine/pyproject.toml ./
+COPY engine/catena_engine ./catena_engine
+RUN pip install --no-compile . \
+  && useradd --system --uid 1001 --no-create-home catena-engine
+USER catena-engine
+ENV CATENA_ENGINE_ADDR=0.0.0.0:8790
+EXPOSE 8790
+HEALTHCHECK --interval=5s --timeout=5s --retries=30 \
+  CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8790/readyz', timeout=3).status == 200 else 1)"]
+CMD ["catena-engine"]

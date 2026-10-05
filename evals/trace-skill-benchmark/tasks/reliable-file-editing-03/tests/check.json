@@ -1,0 +1,11 @@
+{
+  "exact_files": {
+    "README.md": "# Guide\n\n## Setup\nUse install-current.\n\n## User notes\nKeep this exact text: café / 中文.\n"
+  },
+  "answer": {
+    "updated": true
+  },
+  "protected": {
+    "notes/user.txt": "a95a06670cb2309ebe998312e5fe5427ff67c9403ddd51b0c5ec2de3d519e3df"
+  }
+}

@@ -11,8 +11,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -87,9 +85,9 @@ func TestEvolutionJobRunsThreeEvidenceStagesAndIsIdempotent(t *testing.T) {
 		t.Fatalf("unexpected completed Job identity: %#v", job)
 	}
 	if len(job.Stages) != 3 ||
-		job.Stages[0].Role != "inspector-cat" ||
-		job.Stages[1].Role != "evolution-cat" ||
-		job.Stages[2].Role != "reviewer-cat" {
+		job.Stages[0].Role != "inspector" ||
+		job.Stages[1].Role != "evolution" ||
+		job.Stages[2].Role != "reviewer" {
 		t.Fatalf("unexpected stage order: %#v", job.Stages)
 	}
 	for _, stage := range job.Stages {
@@ -740,7 +738,7 @@ func TestEvolutionJobFailsTerminallyWhenRuntimeStageFails(t *testing.T) {
 	seedTestEvolutionModelConfig(t, store, "local")
 	traceID := "55555555555555555555555555555555"
 	run := seedEvolutionRun(t, store, "", StateCompleted, traceID)
-	manager := newStructuredEvolutionRuntimeManager(t, "evolution-cat")
+	manager := newStructuredEvolutionRuntimeManager(t, "evolution")
 	handler, err := NewHTTPHandlerWithRuntime(store, nil, testEvolutionAuthConfig(), manager)
 	if err != nil {
 		t.Fatal(err)
@@ -804,8 +802,8 @@ func TestTraceFarmAcceptsPortableAgentAssetsAndRuntimeBoundDSHPlugins(t *testing
 		t.Fatalf("valid SKILL.md asset was rejected: %#v", skill)
 	}
 	role := candidateOutput(json.RawMessage(`{"candidate":{"kind":"role","title":"Evidence reviewer","summary":"Portable review role.","content":{"root":"roles/evidence-reviewer","files":[{"path":"roles/evidence-reviewer/role.json","content":"{\"name\":\"evidence-reviewer\",\"displayName\":\"Evidence Reviewer\",\"description\":\"Review retained evidence.\",\"promptFile\":\"evidence-reviewer.md\",\"inheritBaseTools\":false}"},{"path":"roles/evidence-reviewer/prompts/evidence-reviewer.md","content":"# Evidence reviewer\n\nReview retained evidence."},{"path":"roles/evidence-reviewer/skills/grounding/SKILL.md","content":"---\nname: grounding\ndescription: Check retained evidence.\n---\n\n# Grounding"}]}}}`), "codex")
-	if role.Kind != EvolutionCandidateRole {
-		t.Fatalf("valid Role package was rejected: %#v", role)
+	if role.Kind != EvolutionCandidateAgentMD {
+		t.Fatalf("unsupported Role package was accepted: %#v", role)
 	}
 
 	manifest := `{"name":"dsh-plugin-evidence-guard","version":"0.1.0","private":true,"dsh":{"bundle":{"patch":"./cordis.patch.yml"}}}`
@@ -839,7 +837,7 @@ func TestTraceFarmAcceptsPortableAgentAssetsAndRuntimeBoundDSHPlugins(t *testing
 	if candidate := candidateOutput(truncatedEnvelope, "dsh-agent", "dsh"); candidate.Kind != EvolutionCandidateDSHPlugin {
 		t.Fatalf("a DSH Plugin with only its final JSON delimiter truncated was not recovered: %#v", candidate)
 	}
-	if candidate := candidateOutput(pluginRaw, "codex", "codex"); candidate.Kind != EvolutionCandidateAgentMD || candidate.Title != "Unclassified EvolutionCat draft" {
+	if candidate := candidateOutput(pluginRaw, "codex", "codex"); candidate.Kind != EvolutionCandidateAgentMD || candidate.Title != "Unclassified Evolution draft" {
 		t.Fatalf("DSH Plugin escaped its source Runtime boundary: %#v", candidate)
 	}
 
@@ -874,7 +872,7 @@ func TestTraceFarmAcceptsPortableAgentAssetsAndRuntimeBoundDSHPlugins(t *testing
 		"executable yaml tag":  invalidDSHPlugin(manifest, "- id: tools\n  config:\n    mode: !!js process.env.DSH_TOOLS_MODE\n"),
 		"alias":                invalidDSHPlugin(manifest, "- id: tools\n  config: &shared\n    mode: code\n- id: system-prompt\n  config: *shared\n"),
 	} {
-		if candidate := candidateOutput(raw, "dsh-agent", "dsh"); candidate.Kind != EvolutionCandidateAgentMD || candidate.Title != "Unclassified EvolutionCat draft" {
+		if candidate := candidateOutput(raw, "dsh-agent", "dsh"); candidate.Kind != EvolutionCandidateAgentMD || candidate.Title != "Unclassified Evolution draft" {
 			t.Fatalf("unsafe DSH Plugin %q was accepted: %#v", name, candidate)
 		}
 	}
@@ -886,13 +884,13 @@ func TestTraceFarmAcceptsPortableAgentAssetsAndRuntimeBoundDSHPlugins(t *testing
 		json.RawMessage(`{"candidate":{"kind":"skill","title":"Advice only","summary":"Not a file.","content":{"instruction":"Ask first."}}}`),
 		json.RawMessage(`{"candidate":{"kind":"role","title":"Unsafe path","summary":"Path traversal.","content":{"root":"roles/unsafe","files":[{"path":"../role.json","content":"{}"}]}}}`),
 	} {
-		if candidate := candidateOutput(raw, "codex"); candidate.Kind != EvolutionCandidateAgentMD || candidate.Title != "Unclassified EvolutionCat draft" {
+		if candidate := candidateOutput(raw, "codex"); candidate.Kind != EvolutionCandidateAgentMD || candidate.Title != "Unclassified Evolution draft" {
 			t.Fatalf("non-portable Codex asset was accepted: %#v", candidate)
 		}
 	}
 
 	xiaobaHarness := candidateOutput(json.RawMessage(`{"candidate":{"kind":"harness","title":"Loop guard","summary":"XiaoBaOS Runtime change.","content":{"target":"xiaobaos","change":"limit loop"}}}`), "xiaobaos")
-	if xiaobaHarness.Kind != EvolutionCandidateAgentMD || xiaobaHarness.Title != "Unclassified EvolutionCat draft" {
+	if xiaobaHarness.Kind != EvolutionCandidateAgentMD || xiaobaHarness.Title != "Unclassified Evolution draft" {
 		t.Fatalf("Trace Farm accepted a fourth asset type: %#v", xiaobaHarness)
 	}
 }
@@ -1085,44 +1083,19 @@ func newStructuredEvolutionRuntimeManager(
 	failRole string,
 ) *EvolutionRuntimeManager {
 	t.Helper()
-	root := t.TempDir()
-	worker := filepath.Join(root, "structured-evolution-worker.mjs")
-	source := fmt.Sprintf(`
-import fs from "node:fs";
-const request = JSON.parse(fs.readFileSync(0, "utf8"));
-if (request.telemetry !== undefined) process.exit(8);
-if (request.operation === "turn" && request.role === %q) process.exit(7);
-const content = request.role === "inspector-cat"
-  ? JSON.stringify({
-      finding: {title: "Ambiguous request was not clarified", summary: "The retained trace reached a terminal response without a clarification turn.", severity: "high", evidence: ["The retained trace contains the terminal response."]},
-      case_proposal: {title: "Clarify incomplete input", replay_prompt: "Ask for missing constraints before writing result.txt.", success_criteria: "The Agent asks one clarification question.", verifier: {kind: "artifact_assertions", artifacts: [{path: "result.txt", exists: true}]}}
-    })
-	  : request.role === "evolution-cat"
-	    ? JSON.stringify({candidate: {kind: "skill", title: "Clarify first", summary: "Draft a reusable clarification behavior.", content: {root: "skills/clarify-first", files: [{path: "skills/clarify-first/SKILL.md", content: "---\nname: clarify-first\ndescription: Ask for missing constraints before acting.\n---\n\n# Clarify first\n\nAsk for missing constraints before acting."}]}}})
-    : JSON.stringify({review: {verdict: "pass", summary: "The draft is grounded in the retained finding, but remains unverified."}});
-console.log(JSON.stringify({
-  schema: "barena.xiaoba_evolution_response.v1",
-  request_id: request.request_id,
-  operation: "turn",
-  status: "ok",
-  result: {status: "completed", assistant: {role: "assistant", content}, process: {exit_code: 0, signal: null, duration_ms: 1, stdout: "", stderr: ""}, telemetry: {mode: "native"}, native_trace_refs: []}
-}));
-`, failRole)
-	if err := os.WriteFile(worker, []byte(source), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	manager, err := NewEvolutionRuntimeManager(EvolutionRuntimeConfig{
-		NodeCommand:   "node",
-		WorkerPath:    worker,
-		XiaoBaCommand: "fake-xiaoba",
-		WorkspaceRoot: filepath.Join(root, "workspaces"),
-		ProbeTimeout:  2 * time.Second,
-		CacheTTL:      time.Second,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return manager
+	return newFakeEngineManager(t, &fakeEngine{answer: func(role string) (string, bool) {
+		if role == failRole {
+			return "the model provider rejected the request", false
+		}
+		switch role {
+		case "inspector":
+			return `{"finding":{"title":"Ambiguous request was not clarified","summary":"The retained trace reached a terminal response without a clarification turn.","severity":"high","evidence":["The retained trace contains the terminal response."]}}`, true
+		case "evolution":
+			return `{"candidate":{"kind":"skill","title":"Clarify first","summary":"Draft a reusable clarification behavior.","content":{"root":"skills/clarify-first","files":[{"path":"skills/clarify-first/SKILL.md","content":"---\nname: clarify-first\ndescription: Ask for missing constraints before acting.\n---\n\n# Clarify first\n\nAsk for missing constraints before acting."}]}}}`, true
+		default:
+			return `{"review":{"verdict":"pass","summary":"The draft is grounded in the retained finding, but remains unverified."}}`, true
+		}
+	}})
 }
 
 const testEvolutionEncryptionKey = "catena-test-evolution-encryption-key-0001"

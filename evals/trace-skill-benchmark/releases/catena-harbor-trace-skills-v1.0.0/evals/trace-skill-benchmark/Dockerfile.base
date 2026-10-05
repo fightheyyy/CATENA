@@ -1,0 +1,9 @@
+FROM catena/codex-eval:0.160.0
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends git python3-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -m -u 10001 catena-eval \
+    && mkdir -p /workspace/case /logs/agent /logs/verifier \
+    && chown -R catena-eval:catena-eval /workspace
+WORKDIR /workspace/case
+ENTRYPOINT []

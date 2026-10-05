@@ -1,0 +1,2 @@
+service: worker
+worker_limit: 12

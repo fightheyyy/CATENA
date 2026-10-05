@@ -33,6 +33,18 @@ func OpenPostgres(ctx context.Context, databaseURL string) (*PostgresStore, erro
 
 func (s *PostgresStore) migrate(ctx context.Context) error {
 	_, err := s.db.ExecContext(ctx, `
+CREATE TABLE IF NOT EXISTS catena_experiments (
+  experiment_id TEXT PRIMARY KEY,
+  owner_user_id TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  state TEXT NOT NULL,
+  document JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  UNIQUE(owner_user_id, request_id)
+);
+CREATE INDEX IF NOT EXISTS catena_experiments_owner_created_idx ON catena_experiments(owner_user_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS catena_experiments_one_active ON catena_experiments((1)) WHERE state IN ('queued','running');
 CREATE TABLE IF NOT EXISTS barena_users (
   user_id TEXT PRIMARY KEY,
   github_id BIGINT NOT NULL UNIQUE,

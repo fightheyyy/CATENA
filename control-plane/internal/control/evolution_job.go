@@ -35,9 +35,9 @@ const (
 )
 
 var evolutionJobStages = []EvolutionStage{
-	{Name: "inspector", Role: "inspector-cat", State: EvolutionStageQueued},
-	{Name: "evolution", Role: "evolution-cat", State: EvolutionStageQueued},
-	{Name: "reviewer", Role: "reviewer-cat", State: EvolutionStageQueued},
+	{Name: "inspector", Role: "inspector", State: EvolutionStageQueued},
+	{Name: "evolution", Role: "evolution", State: EvolutionStageQueued},
+	{Name: "reviewer", Role: "reviewer", State: EvolutionStageQueued},
 }
 
 type inspectorTurnOutput struct {
@@ -472,6 +472,41 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 	}
 
 	inspectorPrompt := buildInspectorPrompt(job, evidence)
+	if s.memory != nil {
+		owner := job.OwnerUserID
+		if owner == "" {
+			owner = "local"
+		}
+		query := strings.TrimSpace(job.Objective)
+		if query == "" {
+			query = "Reusable experiences and preferences for " + job.SourceAgentID + " " + job.SourceRuntimeKind
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		recall, recallErr := s.memory.Search(ctx, owner, MemorySearchRequest{Query: query, TopK: 4})
+		cancel()
+		if recallErr == nil {
+			for _, item := range recall.Facts {
+				if item.Score < 0.35 {
+					continue
+				}
+				item.Content = bounded(redactMemoryText(item.Content), 2000)
+				item.Title = bounded(redactMemoryText(item.Title), 200)
+				item.ID = bounded(item.ID, 160)
+				metadata := map[string]any{}
+				for _, key := range []string{"uri", "category", "provider", "trace_id", "conversation_id", "agent_id"} {
+					if value, ok := item.Metadata[key].(string); ok {
+						metadata[key] = bounded(redactMemoryText(value), 500)
+					}
+				}
+				item.Metadata = metadata
+				job.MemoryContext = append(job.MemoryContext, item)
+				if len(job.MemoryContext) == 4 {
+					break
+				}
+			}
+		}
+	}
+	inspectorPrompt += evolutionMemoryContextPrompt(job.MemoryContext)
 	inspectorRaw, ok := s.runEvolutionStage(&job, 0, inspectorPrompt, model)
 	if !ok {
 		return
@@ -484,6 +519,7 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 	}
 
 	evolutionPrompt := buildCandidatePrompt(job)
+	evolutionPrompt += evolutionMemoryContextPrompt(job.MemoryContext)
 	candidateRaw, ok := s.runEvolutionStage(&job, 1, evolutionPrompt, model)
 	if !ok {
 		return
@@ -497,6 +533,7 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 	}
 
 	reviewerPrompt := buildReviewerPrompt(job, evidence)
+	reviewerPrompt += evolutionMemoryContextPrompt(job.MemoryContext)
 	reviewerRaw, ok := s.runEvolutionStage(&job, 2, reviewerPrompt, model)
 	if !ok {
 		return
@@ -529,7 +566,7 @@ func (s *HTTPServer) runEvolutionStage(
 	raw, err := s.evolutionRuntime.RunRoleTurn(ctx, EvolutionRoleTurnInput{
 		RequestID: newID(job.Stages[index].Name),
 		RunID:     job.ID,
-		Role:      job.Stages[index].Role,
+		Role:      job.Stages[index].Name,
 		Prompt:    prompt,
 		Timeout:   evolutionTurnTimeout,
 		Model:     model,
@@ -1115,12 +1152,12 @@ func buildInspectorPrompt(job EvolutionJob, evidence json.RawMessage) string {
 	if focus == "" {
 		focus = "Find one repeated or high-impact evidence-backed failure mode or behavioral boundary across this Agent Trace Set."
 	}
-	return fmt.Sprintf(`You are InspectorCat in Catena. Analyze only the retained execution evidence below.
+	return fmt.Sprintf(`You are the Inspector in Catena. Analyze only the retained execution evidence below.
 Do not invent tool calls, artifacts, verification, or outcomes. Focus: %s
 Output language: %s
 Return one JSON object only with this exact shape:
 {"finding":{"title":"...","summary":"...","severity":"low|medium|high|critical|unknown","evidence":["specific retained fact"]}}
-	Do not propose Memory, Case, or a Replay workflow. Conversation owns memory; EvolutionCat owns Agent assets.
+	Do not propose Memory, Case, or a Replay workflow. The Evolution stage owns Agent assets.
 	Catena did not execute the target Agent and this workflow cannot create a Release decision.
 	Source Agent: %s
 	Source Traces: %s
@@ -1135,11 +1172,10 @@ func buildCandidatePrompt(job EvolutionJob) string {
 		"source_agent_id":     job.SourceAgentID,
 		"source_runtime_kind": job.SourceRuntimeKind,
 	})
-	candidateKinds := "agent_md|skill|role"
-	assetContracts := `Use exactly one of these XiaoBaOS-compatible contracts:
+	candidateKinds := "agent_md|skill"
+	assetContracts := `Use exactly one of these portable contracts, readable by Codex, Claude Code and other file-configured Agents:
 	- agent_md: root is "agent.md" and files contains exactly one file whose path is "agent.md". Its Markdown heading and instructions must use the requested output language.
-	- skill: root is "skills/<kebab-name>" and files must contain "skills/<kebab-name>/SKILL.md" with YAML frontmatter name and description. It may also contain text files under scripts/, references/, or assets/ when they are necessary for the capability.
-	- role: root is "roles/<kebab-name>". A Role is a complete specialist package above Skills, not a Markdown persona. Files must contain role.json and prompts/<prompt-file>.md; role.json must declare name, displayName, description and promptFile. It may define evidence-supported tool policy, confirmation gates and role-local skills/<skill-name>/SKILL.md. All Roles reuse the XiaoBaOS Agent Runtime.`
+	- skill: root is "skills/<kebab-name>" and files must contain "skills/<kebab-name>/SKILL.md" with YAML frontmatter name and description. It may also contain text files under scripts/, references/, or assets/ when they are necessary for the capability.`
 	if job.SourceRuntimeKind == "dsh" {
 		candidateKinds = "dsh_plugin"
 		assetContracts = `The source Runtime is DeepSeek Harness. Return exactly one configuration-only DSH Plugin package:
@@ -1151,14 +1187,14 @@ func buildCandidatePrompt(job EvolutionJob) string {
 	- Never use another id, disabled, insert, name, plugin, aliases, custom YAML tags or !!js expressions.
 	- The system-prompt patch replaces the row's entire config. Keep the persona concrete, configuration-only and narrow enough for Barena to install with lifecycle scripts disabled and validate through DSH Profile composition.`
 	}
-	return fmt.Sprintf(`You are EvolutionCat in Catena's XiaoBaOS Evolution Runtime. Produce one small, reusable Agent asset that directly prevents the accepted failure mode.
+	return fmt.Sprintf(`You are the Evolution stage in Catena. Produce one small, reusable Agent asset that directly prevents the accepted failure mode.
 	Output language: %s
 	Return one JSON object only with this exact shape:
 	{"candidate":{"kind":"%s","title":"...","summary":"...","content":{"root":"...","files":[{"path":"...","content":"..."}]}}}
 	The asset must be an immediately usable repository file or package, not an optimization report.
 	%s
 	Every file path must stay below the declared root. Write concrete instructions, triggers, expected behavior, and failure guards. Keep the package narrow enough to review in one sitting. Do not paste Trace IDs or analysis prose into file bodies. Never invent tool names: omit optional tool policy fields when the retained evidence does not justify them.
-	Never emit Memory or Case: Conversation owns memory, and Trace Farm owns Agent assets. Do not claim the asset was installed, applied, replayed, verified, or released.
+	Never emit Memory or Case. Do not claim the asset was installed, applied, replayed, verified, or released.
 Analysis:
 %s`, evolutionOutputLanguageInstruction(job), candidateKinds, assetContracts, inputs)
 }
@@ -1168,7 +1204,7 @@ func buildReviewerPrompt(job EvolutionJob, evidence json.RawMessage) string {
 		"finding":   job.Finding,
 		"candidate": job.Candidate,
 	})
-	return fmt.Sprintf(`You are ReviewerCat in Catena. Review whether this proposal is coherent and grounded in the retained evidence.
+	return fmt.Sprintf(`You are the Reviewer in Catena. Review whether this proposal is coherent and grounded in the retained evidence.
 Output language: %s
 Return one JSON object only with this exact shape:
 {"review":{"verdict":"pass|fail|blocked","summary":"..."}}
@@ -1185,10 +1221,10 @@ func inspectorOutput(raw json.RawMessage) EvolutionFinding {
 		return sanitizeEvolutionFinding(parsed.Finding)
 	}
 	return EvolutionFinding{
-		Title:    "Unstructured InspectorCat result",
-		Summary:  "InspectorCat returned output that requires human interpretation; its raw response is retained with the stage.",
+		Title:    "Unstructured Inspector result",
+		Summary:  "The Inspector returned output that requires human interpretation; its raw response is retained with the stage.",
 		Severity: "unknown",
-		Evidence: []string{"Raw InspectorCat output is retained in the inspector stage."},
+		Evidence: []string{"Raw Inspector output is retained in the inspector stage."},
 	}
 }
 
@@ -1258,9 +1294,9 @@ func candidateOutput(raw json.RawMessage, sourceAgentID string, sourceRuntimeKin
 	return EvolutionCandidate{
 		ID:      newID("candidate"),
 		Kind:    EvolutionCandidateAgentMD,
-		Title:   "Unclassified EvolutionCat draft",
-		Summary: "EvolutionCat returned an invalid Agent asset. Review the retained stage output before use.",
-		Content: json.RawMessage(`{"root":"agent.md","files":[{"path":"agent.md","content":"# Human review required\n\nEvolutionCat returned an invalid Agent asset. Review the retained stage output before use."}]}`),
+		Title:   "Unclassified Evolution draft",
+		Summary: "The Evolution stage returned an invalid Agent asset. Review the retained stage output before use.",
+		Content: json.RawMessage(`{"root":"agent.md","files":[{"path":"agent.md","content":"# Human review required\n\nThe Evolution stage returned an invalid Agent asset. Review the retained stage output before use."}]}`),
 		Status:  evolutionCandidateStatus,
 	}
 }
@@ -1275,7 +1311,7 @@ func reviewOutput(raw json.RawMessage) EvolutionReview {
 	}
 	return EvolutionReview{
 		Verdict:         "blocked",
-		Summary:         "ReviewerCat returned unstructured output; no proposal acceptance or verification is claimed.",
+		Summary:         "The Reviewer returned unstructured output; no proposal acceptance or verification is claimed.",
 		Scope:           evolutionReviewScope,
 		CandidateStatus: evolutionCandidateStatus,
 	}
@@ -1414,8 +1450,6 @@ func validCurrentEvolutionCandidate(value EvolutionCandidate, _ string, sourceRu
 		return validAgentMDPackage(value.Content)
 	case EvolutionCandidateSkill:
 		return validSkillPackage(value.Content)
-	case EvolutionCandidateRole:
-		return validRolePackage(value.Content)
 	default:
 		return false
 	}
@@ -1481,27 +1515,6 @@ func validSkillPackage(raw json.RawMessage) bool {
 	}
 	skill, exists := files[content.Root+"/SKILL.md"]
 	return exists && frontmatterValue(skill, "name") == parts[1] && frontmatterValue(skill, "description") != ""
-}
-
-func validRolePackage(raw json.RawMessage) bool {
-	content, files, ok := decodePortableAssetPackage(raw)
-	parts := strings.Split(content.Root, "/")
-	if !ok || len(parts) != 2 || parts[0] != "roles" || !validAssetName(parts[1]) {
-		return false
-	}
-	var role struct {
-		Name        string `json:"name"`
-		DisplayName string `json:"displayName"`
-		Description string `json:"description"`
-		PromptFile  string `json:"promptFile"`
-	}
-	if json.Unmarshal([]byte(files[content.Root+"/role.json"]), &role) != nil ||
-		role.Name != parts[1] || strings.TrimSpace(role.DisplayName) == "" ||
-		strings.TrimSpace(role.Description) == "" || !validAssetFilename(role.PromptFile) {
-		return false
-	}
-	_, promptExists := files[content.Root+"/prompts/"+role.PromptFile]
-	return promptExists
 }
 
 func validDSHPluginPackage(raw json.RawMessage) bool {
@@ -1623,11 +1636,6 @@ func validAssetName(value string) bool {
 		}
 	}
 	return true
-}
-
-func validAssetFilename(value string) bool {
-	value = strings.TrimSpace(value)
-	return value != "" && value != "." && value != ".." && !strings.ContainsAny(value, "/\\")
 }
 
 func frontmatterValue(markdown string, key string) string {

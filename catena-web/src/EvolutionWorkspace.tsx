@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { AgentEvolutionLauncher } from "./AgentEvolutionLauncher";
 import { api } from "./api";
 import {
   agentAssetArchive,
@@ -347,8 +346,8 @@ export function EvolutionWorkspace({
   jobs,
   agents,
   initialJobID,
-  initialAgentID,
-  onJobStarted,
+  analysisOnly = false,
+  onAnalyze,
   onJobSelected,
   onJobDeleted,
   onJobsUpdated,
@@ -358,8 +357,8 @@ export function EvolutionWorkspace({
   jobs: EvolutionJob[];
   agents: AgentSummary[];
   initialJobID?: string;
-  initialAgentID?: string;
-  onJobStarted: (job: EvolutionJob) => void;
+  analysisOnly?: boolean;
+  onAnalyze: () => void;
   onJobSelected: (jobID: string) => void;
   onJobDeleted: (jobID: string) => void;
   onJobsUpdated: (jobs: EvolutionJob[]) => void;
@@ -373,10 +372,9 @@ export function EvolutionWorkspace({
   const [loading, setLoading] = useState(Boolean(selectedID));
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
-  const [view, setView] = useState<"assets" | "analyses" | "analysis">(
+  const [view, setView] = useState<"assets" | "analysis">(
     initialJobID ? "analysis" : "assets",
   );
-  const [drawer, setDrawer] = useState<"new" | "">(initialAgentID && !initialJobID ? "new" : "");
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -385,10 +383,6 @@ export function EvolutionWorkspace({
   jobsRef.current = jobs;
   const backgroundJobs = jobs.filter((item) => item.job_id !== selectedID && !isEvolutionJobTerminal(item))
     .map((item) => item.job_id).sort().join(",");
-
-  useEffect(() => {
-    if (initialAgentID && !initialJobID) setDrawer("new");
-  }, [initialAgentID]);
 
   useEffect(() => {
     setSelectedID(initialJobID || "");
@@ -460,14 +454,6 @@ export function EvolutionWorkspace({
     return () => { controller.abort(); window.clearTimeout(timer); };
   }, [backgroundJobs, selectedID, reload, onJobsUpdated, t.loadFailed, refreshVersion]);
 
-  const handleJobStarted = (next: EvolutionJob) => {
-    setSelectedID(next.job_id);
-    setJob(next);
-    setView("analysis");
-    setDrawer("");
-    onJobStarted(next);
-  };
-
   const handleDeleteJob = async () => {
     if (!job || !isEvolutionJobTerminal(job) || deleting) return;
     setDeleting(true);
@@ -477,7 +463,7 @@ export function EvolutionWorkspace({
       const deletedID = job.job_id;
       setSelectedID("");
       setJob(null);
-      setView("analyses");
+      setView("assets");
       setDeleteConfirming(false);
       onJobSelected("");
       onJobDeleted(deletedID);
@@ -521,23 +507,10 @@ export function EvolutionWorkspace({
   return (
     <section className="page evolution-page">
       <header className="page-header evolution-page-header">
-        <div>
-          <h1>{t.title}</h1>
-        </div>
+        <div><h1>{analysisOnly ? t.jobs : t.title}</h1><p>{analysisOnly ? (locale === "zh" ? "查看分析进度、发现与来源证据。" : "Review analysis progress, findings and source evidence.") : t.assetLibraryBody}</p></div>
         <div className="evolution-page-actions">
-          <div className="farm-view-switch" role="group" aria-label={t.title}>
-            <button className={view === "assets" ? "active" : ""} type="button" onClick={() => {
-              setView("assets");
-              setSelectedID("");
-              onJobSelected("");
-            }}>{t.assets}<span>{assetRecords.length}</span></button>
-            <button className={view === "analyses" ? "active" : ""} type="button" onClick={() => {
-              setView("analyses");
-              setSelectedID("");
-              onJobSelected("");
-            }}>{t.jobs}<span>{jobs.length}</span></button>
-          </div>
-          {((view === "assets" && assetRecords.length > 0) || (view === "analyses" && jobs.length > 0) || view === "analysis") ? <button className="primary-button compact" type="button" onClick={() => setDrawer("new")}>{t.newAnalysis}</button> : null}
+          {view === "analysis" && <button className="secondary-button compact" onClick={() => { setView("assets"); setSelectedID(""); onJobSelected(""); }}>{analysisOnly ? (locale === "zh" ? "返回工作台" : "Back to workspace") : (locale === "zh" ? "返回产出" : "Back to outputs")}</button>}
+          {!analysisOnly && <button className="text-button" onClick={onAnalyze}>{locale === "zh" ? "前往工作台分析 →" : "Analyze in workspace →"}</button>}
         </div>
       </header>
       {listError ? <div className="job-error" role="alert"><span>{listError}</span><button className="text-button" type="button" onClick={() => setReload((value) => value + 1)}>{t.retry}</button></div> : null}
@@ -554,37 +527,8 @@ export function EvolutionWorkspace({
         <div className="evolution-empty">
           <h2>{t.assetLibraryEmptyTitle}</h2>
           <p>{t.assetLibraryEmpty}</p>
-          <button className="primary-button compact" type="button" onClick={() => setDrawer("new")}>{t.newAnalysis}</button>
+          <button className="primary-button compact" type="button" onClick={onAnalyze}>{locale === "zh" ? "前往工作台" : "Open workspace"}</button>
         </div>
-      ) : view === "analyses" && jobs.length === 0 ? (
-        <div className="evolution-empty">
-          <h2>{t.noJobsTitle}</h2>
-          <p>{t.noJobs}</p>
-          <button className="primary-button compact" type="button" onClick={() => setDrawer("new")}>{t.newAnalysis}</button>
-        </div>
-      ) : view === "analyses" ? (
-        <section className="farm-overview" aria-labelledby="farm-recent-title">
-          <header>
-            <div>
-              <h2 id="farm-recent-title">{t.recentJobs}</h2>
-            </div>
-            <span>{jobs.length}</span>
-          </header>
-          <div className="farm-overview-list">
-            {jobs.map((item) => {
-              const traceCount = evolutionTraceCounts(item).frozen;
-              const windowLabel = formattedWindow(item, locale);
-              return (
-                <button className="job-row" type="button" key={item.job_id} onClick={() => openAnalysis(item.job_id)}>
-                  <span className={`job-state state-${safeState(item.state)}`}>{stateLabel(t, item.state)}</span>
-                  <strong>{agentName(item.source_agent_id) || item.finding?.title || item.objective || t.analysis}</strong>
-                  <small>{item.source_agent_id ? `${traceCount} ${t.trace} · ${windowLabel || t.agentTraceSet}` : t.legacyTrace}</small>
-                  <time dateTime={item.updated_at}>{formattedTime(item.updated_at, locale)}</time>
-                </button>
-              );
-            })}
-          </div>
-        </section>
       ) : view === "analysis" ? (
         <div className="job-detail-column" aria-live="polite">
           {loading && !job ? <JobSkeleton label={t.loading} /> : null}
@@ -620,15 +564,6 @@ export function EvolutionWorkspace({
           /> : null}
         </div>
       ) : null}
-      <FarmDrawer open={drawer === "new"} title={t.newAnalysis} closeLabel={t.close} onClose={() => setDrawer("")}>
-        <AgentEvolutionLauncher
-          locale={locale}
-          agents={agents}
-          initialAgentID={initialAgentID}
-          onStarted={handleJobStarted}
-          embedded
-        />
-      </FarmDrawer>
     </section>
   );
 }

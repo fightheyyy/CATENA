@@ -1,0 +1,13 @@
+{
+  "answer": {
+    "path": "apps/beacon/runtime/active.json",
+    "port": 7102,
+    "handler": "handle_2"
+  },
+  "protected": {
+    "apps/beacon/runtime/active.json": "ffbf310c0ebd81af9634fedd88b5278f9a7d44cf634540eb6095fb2d8eee4838",
+    "archive/apps/beacon/runtime/active.json": "92e0e368bdd6f2043868bd5e92f5aadd20d115a617f05cb5c631292d3c77ea1a",
+    "apps/beacon/runtime/example.json": "e1cfc348105232c8a064446bb6d3df03c3cce35eeb7d712bdbd40879068a83d0",
+    "README.md": "4078c30ef1968b238e94ab5c7ce7b935022d1cde49cbdc6b0f75c785a12c94b5"
+  }
+}

@@ -17,6 +17,16 @@ has separate [historical import acceptance](../docs/CODEX_LOCAL_IMPORT_20260915.
 A new live runtime requires its own parser, redacted fixture, golden graph
 and real E2E.
 
+## Offline failure study
+
+`python -m catena_tap.failure_cli` scans the same canonical Turn graph for
+reviewable tool-error and repeated-call signals. It emits no prompt, tool
+argument, or tool-result text. `scan` records every eligible Turn and every
+skipped source; `sample` creates a fixed-seed human labeling sheet; `score`
+calculates rates only after labels are filled. See the
+[study protocol](../docs/FAILURE_STUDY.md). This is an offline research path,
+not an automatic failure verdict in the Catena UI.
+
 ## Configuration
 
 ```bash

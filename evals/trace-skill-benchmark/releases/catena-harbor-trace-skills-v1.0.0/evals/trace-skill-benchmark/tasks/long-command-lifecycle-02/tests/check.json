@@ -1,0 +1,11 @@
+{
+  "answer": {
+    "state": "completed",
+    "value": 42
+  },
+  "launch_once": true,
+  "protected": {
+    "build.py": "9b41d8dae51446b734ecebee91c65fc0007182f1e4057e8e2e44201149176fb8",
+    "README.md": "1d0661a73a374dc1e11d7c5d9c7e9700c39b5f238606a67125ed59d29c92cb9a"
+  }
+}

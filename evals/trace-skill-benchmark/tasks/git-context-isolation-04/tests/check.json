@@ -1,0 +1,22 @@
+{
+  "answer": {
+    "updated_in_isolation": true
+  },
+  "json_files": {
+    "project/config.json": {
+      "port": 8200,
+      "name": "app4"
+    }
+  },
+  "worktree": {
+    "repo": "project",
+    "expected": {
+      "port": 8300,
+      "name": "app4"
+    }
+  },
+  "git_no_commit": "project",
+  "protected": {
+    "project/notes.txt": "5e1810b3e289a58293fbaea8c3abc848b3cab7d2fd4a333f7130f51f122503d2"
+  }
+}

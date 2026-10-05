@@ -1,0 +1,16 @@
+{
+  "json_files": {
+    "service.json": {
+      "retries": 5,
+      "timeout": 45,
+      "feature": "unchanged",
+      "owner": "team"
+    }
+  },
+  "answer": {
+    "updated": true
+  },
+  "protected": {
+    "notes/user.txt": "a95a06670cb2309ebe998312e5fe5427ff67c9403ddd51b0c5ec2de3d519e3df"
+  }
+}

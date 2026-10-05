@@ -1,0 +1,14 @@
+{
+  "answer": {
+    "names": [
+      "O'Reilly",
+      "alpha",
+      "beta",
+      "delta"
+    ]
+  },
+  "required_command": "pwsh",
+  "protected": {
+    "catalog.json": "d6da2fdc74ef349cc2e7bb70c21768a0f7236aad9812e00ff79dd4ca45a5aa26"
+  }
+}

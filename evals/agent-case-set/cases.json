@@ -1,0 +1,139 @@
+{
+  "schema": "catena.agent_case_set.v1",
+  "updated": "2026-10-04",
+  "account_scope": "all ClickHouse owner IDs were aggregated; no account-level split is used",
+  "primary_source": {
+    "system": "Catena ClickHouse catena.catena_spans",
+    "owners_included": 7,
+    "rows_after_replacing_merge_tree_final": 93701,
+    "unique_trace_span_pairs": 93682,
+    "unique_traces": 3021,
+    "unique_sessions": 302,
+    "time_range": ["2025-10-10", "2026-09-30"],
+    "content_level_analysis": "limited: full scans of wide input/output columns exceeded the ClickHouse memory limit; candidate discovery uses span metadata and local-session inspection"
+  },
+  "discovery": {
+    "source_files": 300,
+    "sessions": 298,
+    "turns": 2588,
+    "skipped_sources": 0,
+    "candidate_turns": 33,
+    "candidate_turn_rate": 0.01275,
+    "reviewed_turns": 0,
+    "local_review_queue_size": 60,
+    "clickhouse_review_queue_size": 60,
+    "clickhouse_reviewed_turns": 0
+  },
+  "cases": [
+    {
+      "id": "powershell-missing-rg",
+      "title": "Coding agent searches with unavailable rg",
+      "status": "executable_fixture_historical_effect_not_demonstrated",
+      "evidence": {
+        "source": "local Codex and Claude Code history",
+        "candidate_turns": 8,
+        "candidate_sessions": 7,
+        "matching_calls": 9,
+        "manual_validation": "pending",
+        "private_evidence_index": ".local/failure-study/rg-case-sources-20261004.csv"
+      },
+      "fixture": "../rg-missing-search",
+      "fixture_tasks": 3,
+      "verifier": "../rg-missing-search/verify.py",
+      "historical_experiment": {
+        "report": "../rg-missing-search/results/codex-gpt55-20261004.json",
+        "harbor_codex_baseline_passed": 3,
+        "harbor_codex_baseline_total": 3,
+        "harbor_codex_skill_passed": 3,
+        "harbor_codex_skill_total": 3,
+        "missing_rg_errors_baseline": 0,
+        "missing_rg_errors_skill": 0,
+        "interpretation": "The current adapted Codex environment avoided the historical error without the Skill. The experiment did not demonstrate an effect."
+      },
+      "historical_three_arm_study": {
+        "report": "../rg-missing-search/results/memory-skill-gpt55-20261004.json",
+        "target": "OpenAI Agents SDK search Agent",
+        "environment": "Linux/PowerShell 7 adaptation; not Windows replay and not Codex CLI",
+        "valid_trials": 18,
+        "trials_per_arm": 6,
+        "answer_passed": {
+          "baseline": "6/6",
+          "memory": "6/6",
+          "skill": "6/6"
+        },
+        "missing_rg_errors": {
+          "baseline": 4,
+          "memory": 3,
+          "skill": 0
+        },
+        "total_tokens": {
+          "baseline": 18741,
+          "memory": 23113,
+          "skill": 21588
+        },
+        "interpretation": "In this three-task sample, Skill arm avoided four unavailable-rg calls but did not improve answer pass rate and used 15.2% more total tokens than baseline. No statistical significance or general effect is established."
+      }
+    },
+    {
+      "id": "shell-command-failure-clusters",
+      "title": "Repeated or unrecovered shell command errors",
+      "status": "candidate_needs_manual_review",
+      "evidence": {
+        "candidate_turns": 25,
+        "manual_validation": "pending"
+      }
+    },
+    {
+      "id": "agent-turn-status-errors",
+      "title": "Agent turns marked with error status",
+      "status": "candidate_needs_task_outcome_review",
+      "evidence": {
+        "error_marked_turn_traces": 301,
+        "agent_turn_traces": 3015,
+        "candidate_rate": 0.0998,
+        "manual_validation": "pending",
+        "private_review_sample": ".local/failure-study/clickhouse-error-turn-review-20261004.csv"
+      },
+      "interpretation": "Trace status is an execution signal. It does not prove that the requested task failed."
+    },
+    {
+      "id": "shell-activity-in-error-marked-turns",
+      "title": "Shell command activity in error-marked turns",
+      "status": "candidate_needs_trace_review",
+      "evidence": {
+        "error_marked_turn_traces_with_shell_calls": 56,
+        "shell_traces_with_error_status": 9,
+        "traces_with_two_or_more_shell_calls": 49,
+        "shell_command_spans_in_error_marked_turns": 943,
+        "shell_spans_marked_error_status": 17,
+        "maximum_shell_calls_in_one_error_marked_turn": 114,
+        "manual_validation": "pending"
+      },
+      "interpretation": "Multiple shell calls do not prove repeated identical commands or a shared root cause. Review traces before converting this cluster to Cases."
+    },
+    {
+      "id": "repeated-shell-calls",
+      "title": "Repeated identical shell calls",
+      "status": "candidate_needs_manual_review",
+      "evidence": {
+        "candidate_turns": 9,
+        "manual_validation": "pending"
+      }
+    },
+    {
+      "id": "repeated-web-search",
+      "title": "Repeated identical web search calls",
+      "status": "candidate_needs_manual_review",
+      "evidence": {
+        "candidate_turns": 1,
+        "manual_validation": "pending"
+      }
+    }
+  ],
+  "caveats": [
+    "Candidate groups overlap; their counts must not be added to infer a unique failure count.",
+    "A candidate signal is not proof that a task failed or that the same root cause recurred.",
+    "The 60-turn stratified review queue has no human labels yet; precision and false-positive rate are unknown.",
+    "The existing three-task rg fixture has an independent verifier, but the latest Harbor Codex comparison showed no treatment effect."
+  ]
+}

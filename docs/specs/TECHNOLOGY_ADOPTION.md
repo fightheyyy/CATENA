@@ -1,5 +1,26 @@
 # Catena 技术采用决策
 
+## 2026-10-03 当前决定（覆盖下方 9 月 30 日的运行时选择）
+
+用户已确认：Catena 的分析与主动 Agent 运行时统一采用 **OpenAI Agents SDK（Python）**，
+不采用 Pi；Agents API 不再作为默认 Engineer 后端。现有 engine 已使用 SDK，
+下一步在其上扩展受控工具循环、会话与审批恢复。持续目标、调度、预算和业务恢复仍由 Go/Postgres 负责。
+
+云沙箱首选 **E2B**，待执行、暂停恢复、产物导出与清理实测后成为默认云执行环境；
+本地开发/CI 使用 Docker。评测采用 **Harbor**，负责冻结 Case 的 baseline/candidate
+执行、轨迹和 verifier 结果；Catena/Barena 保存业务证据与结论。
+Harbor 已通过限定 Case 的平台 Agent 工具调用与 Docker 执行验收，
+见 [首次链路实验](../HARBOR_EXPERIMENT_20261003.md)；尚未接入公开 Go API/前端，
+也未验收 Codex/Claude Code adapter。E2B 云端验收仍待完成，不能宣称总体成功率提升。
+
+后续已补充 [E2B 工具路由与 provider 接入](../E2B_INTEGRATION_20261003.md)，
+依赖、配置、时长限制与清理记录已实现；缺少 API Key，云端实测仍待完成。
+
+首个真实问题的 Case 见 [缺少 rg 的 PowerShell 搜索](../../evals/rg-missing-search/CASE.md)。
+该 Case 原计划评测 Codex CLI；CLI 预跑环境无效。目前有效实验的被测对象是
+独立 SDK 搜索 Agent，与平台协调 Agent 分开，不把结果归因于 Codex CLI。
+以下 9 月 30 日内容保留为历史研究记录，其中 Agents API 首选与迁移计划已被本决定覆盖。
+
 日期：2026-09-30。状态：设计决策，尚未安装新依赖或完成新服务接入。产品定位见 [总 SPEC](../../SPEC.md)。
 
 ## 1. 结论

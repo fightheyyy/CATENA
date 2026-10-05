@@ -1,0 +1,13 @@
+{
+  "answer": {
+    "names": [
+      "c",
+      "a"
+    ],
+    "sum": 11
+  },
+  "required_command": "pwsh",
+  "protected": {
+    "events.csv": "cbb75a68db59bfca2c89981dad30ad237bc4b47a078d21734597b3ffe8965a37"
+  }
+}

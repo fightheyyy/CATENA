@@ -1,0 +1,7 @@
+FROM python:3.12-slim
+RUN pip install --no-cache-dir fastembed==0.7.4
+WORKDIR /app
+COPY deploy/catena-mvp1/embedding/server.py /app/server.py
+ENV PYTHONUNBUFFERED=1 HF_HUB_DISABLE_TELEMETRY=1
+EXPOSE 8080
+CMD ["python", "/app/server.py"]

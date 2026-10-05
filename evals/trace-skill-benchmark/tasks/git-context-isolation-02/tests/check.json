@@ -1,0 +1,16 @@
+{
+  "answer": {
+    "repo": "apps/beacon",
+    "branch": "main",
+    "tracked": [
+      "config.json",
+      "notes.txt"
+    ]
+  },
+  "protected": {
+    "apps/beacon/config.json": "e7b5a12bbaf67ba2c089c0bd12b82dd6db8af2564febfc0821f85948e4bff23a",
+    "apps/beacon/notes.txt": "5e1810b3e289a58293fbaea8c3abc848b3cab7d2fd4a333f7130f51f122503d2",
+    "README.md": "f18537b2ab3384cfa7d1a3929bebfedb8dfcb47c6d25dc882f5c2ddb8b03c14e",
+    "apps/beacon/vendor/helper/README.md": "738b5d89926e08576fb03271a3e7bff7e5e6a61a797f2d931374f2717c390af6"
+  }
+}

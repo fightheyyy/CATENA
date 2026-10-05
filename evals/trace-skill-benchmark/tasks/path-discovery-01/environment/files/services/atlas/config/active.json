@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "environment": "production",
+  "port": 7101,
+  "handler": "handle_1"
+}

@@ -4,75 +4,74 @@
 
 <h1 align="center">Catena</h1>
 
-<p align="center"><strong>让每一段 Agent 经历，有所积累。</strong></p>
+<p align="center"><strong>从编程 Agent 的真实运行中，找到可修复的问题。</strong></p>
 
 <p align="center">
-  A calm workspace for your Agents, working history, traceable memory, and reusable outputs.
+  Traceable failure patterns and reviewable Skill drafts from Codex and Claude Code sessions.
 </p>
 
-Catena 是一个基于 Trace 的云端工作空间：汇集端侧 Agent 的经历，回看工作过程，保留重要信息，再提炼可带走的方法。界面围绕 **总览、经历、记忆、产出** 四个入口展开，接入配置和运行详情按需查看。
+Catena 收集 Codex 和 Claude Code 的运行证据，按 Turn 回看工具调用，帮助维护者找出值得核对的重复问题并生成 Skill 候选。主界面围绕工作台、经历、产出、记忆和 Case 实验展开。Catena Agent 帮助用户分析和规划，Harbor 执行目标 Agent 的评测。候选仍需独立回归验证，Reviewer 的通过不代表目标 Agent 已改善。
 
-当前支持 Codex、Claude Code 的本地采集插件，以及通用 OTLP 接收；可读取的信息取决于来源实际导出的内容。记忆提炼目前基于 XiaoBaOS 用户可见对话，产出使用现有分析流程生成候选文件。跨 Agent 的个人/团队长期剖析仍是后续产品能力。
+当前支持 Codex、Claude Code 的本地采集插件，以及通用 OTLP Trace 接收；可读取的信息取决于来源实际导出的内容。Agent 不原生输出 OTLP 时，需要采集插件或适配器。离线失败线索扫描、人工标注表和独立的 Skill 配对实验入口已可复跑，尚未接入问题卡 UI。首个 3 题合成试跑为基线 3/3、候选 3/3，尚无真实失败修复率结果。
+
+2026-10-03 已从 5 个真实会话确认缺失 `rg` 的重复工具错误，并冻结
+[PowerShell 搜索 Case](evals/rg-missing-search/CASE.md)。确定性环境重放已通过；
+Codex CLI 对照未通过环境验收，旧 3/3 试跑不能作为效果证据。随后通过
+本地 CLIProxyAPI 的 GPT-5.5 完成 12 次有效 SDK 对照：两组均 6/6 答对，
+Skill 将缺失 rg 错误调用从 4 次降到 0 次，但输入令牌增加 29.4%，未证明
+成功率或效率提升。[实验结论](docs/CASE_RG_MISSING_20261003.md)。
+平台运行时采用 OpenAI Agents SDK；随后完成
+[平台 Agent 调用 Harbor 的 Docker 实验](docs/HARBOR_EXPERIMENT_20261003.md)，
+6 次有效 Trial，两组均 3/3，缺失 rg 错误调用 2→0。
+现已提供 [Case 实验页面](docs/HARBOR_WEB_EXPERIMENTS.md)，支持发起、查看与恢复实验。
+E2B 接入仍未完成云端验收；本地评测使用 Docker。
+
+## 冻结实验：7 Skills / 28 Tasks / 168 Rollouts
+
+从 3,021 条真实 Trace 的操作故障线索归纳 7 项手工编写的 Skill，构造
+28 个匿名重构及变体任务，通过 Harbor 0.23.0 驱动真实 Codex CLI 完成
+168 次有效对照实验。without / with 通过率为 **77/84（91.7%）与
+80/84（95.2%）**，增加 3.57 个百分点；工具调用从 **660 增至 796**，
+总 token 增加 9.1%。结果不支持总体成本下降或广泛有效的结论。
+
+- [完整结果、指标与限制](evals/trace-skill-benchmark/results/ab-v2.md)
+- [任务集、Skill 与复跑方法](evals/trace-skill-benchmark/README.md)
+- [冻结报告](evals/trace-skill-benchmark/releases/catena-harbor-trace-skills-v1.0.0/RESULTS.zh-CN.md)
+- [冻结数据集与结果 ZIP](evals/trace-skill-benchmark/releases/catena-harbor-trace-skills-v1.0.0.zip)
+
+这些任务不是严格的历史 held-out 集。原始私人会话、模型密钥和运行日志保留在
+Git 忽略的 `.local/` 中，公开包包含任务、汇总指标、验证证据和复现说明。
 
 ```text
-OTLP Trace ─┐
-Conversation ├─→ Evidence ─→ XiaoBaOS Evolution Runtime ─→ Agent assets
-Barena Run ──┘
+Codex / Claude Code 会话 → Tap → Trace → 可审查的问题线索
+                                  └→ Catena Engine → Skill 候选
+Skill 候选 + 冻结案例 → 本地配对实验入口 → 独立 verifier 与指标
 ```
 
 ## 核心能力
 
 - **总览**：打开即见最近经历与产出；支持搜索、Agent 筛选及准确回到来源，局部加载失败可以单独重试。
-- **经历**：Trace 与对话放在一个入口。按 Turn 阅读请求、调用与最终回答，详细 Span 与原始字段按需展开。
-- **记忆**：默认阅读卡片，点击查看全文与来源；搜索涵盖事实、对话和主题，关系图与提炼任务作为辅助视图。
+- **主动助手**：输入关注目标、查看近期线索并发起分析；当前仅在页面打开时检查新 Trace，[能力边界与后续技术路线](docs/PROACTIVE_ASSISTANT.md)。
+- **经历**：按 Turn 阅读请求、调用与最终回答，详细 Span 与原始字段按需展开。
+- **失败线索研究**：离线扫描真实会话，输出保留分母的信号分组与固定抽样标注表；[方法和当前覆盖](docs/FAILURE_STUDY.md)。
 - **产出**：阅读、复制或下载 `agent.md`、Skill、Role 和 DSH Plugin 候选包；保留来源 Trace、分析过程与审查信息。
 - **连接**：为每个 Agent 创建独立凭证，复制 POSIX/PowerShell 配置，检测第一条数据；在这里配置自己的分析模型。
 
-平台内置的 XiaoBaOS Runtime 消费 Evidence 并生成候选方法；目标 Agent 的执行与验证留在端侧。每位用户在 **连接** 中配置自己的 Provider、Base URL、Model 与 API Key。密钥加密保存，只在该用户的分析任务执行时临时解密。
+平台内置的 Catena Engine 消费 Evidence 并生成候选方法；目标 Agent 的执行与验证留在端侧。每位用户在 **连接** 中配置自己的 Provider、Base URL、Model 与 API Key。密钥加密保存，只在该用户的分析任务执行时临时解密。
+
+旧 XiaoBaOS 对话数据仍可从原有深链接读取；`POST /v1/ingest/conversations` 已停止接入新数据。新的 Agent 证据统一通过 OTLP Trace 上传。
 
 ## 产品边界
 
 ```mermaid
 flowchart LR
-    GitHub["GitHub<br/>OAuth · 开发者身份"] -->|"登录"| Core
-
-    subgraph Edge["用户环境 / CI"]
-        Tap["Runtime Parser<br/>Codex · Claude Code"]
-        Agent["目标 Agent<br/>已验收：Codex · Claude Code"]
-        XiaoBa["XiaoBaOS<br/>拟人化 Agent"]
-        Barena["Barena<br/>Explore · Replay · Compare · Verifier"]
-        Trace["运行证据<br/>OTLP Trace · Artifact"]
-        Conversation["用户可见对话<br/>user · delivered assistant"]
-
-        Barena <--> Agent
-        Barena <--> XiaoBa
-        Tap <--> Agent
-        Tap --> Trace
-        Agent --> Trace
-        XiaoBa --> Trace
-        XiaoBa --> Conversation
-        Barena --> Trace
-    end
-
-    subgraph Cloud["Catena"]
-        Core["Go + React 控制面<br/>身份 · Agent · API Key"]
-        OwnerModel["用户 LLM 配置<br/>Provider · Base URL · Model · API Key"]
-        Facts["Evidence Store<br/>Trace · Conversation · Run"]
-        Farm["Trace Farm<br/>跨 Run 问题发现"]
-        Runtime["XiaoBaOS Evolution Runtime<br/>Inspector · Evolution · Reviewer"]
-        Assets["候选产物<br/>agent.md · Skill · Role · DSH Plugin"]
-        GauzMem["GauzMem<br/>记忆编译 · 召回 · 图谱"]
-        Memories["长期记忆<br/>语义 · 关系 · 时间"]
-
-        Core --> Facts
-        Facts --> Farm --> Runtime --> Assets
-        OwnerModel -->|"每个 Job 临时注入"| Runtime
-        Facts -->|"用户可见对话"| GauzMem --> Memories
-        Assets --> Facts
-    end
-
-    Trace -->|"OTLP / Run Bundle"| Core
-    Conversation -->|"Conversation API"| Core
+    Agent["Codex / Claude Code"] --> Tap["Tap: Turn 与工具事件解析"]
+    Tap -->|"OTLP"| Core["Go 控制层"]
+    Core --> CH["ClickHouse Trace"]
+    CH --> UI["React 证据查看"]
+    Tap --> Scan["离线问题线索扫描"] --> Labels["人工标注"]
+    CH --> Pack["冻结 Evidence Pack"] --> Engine["Catena Engine"] --> Draft["Skill 候选"]
+    Barena["Barena Run Bundle"] --> Core
 ```
 
 [Barena](https://github.com/fightheyyy/barena) 是端侧 Agent E2E 与发布 CI 引擎，负责 Explore、Replay、Compare 和确定性验证；Catena 负责长期证据、跨 Run 分析与进化候选。
@@ -81,8 +80,9 @@ flowchart LR
 
 | 服务 | 职责 |
 | --- | --- |
-| `catena-core` | Go 控制面、React Web、GitHub OAuth、API Key、OTLP、Conversation 与产品 API |
-| `catena-runner` | 内置 XiaoBaOS Evolution Runtime，不运行目标 Agent |
+| `catena-core` | Go 控制面、React Web、GitHub OAuth、API Key、OTLP Trace 与产品 API |
+| `catena-engine` | 使用用户配置的模型运行 Inspector、Evolution、Reviewer；不运行目标 Agent |
+| `catena-runner` | 保留现有 Barena Run 接入能力 |
 | `postgres` | 用户、Agent、Run、Job、Candidate 与审计事实 |
 | `clickhouse` | Trace 与 Span 时序存储 |
 | `caddy` | 公开部署的 HTTPS 与安全响应头 |
@@ -170,32 +170,6 @@ Codex 的模型与 Tool 事件会在该 Turn 的 `Stop` Hook 触发后进入 Cat
 进程在 Hook 前异常退出，则由下一次 Hook 或 historical import 按相同稳定 ID
 恢复。
 
-## 接入 XiaoBaOS 对话
-
-XiaoBaOS 使用同一个 Agent 接入密钥增量同步用户可见的 Conversation Journal：
-
-```bash
-export CATENA_BASE_URL="${CATENA_URL}"
-export CATENA_API_KEY="${CATENA_API_KEY}"
-export XIAOBA_CONVERSATION_AGENT_ID='my-xiaoba'
-xiaoba chat
-```
-
-Conversation 是记忆与角色知识的燃料；Trace 是 Tool、Runtime 与 Harness 分析的燃料。
-
-### 为什么 XiaoBaOS 单独同步用户可见对话
-
-XiaoBaOS 走的是“拟人化工作同事”路线：用户关心的不只是一次任务是否完成，还包括它是否记得长期偏好、人物关系、共同经历和沟通习惯。因此，形成记忆的事实源应该是用户真正参与并看到的对话——用户发出的消息，以及已经成功送达的 Agent 文本或文件回复。
-
-系统 Prompt、隐藏推理、Tool 调用和失败重试仍然进入 Trace，用来诊断 Runtime 与 Harness；它们不应被当成用户经历直接写入长期记忆。Catena 因而保留两条独立的数据路径：
-
-```text
-OTLP Trace          → Trace Farm → agent.md / Skill / Role / DSH Plugin
-XiaoBaOS Conversation → GauzMem   → semantic / graph / temporal memory
-```
-
-MVP1 先为 XiaoBaOS 提供第一方 Conversation 协议，因为它具备稳定的用户可见消息日志；其他 Agent 若能提供同等语义的对话事件，后续也可以通过 Conversation Adapter 接入。
-
 ## 公开单机 Beta
 
 ```bash
@@ -214,7 +188,7 @@ Trace 链接保留精确记录，Trace Farm 的任务完成状态会同步到资
 这些界面行为有独立的浏览器回归测试；模拟数据测试不代替真实接入、模型执行
 或生成产物的效果验收。
 
-MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、用户自带 LLM、OTLP 导入、Runtime 自动识别、Agent 聚合、Span 瀑布、XiaoBaOS Conversation、Trace Farm、进化候选与中英文 UI。DeepSeek Harness 已打通 DSH → Barena Explore → Catena Trace Farm → DSH Plugin 产出与本地安装验收。当前定位是 single-node Beta；多 Worker lease、备份恢复、配额与完整 RBAC 尚未完成。
+MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、用户自带 LLM、OTLP 导入、Runtime 自动识别、Agent 聚合、Span 瀑布、进化候选与中英文 UI。DeepSeek Harness 已打通 DSH → Barena Explore → Catena Trace Farm → DSH Plugin 产出与本地安装验收。当前定位是 single-node Beta；多 Worker lease、备份恢复、配额与完整 RBAC 尚未完成。
 
 ```bash
 cd catena-web && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm typecheck && pnpm build
@@ -225,8 +199,15 @@ cd codex && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test && pnp
 docker compose -f deploy/catena-mvp1/compose.yml config >/dev/null
 ```
 
-架构契约见 [SPEC.md](./SPEC.md)，剩余工作见 [PLAN.md](./PLAN.md)，演示证据见 [MVP1 验收记录](./docs/acceptance/CATENA_MVP1_DEMO.md)。
+架构契约见 [SPEC.md](./SPEC.md)，剩余工作见 [PLAN.md](./PLAN.md)。求职展示材料：[失败线索研究](./docs/FAILURE_STUDY.md)、[竞品对照](./docs/COMPETITOR_COMPARISON.md)、[技术博客草稿](./docs/showcase/CODING_AGENT_TRACE_BLOG.md)、[3 分钟演示脚本](./docs/showcase/THREE_MINUTE_DEMO.md)。旧功能见 [XiaoBaOS 对话记忆兼容说明](./docs/XIAOBA_MEMORY_LEGACY.md)。
 
 ## License
 
 Apache License 2.0。第三方归属见 [NOTICE](./NOTICE)。
+## OpenViking 记忆接入
+
+平台可通过 OpenViking 保存和检索个人记忆。记忆页支持手动添加、中文检索、文件关系查看；Trace 详情可发起异步提炼。平台分析会召回相关记忆，保留参考上下文快照。
+
+本地 embedding 使用 CPU 上的 BGE-small-zh，无需 embedding API Key。记忆提炼复用配置的模型服务。部署、隔离边界和实测结果见 [接入说明](docs/OPENVIKING_INTEGRATION.md)。团队共享空间尚未实现。
+
+2026-10-04 完成 [历史记忆 / Skill 的 Harbor 三组对照](docs/MEMORY_SKILL_EXPERIMENT_20261004.md)：18 次有效 Trial，三组答案均 6/6，缺失 rg 错误为 4 / 3 / 0。Skill 总 token 增加约 15.2%，没有成功率或耗时改善。实验页可查看来源 Trace、冻结记忆及逐次工具日志。

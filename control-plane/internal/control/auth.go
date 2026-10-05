@@ -270,7 +270,7 @@ func (s *HTTPServer) githubCallback(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:   now,
 	})
 	if err != nil {
-		writeProblem(w, http.StatusInternalServerError, "XiaoBa profile persistence failed")
+		writeProblem(w, http.StatusInternalServerError, "Agent profile persistence failed")
 		return
 	}
 	sessionToken, err := randomURLToken(32)

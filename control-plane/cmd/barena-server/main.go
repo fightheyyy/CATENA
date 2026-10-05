@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -71,7 +72,16 @@ func run() error {
 	}
 	var memoryStore control.MemoryBackend
 	if memoryURL := os.Getenv("CATENA_MEMORY_URL"); memoryURL != "" {
-		memoryClient, err := control.NewGauzMemoryClient(memoryURL, os.Getenv("CATENA_MEMORY_API_KEY"))
+		var memoryClient control.MemoryBackend
+		var err error
+		switch env("CATENA_MEMORY_PROVIDER", "gauzmem") {
+		case "openviking":
+			memoryClient, err = control.NewOpenVikingMemoryClient(memoryURL, os.Getenv("CATENA_MEMORY_API_KEY"))
+		case "gauzmem":
+			memoryClient, err = control.NewGauzMemoryClient(memoryURL, os.Getenv("CATENA_MEMORY_API_KEY"))
+		default:
+			return fmt.Errorf("unsupported CATENA_MEMORY_PROVIDER")
+		}
 		if err != nil {
 			return err
 		}
@@ -97,16 +107,10 @@ func run() error {
 		return err
 	}
 	evolutionRuntime, err := control.NewEvolutionRuntimeManager(control.EvolutionRuntimeConfig{
-		NodeCommand:   env("BARENA_NODE", "node"),
-		WorkerPath:    env("BARENA_XIAOBA_EVOLUTION_WORKER", filepath.Join(repoRoot, "dist", "evolution-runtime-worker.js")),
-		XiaoBaCommand: env("BARENA_XIAOBA_COMMAND", "xiaoba"),
-		ProjectRoot:   os.Getenv("BARENA_XIAOBA_PROJECT_ROOT"),
-		RolesRoot:     os.Getenv("BARENA_XIAOBA_ROLES_ROOT"),
-		SkillsRoot:    os.Getenv("BARENA_XIAOBA_SKILLS_ROOT"),
-		WorkspaceRoot: env("BARENA_XIAOBA_EVOLUTION_ROOT", filepath.Join(repoRoot, "runs", "cloud-evolution")),
-		EnvAllowlist:  splitList(os.Getenv("BARENA_XIAOBA_ENV_ALLOWLIST")),
-		ProbeTimeout:  8 * time.Second,
-		CacheTTL:      5 * time.Second,
+		URL:          os.Getenv("CATENA_ENGINE_URL"),
+		Token:        os.Getenv("CATENA_ENGINE_TOKEN"),
+		ProbeTimeout: 8 * time.Second,
+		CacheTTL:     5 * time.Second,
 	})
 	if err != nil {
 		return err

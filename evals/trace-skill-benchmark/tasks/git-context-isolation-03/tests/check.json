@@ -1,0 +1,16 @@
+{
+  "answer": {
+    "updated": true
+  },
+  "json_files": {
+    "project/config.json": {
+      "port": 8300,
+      "name": "app3"
+    }
+  },
+  "exact_files": {
+    "project/notes.txt": "Existing user note.\nUser edit: keep this exact text.\n"
+  },
+  "git_no_commit": "project",
+  "protected": {}
+}

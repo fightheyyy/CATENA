@@ -1,0 +1,15 @@
+{
+  "answer": {
+    "repo": "projects/atlas",
+    "branch": "main",
+    "tracked": [
+      "config.json",
+      "notes.txt"
+    ]
+  },
+  "protected": {
+    "projects/atlas/config.json": "78bb5950d685c41847e399e5fbb3d6208797570d4dc75c7a6ebf0ccfafe5609e",
+    "projects/atlas/notes.txt": "5e1810b3e289a58293fbaea8c3abc848b3cab7d2fd4a333f7130f51f122503d2",
+    "README.md": "7b94a3f6a9c0ea1821de37acec0fb3f493af1055982427764a5d3f3926ead94d"
+  }
+}

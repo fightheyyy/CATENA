@@ -62,12 +62,18 @@ export function AgentEvolutionLauncher({
   initialAgentID,
   onStarted,
   embedded = false,
+  initialObjective = "",
+  onObjectiveChange,
+  enabled = true,
 }: {
   locale: Locale;
   agents: AgentSummary[];
   initialAgentID?: string;
   onStarted: (job: EvolutionJob) => void;
   embedded?: boolean;
+  initialObjective?: string;
+  onObjectiveChange?: (value: string) => void;
+  enabled?: boolean;
 }) {
   const t = launcherCopy[locale];
   const firstAgentID = agents[0]?.agent_id ?? "";
@@ -75,7 +81,7 @@ export function AgentEvolutionLauncher({
     agents.some((agent) => agent.agent_id === initialAgentID) ? initialAgentID ?? "" : firstAgentID,
   );
   const [preset, setPreset] = useState<EvolutionWindowPreset>("7d");
-  const [objective, setObjective] = useState("");
+  const [objective, setObjective] = useState(initialObjective);
   const [preview, setPreview] = useState<AgentTraceWindow | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState("");
@@ -124,7 +130,7 @@ export function AgentEvolutionLauncher({
 
   const traceCount = preview?.traces.length ?? 0;
   const traceSelection = agentEvolutionTraceSelection(traceCount);
-  const canStart = canStartAgentEvolution(agentID, traceCount, previewLoading) && !previewError && !submitting;
+  const canStart = enabled && canStartAgentEvolution(agentID, traceCount, previewLoading) && !previewError && !submitting;
   const selectedAgent = agents.find((agent) => agent.agent_id === agentID);
   const activeWindow = preview ? {
     window_start: preview.window_start,
@@ -175,7 +181,7 @@ export function AgentEvolutionLauncher({
                 ))}
               </div>
             </fieldset>
-            <label className="launcher-objective"><span>{t.objective}</span><input value={objective} maxLength={4000} onChange={(event) => setObjective(event.target.value)} placeholder={t.objectivePlaceholder} /></label>
+            <label className="launcher-objective"><span>{t.objective}</span><input value={objective} maxLength={4000} onChange={(event) => { setObjective(event.target.value); onObjectiveChange?.(event.target.value); }} placeholder={t.objectivePlaceholder} /></label>
           </div>
           <div className="launcher-submit">
             <div>

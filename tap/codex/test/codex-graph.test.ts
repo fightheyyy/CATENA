@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { parseCodexRollout } from "../src/codex-graph.js";
-import { traceToOTLP } from "../src/otlp.js";
+import { splitOTLPPayload, traceToOTLP } from "../src/otlp.js";
 import { runCodexHook, settleCodexHook, writePluginCredentials } from "../src/runtime.js";
 import { ledgerPath } from "../src/state.js";
 
@@ -50,6 +50,27 @@ describe("migrated Codex history", () => {
 
 afterEach(async () => {
   await Promise.all(temporaryDirectories.splice(0).map((directory) => fs.rm(directory, { recursive: true, force: true })));
+});
+
+it("preserves fitting attributes and selectively bounds oversized spans", async () => {
+  const graph = await parseCodexRollout(fixture);
+  graph.traces[0].nodes[0].output = "x".repeat(600_000);
+  const encoded = JSON.stringify(traceToOTLP(graph, graph.traces[0]));
+  expect(encoded).toContain("x".repeat(600_000));
+  expect(encoded).not.toContain("catena.truncated.output.value.original_bytes");
+
+  const tool = graph.traces.flatMap((item) => item.nodes).find((item) => item.kind === "tool")!;
+  tool.output = "z".repeat(4 * 1024 * 1024);
+  const owningTrace = graph.traces.find((item) => item.nodes.includes(tool))!;
+  const bounded = splitOTLPPayload(traceToOTLP(graph, owningTrace));
+  expect(JSON.stringify(bounded)).toContain("catena.truncated.output.value.original_bytes");
+  expect(bounded.every((part) => Buffer.byteLength(JSON.stringify(part)) < 8 * 1024 * 1024)).toBe(true);
+
+  const large = "y".repeat(5 * 1024 * 1024);
+  const payload = { resourceSpans: [{ scopeSpans: [{ spans: [{ blob: large }, { blob: large }] }] }] };
+  const parts = splitOTLPPayload(payload);
+  expect(parts).toHaveLength(2);
+  expect(parts.every((part) => Buffer.byteLength(JSON.stringify(part)) < 8 * 1024 * 1024)).toBe(true);
 });
 
 function trace(graph: Awaited<ReturnType<typeof parseCodexRollout>>, turnId: string) {

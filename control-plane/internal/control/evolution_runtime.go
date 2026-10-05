@@ -6,34 +6,38 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
+	"io"
+	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 )
 
+// The analysis engine (engine/ in this repository) is a private HTTP service.
+// The control plane owns prompts, evidence and output validation; the engine
+// only runs one role turn on the owner's model.
 const (
-	evolutionRequestSchema  = "barena.xiaoba_evolution_request.v1"
-	evolutionResponseSchema = "barena.xiaoba_evolution_response.v1"
-	evolutionManifestSchema = "barena.xiaoba_evolution_runtime.v1"
+	engineTurnRequestSchema  = "catena.engine_turn_request.v1"
+	engineTurnResponseSchema = "catena.engine_turn_response.v1"
+	engineManifestSchema     = "catena.engine_manifest.v1"
+	engineRuntimeID          = "catena-engine"
+	engineMaxResponseBytes   = 512 * 1024
 )
 
 var safeRuntimeID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
 
+// evolutionRoles are the engine roles in stage order.
+var evolutionRoles = []string{"inspector", "evolution", "reviewer"}
+
 type EvolutionRuntimeConfig struct {
-	NodeCommand   string
-	WorkerPath    string
-	XiaoBaCommand string
-	ProjectRoot   string
-	RolesRoot     string
-	SkillsRoot    string
-	WorkspaceRoot string
-	EnvAllowlist  []string
-	ProbeTimeout  time.Duration
-	CacheTTL      time.Duration
+	// URL is the engine origin, for example http://catena-engine:8790.
+	URL          string
+	Token        string
+	ProbeTimeout time.Duration
+	CacheTTL     time.Duration
+	Client       *http.Client
 }
 
 type EvolutionRuntimeRole struct {
@@ -71,41 +75,29 @@ type EvolutionRoleTurnInput struct {
 	Role      string
 	Prompt    string
 	Timeout   time.Duration
-	Telemetry json.RawMessage
 	Model     EvolutionModelCredentials
 }
 
 type EvolutionRuntimeManager struct {
 	config EvolutionRuntimeConfig
+	base   string
 	mu     sync.Mutex
 	cached EvolutionRuntimeManifest
 	until  time.Time
 }
 
-type evolutionWorkerRuntimeConfig struct {
-	Command        string            `json:"command,omitempty"`
-	ProjectRoot    string            `json:"project_root,omitempty"`
-	RolesRoot      string            `json:"roles_root,omitempty"`
-	SkillsRoot     string            `json:"skills_root,omitempty"`
-	EnvAllowlist   []string          `json:"env_allowlist,omitempty"`
-	EnvOverrides   map[string]string `json:"env_overrides,omitempty"`
-	ProbeTimeoutMS int64             `json:"probe_timeout_ms,omitempty"`
-}
-
-type evolutionWorkerResponse struct {
-	Schema    string                    `json:"schema"`
-	RequestID string                    `json:"request_id"`
-	Operation string                    `json:"operation"`
-	Status    string                    `json:"status"`
-	Runtime   *EvolutionRuntimeManifest `json:"runtime,omitempty"`
-	Result    json.RawMessage           `json:"result,omitempty"`
+type engineTurnResponse struct {
+	Schema    string          `json:"schema"`
+	RequestID string          `json:"request_id"`
+	Status    string          `json:"status"`
+	Result    json.RawMessage `json:"result,omitempty"`
 	Error     *struct {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	} `json:"error,omitempty"`
 }
 
-type evolutionWorkerTurnResult struct {
+type engineTurnResult struct {
 	Status     string `json:"status"`
 	ReasonCode string `json:"reason_code,omitempty"`
 	Detail     string `json:"detail,omitempty"`
@@ -114,12 +106,16 @@ type evolutionWorkerTurnResult struct {
 	} `json:"assistant,omitempty"`
 }
 
+// NewEvolutionRuntimeManager returns nil without error when no engine URL is
+// configured; a nil manager reports not_configured and refuses turns.
 func NewEvolutionRuntimeManager(config EvolutionRuntimeConfig) (*EvolutionRuntimeManager, error) {
-	if config.NodeCommand == "" {
-		config.NodeCommand = "node"
+	if strings.TrimSpace(config.URL) == "" {
+		return nil, nil
 	}
-	if config.XiaoBaCommand == "" {
-		config.XiaoBaCommand = "xiaoba"
+	parsed, err := url.Parse(strings.TrimSpace(config.URL))
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" ||
+		parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return nil, errors.New("engine URL must be an HTTP(S) origin")
 	}
 	if config.ProbeTimeout <= 0 {
 		config.ProbeTimeout = 8 * time.Second
@@ -127,27 +123,10 @@ func NewEvolutionRuntimeManager(config EvolutionRuntimeConfig) (*EvolutionRuntim
 	if config.CacheTTL <= 0 {
 		config.CacheTTL = 5 * time.Second
 	}
-	worker, err := filepath.Abs(config.WorkerPath)
-	if err != nil {
-		return nil, err
+	if config.Client == nil {
+		config.Client = &http.Client{}
 	}
-	if info, err := os.Stat(worker); err != nil || !info.Mode().IsRegular() {
-		return nil, fmt.Errorf("Evolution Runtime Worker does not exist: %s", worker)
-	}
-	workspace, err := filepath.Abs(config.WorkspaceRoot)
-	if err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(workspace, 0o700); err != nil {
-		return nil, err
-	}
-	config.WorkerPath = worker
-	config.WorkspaceRoot = workspace
-	config.ProjectRoot = absoluteOptional(config.ProjectRoot)
-	config.RolesRoot = absoluteOptional(config.RolesRoot)
-	config.SkillsRoot = absoluteOptional(config.SkillsRoot)
-	config.EnvAllowlist = uniqueStrings(config.EnvAllowlist)
-	return &EvolutionRuntimeManager{config: config}, nil
+	return &EvolutionRuntimeManager{config: config, base: strings.TrimRight(parsed.String(), "/")}, nil
 }
 
 func (m *EvolutionRuntimeManager) Probe(ctx context.Context) EvolutionRuntimeManifest {
@@ -165,18 +144,11 @@ func (m *EvolutionRuntimeManager) Probe(ctx context.Context) EvolutionRuntimeMan
 
 	probeCtx, cancel := context.WithTimeout(ctx, m.config.ProbeTimeout)
 	defer cancel()
-	requestID := newID("runtime-probe")
-	response, err := m.execute(probeCtx, map[string]any{
-		"schema":     evolutionRequestSchema,
-		"request_id": requestID,
-		"operation":  "probe",
-		"runtime":    m.workerRuntimeConfig(nil),
-	})
 	manifest := blockedEvolutionManifest("runtime_error")
-	if err == nil && response.RequestID == requestID && response.Operation == "probe" &&
-		response.Status == "ok" && response.Runtime != nil &&
-		validEvolutionManifest(*response.Runtime) {
-		manifest = sanitizeEvolutionManifest(*response.Runtime)
+	var remote EvolutionRuntimeManifest
+	if status, err := m.do(probeCtx, http.MethodGet, "/v1/manifest", nil, &remote); err == nil &&
+		status == http.StatusOK && validEvolutionManifest(remote) {
+		manifest = sanitizeEvolutionManifest(remote)
 	}
 	m.mu.Lock()
 	m.cached = cloneEvolutionManifest(manifest)
@@ -190,13 +162,13 @@ func (m *EvolutionRuntimeManager) RunRoleTurn(
 	input EvolutionRoleTurnInput,
 ) (json.RawMessage, error) {
 	if m == nil {
-		return nil, errors.New("Evolution Runtime is not configured")
+		return nil, errors.New("Catena Engine is not configured")
 	}
 	if !safeRuntimeID.MatchString(input.RequestID) || !safeRuntimeID.MatchString(input.RunID) {
 		return nil, errors.New("request and Run identifiers must be safe")
 	}
 	if !isEvolutionRole(input.Role) {
-		return nil, errors.New("role is not allowed in the embedded Evolution Runtime")
+		return nil, errors.New("role is not allowed in Catena Engine")
 	}
 	if strings.TrimSpace(input.Prompt) == "" || len(input.Prompt) > 1_000_000 {
 		return nil, errors.New("prompt must contain from 1 to 1000000 bytes")
@@ -207,153 +179,129 @@ func (m *EvolutionRuntimeManager) RunRoleTurn(
 	if !input.Model.Valid() {
 		return nil, errors.New("owner LLM configuration is incomplete")
 	}
-	workspace := filepath.Join(m.config.WorkspaceRoot, input.RunID, input.RequestID)
-	if err := os.MkdirAll(workspace, 0o700); err != nil {
-		return nil, err
-	}
 	request := map[string]any{
-		"schema":     evolutionRequestSchema,
+		"schema":     engineTurnRequestSchema,
 		"request_id": input.RequestID,
-		"operation":  "turn",
 		"run_id":     input.RunID,
 		"role":       input.Role,
 		"prompt":     input.Prompt,
-		"workspace":  workspace,
 		"timeout_ms": input.Timeout.Milliseconds(),
-		"runtime":    m.workerRuntimeConfig(&input.Model),
+		"model": map[string]string{
+			"provider": input.Model.Provider,
+			"base_url": input.Model.BaseURL,
+			"model":    input.Model.Model,
+			"api_key":  input.Model.APIKey,
+		},
 	}
-	if len(input.Telemetry) > 0 {
-		var telemetry any
-		if err := json.Unmarshal(input.Telemetry, &telemetry); err != nil {
-			return nil, errors.New("telemetry must be valid JSON")
-		}
-		request["telemetry"] = telemetry
-	}
-	response, err := m.execute(ctx, request)
+	var response engineTurnResponse
+	status, err := m.do(ctx, http.MethodPost, "/v1/turn", request, &response)
 	if err != nil {
 		return nil, err
 	}
-	if response.RequestID != input.RequestID || response.Operation != "turn" {
-		return nil, errors.New("Evolution Runtime Worker returned a mismatched response")
+	if response.Schema != engineTurnResponseSchema {
+		return nil, fmt.Errorf("Catena Engine returned HTTP %d with an unsupported schema", status)
 	}
 	if response.Status != "ok" || len(response.Result) == 0 {
-		return nil, errors.New("Evolution Runtime role turn failed")
+		if response.Error != nil {
+			return nil, fmt.Errorf("Catena Engine rejected the turn: %s", bounded(response.Error.Detail, 500))
+		}
+		return nil, errors.New("Catena Engine role turn failed")
 	}
-	var turn evolutionWorkerTurnResult
+	if response.RequestID != input.RequestID {
+		return nil, errors.New("Catena Engine returned a mismatched response")
+	}
+	var turn engineTurnResult
 	if err := json.Unmarshal(response.Result, &turn); err != nil {
-		return nil, errors.New("Evolution Runtime role turn returned an invalid result")
+		return nil, errors.New("Catena Engine role turn returned an invalid result")
 	}
 	if turn.Status != "completed" {
 		detail := bounded(strings.TrimSpace(turn.Detail), 500)
 		if detail == "" {
-			detail = "the Runtime did not complete the role turn"
+			detail = "the engine did not complete the role turn"
 		}
-		reason := bounded(strings.TrimSpace(turn.ReasonCode), 120)
-		if reason != "" {
-			return nil, fmt.Errorf("Evolution Runtime role turn %s: %s", reason, detail)
+		if reason := bounded(strings.TrimSpace(turn.ReasonCode), 120); reason != "" {
+			return nil, fmt.Errorf("Catena Engine role turn %s: %s", reason, detail)
 		}
-		return nil, fmt.Errorf("Evolution Runtime role turn failed: %s", detail)
+		return nil, fmt.Errorf("Catena Engine role turn failed: %s", detail)
 	}
 	if turn.Assistant == nil || strings.TrimSpace(turn.Assistant.Content) == "" {
-		return nil, errors.New("Evolution Runtime role turn completed without assistant output")
+		return nil, errors.New("Catena Engine role turn completed without assistant output")
 	}
 	return append(json.RawMessage(nil), response.Result...), nil
 }
 
-func (m *EvolutionRuntimeManager) workerRuntimeConfig(model *EvolutionModelCredentials) evolutionWorkerRuntimeConfig {
-	probeTimeout := m.config.ProbeTimeout - 500*time.Millisecond
-	if probeTimeout < time.Millisecond {
-		probeTimeout = m.config.ProbeTimeout
-	}
-	config := evolutionWorkerRuntimeConfig{
-		Command:        m.config.XiaoBaCommand,
-		ProjectRoot:    m.config.ProjectRoot,
-		RolesRoot:      m.config.RolesRoot,
-		SkillsRoot:     m.config.SkillsRoot,
-		EnvAllowlist:   append([]string(nil), m.config.EnvAllowlist...),
-		ProbeTimeoutMS: probeTimeout.Milliseconds(),
-	}
-	if model != nil {
-		config.EnvOverrides = map[string]string{
-			"XIAOBA_LLM_PROVIDER": model.Provider,
-			"XIAOBA_LLM_API_BASE": model.BaseURL,
-			"XIAOBA_LLM_API_KEY":  model.APIKey,
-			"XIAOBA_LLM_MODEL":    model.Model,
-		}
-	}
-	return config
-}
-
-func (m *EvolutionRuntimeManager) execute(
+func (m *EvolutionRuntimeManager) do(
 	ctx context.Context,
-	request any,
-) (evolutionWorkerResponse, error) {
-	requestBytes, err := json.Marshal(request)
-	if err != nil {
-		return evolutionWorkerResponse{}, err
-	}
-	cmd := exec.Command(m.config.NodeCommand, m.config.WorkerPath)
-	prepareCommand(cmd)
-	cmd.Stdin = bytes.NewReader(requestBytes)
-	stdout := &boundedCommandBuffer{limit: 512 * 1024}
-	stderr := &boundedCommandBuffer{limit: 64 * 1024}
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	if err := cmd.Start(); err != nil {
-		return evolutionWorkerResponse{}, err
-	}
-	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
-	select {
-	case err = <-done:
-	case <-ctx.Done():
-		_ = interruptCommand(cmd)
-		select {
-		case <-done:
-		case <-time.After(750 * time.Millisecond):
-			_ = killCommand(cmd)
-			<-done
+	method string,
+	path string,
+	body any,
+	destination any,
+) (int, error) {
+	var reader io.Reader
+	if body != nil {
+		encoded, err := json.Marshal(body)
+		if err != nil {
+			return 0, err
 		}
-		return evolutionWorkerResponse{}, ctx.Err()
+		reader = bytes.NewReader(encoded)
 	}
+	request, err := http.NewRequestWithContext(ctx, method, m.base+path, reader)
 	if err != nil {
-		return evolutionWorkerResponse{}, fmt.Errorf("Evolution Runtime Worker failed: %w", err)
+		return 0, err
 	}
-	var response evolutionWorkerResponse
-	if err := json.Unmarshal(bytes.TrimSpace(stdout.Bytes()), &response); err != nil {
-		return evolutionWorkerResponse{}, errors.New("Evolution Runtime Worker returned invalid JSON")
+	request.Header.Set("Content-Type", "application/json")
+	if m.config.Token != "" {
+		request.Header.Set("Authorization", "Bearer "+m.config.Token)
 	}
-	if response.Schema != evolutionResponseSchema {
-		return evolutionWorkerResponse{}, errors.New("Evolution Runtime Worker returned an unsupported schema")
+	response, err := m.config.Client.Do(request)
+	if err != nil {
+		if ctx.Err() != nil {
+			return 0, ctx.Err()
+		}
+		// Transport errors can echo the URL but never the request body.
+		return 0, errors.New("Catena Engine is unreachable")
 	}
-	return response, nil
+	defer response.Body.Close()
+	payload, err := io.ReadAll(io.LimitReader(response.Body, engineMaxResponseBytes+1))
+	if err != nil {
+		return response.StatusCode, errors.New("Catena Engine response could not be read")
+	}
+	if len(payload) > engineMaxResponseBytes {
+		return response.StatusCode, errors.New("Catena Engine response exceeded the size limit")
+	}
+	if err := json.Unmarshal(payload, destination); err != nil {
+		return response.StatusCode, fmt.Errorf("Catena Engine returned HTTP %d without valid JSON", response.StatusCode)
+	}
+	return response.StatusCode, nil
 }
 
 func validEvolutionManifest(manifest EvolutionRuntimeManifest) bool {
-	if manifest.Schema != evolutionManifestSchema || manifest.RuntimeID != "xiaobaos-evolution" ||
-		manifest.Kind != "embedded_evolution" || (manifest.Status != "ready" && manifest.Status != "blocked") ||
-		manifest.Capabilities.TargetRuntimeHosted || len(manifest.Roles) != 4 {
+	if manifest.Schema != engineManifestSchema || manifest.RuntimeID != engineRuntimeID ||
+		(manifest.Status != "ready" && manifest.Status != "blocked") ||
+		manifest.Capabilities.TargetRuntimeHosted || len(manifest.Roles) != len(evolutionRoles) {
 		return false
 	}
-	seen := make(map[string]bool, 4)
+	seen := make(map[string]bool, len(evolutionRoles))
 	for _, role := range manifest.Roles {
 		if !isEvolutionRole(role.ID) || seen[role.ID] {
 			return false
 		}
 		seen[role.ID] = true
 	}
-	return len(seen) == 4
+	return true
 }
 
+// sanitizeEvolutionManifest keeps only status and version from the engine;
+// every descriptive field comes from the control plane.
 func sanitizeEvolutionManifest(input EvolutionRuntimeManifest) EvolutionRuntimeManifest {
 	manifest := baseEvolutionManifest()
 	manifest.Status = input.Status
 	manifest.Version = safeVersion(input.Version)
-	manifest.ReasonCode = input.ReasonCode
 	if input.Status == "ready" {
-		manifest.Detail = "Embedded XiaoBaOS is ready with all four evaluator/evolution roles."
+		manifest.Detail = "Catena Engine is ready with the Inspector, Evolution and Reviewer roles."
 	} else {
-		manifest.Detail = "The embedded XiaoBaOS evaluator/evolution Runtime is currently blocked."
+		manifest.ReasonCode = safeVersion(input.ReasonCode)
+		manifest.Detail = "Catena Engine is currently blocked."
 	}
 	return manifest
 }
@@ -363,31 +311,30 @@ func blockedEvolutionManifest(reason string) EvolutionRuntimeManifest {
 	manifest.Status = "blocked"
 	manifest.ReasonCode = reason
 	if reason == "not_configured" {
-		manifest.Detail = "The XiaoBaOS evaluator/evolution Runtime is not configured."
+		manifest.Detail = "Catena Engine is not configured."
 	} else {
-		manifest.Detail = "The embedded XiaoBaOS evaluator/evolution Runtime is currently blocked."
+		manifest.Detail = "Catena Engine is currently unreachable or blocked."
 	}
 	return manifest
 }
 
 func baseEvolutionManifest() EvolutionRuntimeManifest {
 	return EvolutionRuntimeManifest{
-		Schema:      evolutionManifestSchema,
-		RuntimeID:   "xiaobaos-evolution",
-		DisplayName: "XiaoBa Evolution Runtime",
+		Schema:      engineManifestSchema,
+		RuntimeID:   engineRuntimeID,
+		DisplayName: "Catena Engine",
 		Kind:        "embedded_evolution",
 		Source:      "configured",
 		Roles: []EvolutionRuntimeRole{
-			{ID: "user-cat", DisplayName: "UserCat", Responsibility: "Simulate one natural, incomplete user turn without judging the Agent.", Output: "user turn"},
-			{ID: "inspector-cat", DisplayName: "InspectorCat", Responsibility: "Locate a grounded failure pattern in retained Trace evidence.", Output: "finding"},
-			{ID: "reviewer-cat", DisplayName: "ReviewerCat", Responsibility: "Review verifier-backed evidence and emit a semantic pass, fail, or blocked verdict.", Output: "semantic review"},
-			{ID: "evolution-cat", DisplayName: "EvolutionCat", Responsibility: "Create one portable agent.md, Skill, or Role asset; XiaoBaOS may also receive a Harness optimization.", Output: "Agent asset"},
+			{ID: "inspector", DisplayName: "Inspector", Responsibility: "Locate one grounded failure pattern in retained Trace evidence.", Output: "finding"},
+			{ID: "evolution", DisplayName: "Evolution", Responsibility: "Draft one small, reviewable agent.md or Skill that addresses an accepted finding.", Output: "Agent asset"},
+			{ID: "reviewer", DisplayName: "Reviewer", Responsibility: "Check whether a proposal is coherent and grounded in the retained evidence.", Output: "grounding review"},
 		},
 		Capabilities: EvolutionRuntimeCapabilities{
 			Probe:               true,
 			RoleTurn:            true,
-			Cancellation:        true,
-			Telemetry:           "native",
+			Cancellation:        false,
+			Telemetry:           "none",
 			TargetRuntimeHosted: false,
 		},
 	}
@@ -399,12 +346,12 @@ func cloneEvolutionManifest(input EvolutionRuntimeManifest) EvolutionRuntimeMani
 }
 
 func isEvolutionRole(role string) bool {
-	switch role {
-	case "user-cat", "inspector-cat", "reviewer-cat", "evolution-cat":
-		return true
-	default:
-		return false
+	for _, known := range evolutionRoles {
+		if role == known {
+			return true
+		}
 	}
+	return false
 }
 
 func safeVersion(value string) string {
@@ -418,40 +365,4 @@ func safeVersion(value string) string {
 		}
 		return -1
 	}, value)
-}
-
-func absoluteOptional(value string) string {
-	if value == "" {
-		return ""
-	}
-	absolute, err := filepath.Abs(value)
-	if err != nil {
-		return value
-	}
-	return absolute
-}
-
-func uniqueStrings(values []string) []string {
-	seen := make(map[string]bool, len(values))
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value != "" && !seen[value] {
-			seen[value] = true
-			result = append(result, value)
-		}
-	}
-	return result
-}
-
-type boundedCommandBuffer struct {
-	bytes.Buffer
-	limit int
-}
-
-func (b *boundedCommandBuffer) Write(value []byte) (int, error) {
-	if b.Buffer.Len()+len(value) > b.limit {
-		return 0, errors.New("worker output exceeded limit")
-	}
-	return b.Buffer.Write(value)
 }

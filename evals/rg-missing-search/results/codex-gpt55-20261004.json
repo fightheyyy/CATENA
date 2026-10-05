@@ -1,0 +1,416 @@
+{
+  "schema": "catena.native_codex_study.v1",
+  "date": "2026-10-04",
+  "experiment_id": "experiment-1791086601354-b6a071d2048594fe",
+  "job_id": "24563438f90e4959bd2a5dc7f1fb1928",
+  "model": "gpt-5.5",
+  "target": "Harbor built-in Codex adapter / Codex CLI 0.160.0",
+  "harbor_version": "0.23.0",
+  "status": "completed",
+  "environment": "Linux/PowerShell 7 docker adaptation; not Windows replay",
+  "attempts_per_task_per_arm": 1,
+  "tasks_unchanged": true,
+  "task_sha256": {
+    "tasks/absent-symbol/instruction.md": "efd9c26f8b56bb68d78725808727d0a8bacdc85b1d841b070e532f4090d63558",
+    "tasks/absent-symbol/task.toml": "06b2e3748ab46793d05b9e7b57288a0f3f27d7a13ab73147583663b080b03a93",
+    "tasks/command-handler/instruction.md": "5262b1c2ac7f6474f282dcc00efaf48615180ac6566bb12255b03e05b6070e2c",
+    "tasks/command-handler/task.toml": "8e226e08276cb40f6f9f17b84f5f7374bd7370748d124e2559cff149089237c9",
+    "tasks/role-config/instruction.md": "9518c97c8e81a9dd7305dc73be175203ffad1a98d885744ce1ceb16b45a3ed60",
+    "tasks/role-config/task.toml": "736799860b8956945d1bf1a4d146813489641614ebf74e72f2b5d61a9f8f0498",
+    "tasks/absent-symbol/environment/Dockerfile": "5ad8153ae078b515a9cfae2d099b369d07248215a3a008b66b985a6ca4c4642d",
+    "tasks/absent-symbol/environment/read_only_shell.ps1": "a8153f8ce0a667bf607497edcf920fda026bede6c77fb32109a73161d8bf5fce",
+    "tasks/absent-symbol/tests/expected.json": "6edefdc8c18faf8da1edd0e700e90388826109daa632b322082367f7392b9f67",
+    "tasks/absent-symbol/tests/extract.py": "b33db69c44073abf47319669861401762d6af82f82d911422ff45f5dfdd55a17",
+    "tasks/absent-symbol/tests/test.sh": "793d4dbcada0e779808c156d5f2d3657b01d815005c89dc3035db2a338496909",
+    "tasks/absent-symbol/tests/verify.ps1": "66e3273891c5542d6fdcb5095dedc6a108ba7d7fdaf3372f4c5aa3fc65564e2c",
+    "tasks/absent-symbol/environment/repo/src/doctor.ts": "f937f97ae3a36dd554b17085529585006c8d4be2f7f0143f3de74ccf059afb96",
+    "tasks/absent-symbol/environment/repo/src/extract.ts": "ead961726fd4fa2a4f12955d7fa97337bf111e9d8da31e35beec2e2fdeab5deb",
+    "tasks/command-handler/environment/Dockerfile": "5ad8153ae078b515a9cfae2d099b369d07248215a3a008b66b985a6ca4c4642d",
+    "tasks/command-handler/environment/read_only_shell.ps1": "a8153f8ce0a667bf607497edcf920fda026bede6c77fb32109a73161d8bf5fce",
+    "tasks/command-handler/tests/expected.json": "5313bfb0cb6f0c177310561cd0eeee4c638d1abea43dc455939eec12f218c607",
+    "tasks/command-handler/tests/extract.py": "b33db69c44073abf47319669861401762d6af82f82d911422ff45f5dfdd55a17",
+    "tasks/command-handler/tests/test.sh": "793d4dbcada0e779808c156d5f2d3657b01d815005c89dc3035db2a338496909",
+    "tasks/command-handler/tests/verify.ps1": "66e3273891c5542d6fdcb5095dedc6a108ba7d7fdaf3372f4c5aa3fc65564e2c",
+    "tasks/command-handler/environment/repo/archive/inspect.ts": "a13af646b7eac5fb5b046d0f557c2c8a75dd8186ceca3a70457b75049b1e3bd4",
+    "tasks/command-handler/environment/repo/docs/commands.md": "1762efb9c5ead8d3d65821c47ab91fc068c9d47efd6fce8bc01d194fee35a583",
+    "tasks/command-handler/environment/repo/tests/inspect.test.ts": "112b99e23168871e39e02bdbba9b5bbfda7d88ff0b0c81a65bc0ddad674d6532",
+    "tasks/command-handler/environment/repo/src/commands/inspect.ts": "14d4fbc71649d2ced498abbf08cfb4e373b2e30fa93de04debbe63ecd7c74050",
+    "tasks/command-handler/environment/repo/src/commands/status.ts": "acb37a097f49d07e6f50a857f19cefe061e850ea357b2eea2f79b6c6c4661b84",
+    "tasks/role-config/environment/Dockerfile": "5ad8153ae078b515a9cfae2d099b369d07248215a3a008b66b985a6ca4c4642d",
+    "tasks/role-config/environment/read_only_shell.ps1": "a8153f8ce0a667bf607497edcf920fda026bede6c77fb32109a73161d8bf5fce",
+    "tasks/role-config/tests/expected.json": "9e1d32157e14890f772514113c2a12a355cf36be510cb38f26e94ab50cfd1b2d",
+    "tasks/role-config/tests/extract.py": "b33db69c44073abf47319669861401762d6af82f82d911422ff45f5dfdd55a17",
+    "tasks/role-config/tests/test.sh": "793d4dbcada0e779808c156d5f2d3657b01d815005c89dc3035db2a338496909",
+    "tasks/role-config/tests/verify.ps1": "66e3273891c5542d6fdcb5095dedc6a108ba7d7fdaf3372f4c5aa3fc65564e2c",
+    "tasks/role-config/environment/repo/archive/production.yaml": "8119acc81f80372880ac5717b39acb5dcc5c008bb5e4833195f1ed6c2960aa19",
+    "tasks/role-config/environment/repo/roles/disabled.yaml": "c5d0de5462d9d0bc1124af66c28cee8006780c49b5276fea156a3328809ca62a",
+    "tasks/role-config/environment/repo/roles/production.yaml": "d6458f5a9f1bb008891162f25a2cf1b8645118b707e7d2e8a9f312fc06ad85cc",
+    "tasks/role-config/environment/repo/roles/reviewer.yaml": "a42b02735bdecbc16e7a3bd651d9d84228aacfedfc8ed7744b107a96a1f9994f"
+  },
+  "skill_sha256": "7044042156a765ba36bb4c7408806f5683e73873628305b55b2b61bf24791e0b",
+  "summaries": {
+    "baseline": {
+      "valid": 3,
+      "passed": 3,
+      "missing_rg_errors": 0,
+      "command_count": 14,
+      "input_tokens": 125117,
+      "output_tokens": 2730,
+      "cached_input_tokens": 89088,
+      "nonzero_command_exits": 3,
+      "duration_seconds": 148.08456
+    },
+    "candidate": {
+      "valid": 3,
+      "passed": 3,
+      "missing_rg_errors": 0,
+      "command_count": 14,
+      "input_tokens": 128764,
+      "output_tokens": 2483,
+      "cached_input_tokens": 95744,
+      "nonzero_command_exits": 3,
+      "duration_seconds": 127.013308
+    }
+  },
+  "trials": [
+    {
+      "variant": "baseline",
+      "task": "catena/absent-symbol",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "input_tokens": 41689,
+      "output_tokens": 1100,
+      "duration_seconds": 54.13058,
+      "native_session_verified": true,
+      "environment_verified": true,
+      "command_count": 4,
+      "missing_rg_errors": 0,
+      "policy_rejections": 0,
+      "cached_input_tokens": 28672,
+      "nonzero_command_exits": 1,
+      "environment_probe": {
+        "rg_absent": true,
+        "codex_version": "codex-cli 0.160.0"
+      },
+      "native_session_sha256": "74a637e061a9e25814db62d1bc2291d6268cccf938250fecf430c856b96cc42f",
+      "tool_calls": [
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"Set-Location -LiteralPath '/workspace/repo'; if (Test-Path -LiteralPath './src') { Get-ChildItem -LiteralPath './src' -Recurse -File | Select-String -Pattern 'extract-skill-v2' -SimpleMatch | ForEach-Object { [pscustomobject]@{ Path = (Resolve-Path -Relative $_.Path); LineNumber = $_.LineNumber; Line = $_.Line.Trim() } } | ConvertTo-Json -Depth 4 } else { @() | ConvertTo-Json }\"",
+          "exit_code": 1,
+          "stdout": "Chunk ID: 0d3523\nWall time: 0.4240 seconds\nProcess exited with code 1\nOriginal token count: 57\nOutput:\nParserError: \nLine |\n   1 |  … /bin/codex.LineNumber; Line = /usr/local/bin/codex.Line.Trim() } } |  …\n     |                                                                 ~\n     | An expression was expected after '('.\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command 'Set-Location -LiteralPath \"/workspace/repo\"; if (Test-Path -LiteralPath \"./src\") { Get-ChildItem -LiteralPath \"./src\" -Recurse -File | Select-String -Pattern \"extract-skill-v2\" -SimpleMatch | ForEach-Object { [pscustomobject]@{ Path = (Resolve-Path -Relative $_.Path); LineNumber = $_.LineNumber; Line = $_.Line.Trim() } } | ConvertTo-Json -Depth 4 } else { @() | ConvertTo-Json }'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: d29fb8\nWall time: 0.4839 seconds\nProcess exited with code 0\nOriginal token count: 0\nOutput:\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command 'Set-Location -LiteralPath \"/workspace/repo\"; if (Test-Path -LiteralPath \"./src\") { Get-ChildItem -LiteralPath \"./src\" -Recurse -File | Select-String -Pattern \"extract.*skill|skill.*extract\" | ForEach-Object { [pscustomobject]@{ Path = ((Resolve-Path -Relative $_.Path) -replace \"^\\./\", \"\" -replace \"\\\\\", \"/\"); LineNumber = $_.LineNumber; Line = $_.Line.Trim() } } | ConvertTo-Json -Depth 4 } else { @() | ConvertTo-Json }'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: d8f78d\nWall time: 0.4030 seconds\nProcess exited with code 0\nOriginal token count: 63\nOutput:\n[\n  {\n    \"Path\": \"src/extract.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"export const command = \\\"extract-skill\\\";\"\n  },\n  {\n    \"Path\": \"src/extract.ts\",\n    \"LineNumber\": 2,\n    \"Line\": \"export function extractSkill() { return { version: 1 }; }\"\n  }\n]\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command 'Set-Location -LiteralPath \"/workspace/repo\"; if (Test-Path -LiteralPath \"./src\") { Get-ChildItem -LiteralPath \"./src\" -Recurse -File | Select-String -Pattern \"v2|extractSkill|function|command\" | Where-Object { $_.Line -match \"extract|skill|v2\" } | ForEach-Object { [pscustomobject]@{ Path = ((Resolve-Path -Relative $_.Path) -replace \"^\\./\", \"\" -replace \"\\\\\", \"/\"); LineNumber = $_.LineNumber; Line = $_.Line.Trim() } } | ConvertTo-Json -Depth 4 } else { @() | ConvertTo-Json }'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 8a5e68\nWall time: 0.4347 seconds\nProcess exited with code 0\nOriginal token count: 63\nOutput:\n[\n  {\n    \"Path\": \"src/extract.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"export const command = \\\"extract-skill\\\";\"\n  },\n  {\n    \"Path\": \"src/extract.ts\",\n    \"LineNumber\": 2,\n    \"Line\": \"export function extractSkill() { return { version: 1 }; }\"\n  }\n]\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[]}"
+    },
+    {
+      "variant": "baseline",
+      "task": "catena/command-handler",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "input_tokens": 50496,
+      "output_tokens": 972,
+      "duration_seconds": 59.405604,
+      "native_session_verified": true,
+      "environment_verified": true,
+      "command_count": 5,
+      "missing_rg_errors": 0,
+      "policy_rejections": 0,
+      "cached_input_tokens": 38400,
+      "nonzero_command_exits": 2,
+      "environment_probe": {
+        "codex_version": "codex-cli 0.160.0",
+        "rg_absent": true
+      },
+      "native_session_sha256": "5de1aeec253d748c1ce51a1d441b3e780c7eeeab21ea882a9e442c457cf47ded",
+      "tool_calls": [
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch '([/\\\\])(docs|archive|tests)([/\\\\])' } | Select-String -Pattern 'analyze-log' -SimpleMatch | ForEach-Object { '{0}:{1}:{2}' -f ($_.Path.Substring((Get-Location).Path.Length+1) -replace '\\\\','/'), $_.LineNumber, $_.Line.Trim() }\"",
+          "exit_code": 1,
+          "stdout": "Chunk ID: 1939eb\nWall time: 0.4735 seconds\nProcess exited with code 1\nOriginal token count: 55\nOutput:\nParserError: \nLine |\n   1 |  … th.Substring((Get-Location).Path.Length+1) -replace '\\','/'), /usr/lo …\n     |                                                                 ~\n     | Missing expression after ','.\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command '$root=(Get-Location).Path; Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch ''[/\\\\](docs|archive|tests)[/\\\\]'' } | Select-String -Pattern ''analyze-log'' -SimpleMatch | ForEach-Object { $rel=$_.Path.Substring($root.Length+1).Replace([IO.Path]::DirectorySeparatorChar,''/''); ''{0}:{1}:{2}'' -f $rel,$_.LineNumber,$_.Line.Trim() }'",
+          "exit_code": 1,
+          "stdout": "Chunk ID: a6b498\nWall time: 0.4246 seconds\nProcess exited with code 1\nOriginal token count: 54\nOutput:\nParserError: \nLine |\n   1 |  … dItem -Recurse -File | Where-Object { $_.FullName -notmatch [/\\\\](doc …\n     |                                                                 ~\n     | Missing type name after '['.\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"\\$root=(Get-Location).Path; Get-ChildItem -Recurse -File | Where-Object { \\$_.FullName -notmatch '[/\\\\](docs|archive|tests)[/\\\\]' } | Select-String -Pattern 'analyze-log' -SimpleMatch | ForEach-Object { \\$rel=\\$_.Path.Substring(\\$root.Length+1).Replace([IO.Path]::DirectorySeparatorChar,'/'); '{0}:{1}:{2}' -f \\$rel,\\$_.LineNumber,\\$_.Line.Trim() }\"",
+          "exit_code": 0,
+          "stdout": "Chunk ID: e42bb4\nWall time: 0.9608 seconds\nProcess exited with code 0\nOriginal token count: 125\nOutput:\nOperationStopped: Invalid pattern '[/\\](docs|archive|tests)[/\\]' at offset 28. Unterminated [] set.\nOperationStopped: Invalid pattern '[/\\](docs|archive|tests)[/\\]' at offset 28. Unterminated [] set.\nOperationStopped: Invalid pattern '[/\\](docs|archive|tests)[/\\]' at offset 28. Unterminated [] set.\nOperationStopped: Invalid pattern '[/\\](docs|archive|tests)[/\\]' at offset 28. Unterminated [] set.\nOperationStopped: Invalid pattern '[/\\](docs|archive|tests)[/\\]' at offset 28. Unterminated [] set.\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"\\$root=(Get-Location).Path; Get-ChildItem -Recurse -File | Where-Object { \\$_.FullName -notmatch '[\\\\/](docs|archive|tests)[\\\\/]' } | Select-String -Pattern 'analyze-log' -SimpleMatch | ForEach-Object { \\$rel=\\$_.Path.Substring(\\$root.Length+1).Replace([IO.Path]::DirectorySeparatorChar,'/'); '{0}:{1}:{2}' -f \\$rel,\\$_.LineNumber,\\$_.Line.Trim() }\"",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 18bcfd\nWall time: 0.7367 seconds\nProcess exited with code 0\nOriginal token count: 16\nOutput:\nsrc/commands/inspect.ts:1:export const command = \"analyze-log\";\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"Get-Content -Path 'src/commands/inspect.ts'\"",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 15bedb\nWall time: 0.3977 seconds\nProcess exited with code 0\nOriginal token count: 35\nOutput:\nexport const command = \"analyze-log\";\nexport async function runLogInspection(file: string) {\n  return { source: file, reviewed: true };\n}\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"src/commands/inspect.ts\",\"value\":\"runLogInspection\"}]}"
+    },
+    {
+      "variant": "baseline",
+      "task": "catena/role-config",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "input_tokens": 32932,
+      "output_tokens": 658,
+      "duration_seconds": 34.548376,
+      "native_session_verified": true,
+      "environment_verified": true,
+      "command_count": 5,
+      "missing_rg_errors": 0,
+      "policy_rejections": 0,
+      "cached_input_tokens": 22016,
+      "nonzero_command_exits": 0,
+      "environment_probe": {
+        "rg_absent": true,
+        "codex_version": "codex-cli 0.160.0"
+      },
+      "native_session_sha256": "c9d27f8347c193c47974c25bb3288721de18e69f3236d10d17ca727d9a0f933e",
+      "tool_calls": [
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch '(/|\\\\)archive(/|\\\\)' } | Select-String -Pattern 'coder|enabled|model' -List | ForEach-Object { $_.Path }\"",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 12e494\nWall time: 0.7713 seconds\nProcess exited with code 0\nOriginal token count: 265\nOutput:\n/usr/local/bin/codex.FullName: The term '/usr/local/bin/codex.FullName' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n/usr/local/bin/codex.FullName: The term '/usr/local/bin/codex.FullName' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n/usr/local/bin/codex.FullName: The term '/usr/local/bin/codex.FullName' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n/usr/local/bin/codex.FullName: The term '/usr/local/bin/codex.FullName' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command 'Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch \"(/|\\\\)archive(/|\\\\)\" } | Select-String -Pattern \"coder|enabled|model\" -List | ForEach-Object { $_.Path }'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 0a50b3\nWall time: 0.4394 seconds\nProcess exited with code 0\nOriginal token count: 28\nOutput:\n/workspace/repo/roles/disabled.yaml\n/workspace/repo/roles/production.yaml\n/workspace/repo/roles/reviewer.yaml\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command 'Get-Content -Raw roles/disabled.yaml'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: c973cc\nWall time: 1.4329 seconds\nProcess exited with code 0\nOriginal token count: 12\nOutput:\nrole: coder\nenabled: false\nmodel: model-copper\n\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command 'Get-Content -Raw roles/production.yaml'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: f4d876\nWall time: 1.4269 seconds\nProcess exited with code 0\nOriginal token count: 12\nOutput:\nrole: coder\nenabled: true\nmodel: model-silver\n\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command 'Get-Content -Raw roles/reviewer.yaml'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 80960d\nWall time: 1.3218 seconds\nProcess exited with code 0\nOriginal token count: 12\nOutput:\nrole: reviewer\nenabled: true\nmodel: model-gold\n\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"roles/production.yaml\",\"value\":\"model-silver\"}]}"
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/absent-symbol",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "input_tokens": 33593,
+      "output_tokens": 585,
+      "duration_seconds": 35.092347,
+      "native_session_verified": true,
+      "environment_verified": true,
+      "command_count": 3,
+      "missing_rg_errors": 0,
+      "policy_rejections": 0,
+      "cached_input_tokens": 28672,
+      "nonzero_command_exits": 0,
+      "environment_probe": {
+        "rg_absent": true,
+        "codex_version": "codex-cli 0.160.0"
+      },
+      "native_session_sha256": "2330cab14b04d09f9ea61dc2d4b95f169c13b6b5ab42c06b323a8a6822ff289e",
+      "tool_calls": [
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"Get-Content -LiteralPath '/home/catena-eval/.agents/skills/skill/SKILL.md'\"",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 24d371\nWall time: 0.3834 seconds\nProcess exited with code 0\nOriginal token count: 216\nOutput:\n---\nname: powershell-search-fallback\ndescription: Find source implementations and configuration in Windows PowerShell repositories when ripgrep may be unavailable.\n---\n\nBefore a repository search relies on `rg`, check `Get-Command rg -ErrorAction SilentlyContinue`. If it exists, use it normally. If absent, search the relevant directories with `Get-ChildItem -Recurse -File` and `Select-String -SimpleMatch`; inspect the matching files with `Get-Content` to distinguish implementation, documentation, and archived configuration.\n\nAn absent command and a search with no matches are different outcomes. Do not repeat an unavailable `rg` call or install tools merely to search. `Select-String` prints nothing when there is no match; report absence only after searching the requested scope. Preserve the user's exclusions and return paths relative to the repository.\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; if (Get-Command rg -ErrorAction SilentlyContinue) { 'RG_AVAILABLE' } else { 'RG_ABSENT' }\"",
+          "exit_code": 0,
+          "stdout": "Chunk ID: aaebc5\nWall time: 0.5494 seconds\nProcess exited with code 0\nOriginal token count: 57\nOutput:\n=Stop: The term '=Stop' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\nRG_ABSENT\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command '$matches = Get-ChildItem -LiteralPath \"/workspace/repo/src\" -Recurse -File -ErrorAction Stop | Select-String -SimpleMatch -Pattern \"extract-skill-v2\"; $matches | ForEach-Object { \"{0}:{1}:{2}\" -f $_.Path, $_.LineNumber, $_.Line.Trim() }'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 550b4b\nWall time: 0.3649 seconds\nProcess exited with code 0\nOriginal token count: 0\nOutput:\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[]}"
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/command-handler",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "input_tokens": 42366,
+      "output_tokens": 832,
+      "duration_seconds": 42.174729,
+      "native_session_verified": true,
+      "environment_verified": true,
+      "command_count": 4,
+      "missing_rg_errors": 0,
+      "policy_rejections": 0,
+      "cached_input_tokens": 34304,
+      "nonzero_command_exits": 2,
+      "environment_probe": {
+        "rg_absent": true,
+        "codex_version": "codex-cli 0.160.0"
+      },
+      "native_session_sha256": "4f055b13c915e19ab10203ccb304e1ec344c459ca8a291a80ab7a0e36ed2b4b7",
+      "tool_calls": [
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"Set-Location '/workspace/repo'; Get-Command rg -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\"",
+          "exit_code": 1,
+          "stdout": "Chunk ID: 8800ee\nWall time: 0.5553 seconds\nProcess exited with code 1\nOriginal token count: 0\nOutput:\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; Set-Location '/workspace/repo'; $exclude = @('/docs/','/archive/','/test/','/tests/'); Get-ChildItem -Recurse -File | Where-Object { $p=$_.FullName.Replace('\\\\','/'); -not ($exclude | Where-Object { $p.ToLowerInvariant().Contains($_) }) } | Select-String -SimpleMatch 'analyze-log' | ForEach-Object { [pscustomobject]@{ Path = Resolve-Path -Relative $_.Path; LineNumber=$_.LineNumber; Line=$_.Line.Trim() } } | ConvertTo-Json -Depth 4\"",
+          "exit_code": 1,
+          "stdout": "Chunk ID: 424ffe\nWall time: 0.4495 seconds\nProcess exited with code 1\nOriginal token count: 56\nOutput:\nParserError: \nLine |\n   1 |  … t { =/usr/local/bin/codex.FullName.Replace('\\','/'); -not ( | Where-O …\n     |                                                                ~\n     | An empty pipe element is not allowed.\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command '$ErrorActionPreference=\"Stop\"; Set-Location \"/workspace/repo\"; $exclude = @(\"/docs/\",\"/archive/\",\"/test/\",\"/tests/\"); Get-ChildItem -Recurse -File | Where-Object { $p=$_.FullName.Replace(\"\\\",\"/\"); -not ($exclude | Where-Object { $p.ToLowerInvariant().Contains($_) }) } | Select-String -SimpleMatch \"analyze-log\" | ForEach-Object { [pscustomobject]@{ Path = (Resolve-Path -Relative $_.Path); LineNumber=$_.LineNumber; Line=$_.Line.Trim() } } | ConvertTo-Json -Depth 4'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 778176\nWall time: 0.5231 seconds\nProcess exited with code 0\nOriginal token count: 29\nOutput:\n{\n  \"Path\": \"./src/commands/inspect.ts\",\n  \"LineNumber\": 1,\n  \"Line\": \"export const command = \\\"analyze-log\\\";\"\n}\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command 'Set-Location \"/workspace/repo\"; Get-Content -Path \"src/commands/inspect.ts\"'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 3353c1\nWall time: 0.3737 seconds\nProcess exited with code 0\nOriginal token count: 35\nOutput:\nexport const command = \"analyze-log\";\nexport async function runLogInspection(file: string) {\n  return { source: file, reviewed: true };\n}\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"src/commands/inspect.ts\",\"value\":\"runLogInspection\"}]}"
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/role-config",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "input_tokens": 52805,
+      "output_tokens": 1066,
+      "duration_seconds": 49.746232,
+      "native_session_verified": true,
+      "environment_verified": true,
+      "command_count": 7,
+      "missing_rg_errors": 0,
+      "policy_rejections": 0,
+      "cached_input_tokens": 32768,
+      "nonzero_command_exits": 1,
+      "environment_probe": {
+        "codex_version": "codex-cli 0.160.0",
+        "rg_absent": true
+      },
+      "native_session_sha256": "91cf4dada5ccf96be5e2fb690db822aa4fe3f0e000cabbd65f4692c7c2bd8ac9",
+      "tool_calls": [
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"Get-Content -LiteralPath '/home/catena-eval/.agents/skills/skill/SKILL.md'\"",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 112b29\nWall time: 0.3545 seconds\nProcess exited with code 0\nOriginal token count: 216\nOutput:\n---\nname: powershell-search-fallback\ndescription: Find source implementations and configuration in Windows PowerShell repositories when ripgrep may be unavailable.\n---\n\nBefore a repository search relies on `rg`, check `Get-Command rg -ErrorAction SilentlyContinue`. If it exists, use it normally. If absent, search the relevant directories with `Get-ChildItem -Recurse -File` and `Select-String -SimpleMatch`; inspect the matching files with `Get-Content` to distinguish implementation, documentation, and archived configuration.\n\nAn absent command and a search with no matches are different outcomes. Do not repeat an unavailable `rg` call or install tools merely to search. `Select-String` prints nothing when there is no match; report absence only after searching the requested scope. Preserve the user's exclusions and return paths relative to the repository.\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"Get-Command rg -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\"",
+          "exit_code": 1,
+          "stdout": "Chunk ID: bec49f\nWall time: 0.5412 seconds\nProcess exited with code 1\nOriginal token count: 0\nOutput:\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; Set-Location '/workspace/repo'; Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch '([/\\\\])\\.git([/\\\\])' } | Select-String -SimpleMatch 'coder' | ForEach-Object { $_.Path.Substring((Get-Location).Path.Length+1) -replace '\\\\','/' } | Sort-Object -Unique\"",
+          "exit_code": 0,
+          "stdout": "Chunk ID: d997f8\nWall time: 0.7097 seconds\nProcess exited with code 0\nOriginal token count: 320\nOutput:\n=Stop: The term '=Stop' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n/usr/local/bin/codex.FullName: The term '/usr/local/bin/codex.FullName' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n/usr/local/bin/codex.FullName: The term '/usr/local/bin/codex.FullName' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n/usr/local/bin/codex.FullName: The term '/usr/local/bin/codex.FullName' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n/usr/local/bin/codex.FullName: The term '/usr/local/bin/codex.FullName' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command '$ErrorActionPreference=\"Stop\"; Set-Location \"/workspace/repo\"; Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch \"([/\\\\])\\.git([/\\\\])\" } | Select-String -SimpleMatch \"coder\" | ForEach-Object { $_.Path.Substring((Get-Location).Path.Length+1) -replace \"\\\\\",\"/\" } | Sort-Object -Unique'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: afc8c3\nWall time: 0.4000 seconds\nProcess exited with code 0\nOriginal token count: 17\nOutput:\narchive/production.yaml\nroles/disabled.yaml\nroles/production.yaml\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command 'Get-Content -LiteralPath \"/workspace/repo/archive/production.yaml\"'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: dc7f1d\nWall time: 1.2603 seconds\nProcess exited with code 0\nOriginal token count: 12\nOutput:\nrole: coder\nenabled: true\nmodel: model-retired\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command 'Get-Content -LiteralPath \"/workspace/repo/roles/disabled.yaml\"'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: 011fb8\nWall time: 1.1494 seconds\nProcess exited with code 0\nOriginal token count: 12\nOutput:\nrole: coder\nenabled: false\nmodel: model-copper\n",
+          "stderr": ""
+        },
+        {
+          "command": "pwsh -NoProfile -NonInteractive -Command 'Get-Content -LiteralPath \"/workspace/repo/roles/production.yaml\"'",
+          "exit_code": 0,
+          "stdout": "Chunk ID: f251a0\nWall time: 1.2586 seconds\nProcess exited with code 0\nOriginal token count: 12\nOutput:\nrole: coder\nenabled: true\nmodel: model-silver\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"roles/production.yaml\",\"value\":\"model-silver\"}]}"
+    }
+  ],
+  "limitations": [
+    "Three anonymous Linux/PowerShell fixtures, not an original Windows session replay.",
+    "The native Agent runs as a non-root user with read-only repository fixtures.",
+    "Skill is installed through Harbor and explicitly requested; automatic discovery benefit is not tested.",
+    "One attempt per task per arm; no statistical significance or general success-rate claim.",
+    "Input tokens include cached input. These are target usage counts, not billing amounts.",
+    "Execution time excludes container builds and Catena coordinator usage.",
+    "Claude Code is not evaluated in this experiment."
+  ]
+}

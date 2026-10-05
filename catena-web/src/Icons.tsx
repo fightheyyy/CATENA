@@ -1,8 +1,9 @@
 import type { SVGProps } from "react";
 
-export type IconName = "home" | "history" | "memory" | "outputs" | "agents" | "plug" | "settings" | "search" | "arrow" | "plus" | "refresh" | "book" | "graph" | "clock" | "close";
+export type IconName = "home" | "assistant" | "history" | "memory" | "outputs" | "agents" | "plug" | "settings" | "search" | "arrow" | "plus" | "refresh" | "book" | "graph" | "clock" | "close";
 const paths: Record<IconName, React.ReactNode> = {
   home: <><rect x="3" y="3" width="7" height="7" rx="2" /><rect x="14" y="3" width="7" height="7" rx="2" /><rect x="3" y="14" width="7" height="7" rx="2" /><rect x="14" y="14" width="7" height="7" rx="2" /></>,
+  assistant: <><path d="M12 2.5 13.7 9l6.3 1.8-6.3 1.8-1.7 6.9-1.7-6.9L4 10.8 10.3 9 12 2.5Z" /><path d="m19 17 .6 1.5L21 19l-1.4.5L19 21l-.6-1.5L17 19l1.4-.5L19 17Z" /></>,
   history: <><path d="M4 6h5m6 0h5M4 18h5m6 0h5M9 6l6 12M9 18l6-12" /><circle cx="4" cy="6" r="2" /><circle cx="20" cy="6" r="2" /><circle cx="4" cy="18" r="2" /><circle cx="20" cy="18" r="2" /></>,
   memory: <><path d="M12 20V7m0 4C4 12 3 8 4 4c4-1 8 0 8 5m0 7c8 1 10-3 9-7-4-1-9 0-9 5M8 21h8" /></>,
   outputs: <><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zm0 0v6h6M8 13h8m-8 4h5" /></>,

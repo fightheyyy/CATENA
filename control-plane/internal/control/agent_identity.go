@@ -56,6 +56,7 @@ var acceptedRuntimeSourceKinds = map[string]string{
 
 var xiaoBaOSSourceAliases = []string{"xiaobaos", "barena-xiaoba-target"}
 
+// Evaluator services emitted by Barena Explore are never user Agents.
 var internalAgentSources = map[string]struct{}{
 	"barena-explore-engine":        {},
 	"barena-xiaoba-user_simulator": {},

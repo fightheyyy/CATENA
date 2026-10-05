@@ -1,0 +1,35 @@
+{
+  "schema_version": "catena.skill_experiment.v1",
+  "model": "gpt-5.5",
+  "skill_name": "powershell-search-fallback",
+  "requires_rg_absent": true,
+  "skill": "skill",
+  "output_schema": "answer.schema.json",
+  "verifier_files": ["verify.py"],
+  "shell_environment": {
+    "PATH": "C:\\Windows\\System32;C:\\Windows;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Program Files\\PowerShell\\7"
+  },
+  "repeats": 2,
+  "agent_timeout_seconds": 180,
+  "verify_timeout_seconds": 20,
+  "cases": [
+    {
+      "id": "command-handler",
+      "fixture": "fixtures/command-handler",
+      "prompt": "在当前 Windows PowerShell 仓库中找到 analyze-log 子命令的实现文件和导出的处理函数名。以实际源代码为准，排除 docs、archive、tests。只读当前目录，不安装工具、不改文件。返回 JSON：matches 数组，每项 path 为正斜杠相对路径，value 为函数名。",
+      "verify": ["python", "{manifest_dir}/verify.py", "command-handler"]
+    },
+    {
+      "id": "role-config",
+      "fixture": "fixtures/role-config",
+      "prompt": "在当前 Windows PowerShell 仓库中找到启用的 coder 角色配置文件，返回它的 model 值。排除 archive 和 enabled: false 的配置。只读当前目录，不安装工具、不改文件。返回 JSON：matches 数组，每项 path 为正斜杠相对路径，value 为 model 值。",
+      "verify": ["python", "{manifest_dir}/verify.py", "role-config"]
+    },
+    {
+      "id": "absent-symbol",
+      "fixture": "fixtures/absent-symbol",
+      "prompt": "在当前 Windows PowerShell 仓库 src 目录中查找 extract-skill-v2 命令的实现。若存在，返回实现文件路径和函数名；若不存在，返回空 matches 数组，不猜测。只读当前目录，不安装工具、不改文件。返回 JSON：matches 数组，每项 path 为正斜杠相对路径，value 为函数名。",
+      "verify": ["python", "{manifest_dir}/verify.py", "absent-symbol"]
+    }
+  ]
+}

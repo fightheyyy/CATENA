@@ -1,0 +1,12 @@
+{
+  "answer": {
+    "lines": [
+      2,
+      4
+    ]
+  },
+  "required_command": "pwsh",
+  "protected": {
+    "logs/notes.txt": "b8f2a55f809ea693797a177e95c0fb2cfac98997b7d666957861b09ee9932daf"
+  }
+}

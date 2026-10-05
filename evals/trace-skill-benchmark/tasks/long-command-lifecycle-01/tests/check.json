@@ -1,0 +1,11 @@
+{
+  "answer": {
+    "state": "completed",
+    "value": 41
+  },
+  "launch_once": true,
+  "protected": {
+    "install_local.py": "14cdc1b7fcde2922299c248cb059bfc31bc6c94e562c0d29b54c15b6d043586b",
+    "README.md": "7bc6f647e22d838561cab7dd64908d7000c5e65fd4c137fde4ba648af53a76cd"
+  }
+}

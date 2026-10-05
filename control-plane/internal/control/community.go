@@ -19,7 +19,7 @@ func (s *HTTPServer) myAgentProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	profile, err := s.store.GetAgentProfileByOwner(r.Context(), user.ID)
 	if err != nil {
-		writeProblem(w, statusFor(err), "XiaoBa profile lookup failed")
+		writeProblem(w, statusFor(err), "Agent profile lookup failed")
 		return
 	}
 	capabilities, err := s.capabilitiesForOwner(r, user.ID)
@@ -76,7 +76,7 @@ func (s *HTTPServer) updateMyAgentProfile(w http.ResponseWriter, r *http.Request
 	}
 	existing, err := s.store.GetAgentProfileByOwner(r.Context(), user.ID)
 	if err != nil {
-		writeProblem(w, statusFor(err), "XiaoBa profile lookup failed")
+		writeProblem(w, statusFor(err), "Agent profile lookup failed")
 		return
 	}
 	existing.DisplayName = request.DisplayName
@@ -85,7 +85,7 @@ func (s *HTTPServer) updateMyAgentProfile(w http.ResponseWriter, r *http.Request
 	existing.UpdatedAt = time.Now().UTC()
 	updated, err := s.store.UpdateAgentProfile(r.Context(), existing)
 	if err != nil {
-		writeProblem(w, statusFor(err), "XiaoBa profile update failed")
+		writeProblem(w, statusFor(err), "Agent profile update failed")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{

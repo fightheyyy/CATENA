@@ -1,0 +1,353 @@
+{
+  "schema": "catena.harbor_experiment.v1",
+  "date": "2026-10-03",
+  "job_id": "5c5fe8a179e8460f9f2577ef6be7e4aa",
+  "runtime": "OpenAI Agents SDK 0.22.3",
+  "model": "gpt-5.5 via local CLIProxyAPI",
+  "target": "catena-sdk-search 1.0.0; not Codex CLI",
+  "harbor_version": "0.23.0",
+  "harbor_commit": "3b287b5cc2f0f30745eec73cc1ace578cbfae4c5",
+  "worker_openai_version": "2.54.0",
+  "environment": "Linux/PowerShell 7 Docker adaptation; not Windows replay",
+  "verifier_mode": "shared",
+  "image": "mcr.microsoft.com/powershell@sha256:62300a213a9293916333df2b014cd3a8f22fb0b0b65f2bb446aaf436bcf8c868",
+  "status": "completed",
+  "tasks_unchanged": true,
+  "activation": "explicit extra instruction; candidate only",
+  "attempts_per_case_per_arm": 1,
+  "summaries": {
+    "baseline": {
+      "total": 3,
+      "valid": 3,
+      "passed": 3,
+      "command_count": 12,
+      "missing_rg_errors": 2,
+      "policy_rejections": 0,
+      "input_tokens": 8903,
+      "output_tokens": 824
+    },
+    "candidate": {
+      "total": 3,
+      "valid": 3,
+      "passed": 3,
+      "command_count": 10,
+      "missing_rg_errors": 0,
+      "policy_rejections": 0,
+      "input_tokens": 10029,
+      "output_tokens": 595
+    }
+  },
+  "trials": [
+    {
+      "variant": "baseline",
+      "task": "catena/absent-symbol",
+      "trial_name": "absent-symbol__uFgkDs8",
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "exception": null,
+      "input_tokens": 3452,
+      "output_tokens": 405,
+      "command_count": 4,
+      "environment": "Linux/PowerShell 7",
+      "missing_rg_errors": 1,
+      "policy_rejections": 0
+    },
+    {
+      "variant": "baseline",
+      "task": "catena/command-handler",
+      "trial_name": "command-handler__64MqipJ",
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "exception": null,
+      "input_tokens": 3404,
+      "output_tokens": 215,
+      "command_count": 3,
+      "environment": "Linux/PowerShell 7",
+      "missing_rg_errors": 1,
+      "policy_rejections": 0
+    },
+    {
+      "variant": "baseline",
+      "task": "catena/role-config",
+      "trial_name": "role-config__Rz5XhRL",
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "exception": null,
+      "input_tokens": 2047,
+      "output_tokens": 204,
+      "command_count": 5,
+      "environment": "Linux/PowerShell 7",
+      "missing_rg_errors": 0,
+      "policy_rejections": 0
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/absent-symbol",
+      "trial_name": "absent-symbol__6LZ37ro",
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "exception": null,
+      "input_tokens": 2330,
+      "output_tokens": 160,
+      "command_count": 2,
+      "environment": "Linux/PowerShell 7",
+      "missing_rg_errors": 0,
+      "policy_rejections": 0
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/command-handler",
+      "trial_name": "command-handler__ziharZ9",
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "exception": null,
+      "input_tokens": 3667,
+      "output_tokens": 193,
+      "command_count": 3,
+      "environment": "Linux/PowerShell 7",
+      "missing_rg_errors": 0,
+      "policy_rejections": 0
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/role-config",
+      "trial_name": "role-config__RpqgFXB",
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "exception": null,
+      "input_tokens": 4032,
+      "output_tokens": 242,
+      "command_count": 5,
+      "environment": "Linux/PowerShell 7",
+      "missing_rg_errors": 0,
+      "policy_rejections": 0
+    }
+  ],
+  "task_sha256": {
+    "tasks/absent-symbol/instruction.md": "653f3434588537e7fc59c563c6fa5cc5034eb26baecb2980cf94cf36b9c324b3",
+    "tasks/absent-symbol/task.toml": "ad27966101e8f451d7a4bd83ffad6046ae96dd094b03f0def3387cb078fe9aee",
+    "tasks/command-handler/instruction.md": "d86d46754daa8e31744bc4a94a201e6a4708a4dfb4459d30cf1dfd5cf0324ca1",
+    "tasks/command-handler/task.toml": "ab7ed58089d6fb3baf34eabfb2540e2ab5658b0a3c3a71a8a30392c3b6a2d6b1",
+    "tasks/role-config/instruction.md": "ffde744009c5fa3e87cc5b4c853399a7d47157d3d8766d67da6c32705b61160f",
+    "tasks/role-config/task.toml": "61c6d13c623cfd5d00656e561111e5e3ff633ebc4bdfd3a88e01e66ab4c41491",
+    "tasks/absent-symbol/environment/Dockerfile": "798f4561532562327bc8d93bee18f064a50277d83597a1d696d4dcc594911eb3",
+    "tasks/absent-symbol/environment/read_only_shell.ps1": "a8153f8ce0a667bf607497edcf920fda026bede6c77fb32109a73161d8bf5fce",
+    "tasks/absent-symbol/tests/expected.json": "6edefdc8c18faf8da1edd0e700e90388826109daa632b322082367f7392b9f67",
+    "tasks/absent-symbol/tests/test.sh": "41f1e509bfd07fac045dd6cfb316c5ee63be0bda9251c418fc7cddfa1fa863a5",
+    "tasks/absent-symbol/tests/verify.ps1": "66e3273891c5542d6fdcb5095dedc6a108ba7d7fdaf3372f4c5aa3fc65564e2c",
+    "tasks/absent-symbol/environment/repo/src/doctor.ts": "f937f97ae3a36dd554b17085529585006c8d4be2f7f0143f3de74ccf059afb96",
+    "tasks/absent-symbol/environment/repo/src/extract.ts": "ead961726fd4fa2a4f12955d7fa97337bf111e9d8da31e35beec2e2fdeab5deb",
+    "tasks/command-handler/environment/Dockerfile": "798f4561532562327bc8d93bee18f064a50277d83597a1d696d4dcc594911eb3",
+    "tasks/command-handler/environment/read_only_shell.ps1": "a8153f8ce0a667bf607497edcf920fda026bede6c77fb32109a73161d8bf5fce",
+    "tasks/command-handler/tests/expected.json": "5313bfb0cb6f0c177310561cd0eeee4c638d1abea43dc455939eec12f218c607",
+    "tasks/command-handler/tests/test.sh": "41f1e509bfd07fac045dd6cfb316c5ee63be0bda9251c418fc7cddfa1fa863a5",
+    "tasks/command-handler/tests/verify.ps1": "66e3273891c5542d6fdcb5095dedc6a108ba7d7fdaf3372f4c5aa3fc65564e2c",
+    "tasks/command-handler/environment/repo/archive/inspect.ts": "a13af646b7eac5fb5b046d0f557c2c8a75dd8186ceca3a70457b75049b1e3bd4",
+    "tasks/command-handler/environment/repo/docs/commands.md": "1762efb9c5ead8d3d65821c47ab91fc068c9d47efd6fce8bc01d194fee35a583",
+    "tasks/command-handler/environment/repo/tests/inspect.test.ts": "112b99e23168871e39e02bdbba9b5bbfda7d88ff0b0c81a65bc0ddad674d6532",
+    "tasks/command-handler/environment/repo/src/commands/inspect.ts": "14d4fbc71649d2ced498abbf08cfb4e373b2e30fa93de04debbe63ecd7c74050",
+    "tasks/command-handler/environment/repo/src/commands/status.ts": "acb37a097f49d07e6f50a857f19cefe061e850ea357b2eea2f79b6c6c4661b84",
+    "tasks/role-config/environment/Dockerfile": "798f4561532562327bc8d93bee18f064a50277d83597a1d696d4dcc594911eb3",
+    "tasks/role-config/environment/read_only_shell.ps1": "a8153f8ce0a667bf607497edcf920fda026bede6c77fb32109a73161d8bf5fce",
+    "tasks/role-config/tests/expected.json": "9e1d32157e14890f772514113c2a12a355cf36be510cb38f26e94ab50cfd1b2d",
+    "tasks/role-config/tests/test.sh": "41f1e509bfd07fac045dd6cfb316c5ee63be0bda9251c418fc7cddfa1fa863a5",
+    "tasks/role-config/tests/verify.ps1": "66e3273891c5542d6fdcb5095dedc6a108ba7d7fdaf3372f4c5aa3fc65564e2c",
+    "tasks/role-config/environment/repo/archive/production.yaml": "8119acc81f80372880ac5717b39acb5dcc5c008bb5e4833195f1ed6c2960aa19",
+    "tasks/role-config/environment/repo/roles/disabled.yaml": "c5d0de5462d9d0bc1124af66c28cee8006780c49b5276fea156a3328809ca62a",
+    "tasks/role-config/environment/repo/roles/production.yaml": "d6458f5a9f1bb008891162f25a2cf1b8645118b707e7d2e8a9f312fc06ad85cc",
+    "tasks/role-config/environment/repo/roles/reviewer.yaml": "a42b02735bdecbc16e7a3bd651d9d84228aacfedfc8ed7744b107a96a1f9994f"
+  },
+  "platform_submission_tool_events": [
+    {
+      "tool": "submit_harbor_experiment",
+      "job_id": "5c5fe8a179e8460f9f2577ef6be7e4aa",
+      "status": "running"
+    },
+    {
+      "tool": "wait_harbor_result",
+      "job_id": "5c5fe8a179e8460f9f2577ef6be7e4aa",
+      "status": "running"
+    },
+    {
+      "tool": "wait_harbor_result",
+      "job_id": "5c5fe8a179e8460f9f2577ef6be7e4aa",
+      "status": "running"
+    },
+    {
+      "tool": "wait_harbor_result",
+      "job_id": "5c5fe8a179e8460f9f2577ef6be7e4aa",
+      "status": "running"
+    },
+    {
+      "tool": "wait_harbor_result",
+      "job_id": "5c5fe8a179e8460f9f2577ef6be7e4aa",
+      "status": "running"
+    },
+    {
+      "tool": "wait_harbor_result",
+      "job_id": "5c5fe8a179e8460f9f2577ef6be7e4aa",
+      "status": "running"
+    },
+    {
+      "tool": "wait_harbor_result",
+      "job_id": "5c5fe8a179e8460f9f2577ef6be7e4aa",
+      "status": "running"
+    },
+    {
+      "tool": "wait_harbor_result",
+      "job_id": "5c5fe8a179e8460f9f2577ef6be7e4aa",
+      "status": "completed"
+    }
+  ],
+  "platform_retrieval_tool_events": [
+    {
+      "tool": "submit_harbor_experiment",
+      "job_id": "5c5fe8a179e8460f9f2577ef6be7e4aa",
+      "status": "completed"
+    }
+  ],
+  "platform_summary": {
+    "case_id": "rg-missing-search",
+    "status": "completed",
+    "submitted_once": true,
+    "environment": "Linux/PowerShell 7 Docker adaptation；不是 Windows replay，也不是 Codex CLI",
+    "sdk_target": "GPT-5.5",
+    "validity_check": {
+      "all_trials_completed": true,
+      "tasks_unchanged": true,
+      "valid_trials_total": 6,
+      "invalid_trials_total": 0,
+      "arms_balanced": true,
+      "tasks_per_arm": 3,
+      "conclusion": "实验有效：baseline 与 candidate 各运行 3 个冻结任务，全部 trial 有效，任务哈希未变化。"
+    },
+    "arms": {
+      "baseline_no_skill": {
+        "valid_trials": 3,
+        "invalid_trials": 0,
+        "reward_total": 3.0,
+        "reward_average": 1.0,
+        "input_tokens_total": 8903,
+        "output_tokens_total": 824,
+        "tokens_total": 9727,
+        "command_count_total": 12,
+        "tool_errors": {
+          "exceptions": 0,
+          "missing_rg_errors": 2,
+          "policy_rejections": 0
+        },
+        "trials": [
+          {
+            "task": "catena/absent-symbol",
+            "trial_name": "absent-symbol__uFgkDs8",
+            "valid": true,
+            "reward": 1.0,
+            "exception": null,
+            "input_tokens": 3452,
+            "output_tokens": 405,
+            "missing_rg_errors": 1,
+            "policy_rejections": 0
+          },
+          {
+            "task": "catena/command-handler",
+            "trial_name": "command-handler__64MqipJ",
+            "valid": true,
+            "reward": 1.0,
+            "exception": null,
+            "input_tokens": 3404,
+            "output_tokens": 215,
+            "missing_rg_errors": 1,
+            "policy_rejections": 0
+          },
+          {
+            "task": "catena/role-config",
+            "trial_name": "role-config__Rz5XhRL",
+            "valid": true,
+            "reward": 1.0,
+            "exception": null,
+            "input_tokens": 2047,
+            "output_tokens": 204,
+            "missing_rg_errors": 0,
+            "policy_rejections": 0
+          }
+        ]
+      },
+      "candidate_with_skill": {
+        "valid_trials": 3,
+        "invalid_trials": 0,
+        "reward_total": 3.0,
+        "reward_average": 1.0,
+        "input_tokens_total": 10029,
+        "output_tokens_total": 595,
+        "tokens_total": 10624,
+        "command_count_total": 10,
+        "tool_errors": {
+          "exceptions": 0,
+          "missing_rg_errors": 0,
+          "policy_rejections": 0
+        },
+        "trials": [
+          {
+            "task": "catena/absent-symbol",
+            "trial_name": "absent-symbol__6LZ37ro",
+            "valid": true,
+            "reward": 1.0,
+            "exception": null,
+            "input_tokens": 2330,
+            "output_tokens": 160,
+            "missing_rg_errors": 0,
+            "policy_rejections": 0
+          },
+          {
+            "task": "catena/command-handler",
+            "trial_name": "command-handler__ziharZ9",
+            "valid": true,
+            "reward": 1.0,
+            "exception": null,
+            "input_tokens": 3667,
+            "output_tokens": 193,
+            "missing_rg_errors": 0,
+            "policy_rejections": 0
+          },
+          {
+            "task": "catena/role-config",
+            "trial_name": "role-config__RpqgFXB",
+            "valid": true,
+            "reward": 1.0,
+            "exception": null,
+            "input_tokens": 4032,
+            "output_tokens": 242,
+            "missing_rg_errors": 0,
+            "policy_rejections": 0
+          }
+        ]
+      }
+    },
+    "comparison_summary_zh": {
+      "answer_reward": "无 Skill 与有 Skill 两组均为 3/3 满分，平均 reward 都是 1.0，本次在最终任务得分上没有拉开差距。",
+      "tool_error_difference": "baseline 出现 2 次 missing rg 相关错误；candidate 为 0 次，说明 Skill 候选在避免 rg 缺失问题上表现更好。",
+      "token_usage": "baseline 总 token 为 9727；candidate 总 token 为 10624。candidate 多用 897 token，其中输入 token 更多、输出 token 更少。",
+      "overall_conclusion": "本次 Linux/PowerShell 7 Docker 适配实验有效。两组都完成全部任务并拿到满分；candidate 的主要优势是消除了 missing rg 错误，但没有带来 reward 提升。"
+    }
+  },
+  "notes": [
+    "SDK model loop runs in host worker; filesystem and command tools run in Harbor containers.",
+    "Linux PowerShell 7 adaptation; not original Windows replay.",
+    "Metrics reconciled from raw tool logs because Docker merged stderr into stdout.",
+    "Re-reading the completed job did not execute new trials.",
+    "Six trials only; no statistical significance or overall success-rate gain established.",
+    "Private engine endpoint; not yet public Go API, frontend Case UI, or Postgres Experiment."
+  ]
+}

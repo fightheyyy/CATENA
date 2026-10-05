@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "properties": {
+    "matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {"path": {"type": "string"}, "value": {"type": "string"}},
+        "required": ["path", "value"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["matches"],
+  "additionalProperties": false
+}

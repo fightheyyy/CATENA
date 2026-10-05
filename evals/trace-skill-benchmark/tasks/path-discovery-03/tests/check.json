@@ -1,0 +1,13 @@
+{
+  "answer": {
+    "path": "packages/courier/settings/active.json",
+    "port": 7103,
+    "handler": "handle_3"
+  },
+  "protected": {
+    "packages/courier/settings/active.json": "ab6d850337db988253456cd19ba183b0b4a5bdfbe19afb64b40b089cead485cd",
+    "archive/packages/courier/settings/active.json": "c5940fddcf8bfcda0cc8198991cd9a1952949fb28a53354e97b7a2ed06824740",
+    "packages/courier/settings/example.json": "9971823be1f547b104bd41a35c59aad3613dab82be280231c72d79e28075eb15",
+    "README.md": "24d25661595f1c52af2f07d6446a5d4e76fa6473f5d8d43e1f56b4824b7320c5"
+  }
+}

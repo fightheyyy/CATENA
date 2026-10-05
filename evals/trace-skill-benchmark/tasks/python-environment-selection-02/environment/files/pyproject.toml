@@ -1,0 +1,4 @@
+[project]
+name="fixture-2"
+version="1.0.0"
+dependencies=["beaconcalc==2.0.0"]

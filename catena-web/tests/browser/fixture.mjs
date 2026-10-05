@@ -50,7 +50,13 @@ export async function fixtureServer(overrides = {}) {
         if (state.failAgents) return json(res, { detail: "Agent query temporarily failed" }, 503);
         return json(res, { available: true, agents: state.agents.map((item) => item.agent_id === "new-agent" ? { ...item, connected: state.connected } : item) });
       }
-      if (/^\/v1\/agents\/[^/]+\/traces$/.test(pathname)) return json(res, { available: true, traces: state.emptyTraces ? [] : state.traces.filter((trace) => trace.agent_id === pathname.split('/')[3]) });
+      if (/^\/v1\/agents\/[^/]+\/traces$/.test(pathname)) {
+        const query = new URL(req.url, "http://localhost").searchParams;
+        const agentID = pathname.split('/')[3];
+        return json(res, { available: true, agent_id: agentID,
+          window_start: query.get("from") ?? now, window_end: query.get("to") ?? now,
+          traces: state.emptyTraces ? [] : state.traces.filter((trace) => trace.agent_id === agentID) });
+      }
       if (/^\/v1\/agents\/[^/]+$/.test(pathname)) {
         if (state.failConnection) return json(res, { detail: "Connection check failed" }, 503);
         return json(res, { agent: state.agents.find((item) => item.agent_id === pathname.split("/").at(-1)), connected: state.connected, credential });

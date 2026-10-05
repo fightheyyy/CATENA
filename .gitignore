@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 !.env.*.example
+# Synthetic credential canaries required by the frozen public benchmark.
+!evals/trace-skill-benchmark/tasks/secret-output-control-*/environment/files/.env
+!evals/trace-skill-benchmark/releases/*/evals/trace-skill-benchmark/tasks/secret-output-control-*/environment/files/.env
 
 node_modules/
 dist/

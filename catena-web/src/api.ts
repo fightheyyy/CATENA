@@ -12,14 +12,17 @@ import type {
   MemoryTaskRecord,
   MemoryFactGraph,
   MemoryList,
+  MemoryRecord,
   MemoryRecallBundle,
   Session,
   TraceDetail,
+  TraceSummary,
   WorkspaceData,
 } from "./types";
 import { normalizeEvolutionJob, normalizeEvolutionJobs } from "./evolution";
 import { routeResources, workspaceResources } from "./workspace";
 import type { Route } from "./navigation";
+import type { Experiment, ExperimentCase } from "./experiments";
 
 type Problem = {
   detail?: string;
@@ -65,6 +68,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  experimentCases: (signal?: AbortSignal) => request<{ cases: ExperimentCase[] }>("/v1/experiment-cases", { signal }),
+  experiments: (signal?: AbortSignal) => request<{ experiments: Experiment[] }>("/v1/experiments", { signal }),
+  createExperiment: (caseID: string, requestID: string, includeMemory = false, targetAgent = "sdk") => request<Experiment>("/v1/experiments", { method: "POST", body: JSON.stringify({ case_id: caseID, request_id: requestID, include_memory: includeMemory, target_agent: targetAgent }) }),
+  experimentEvidence: (experimentID: string, index: number) => request<{ answer: string; calls: { command: string; exit_code: number | null; stdout: string; stderr: string }[] }>(`/v1/experiments/${encodeURIComponent(experimentID)}/trials/${index}`),
   session: () => request<Session>("/v1/auth/session"),
   logout: () => request<void>("/v1/auth/logout", { method: "POST" }),
   workspace: async (route: Route, signal: AbortSignal): Promise<Partial<WorkspaceData>> => {
@@ -94,6 +101,8 @@ export const api = {
     return Object.assign({}, ...parts) as Partial<WorkspaceData>;
   },
   trace: (traceID: string, signal?: AbortSignal) => request<TraceDetail>(`/v1/traces/${encodeURIComponent(traceID)}`, { signal }),
+  rememberTrace: (traceID: string) => request<MemoryIngestReceipt>(`/v1/traces/${encodeURIComponent(traceID)}/memories`, {method:"POST"}),
+  traces: (limit = 100, signal?: AbortSignal) => request<{ available: boolean; traces: TraceSummary[] }>(`/v1/traces?limit=${limit}`, { signal }),
   agentTraces: (agentID: string, windowStart: string, windowEnd: string, limit = 100, signal?: AbortSignal) => {
     const query = new URLSearchParams({
       from: windowStart,
@@ -149,6 +158,10 @@ export const api = {
   memoryTasks: (limit = 20) =>
     request<{ tasks: MemoryTaskRecord[] }>(`/v1/memories/tasks?limit=${limit}`),
   memories: (limit = 24) => request<MemoryList>(`/v1/memories?limit=${limit}`),
+  memoryStatus: () => request<{status: string; backend: string; capabilities: string[]}>("/v1/memories/status"),
+  createMemory: (title: string, content: string) => request<MemoryRecord>("/v1/memories", {
+    method: "POST", body: JSON.stringify({title, content}),
+  }),
   memoryGraph: (factID: string | number) =>
     request<MemoryFactGraph>(`/v1/memories/facts/${encodeURIComponent(String(factID))}/graph`),
   searchMemories: (query: string, topK = 8) =>

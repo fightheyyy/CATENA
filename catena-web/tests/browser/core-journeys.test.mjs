@@ -54,17 +54,18 @@ test("Settings and Agent routes avoid unrelated endpoints; failed reads remain r
   await page.getByText("Agent query temporarily failed", { exact: true }).waitFor({ state: "hidden" });
 });
 
-test("An empty overview offers one actionable connection entry without invented statistics", async (t) => {
+test("An empty workspace offers an Agent connection and labels its sample counts", async (t) => {
   const { page, origin, state } = await setup(t);
   state.agents = [];
   state.emptyTraces = true;
   state.jobs = false;
   await page.goto(origin + "/");
-  await visible(page.getByRole("button", { name: "接入新 Agent", exact: true }));
-  assert.deepEqual(state.requests.map((item) => item.path).sort(), ["/v1/auth/session", "/v1/agents", "/v1/traces", "/v1/evolution-jobs"].sort());
-  assert.equal(await page.locator(".overview-metric").count(), 0);
+  await visible(page.getByRole("button", { name: "接入 Agent", exact: true }));
+  await visible(page.getByText("统计基于最近 100 条 Trace；错误状态不等同于任务失败。", { exact: true }));
+  assert.deepEqual(state.requests.map((item) => item.path).sort(), ["/v1/auth/session", "/v1/agents", "/v1/traces", "/v1/evolution-jobs", "/v1/me/llm-config"].sort());
+  assert.deepEqual(await page.locator(".proactive-metrics strong").allTextContents(), ["0", "0", "0"]);
   await screenshot(page, "overview-empty");
-  await page.getByRole("button", { name: "接入新 Agent", exact: true }).click();
+  await page.getByRole("button", { name: "接入 Agent", exact: true }).click();
   await visible(page.getByRole("heading", { name: "连接", exact: true }));
 });
 
@@ -123,7 +124,7 @@ test("A polled analysis publishes its asset into the shared library without relo
   await visible(page.locator(".job-detail-column"));
   state.jobComplete = true;
   await visible(page.getByRole("button", { name: "删除分析", exact: true }));
-  await page.locator(".farm-view-switch button").first().click();
+  await page.getByRole("button", { name: "返回产出", exact: true }).click();
   await visible(page.getByText("先核对再回答", { exact: true }).first());
   assert.ok(state.requests.filter((item) => item.path.endsWith("/job-fixture")).length < 8, "poll results must not retrigger an immediate fetch loop");
   await screenshot(page, "assets-desktop");
@@ -180,53 +181,53 @@ test("Connection setup fits 390px in English and dark appearance", async (t) => 
   await screenshot(page, "setup-mobile-dark-en");
 });
 
-test("Overview searches real records and retains exact evidence and output links", async (t) => {
+test("Workspace retains exact recent evidence and analysis links", async (t) => {
   const { page, origin, state } = await setup(t);
   populateWorkspace(state);
   await page.goto(origin);
-  await visible(page.locator(".overview-trace").first());
-  assert.deepEqual(await page.locator(".sidebar nav button").allTextContents(), ["总览", "经历", "记忆", "产出"]);
-  assert.equal(await page.locator(".overview-trace").count(), 7);
-  assert.equal(await page.locator(".overview-trace strong").first().innerText(), state.traces[0].input_preview);
+  const history = page.locator(".proactive-list").filter({ has: page.getByRole("heading", { name: "最近经历", exact: true }) });
+  const analyses = page.locator(".proactive-list").filter({ has: page.getByRole("heading", { name: /^分析记录/ }) });
+  await visible(history.getByRole("button").first());
+  assert.deepEqual(await page.locator(".sidebar nav button").allTextContents(), ["工作台", "经历", "记忆", "实验", "产出"]);
+  assert.equal(await history.getByRole("button").count(), 4);
+  assert.equal(await history.locator("small").first().innerText(), state.traces[0].input_preview);
   await noOverflow(page);
   await screenshot(page, "overview-desktop");
-  await page.getByRole("textbox", { name: "搜索最近经历" }).fill("部署");
-  assert.equal(await page.locator(".overview-trace").count(), 1);
-  await page.locator(".overview-trace").click();
+  await history.getByRole("button").filter({ hasText: "为什么这次部署变慢了" }).click();
   await page.waitForURL(/trace=sample-trace-3/);
   await visible(page.locator('.trace-detail-identity [title="sample-trace-3"]'));
   await page.goBack();
-  await page.locator(".overview-asset").click();
+  await analyses.getByRole("button").first().click();
   await page.waitForURL(/job=job-fixture/);
   await visible(page.locator(".job-detail-column"));
 });
 
-test("Overview isolates a failed section and can recover it without hiding other evidence", async (t) => {
+test("Workspace retains analyses when history fails and can retry the failed read", async (t) => {
   const { page, origin, state } = await setup(t);
-  state.jobComplete = true;
+  populateWorkspace(state);
   state.failTraceList = true;
   await page.goto(origin);
-  await visible(page.getByText("经历暂时无法读取", { exact: true }));
-  await visible(page.locator(".overview-asset"));
-  assert.equal(await page.locator(".overview-welcome").count(), 0, "failed history must not appear as an empty workspace");
+  await visible(page.getByRole("alert").filter({ hasText: "Trace query temporarily failed" }));
+  await visible(page.locator(".proactive-list").last().getByRole("button").first());
   await screenshot(page, "overview-partial-error");
   state.failTraceList = false;
-  await page.getByRole("button", { name: "重新读取", exact: true }).click();
-  await visible(page.locator(".overview-trace").first());
-  assert.equal(await page.locator(".overview-error").count(), 0);
+  await page.getByRole("button", { name: "重试", exact: true }).click();
+  await visible(page.locator(".proactive-list").first().getByRole("button").first());
+  assert.equal(await page.getByRole("alert").filter({ hasText: "Trace query temporarily failed" }).count(), 0);
 });
 
-test("Mobile primary navigation stays reachable and History groups Trace and conversations", async (t) => {
+test("Mobile navigation stays reachable and legacy conversation links retain History selection", async (t) => {
   const { page, origin, state } = await setup(t, { viewport: { width: 390, height: 844 } });
   populateWorkspace(state);
   await page.goto(origin);
-  await visible(page.locator(".overview-trace").first());
+  await visible(page.locator(".proactive-list").first().getByRole("button").first());
   await noOverflow(page);
   await screenshot(page, "overview-mobile");
   const nav = await page.locator(".sidebar nav").boundingBox();
   assert.ok(nav.y >= 740 && nav.y + nav.height <= 845, "primary navigation remains at the bottom of the viewport");
   await page.locator(".sidebar nav").getByRole("button", { name: "经历", exact: true }).click();
-  await page.getByRole("group", { name: "经历视图" }).getByRole("button", { name: "对话", exact: true }).click();
+  await visible(page.locator(".trace-index"));
+  await page.goto(origin + "/conversations");
   await page.waitForURL(/conversations/);
   await visible(page.locator(".conversation-index"));
   assert.equal(await page.locator('.sidebar nav [aria-current="page"]').innerText(), "经历");
@@ -261,12 +262,12 @@ test("Memory starts as readable cards, retains mixed search results and supports
   await noOverflow(page);
 });
 
-test("Memory and overview fit narrow screens in English and dark appearance", async (t) => {
+test("Memory and workspace fit narrow screens in English and dark appearance", async (t) => {
   const { page, origin, state } = await setup(t, { viewport: { width: 390, height: 844 } });
   populateWorkspace(state);
   await page.addInitScript(() => { localStorage.setItem("catena.locale", "en"); localStorage.setItem("catena.theme", "dark"); });
   await page.goto(origin);
-  await visible(page.locator(".overview-trace").first());
+  await visible(page.locator(".proactive-list").first().getByRole("button").first());
   await noOverflow(page);
   await screenshot(page, "overview-mobile-dark-en");
   await page.locator(".sidebar nav").getByRole("button", { name: "Memory", exact: true }).click();

@@ -1,0 +1,13 @@
+{
+  "answer": {
+    "path": "components/delta/deploy/active.json",
+    "port": 7104,
+    "handler": "handle_4"
+  },
+  "protected": {
+    "components/delta/deploy/active.json": "58e0382ea7a89e80a7b06cf89d6242f7c1603666bd286d2085c52394ce4e61d0",
+    "archive/components/delta/deploy/active.json": "292477cf7a0732e16a47a902f8e56635d6ee71fd7082393ce0452835edc55889",
+    "components/delta/deploy/example.json": "80f10357f45b1eaadf4bca7eae59574d04c636068b74db08f6b88a70df841980",
+    "README.md": "0377f1a814bae158a6ad8c2b5ffa50dbd5f6cef38a8737d54ae0eef0dde4041b"
+  }
+}

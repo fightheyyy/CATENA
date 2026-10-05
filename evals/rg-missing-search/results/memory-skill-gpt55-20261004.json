@@ -1,0 +1,818 @@
+{
+  "schema": "catena.memory_skill_study.v1",
+  "date": "2026-10-04",
+  "job_id": "9a0c98cf08774647b932ba40d3216be7",
+  "request_id": "experiment-1791050477860-262d7dc8cf9d5236",
+  "model": "gpt-5.5",
+  "runtime_versions": {
+    "openai-agents": "0.22.3",
+    "openai": "2.54.0",
+    "harbor": "0.23.0"
+  },
+  "memory_query": "PowerShell 搜索缺少 rg 历史错误恢复",
+  "status": "completed",
+  "target": "OpenAI Agents SDK search Agent; not Codex CLI or Claude Code",
+  "environment": "Linux/PowerShell 7 docker adaptation; not Windows replay",
+  "attempts_per_task_per_arm": 2,
+  "tasks_unchanged": true,
+  "task_sha256": {
+    "tasks/absent-symbol/instruction.md": "653f3434588537e7fc59c563c6fa5cc5034eb26baecb2980cf94cf36b9c324b3",
+    "tasks/absent-symbol/task.toml": "ad27966101e8f451d7a4bd83ffad6046ae96dd094b03f0def3387cb078fe9aee",
+    "tasks/command-handler/instruction.md": "d86d46754daa8e31744bc4a94a201e6a4708a4dfb4459d30cf1dfd5cf0324ca1",
+    "tasks/command-handler/task.toml": "ab7ed58089d6fb3baf34eabfb2540e2ab5658b0a3c3a71a8a30392c3b6a2d6b1",
+    "tasks/role-config/instruction.md": "ffde744009c5fa3e87cc5b4c853399a7d47157d3d8766d67da6c32705b61160f",
+    "tasks/role-config/task.toml": "61c6d13c623cfd5d00656e561111e5e3ff633ebc4bdfd3a88e01e66ab4c41491",
+    "tasks/absent-symbol/environment/Dockerfile": "35bbf9d84dd7c7e6f07ccb9708184f197f11e3bf1466c194aa9247c95146353d",
+    "tasks/absent-symbol/environment/read_only_shell.ps1": "a8153f8ce0a667bf607497edcf920fda026bede6c77fb32109a73161d8bf5fce",
+    "tasks/absent-symbol/tests/expected.json": "6edefdc8c18faf8da1edd0e700e90388826109daa632b322082367f7392b9f67",
+    "tasks/absent-symbol/tests/test.sh": "41f1e509bfd07fac045dd6cfb316c5ee63be0bda9251c418fc7cddfa1fa863a5",
+    "tasks/absent-symbol/tests/verify.ps1": "66e3273891c5542d6fdcb5095dedc6a108ba7d7fdaf3372f4c5aa3fc65564e2c",
+    "tasks/absent-symbol/environment/repo/src/doctor.ts": "f937f97ae3a36dd554b17085529585006c8d4be2f7f0143f3de74ccf059afb96",
+    "tasks/absent-symbol/environment/repo/src/extract.ts": "ead961726fd4fa2a4f12955d7fa97337bf111e9d8da31e35beec2e2fdeab5deb",
+    "tasks/command-handler/environment/Dockerfile": "35bbf9d84dd7c7e6f07ccb9708184f197f11e3bf1466c194aa9247c95146353d",
+    "tasks/command-handler/environment/read_only_shell.ps1": "a8153f8ce0a667bf607497edcf920fda026bede6c77fb32109a73161d8bf5fce",
+    "tasks/command-handler/tests/expected.json": "5313bfb0cb6f0c177310561cd0eeee4c638d1abea43dc455939eec12f218c607",
+    "tasks/command-handler/tests/test.sh": "41f1e509bfd07fac045dd6cfb316c5ee63be0bda9251c418fc7cddfa1fa863a5",
+    "tasks/command-handler/tests/verify.ps1": "66e3273891c5542d6fdcb5095dedc6a108ba7d7fdaf3372f4c5aa3fc65564e2c",
+    "tasks/command-handler/environment/repo/archive/inspect.ts": "a13af646b7eac5fb5b046d0f557c2c8a75dd8186ceca3a70457b75049b1e3bd4",
+    "tasks/command-handler/environment/repo/docs/commands.md": "1762efb9c5ead8d3d65821c47ab91fc068c9d47efd6fce8bc01d194fee35a583",
+    "tasks/command-handler/environment/repo/tests/inspect.test.ts": "112b99e23168871e39e02bdbba9b5bbfda7d88ff0b0c81a65bc0ddad674d6532",
+    "tasks/command-handler/environment/repo/src/commands/inspect.ts": "14d4fbc71649d2ced498abbf08cfb4e373b2e30fa93de04debbe63ecd7c74050",
+    "tasks/command-handler/environment/repo/src/commands/status.ts": "acb37a097f49d07e6f50a857f19cefe061e850ea357b2eea2f79b6c6c4661b84",
+    "tasks/role-config/environment/Dockerfile": "35bbf9d84dd7c7e6f07ccb9708184f197f11e3bf1466c194aa9247c95146353d",
+    "tasks/role-config/environment/read_only_shell.ps1": "a8153f8ce0a667bf607497edcf920fda026bede6c77fb32109a73161d8bf5fce",
+    "tasks/role-config/tests/expected.json": "9e1d32157e14890f772514113c2a12a355cf36be510cb38f26e94ab50cfd1b2d",
+    "tasks/role-config/tests/test.sh": "41f1e509bfd07fac045dd6cfb316c5ee63be0bda9251c418fc7cddfa1fa863a5",
+    "tasks/role-config/tests/verify.ps1": "66e3273891c5542d6fdcb5095dedc6a108ba7d7fdaf3372f4c5aa3fc65564e2c",
+    "tasks/role-config/environment/repo/archive/production.yaml": "8119acc81f80372880ac5717b39acb5dcc5c008bb5e4833195f1ed6c2960aa19",
+    "tasks/role-config/environment/repo/roles/disabled.yaml": "c5d0de5462d9d0bc1124af66c28cee8006780c49b5276fea156a3328809ca62a",
+    "tasks/role-config/environment/repo/roles/production.yaml": "d6458f5a9f1bb008891162f25a2cf1b8645118b707e7d2e8a9f312fc06ad85cc",
+    "tasks/role-config/environment/repo/roles/reviewer.yaml": "a42b02735bdecbc16e7a3bd651d9d84228aacfedfc8ed7744b107a96a1f9994f"
+  },
+  "skill_sha256": "7044042156a765ba36bb4c7408806f5683e73873628305b55b2b61bf24791e0b",
+  "memory_sha256": "65a5ed1c9d26842b0c9bdd47f5cf52a44a4f5ddf2ddfe71b25d327971ecd68ea",
+  "memory_context": [
+    {
+      "id": "34902427029149",
+      "content": "# 历史观察：PowerShell 缺少 rg 的重复搜索错误\n\n这是从五个独立 Codex 历史会话人工核对的环境观察，并非当前机器配置或用户偏好。2026-04-10、2026-04-16、2026-04-21 的五次搜索调用中，PowerShell 报 ObjectNotFound: (rg:String) 或 CommandNotFoundException。后续原始工具输出显示 Agent 使用 PowerShell 原生文件枚举或文本查找后继续任务。观察说明这些会话重复支付了缺失命令的失败成本，不说明任务最终失败。可核对来源 Trace：32224e4d48f38a77ef965b9ae585aa80，Span：a358eb5604e7b275。完整匿名化证据说明见 evals/rg-missing-search/CASE.md。不同运行环境的工具安装情况可能不同。",
+      "title": "历史观察：PowerShell 缺少 rg 的重复搜索错误",
+      "score": 0.9003045558929443,
+      "metadata": {
+        "provider": "memory_backend"
+      }
+    }
+  ],
+  "summaries": {
+    "baseline": {
+      "valid": 6,
+      "passed": 6,
+      "missing_rg_errors": 4,
+      "command_count": 22,
+      "input_tokens": 17432,
+      "output_tokens": 1309,
+      "duration_seconds": 91.686
+    },
+    "memory": {
+      "valid": 6,
+      "passed": 6,
+      "missing_rg_errors": 3,
+      "command_count": 25,
+      "input_tokens": 21644,
+      "output_tokens": 1469,
+      "duration_seconds": 96.07900000000001
+    },
+    "candidate": {
+      "valid": 6,
+      "passed": 6,
+      "missing_rg_errors": 0,
+      "command_count": 21,
+      "input_tokens": 20272,
+      "output_tokens": 1316,
+      "duration_seconds": 94.703
+    }
+  },
+  "trials": [
+    {
+      "variant": "baseline",
+      "task": "catena/absent-symbol",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 1,
+      "command_count": 3,
+      "input_tokens": 3260,
+      "output_tokens": 210,
+      "duration_seconds": 14.734,
+      "tool_calls": [
+        {
+          "command": "rg -n \"extract-skill-v2|Extract-Skill|extract skill|skill-v2\" src",
+          "exit_code": 1,
+          "stdout": "\u001b[31;1mread_only_shell.ps1: \u001b[31;1mThe term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.\u001b[0m\n\u001b[31;1m\u001b[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\u001b[0m\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Path src -Recurse -File | Select-String -Pattern 'extract-skill-v2','Extract-Skill','extract skill','skill-v2' | Select-Object Path,LineNumber,Line",
+          "exit_code": 0,
+          "stdout": "\n\u001b[32;1mPath                          \u001b[0m\u001b[32;1m LineNumber\u001b[0m\u001b[32;1m Line\u001b[0m\n\u001b[32;1m----                          \u001b[0m \u001b[32;1m----------\u001b[0m \u001b[32;1m----\u001b[0m\n/workspace/repo/src/extract.ts          1 export const command = \"extract-skil…\n\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content -Path src/extract.ts | Select-Object -First 120",
+          "exit_code": 0,
+          "stdout": "export const command = \"extract-skill\";\nexport function extractSkill() { return { version: 1 }; }\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[]}"
+    },
+    {
+      "variant": "baseline",
+      "task": "catena/command-handler",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 1,
+      "command_count": 3,
+      "input_tokens": 3422,
+      "output_tokens": 234,
+      "duration_seconds": 19.172,
+      "tool_calls": [
+        {
+          "command": "rg -n \"analyze-log|analyze log|AnalyzeLog|Analyze-Log|analyzelog\" .",
+          "exit_code": 1,
+          "stdout": "\u001b[31;1mread_only_shell.ps1: \u001b[31;1mThe term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.\u001b[0m\n\u001b[31;1m\u001b[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\u001b[0m\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-String -Pattern 'analyze-log','AnalyzeLog','Analyze-Log','analyzelog','analyze log' | Select-Object Path,LineNumber,Line | ConvertTo-Json",
+          "exit_code": 0,
+          "stdout": "[\n  {\n    \"Path\": \"/workspace/repo/tests/inspect.test.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"const command = \\\"analyze-log\\\";\"\n  },\n  {\n    \"Path\": \"/workspace/repo/docs/commands.md\",\n    \"LineNumber\": 1,\n    \"Line\": \"The analyze-log command was once documented as runLogReview.\"\n  },\n  {\n    \"Path\": \"/workspace/repo/src/commands/inspect.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"export const command = \\\"analyze-log\\\";\"\n  },\n  {\n    \"Path\": \"/workspace/repo/archive/inspect.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"export const command = \\\"analyze-log\\\";\"\n  }\n]\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content src/commands/inspect.ts",
+          "exit_code": 0,
+          "stdout": "export const command = \"analyze-log\";\nexport async function runLogInspection(file: string) {\n  return { source: file, reviewed: true };\n}\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"src/commands/inspect.ts\",\"value\":\"runLogInspection\"}]}"
+    },
+    {
+      "variant": "baseline",
+      "task": "catena/role-config",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 0,
+      "command_count": 5,
+      "input_tokens": 2047,
+      "output_tokens": 216,
+      "duration_seconds": 13.187,
+      "tool_calls": [
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-Object -ExpandProperty FullName",
+          "exit_code": 0,
+          "stdout": "/workspace/repo/roles/disabled.yaml\n/workspace/repo/roles/production.yaml\n/workspace/repo/roles/reviewer.yaml\n/workspace/repo/archive/production.yaml\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/disabled.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: false\nmodel: model-copper\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/production.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: true\nmodel: model-silver\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content archive/production.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: true\nmodel: model-retired\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/reviewer.yaml",
+          "exit_code": 0,
+          "stdout": "role: reviewer\nenabled: true\nmodel: model-gold\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"roles/production.yaml\",\"value\":\"model-silver\"}]}"
+    },
+    {
+      "variant": "memory",
+      "task": "catena/absent-symbol",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 0,
+      "command_count": 3,
+      "input_tokens": 2786,
+      "output_tokens": 186,
+      "duration_seconds": 12.594,
+      "tool_calls": [
+        {
+          "command": "Get-ChildItem -Path src -Recurse -File | Select-Object -ExpandProperty FullName",
+          "exit_code": 0,
+          "stdout": "/workspace/repo/src/doctor.ts\n/workspace/repo/src/extract.ts\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content -Path src/extract.ts",
+          "exit_code": 0,
+          "stdout": "export const command = \"extract-skill\";\nexport function extractSkill() { return { version: 1 }; }\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content -Path src/doctor.ts",
+          "exit_code": 0,
+          "stdout": "export const command = \"runtime-doctor\";\nexport function runtimeDoctor() { return { ready: true }; }\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[]}"
+    },
+    {
+      "variant": "memory",
+      "task": "catena/command-handler",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 1,
+      "command_count": 3,
+      "input_tokens": 4372,
+      "output_tokens": 307,
+      "duration_seconds": 16.672,
+      "tool_calls": [
+        {
+          "command": "rg -n --glob '!docs/**' --glob '!archive/**' --glob '!tests/**' \"analyze-log|analyze log|analyzelog\" .",
+          "exit_code": 1,
+          "stdout": "\u001b[31;1mread_only_shell.ps1: \u001b[31;1mThe term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.\u001b[0m\n\u001b[31;1m\u001b[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\u001b[0m\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-String -Pattern 'analyze-log','analyze log','analyzelog'",
+          "exit_code": 0,
+          "stdout": "\ntests/inspect.test.ts:1:const command = \"\u001b[7manalyze-log\u001b[0m\";\ndocs/commands.md:1:The \u001b[7manalyze-log\u001b[0m command was once documented as runLogReview.\nsrc/commands/inspect.ts:1:export const command = \"\u001b[7manalyze-log\u001b[0m\";\narchive/inspect.ts:1:export const command = \"\u001b[7manalyze-log\u001b[0m\";\n\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content src/commands/inspect.ts",
+          "exit_code": 0,
+          "stdout": "export const command = \"analyze-log\";\nexport async function runLogInspection(file: string) {\n  return { source: file, reviewed: true };\n}\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"src/commands/inspect.ts\",\"value\":\"runLogInspection\"}]}"
+    },
+    {
+      "variant": "memory",
+      "task": "catena/role-config",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 0,
+      "command_count": 5,
+      "input_tokens": 2896,
+      "output_tokens": 205,
+      "duration_seconds": 13.813,
+      "tool_calls": [
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-Object -ExpandProperty FullName",
+          "exit_code": 0,
+          "stdout": "/workspace/repo/roles/disabled.yaml\n/workspace/repo/roles/production.yaml\n/workspace/repo/roles/reviewer.yaml\n/workspace/repo/archive/production.yaml\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/disabled.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: false\nmodel: model-copper\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/production.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: true\nmodel: model-silver\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/reviewer.yaml",
+          "exit_code": 0,
+          "stdout": "role: reviewer\nenabled: true\nmodel: model-gold\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content archive/production.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: true\nmodel: model-retired\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"roles/production.yaml\",\"value\":\"model-silver\"}]}"
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/absent-symbol",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 0,
+      "command_count": 2,
+      "input_tokens": 2330,
+      "output_tokens": 145,
+      "duration_seconds": 12.265,
+      "tool_calls": [
+        {
+          "command": "Get-Command rg -ErrorAction SilentlyContinue | Format-List",
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem src -Recurse -File | Select-String -SimpleMatch 'extract-skill-v2' | Select-Object Path,LineNumber,Line | ConvertTo-Json",
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[]}"
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/command-handler",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 0,
+      "command_count": 3,
+      "input_tokens": 3443,
+      "output_tokens": 230,
+      "duration_seconds": 21.094,
+      "tool_calls": [
+        {
+          "command": "Get-Command rg -ErrorAction SilentlyContinue",
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-String -SimpleMatch \"analyze-log\"",
+          "exit_code": 0,
+          "stdout": "\ntests/inspect.test.ts:1:const command = \"\u001b[7manalyze-log\u001b[0m\";\ndocs/commands.md:1:The \u001b[7manalyze-log\u001b[0m command was once documented as runLogReview.\nsrc/commands/inspect.ts:1:export const command = \"\u001b[7manalyze-log\u001b[0m\";\narchive/inspect.ts:1:export const command = \"\u001b[7manalyze-log\u001b[0m\";\n\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content src/commands/inspect.ts",
+          "exit_code": 0,
+          "stdout": "export const command = \"analyze-log\";\nexport async function runLogInspection(file: string) {\n  return { source: file, reviewed: true };\n}\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"src/commands/inspect.ts\",\"value\":\"runLogInspection\"}]}"
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/role-config",
+      "attempt": 1,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 0,
+      "command_count": 5,
+      "input_tokens": 4654,
+      "output_tokens": 322,
+      "duration_seconds": 17.734,
+      "tool_calls": [
+        {
+          "command": "Get-Command rg -ErrorAction SilentlyContinue | Format-List",
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-String -SimpleMatch 'enabled' | Select-Object Path,LineNumber,Line | ConvertTo-Json",
+          "exit_code": 0,
+          "stdout": "[\n  {\n    \"Path\": \"/workspace/repo/roles/disabled.yaml\",\n    \"LineNumber\": 2,\n    \"Line\": \"enabled: false\"\n  },\n  {\n    \"Path\": \"/workspace/repo/roles/production.yaml\",\n    \"LineNumber\": 2,\n    \"Line\": \"enabled: true\"\n  },\n  {\n    \"Path\": \"/workspace/repo/roles/reviewer.yaml\",\n    \"LineNumber\": 2,\n    \"Line\": \"enabled: true\"\n  },\n  {\n    \"Path\": \"/workspace/repo/archive/production.yaml\",\n    \"LineNumber\": 2,\n    \"Line\": \"enabled: true\"\n  }\n]\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-String -SimpleMatch 'coder' | Select-Object Path,LineNumber,Line | ConvertTo-Json",
+          "exit_code": 0,
+          "stdout": "[\n  {\n    \"Path\": \"/workspace/repo/roles/disabled.yaml\",\n    \"LineNumber\": 1,\n    \"Line\": \"role: coder\"\n  },\n  {\n    \"Path\": \"/workspace/repo/roles/production.yaml\",\n    \"LineNumber\": 1,\n    \"Line\": \"role: coder\"\n  },\n  {\n    \"Path\": \"/workspace/repo/archive/production.yaml\",\n    \"LineNumber\": 1,\n    \"Line\": \"role: coder\"\n  }\n]\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-String -SimpleMatch 'model' | Select-Object Path,LineNumber,Line | ConvertTo-Json",
+          "exit_code": 0,
+          "stdout": "[\n  {\n    \"Path\": \"/workspace/repo/roles/disabled.yaml\",\n    \"LineNumber\": 3,\n    \"Line\": \"model: model-copper\"\n  },\n  {\n    \"Path\": \"/workspace/repo/roles/production.yaml\",\n    \"LineNumber\": 3,\n    \"Line\": \"model: model-silver\"\n  },\n  {\n    \"Path\": \"/workspace/repo/roles/reviewer.yaml\",\n    \"LineNumber\": 3,\n    \"Line\": \"model: model-gold\"\n  },\n  {\n    \"Path\": \"/workspace/repo/archive/production.yaml\",\n    \"LineNumber\": 3,\n    \"Line\": \"model: model-retired\"\n  }\n]\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/production.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: true\nmodel: model-silver\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"roles/production.yaml\",\"value\":\"model-silver\"}]}"
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/absent-symbol",
+      "attempt": 2,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 0,
+      "command_count": 2,
+      "input_tokens": 2330,
+      "output_tokens": 145,
+      "duration_seconds": 9.532,
+      "tool_calls": [
+        {
+          "command": "Get-Command rg -ErrorAction SilentlyContinue | Format-List",
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem src -Recurse -File | Select-String -SimpleMatch 'extract-skill-v2' | Select-Object Path,LineNumber,Line | ConvertTo-Json",
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[]}"
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/command-handler",
+      "attempt": 2,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 0,
+      "command_count": 3,
+      "input_tokens": 3687,
+      "output_tokens": 204,
+      "duration_seconds": 17.265,
+      "tool_calls": [
+        {
+          "command": "Get-Command rg -ErrorAction SilentlyContinue | Format-List",
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-String -SimpleMatch 'analyze-log' | Select-Object Path,LineNumber,Line | ConvertTo-Json",
+          "exit_code": 0,
+          "stdout": "[\n  {\n    \"Path\": \"/workspace/repo/tests/inspect.test.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"const command = \\\"analyze-log\\\";\"\n  },\n  {\n    \"Path\": \"/workspace/repo/docs/commands.md\",\n    \"LineNumber\": 1,\n    \"Line\": \"The analyze-log command was once documented as runLogReview.\"\n  },\n  {\n    \"Path\": \"/workspace/repo/src/commands/inspect.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"export const command = \\\"analyze-log\\\";\"\n  },\n  {\n    \"Path\": \"/workspace/repo/archive/inspect.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"export const command = \\\"analyze-log\\\";\"\n  }\n]\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content src/commands/inspect.ts",
+          "exit_code": 0,
+          "stdout": "export const command = \"analyze-log\";\nexport async function runLogInspection(file: string) {\n  return { source: file, reviewed: true };\n}\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"src/commands/inspect.ts\",\"value\":\"runLogInspection\"}]}"
+    },
+    {
+      "variant": "candidate",
+      "task": "catena/role-config",
+      "attempt": 2,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 0,
+      "command_count": 6,
+      "input_tokens": 3828,
+      "output_tokens": 270,
+      "duration_seconds": 16.813,
+      "tool_calls": [
+        {
+          "command": "Get-Command rg -ErrorAction SilentlyContinue",
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-String -SimpleMatch 'enabled'",
+          "exit_code": 0,
+          "stdout": "\nroles/disabled.yaml:2:\u001b[7menabled\u001b[0m: false\nroles/production.yaml:2:\u001b[7menabled\u001b[0m: true\nroles/reviewer.yaml:2:\u001b[7menabled\u001b[0m: true\narchive/production.yaml:2:\u001b[7menabled\u001b[0m: true\n\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-String -SimpleMatch 'coder'",
+          "exit_code": 0,
+          "stdout": "\nroles/disabled.yaml:1:role: \u001b[7mcoder\u001b[0m\nroles/production.yaml:1:role: \u001b[7mcoder\u001b[0m\narchive/production.yaml:1:role: \u001b[7mcoder\u001b[0m\n\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/disabled.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: false\nmodel: model-copper\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/production.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: true\nmodel: model-silver\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content archive/production.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: true\nmodel: model-retired\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"roles/production.yaml\",\"value\":\"model-silver\"}]}"
+    },
+    {
+      "variant": "memory",
+      "task": "catena/absent-symbol",
+      "attempt": 2,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 1,
+      "command_count": 4,
+      "input_tokens": 4520,
+      "output_tokens": 315,
+      "duration_seconds": 19.782,
+      "tool_calls": [
+        {
+          "command": "rg -n \"extract-skill-v2|extract_skill_v2|Extract-Skill\" src",
+          "exit_code": 1,
+          "stdout": "\u001b[31;1mread_only_shell.ps1: \u001b[31;1mThe term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.\u001b[0m\n\u001b[31;1m\u001b[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\u001b[0m\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Path src -Recurse -File | Select-String -Pattern 'extract-skill-v2','extract_skill_v2','Extract-Skill' | Select-Object Path,LineNumber,Line | ConvertTo-Json",
+          "exit_code": 0,
+          "stdout": "{\n  \"Path\": \"/workspace/repo/src/extract.ts\",\n  \"LineNumber\": 1,\n  \"Line\": \"export const command = \\\"extract-skill\\\";\"\n}\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Path src -Recurse -File | Select-Object FullName | ConvertTo-Json",
+          "exit_code": 0,
+          "stdout": "[\n  {\n    \"FullName\": \"/workspace/repo/src/doctor.ts\"\n  },\n  {\n    \"FullName\": \"/workspace/repo/src/extract.ts\"\n  }\n]\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Path src -Recurse -File | Select-String -Pattern 'skill-v2','v2','extract' | Select-Object Path,LineNumber,Line | ConvertTo-Json",
+          "exit_code": 0,
+          "stdout": "[\n  {\n    \"Path\": \"/workspace/repo/src/extract.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"export const command = \\\"extract-skill\\\";\"\n  },\n  {\n    \"Path\": \"/workspace/repo/src/extract.ts\",\n    \"LineNumber\": 2,\n    \"Line\": \"export function extractSkill() { return { version: 1 }; }\"\n  }\n]\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[]}"
+    },
+    {
+      "variant": "memory",
+      "task": "catena/command-handler",
+      "attempt": 2,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 1,
+      "command_count": 5,
+      "input_tokens": 4174,
+      "output_tokens": 254,
+      "duration_seconds": 19.109,
+      "tool_calls": [
+        {
+          "command": "Get-ChildItem -Name",
+          "exit_code": 0,
+          "stdout": "archive\ndocs\nsrc\ntests\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse src | Select-Object -ExpandProperty FullName",
+          "exit_code": 0,
+          "stdout": "/workspace/repo/src/commands\n/workspace/repo/src/commands/inspect.ts\n/workspace/repo/src/commands/status.ts\n",
+          "stderr": ""
+        },
+        {
+          "command": "rg -n \"analyze-log|Analyze-Log|analyzeLog|AnalyzeLog\" src",
+          "exit_code": 1,
+          "stdout": "\u001b[31;1mread_only_shell.ps1: \u001b[31;1mThe term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.\u001b[0m\n\u001b[31;1m\u001b[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\u001b[0m\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content src/commands/inspect.ts",
+          "exit_code": 0,
+          "stdout": "export const command = \"analyze-log\";\nexport async function runLogInspection(file: string) {\n  return { source: file, reviewed: true };\n}\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content src/commands/status.ts",
+          "exit_code": 0,
+          "stdout": "export const command = \"runtime-doctor\";\nexport async function runDoctor() { return { ready: true }; }\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"src/commands/inspect.ts\",\"value\":\"runLogInspection\"}]}"
+    },
+    {
+      "variant": "memory",
+      "task": "catena/role-config",
+      "attempt": 2,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 0,
+      "command_count": 5,
+      "input_tokens": 2896,
+      "output_tokens": 202,
+      "duration_seconds": 14.109,
+      "tool_calls": [
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-Object -ExpandProperty FullName",
+          "exit_code": 0,
+          "stdout": "/workspace/repo/roles/disabled.yaml\n/workspace/repo/roles/production.yaml\n/workspace/repo/roles/reviewer.yaml\n/workspace/repo/archive/production.yaml\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/production.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: true\nmodel: model-silver\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/reviewer.yaml",
+          "exit_code": 0,
+          "stdout": "role: reviewer\nenabled: true\nmodel: model-gold\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content archive/production.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: true\nmodel: model-retired\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/disabled.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: false\nmodel: model-copper\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"roles/production.yaml\",\"value\":\"model-silver\"}]}"
+    },
+    {
+      "variant": "baseline",
+      "task": "catena/absent-symbol",
+      "attempt": 2,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 1,
+      "command_count": 3,
+      "input_tokens": 3224,
+      "output_tokens": 236,
+      "duration_seconds": 15.094,
+      "tool_calls": [
+        {
+          "command": "rg -n \"extract-skill-v2|Extract-Skill|extract skill|skill-v2\" src",
+          "exit_code": 1,
+          "stdout": "\u001b[31;1mread_only_shell.ps1: \u001b[31;1mThe term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.\u001b[0m\n\u001b[31;1m\u001b[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\u001b[0m\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse src | Select-String -Pattern \"extract-skill-v2\",\"Extract-Skill\",\"skill-v2\",\"extract skill\" | Select-Object Path,LineNumber,Line",
+          "exit_code": 0,
+          "stdout": "\n\u001b[32;1mPath                          \u001b[0m\u001b[32;1m LineNumber\u001b[0m\u001b[32;1m Line\u001b[0m\n\u001b[32;1m----                          \u001b[0m \u001b[32;1m----------\u001b[0m \u001b[32;1m----\u001b[0m\n/workspace/repo/src/extract.ts          1 export const command = \"extract-skil…\n\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content src/extract.ts",
+          "exit_code": 0,
+          "stdout": "export const command = \"extract-skill\";\nexport function extractSkill() { return { version: 1 }; }\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[]}"
+    },
+    {
+      "variant": "baseline",
+      "task": "catena/command-handler",
+      "attempt": 2,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 1,
+      "command_count": 3,
+      "input_tokens": 3432,
+      "output_tokens": 217,
+      "duration_seconds": 16.14,
+      "tool_calls": [
+        {
+          "command": "rg -n \"analyze-log|analyze log|Analyze-Log|analyzeLog|analyzelog\" .",
+          "exit_code": 1,
+          "stdout": "\u001b[31;1mread_only_shell.ps1: \u001b[31;1mThe term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.\u001b[0m\n\u001b[31;1m\u001b[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\u001b[0m\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-String -Pattern 'analyze-log','analyze log','Analyze-Log','analyzeLog','analyzelog' | Select-Object Path,LineNumber,Line | ConvertTo-Json",
+          "exit_code": 0,
+          "stdout": "[\n  {\n    \"Path\": \"/workspace/repo/tests/inspect.test.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"const command = \\\"analyze-log\\\";\"\n  },\n  {\n    \"Path\": \"/workspace/repo/docs/commands.md\",\n    \"LineNumber\": 1,\n    \"Line\": \"The analyze-log command was once documented as runLogReview.\"\n  },\n  {\n    \"Path\": \"/workspace/repo/src/commands/inspect.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"export const command = \\\"analyze-log\\\";\"\n  },\n  {\n    \"Path\": \"/workspace/repo/archive/inspect.ts\",\n    \"LineNumber\": 1,\n    \"Line\": \"export const command = \\\"analyze-log\\\";\"\n  }\n]\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content src/commands/inspect.ts",
+          "exit_code": 0,
+          "stdout": "export const command = \"analyze-log\";\nexport async function runLogInspection(file: string) {\n  return { source: file, reviewed: true };\n}\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"src/commands/inspect.ts\",\"value\":\"runLogInspection\"}]}"
+    },
+    {
+      "variant": "baseline",
+      "task": "catena/role-config",
+      "attempt": 2,
+      "valid": true,
+      "rewards": {
+        "reward": 1.0
+      },
+      "missing_rg_errors": 0,
+      "command_count": 5,
+      "input_tokens": 2047,
+      "output_tokens": 196,
+      "duration_seconds": 13.359,
+      "tool_calls": [
+        {
+          "command": "Get-ChildItem -Recurse -File | Select-Object -ExpandProperty FullName",
+          "exit_code": 0,
+          "stdout": "/workspace/repo/roles/disabled.yaml\n/workspace/repo/roles/production.yaml\n/workspace/repo/roles/reviewer.yaml\n/workspace/repo/archive/production.yaml\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/production.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: true\nmodel: model-silver\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/disabled.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: false\nmodel: model-copper\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content roles/reviewer.yaml",
+          "exit_code": 0,
+          "stdout": "role: reviewer\nenabled: true\nmodel: model-gold\n",
+          "stderr": ""
+        },
+        {
+          "command": "Get-Content archive/production.yaml",
+          "exit_code": 0,
+          "stdout": "role: coder\nenabled: true\nmodel: model-retired\n",
+          "stderr": ""
+        }
+      ],
+      "answer": "{\"matches\":[{\"path\":\"roles/production.yaml\",\"value\":\"model-silver\"}]}"
+    }
+  ],
+  "limitations": [
+    "Three anonymous reconstructed search tasks, not original Windows replay.",
+    "Memory is a manually verified historical observation retrieved from OpenViking; no task answers.",
+    "Interventions are explicit: memory only or Skill only; no automatic Skill discovery tested.",
+    "Two repetitions per task per arm; no statistical significance or general success-rate claim.",
+    "Duration includes model and search tools; excludes container build, retrieval and coordinator.",
+    "Token totals are target usage, not billing amounts or coordinator usage."
+  ]
+}

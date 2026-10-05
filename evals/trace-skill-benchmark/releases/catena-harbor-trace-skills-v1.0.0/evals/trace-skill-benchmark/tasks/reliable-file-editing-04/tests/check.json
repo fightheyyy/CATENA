@@ -1,0 +1,14 @@
+{
+  "exact_files": {
+    "app.py": "def render():\n    return \"current\"\n"
+  },
+  "absent": [
+    "legacy.py"
+  ],
+  "answer": {
+    "updated": true
+  },
+  "protected": {
+    "notes/user.txt": "a95a06670cb2309ebe998312e5fe5427ff67c9403ddd51b0c5ec2de3d519e3df"
+  }
+}

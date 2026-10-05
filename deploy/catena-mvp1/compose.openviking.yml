@@ -1,0 +1,53 @@
+# Overlay: docker compose -f compose.yml -f compose.openviking.yml up -d
+services:
+  catena-core:
+    environment:
+      CATENA_MEMORY_PROVIDER: openviking
+      CATENA_MEMORY_URL: http://openviking:1933
+      CATENA_MEMORY_API_KEY: ${CATENA_OPENVIKING_API_KEY:?configure CATENA_OPENVIKING_API_KEY}
+    depends_on:
+      openviking:
+        condition: service_healthy
+
+  openviking:
+    # Tested official 0.4.23 image; pin the digest so interfaces cannot drift.
+    image: ghcr.io/volcengine/openviking@sha256:fb4cd789fd3303509edd1c10437ff63d4fab56b622494ac621f1fda042540ed4
+    volumes:
+      - ${CATENA_OPENVIKING_CONFIG_DIR:-../../.local/openviking}:/app/.openviking
+    environment:
+      OPENVIKING_SERVER_PORT: "1933"
+      OPENVIKING_WITH_BOT: "0"
+    depends_on:
+      catena-embedding:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "openviking-entrypoint", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+    mem_limit: 2g
+    cpus: 1
+
+  catena-embedding:
+    build:
+      context: ../..
+      dockerfile: deploy/catena-mvp1/Dockerfile.embedding
+    image: catena/embedding:bge-small-zh
+    volumes:
+      - catena-embedding-models:/models
+    environment:
+      CATENA_EMBEDDING_MODEL: BAAI/bge-small-zh-v1.5
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 1
+
+volumes:
+  catena-embedding-models:

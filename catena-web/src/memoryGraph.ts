@@ -115,6 +115,10 @@ function sourceEntityRank(entity: MemoryGraphEntity) {
 
 function memoryRelationLabel(value: string, locale: "zh" | "en") {
   const normalized = value.trim().toUpperCase();
+  if (normalized === "STORED_IN") return locale === "zh" ? "保存于" : "Stored in";
+  if (normalized === "FILE_LINK") return locale === "zh" ? "引用文件" : "References";
+  if (normalized === "RELATED_TO") return locale === "zh" ? "关联" : "Related to";
+  if (normalized === "BELONGS_TO") return locale === "zh" ? "属于" : "Belongs to";
   if (normalized === "SAME_CONVERSATION") return locale === "zh" ? "同源对话" : "SAME CONVERSATION";
   if (normalized === "SOURCE_CONVERSATION") return locale === "zh" ? "来自对话" : "FROM CONVERSATION";
   if (normalized === "SOURCE_AGENT") return locale === "zh" ? "来自 AGENT" : "FROM AGENT";

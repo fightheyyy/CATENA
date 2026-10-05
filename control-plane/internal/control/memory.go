@@ -26,7 +26,7 @@ const (
 	maxMemoryResponseBytes = 4 * 1024 * 1024
 )
 
-// MemoryBackend is the private Catena-to-GauzMem boundary. Implementations do
+// MemoryBackend is the private Catena-to-memory-provider boundary. Implementations do
 // not authenticate end users; Catena resolves the owner before calling it.
 type MemoryBackend interface {
 	Ping(context.Context) error
@@ -737,11 +737,44 @@ func (s *HTTPServer) memoryStatus(w http.ResponseWriter, r *http.Request) {
 			status = "available"
 		}
 	}
+	backend, capabilities := "gauzmem", []string{"semantic", "graph", "temporal"}
+	if provider, ok := s.memory.(interface{ MemoryProvider() (string, []string) }); ok {
+		backend, capabilities = provider.MemoryProvider()
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":       status,
-		"backend":      "gauzmem",
-		"capabilities": []string{"semantic", "graph", "temporal"},
+		"backend":      backend,
+		"capabilities": capabilities,
 	})
+}
+
+func (s *HTTPServer) createMemoryNote(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	backend, ok := s.memory.(MemoryNoteBackend)
+	if !ok {
+		writeProblem(w, http.StatusServiceUnavailable, "Memory file writing is not available")
+		return
+	}
+	var note MemoryNoteRequest
+	if err := decodeJSON(w, r, &note); err != nil {
+		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	note.Title, note.Content = strings.TrimSpace(note.Title), strings.TrimSpace(note.Content)
+	if note.Title == "" || len(note.Title) > 200 || strings.ContainsAny(note.Title, "\r\n") || note.Content == "" || len(note.Content) > 32000 {
+		writeProblem(w, http.StatusBadRequest, "title (1-200 bytes) and content (1-32000 bytes) are required")
+		return
+	}
+	record, err := backend.CreateNote(r.Context(), traceOwnerID(user), note)
+	if err != nil {
+		slog.Warn("memory note write failed", "error", err)
+		writeProblem(w, http.StatusBadGateway, "Memory note could not be indexed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, record)
 }
 
 func (s *HTTPServer) listMemories(w http.ResponseWriter, r *http.Request) {
@@ -803,6 +836,17 @@ func (s *HTTPServer) rememberTrace(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Warn("GauzMem trace ingestion failed", "trace_id", traceID, "error", err)
 		writeProblem(w, http.StatusBadGateway, "GauzMem trace ingestion failed")
+		return
+	}
+	agentID := trace.Summary.AgentID
+	if !validConversationIdentifier(agentID, 160) {
+		agentID = memoryProjectID(trace.Summary.ServiceName)
+	}
+	document := ConversationDocument{Summary: ConversationSummary{ConversationID: traceID, Title: trace.Summary.RootName, AgentID: agentID, AgentName: trace.Summary.ServiceName}}
+	record := newMemoryTaskRecord(ownerID, document, receipt, time.Now().UTC())
+	if err := s.store.UpsertMemoryTask(r.Context(), record); err != nil {
+		slog.Error("memory trace task persistence failed", "error", err)
+		writeProblem(w, http.StatusInternalServerError, "Memory task could not be tracked")
 		return
 	}
 	writeJSON(w, http.StatusAccepted, receipt)

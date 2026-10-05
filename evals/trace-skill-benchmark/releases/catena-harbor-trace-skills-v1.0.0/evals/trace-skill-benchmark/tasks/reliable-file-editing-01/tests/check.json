@@ -1,0 +1,14 @@
+{
+  "exact_files": {
+    "managed/policy.py": "# Preserve this comment.\ndef retry_limit():\n    return 5\n"
+  },
+  "modes": {
+    "managed": 365
+  },
+  "answer": {
+    "updated": true
+  },
+  "protected": {
+    "notes/user.txt": "a95a06670cb2309ebe998312e5fe5427ff67c9403ddd51b0c5ec2de3d519e3df"
+  }
+}

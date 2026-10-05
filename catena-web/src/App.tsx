@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { api } from "./api";
 import type { MemoryVisualNode } from "./memoryGraph";
 import { primaryNavigationRoutes, readNavigation, navigationURL, type Route, type EvidenceSelection } from "./navigation";
@@ -8,26 +9,27 @@ import { isMemoryTaskActive, memoryTaskDisplayPercent } from "./memoryTaskView";
 import type { EvolutionJob, MemoryFactGraph, MemoryRecallBundle, MemoryRecallItem, MemoryRecord, MemoryTaskRecord, Session, WorkspaceData } from "./types";
 
 const AgentWorkspace = lazy(() => import("./AgentWorkspace").then((module) => ({ default: module.AgentWorkspace })));
-const OverviewWorkspace = lazy(() => import("./OverviewWorkspace").then((module) => ({ default: module.OverviewWorkspace })));
 const ApiManagementPage = lazy(() => import("./ApiManagementPage").then((module) => ({ default: module.ApiManagementPage })));
+const WorkbenchWorkspace = lazy(() => import("./WorkbenchWorkspace").then((module) => ({ default: module.WorkbenchWorkspace })));
 const ConversationWorkspace = lazy(() => import("./ConversationWorkspace").then((module) => ({ default: module.ConversationWorkspace })));
 const EvolutionWorkspace = lazy(() => import("./EvolutionWorkspace").then((module) => ({ default: module.EvolutionWorkspace })));
 const MemoryGraphCanvas = lazy(() => import("./MemoryGraphCanvas").then((module) => ({ default: module.MemoryGraphCanvas })));
 const TraceExplorer = lazy(() => import("./TraceExplorer").then((module) => ({ default: module.TraceExplorer })));
+const ExperimentWorkspace = lazy(() => import("./ExperimentWorkspace").then((module) => ({ default: module.ExperimentWorkspace })));
 
 type Locale = "zh" | "en";
 type Theme = "system" | "light" | "dark";
 
 const copy = {
   zh: {
-    nav: { home: "总览", agents: "Agent", apiKeys: "连接", conversations: "对话", traces: "经历", evolution: "产出", memory: "记忆", settings: "设置" },
+    nav: { home: "工作台", assistant: "工作台", cases: "实验", agents: "Agent", apiKeys: "连接", conversations: "对话", traces: "经历", evolution: "产出", memory: "记忆", settings: "设置" },
     signIn: "使用 GitHub 登录",
     oauthFlowExpired: "登录流程已过期或从另一个地址发起。请重新登录，Catena 会自动使用正确的回调地址。",
     oauthUpstreamUnavailable: "GitHub 连接暂时超时，请重新登录。Catena 不会保留失败的授权流程。",
     oauthCancelled: "GitHub 授权已取消，你可以随时重新登录。",
-    landingTitle: "让每一段经历，有所积累。",
-    landingBody: "把散落在不同 Agent 中的工作连起来。回看经历，留下记忆，提炼可复用的成果。",
-    landingNote: "你的 Agent 在端侧工作，经历在这里汇合。",
+    landingTitle: "从真实运行，找到可修复的问题。",
+    landingBody: "回看 Codex 和 Claude Code 的运行证据，提炼可审查的 Skill 候选。",
+    landingNote: "原始运行留在端侧；Catena 保存可追溯的分析证据。",
     homeTitle: "今天的 Agent 状态",
     homeBody: "汇聚不同 Agent 的 Trace，由 XiaoBaOS 提炼可复用的 Agent 资产。",
     agentsTitle: "Agent",
@@ -135,14 +137,14 @@ const copy = {
     latest: "最近更新",
   },
   en: {
-    nav: { home: "Overview", agents: "Agents", apiKeys: "Connections", conversations: "Conversations", traces: "History", evolution: "Outputs", memory: "Memory", settings: "Settings" },
+    nav: { home: "Workspace", assistant: "Workspace", cases: "Experiments", agents: "Agents", apiKeys: "Connections", conversations: "Conversations", traces: "History", evolution: "Outputs", memory: "Memory", settings: "Settings" },
     signIn: "Continue with GitHub",
     oauthFlowExpired: "This sign-in flow expired or started on another address. Restart it and Catena will use the canonical callback origin.",
     oauthUpstreamUnavailable: "GitHub temporarily timed out. Restart sign-in; Catena does not retain the failed authorization flow.",
     oauthCancelled: "GitHub authorization was cancelled. You can restart sign-in at any time.",
-    landingTitle: "Good work leaves a trail.",
-    landingBody: "Bring your Agents' work together. Revisit the journey, keep useful memories, and create something you can use again.",
-    landingNote: "Your Agents work locally. Their history comes together here.",
+    landingTitle: "Find fixable patterns in real Agent runs.",
+    landingBody: "Review Codex and Claude Code evidence, then draft Skills grounded in the observed behavior.",
+    landingNote: "Your Agents run locally; Catena keeps the analysis traceable.",
     homeTitle: "Your Agent state today",
     homeBody: "Unify Traces across Agents and distill reusable Agent assets with XiaoBaOS.",
     agentsTitle: "Agents",
@@ -322,16 +324,16 @@ export function App() {
 
   const openEvolutionJob = useCallback((job: EvolutionJob) => {
     updateJobs([job]);
-    navigate("evolution", { agentID: job.source_agent_id, jobID: job.job_id });
+    navigate("home", { agentID: job.source_agent_id, jobID: job.job_id });
   }, [navigate, updateJobs]);
 
   const analyzeAgent = useCallback((agentID: string) => {
-    navigate("evolution", { agentID });
+    navigate("home", { agentID });
   }, [navigate]);
 
   const selectEvolutionJob = useCallback((jobID: string) => {
-    navigate("evolution", { agentID: selection.agentID, jobID });
-  }, [navigate, selection.agentID]);
+    navigate(selection.route === "home" ? "home" : "evolution", { agentID: selection.agentID, jobID });
+  }, [navigate, selection.agentID, selection.route]);
 
   const removeEvolutionJob = useCallback((jobID: string) => {
     removeJob(jobID);
@@ -445,13 +447,19 @@ function AccountMenu({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [popoverPosition, setPopoverPosition] = useState({ left: 0, bottom: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
   const user = session.user;
   const displayName = user?.display_name || user?.login || (locale === "zh" ? "本地账户" : "Local account");
   const initial = displayName.trim().slice(0, 1).toUpperCase() || "C";
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
+    const positionPopover = () => {
+      const bounds = menuRef.current?.getBoundingClientRect();
+      if (bounds) setPopoverPosition({ left: bounds.right + 10, bottom: window.innerHeight - bounds.bottom });
+    };
+    positionPopover();
     const closeOnOutside = (event: MouseEvent) => {
       if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
     };
@@ -460,9 +468,13 @@ function AccountMenu({
     };
     document.addEventListener("mousedown", closeOnOutside);
     document.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("resize", positionPopover);
+    window.addEventListener("scroll", positionPopover, true);
     return () => {
       document.removeEventListener("mousedown", closeOnOutside);
       document.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("resize", positionPopover);
+      window.removeEventListener("scroll", positionPopover, true);
     };
   }, [open]);
 
@@ -498,7 +510,7 @@ function AccountMenu({
         <span className="account-chevron" aria-hidden="true">⌄</span>
       </button>
       {open ? (
-        <div className="account-popover" role="menu">
+        <div className="account-popover" role="menu" style={{ "--account-popover-left": `${popoverPosition.left}px`, "--account-popover-bottom": `${popoverPosition.bottom}px` } as CSSProperties}>
           <div className="account-identity">
             <span className="account-avatar large">
               {user?.avatar_url ? <img src={user.avatar_url} alt="" referrerPolicy="no-referrer" /> : initial}
@@ -588,7 +600,7 @@ function Sidebar({
   refreshing: boolean;
 }) {
   const t = copy[locale];
-  const icons: Record<Route, IconName> = { home: "home", traces: "history", memory: "memory", evolution: "outputs", agents: "agents", apiKeys: "plug", settings: "settings", conversations: "book" };
+  const icons: Record<Route, IconName> = { home: "home", assistant: "assistant", cases: "book", traces: "history", memory: "memory", evolution: "outputs", agents: "agents", apiKeys: "plug", settings: "settings", conversations: "book" };
   return (
     <aside className="sidebar">
       <div className="sidebar-brand"><Brand />{onRefresh && <button className="text-button icon-button" type="button" aria-label={locale === "zh" ? "刷新" : "Refresh"} title={locale === "zh" ? "刷新" : "Refresh"} disabled={refreshing} onClick={() => void onRefresh()}><Icon name="refresh" /></button>}</div>
@@ -675,20 +687,21 @@ function RouteView({
   onLogout: () => void;
 }) {
   let content: React.ReactNode;
-  const historyTabs = <div className="history-tabs" role="group" aria-label={locale === "zh" ? "经历视图" : "History view"}><button className={route === "traces" ? "active" : ""} type="button" aria-pressed={route === "traces"} onClick={() => onNavigate("traces")}><Icon name="history" />Trace</button><button className={route === "conversations" ? "active" : ""} type="button" aria-pressed={route === "conversations"} onClick={() => onNavigate("conversations")}><Icon name="book" />{locale === "zh" ? "对话" : "Conversations"}</button></div>;
-  if (route === "home") content = <OverviewWorkspace locale={locale} workspace={workspace} onNavigate={onNavigate} onOpenTrace={onOpenAgentTraces} onOpenJob={onOpenEvolutionJob} onRetry={onRefresh} />;
+  const historyTabs = route === "conversations" ? <div className="history-tabs" role="group" aria-label={locale === "zh" ? "经历视图" : "History view"}><button type="button" onClick={() => onNavigate("traces")}><Icon name="history" />Trace</button><button className="active" type="button" aria-pressed="true"><Icon name="book" />{locale === "zh" ? "对话" : "Conversations"}</button></div> : null;
+  if (route === "home" && !selectedEvolutionJobID) content = <WorkbenchWorkspace key={session.user?.id ?? "local"} locale={locale} workspace={workspace} ownerID={session.user?.id ?? "local"} initialAgentID={selectedAgentID} onOpenTrace={onOpenAgentTraces} onOpenJob={onOpenEvolutionJob} onConnectAgent={onConnectAgent} onRefresh={onRefresh} />;
+  else if (route === "cases") content = <ExperimentWorkspace key={session.user?.id ?? "local"} locale={locale} />;
   else if (route === "agents") content = <AgentWorkspace locale={locale} workspace={workspace} initialAgentID={selectedAgentID} onSelectAgent={onOpenAgent} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} onConnect={onConnectAgent} />;
   else if (route === "apiKeys") content = <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} onOpenAgent={onOpenAgent} />;
   else if (route === "conversations") content = <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} onOpenMemory={onOpenMemory} navigation={historyTabs} />;
   else if (route === "traces") content = <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} initialTraceID={selectedTraceID} onSelectTrace={onOpenAgentTraces} refreshVersion={refreshVersion} navigation={historyTabs} />;
-  else if (route === "evolution") content = (
+  else if (route === "evolution" || route === "home") content = (
     <EvolutionWorkspace
       locale={locale}
       jobs={workspace.evolutionJobs}
       agents={workspace.agents}
       initialJobID={selectedEvolutionJobID}
-      initialAgentID={selectedEvolutionAgentID}
-      onJobStarted={onOpenEvolutionJob}
+      analysisOnly={route === "home"}
+      onAnalyze={() => onAnalyzeAgent(selectedEvolutionAgentID)}
       onJobSelected={onSelectEvolutionJob}
       onJobDeleted={onDeleteEvolutionJob}
       onJobsUpdated={onJobsUpdated}
@@ -726,9 +739,21 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
   const [tasks, setTasks] = useState<MemoryTaskRecord[]>([]);
   const [taskError, setTaskError] = useState("");
   const [memoryView, setMemoryView] = useState<"collection" | "graph">("collection");
+  const [provider, setProvider] = useState("");
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [noteError, setNoteError] = useState("");
   const [expandedMemory, setExpandedMemory] = useState<{ kind: string; item: MemoryRecallItem } | null>(null);
   const readerRef = useRef<HTMLElement>(null);
   const graphSequence = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    void api.memoryStatus().then((status) => { if (active) setProvider(status.backend); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (expandedMemory && memoryView === "collection") {
@@ -832,7 +857,7 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
   const visibleEntries: Array<{ kind: string; item: MemoryRecallItem; createdAt?: string }> = results === null
     ? recent.map((item) => ({
       kind: t.recallFact,
-      item: { id: item.id, content: item.content, score: 0, metadata: item.metadata },
+      item: { id: item.id, content: item.content, title: typeof item.metadata?.title === "string" ? item.metadata.title : undefined, score: 0, metadata: item.metadata },
       createdAt: item.created_at,
     }))
     : results.map((item) => ({ ...item }));
@@ -850,7 +875,21 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
     <section className="page memory-page">
       <header className="memory-page-header">
         <h1>{t.memoryTitle}</h1>
+        {ready && provider === "openviking" && <button className="secondary-button" type="button" onClick={() => setNoteOpen(!noteOpen)}><Icon name="plus" />{locale === "zh" ? "添加记忆" : "Add memory"}</button>}
       </header>
+      {ready && noteOpen && <form className="memory-note-form" onSubmit={async (event) => {
+        event.preventDefault(); setSavingNote(true); setNoteError("");
+        try {
+          await api.createMemory(noteTitle.trim(), noteContent.trim());
+          setNoteTitle(""); setNoteContent(""); setNoteOpen(false); setResults(null); setRecentReload((value) => value + 1);
+        } catch { setNoteError(locale === "zh" ? "保存未完成，请稍后重试。" : "Could not save memory. Please retry."); }
+        finally { setSavingNote(false); }
+      }}>
+        <label>{locale === "zh" ? "标题" : "Title"}<input value={noteTitle} maxLength={100} required onChange={(event) => setNoteTitle(event.target.value)} placeholder={locale === "zh" ? "一件值得记住的事" : "Something worth remembering"} /></label>
+        <label>{locale === "zh" ? "内容" : "Content"}<textarea value={noteContent} maxLength={8000} required rows={5} onChange={(event) => setNoteContent(event.target.value)} placeholder={locale === "zh" ? "偏好、生活记录、决定或经验……" : "A preference, event, decision or experience…"} /></label>
+        {noteError && <p role="alert">{noteError}</p>}
+        <div><button className="primary-button" disabled={savingNote || !noteTitle.trim() || !noteContent.trim()}>{savingNote ? (locale === "zh" ? "正在保存" : "Saving") : (locale === "zh" ? "保存记忆" : "Save memory")}</button><button className="text-button" type="button" disabled={savingNote} onClick={() => setNoteOpen(false)}>{locale === "zh" ? "取消" : "Cancel"}</button></div>
+      </form>}
       {!ready ? (
         <section className="memory-unavailable">
           <Status value="unavailable" locale={locale} />
@@ -916,8 +955,9 @@ function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceDat
                   <h2>{selectedNode.title}</h2>
                   {selectedNode.title !== selectedNode.content ? <p>{selectedNode.content}</p> : null}
                   <dl>
+                    {typeof selectedRecord?.metadata?.uri === "string" && selectedNode.kind === "fact" && <MemoryContextFact label={locale === "zh" ? "文件" : "File"} value={selectedRecord.metadata.uri} />}
                     {selectedNode.relation ? <MemoryContextFact label={t.relationType} value={selectedNode.relation.type} /> : null}
-                    {selectedNode.relation ? <MemoryContextFact label={t.confidence} value={`${Math.round(selectedNode.relation.confidence * 100)}%`} /> : null}
+                    {selectedNode.relation && selectedNode.relation.origin !== "openviking_link" ? <MemoryContextFact label={t.confidence} value={`${Math.round(selectedNode.relation.confidence * 100)}%`} /> : null}
                     {selectedNode.entity?.type && selectedNode.entity.type !== "unknown" ? <MemoryContextFact label="Type" value={selectedNode.entity.type} /> : null}
                     {sourceConversation && selectedNode.kind === "fact" ? <MemoryContextFact label={t.sourceConversation} value={sourceConversation} /> : null}
                     {bundle && selectedNode.kind === "fact" ? <MemoryContextFact label={t.searchTime} value={typeof bundle.search_time_ms === "number" ? `${Math.round(bundle.search_time_ms)} ms` : "-"} /> : null}

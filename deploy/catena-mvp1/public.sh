@@ -18,6 +18,7 @@ required=(
   CATENA_POSTGRES_ADMIN_PASSWORD
   CATENA_CORE_DB_PASSWORD
   CATENA_CLICKHOUSE_PASSWORD
+  CATENA_ENGINE_TOKEN
 )
 
 set -a
@@ -43,7 +44,7 @@ for name in "${required[@]}"; do
   fi
 done
 
-for name in CATENA_GATEWAY_SECRET CATENA_API_TOKEN_SECRET CATENA_POSTGRES_ADMIN_PASSWORD CATENA_CORE_DB_PASSWORD CATENA_CLICKHOUSE_PASSWORD; do
+for name in CATENA_GATEWAY_SECRET CATENA_API_TOKEN_SECRET CATENA_POSTGRES_ADMIN_PASSWORD CATENA_CORE_DB_PASSWORD CATENA_CLICKHOUSE_PASSWORD CATENA_ENGINE_TOKEN; do
   value="${!name}"
   if (( ${#value} < 24 )); then
     echo "$name must contain at least 24 characters" >&2
@@ -65,7 +66,7 @@ case "$action" in
     "${compose[@]}" config
     ;;
   build)
-    "${compose[@]}" build catena-runner catena-core
+    "${compose[@]}" build catena-engine catena-runner catena-core
     ;;
   up)
     "${compose[@]}" up -d --build --wait --wait-timeout 1200
@@ -82,7 +83,7 @@ case "$action" in
     "$deploy_dir/smoke-public.sh"
     ;;
   logs)
-    "${compose[@]}" logs -f --tail=200 caddy catena-core catena-runner
+    "${compose[@]}" logs -f --tail=200 caddy catena-core catena-engine catena-runner
     ;;
   down)
     "${compose[@]}" down --remove-orphans

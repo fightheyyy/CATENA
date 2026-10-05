@@ -344,7 +344,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: .85; }
   .sidebar { height: 64px; width: 100%; inset: 0 0 auto; padding: 9px 18px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; border-right: 0; border-bottom: 1px solid var(--line); background: var(--surface); overflow: visible; }
   .sidebar .brand img { width: 32px; height: 32px; }
   .sidebar .brand span { display: inline; font-size: 22px; }
-  .sidebar nav { position: fixed; inset: auto 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: auto; min-height: 70px; padding: 7px max(14px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); margin: 0; gap: 6px; background: var(--surface-strong); border-top: 1px solid var(--line); box-shadow: 0 -5px 18px rgb(0 0 0 / 3%); }
+  .sidebar nav { position: fixed; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: auto; min-height: 70px; padding: 7px max(14px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); margin: 0; gap: 6px; background: var(--surface-strong); border-top: 1px solid var(--line); box-shadow: 0 -5px 18px rgb(0 0 0 / 3%); }
   .sidebar nav .nav-item { display: flex; flex-direction: column; gap: 3px; min-height: 51px; padding: 5px 3px; text-align: center; font-size: 11px; }
   .sidebar nav .nav-item.active { background: var(--accent-soft); color: var(--accent); box-shadow: none; }
   .sidebar-footer { display: flex; flex-direction: row; gap: 9px; margin: 0; }

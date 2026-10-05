@@ -1,0 +1,42 @@
+{
+  "schema_version": "catena.skill_experiment.v1",
+  "model": "gpt-5.5",
+  "skill_name": "powershell-search-fallback",
+  "skill": "skills/powershell-search-fallback",
+  "repeats": 1,
+  "agent_timeout_seconds": 180,
+  "verify_timeout_seconds": 30,
+  "cases": [
+    {
+      "id": "find-toml-value",
+      "fixture": "fixtures/powershell-search-01",
+      "prompt": "在这个 Windows PowerShell 工作目录里找到 task_route 的配置值，不预设文件名。只在最终回复给出该值，不修改文件。",
+      "verify": [
+        "python",
+        "-c",
+        "from pathlib import Path; assert 'relay-east' in Path('../agent.final.txt').read_text(encoding='utf-8')"
+      ]
+    },
+    {
+      "id": "find-yaml-value",
+      "fixture": "fixtures/powershell-search-02",
+      "prompt": "在这个 Windows PowerShell 工作目录里找到 API 服务的 cache_limit 值，只在最终回复给出该数字，不修改文件。",
+      "verify": [
+        "python",
+        "-c",
+        "from pathlib import Path; assert '73' in Path('../agent.final.txt').read_text(encoding='utf-8')"
+      ]
+    },
+    {
+      "id": "find-current-release",
+      "fixture": "fixtures/powershell-search-03",
+      "prompt": "在这个 Windows PowerShell 工作目录里找到当前发布标签。旧归档也有同名文件，只在最终回复给出当前标签，不修改文件。",
+      "verify": [
+        "python",
+        "-c",
+        "from pathlib import Path; assert 'current-release' in Path('../agent.final.txt').read_text(encoding='utf-8')"
+      ]
+    }
+  ]
+}
+

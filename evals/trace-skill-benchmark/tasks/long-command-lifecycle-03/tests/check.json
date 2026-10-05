@@ -1,0 +1,14 @@
+{
+  "answer": {
+    "state": "ready",
+    "service": "delta"
+  },
+  "server": {
+    "state": "ready",
+    "service": "delta"
+  },
+  "protected": {
+    "server.py": "fc4ed8a7418c06042149a149846e1fcf0f8a861bc51d18d4bd03cf0e6ae917f8",
+    "README.md": "f85bd880d2b673d9a4c8ad4c9a5d609613fc2f0b3f60854fb2c09a1bff4f85a6"
+  }
+}

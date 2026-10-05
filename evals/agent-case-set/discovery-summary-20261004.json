@@ -1,0 +1,78 @@
+{
+  "schema": "catena.agent_case_discovery.v1",
+  "date": "2026-10-04",
+  "status": "candidate_discovery_complete_review_pending",
+  "corpus": {
+    "source_files": 300,
+    "source_mib": 2216.0,
+    "skipped_sources": 0,
+    "sessions": 298,
+    "turns": 2588,
+    "turns_by_runtime": {
+      "codex": 2582,
+      "claude-code": 6
+    }
+  },
+  "clickhouse_aggregate": {
+    "owner_ids_included": 7,
+    "account_partitioning": false,
+    "rows_after_replacing_merge_tree_final": 93701,
+    "unique_trace_span_pairs": 93682,
+    "unique_traces": 3021,
+    "unique_sessions": 302,
+    "status_error_spans": 330,
+    "time_range": ["2025-10-10", "2026-09-30"],
+    "content_scan": "limited by wide input/output columns exceeding ClickHouse memory; text-level candidates are supplemented by local session parsing"
+  },
+  "clickhouse_case_candidates": {
+    "agent_turn_status_error_traces": 301,
+    "agent_turn_traces": 3015,
+    "error_turn_traces_with_shell_calls": 56,
+    "error_turn_traces_with_two_or_more_shell_calls": 49,
+    "shell_command_spans_in_error_marked_turns": 943,
+    "shell_tool_spans_with_error_status": 17,
+    "review_sample_size": 60,
+    "review_labels_complete": 0
+  },
+  "clickhouse_review": {
+    "sample_size": 60,
+    "candidate_multi_shell_error_turns": 30,
+    "control_zero_or_one_shell_call_turns": 30,
+    "labels_complete": 0,
+    "private_queue": ".local/failure-study/clickhouse-error-turn-review-20261004.csv"
+  },
+  "signals": {
+    "flagged_turns": 33,
+    "unflagged_turns": 2555,
+    "candidate_turn_rate": 0.01275,
+    "flagged_turn_state_counts": {
+      "ok": 28,
+      "aborted": 3,
+      "incomplete": 1,
+      "error": 1
+    },
+    "groups_by_affected_turns": [
+      {"signal": "unrecovered_tool_error", "tool": "shell_command", "affected_turns": 25},
+      {"signal": "repeated_identical_call", "tool": "shell_command", "affected_turns": 9},
+      {"signal": "repeated_identical_call", "tool": "web_search", "affected_turns": 1},
+      {"signal": "unrecovered_tool_error", "tool": "agent", "affected_turns": 1}
+    ],
+    "unique_source_files_with_signals": 15
+  },
+  "review": {
+    "sample_size": 60,
+    "sampled_flagged": 30,
+    "sampled_unflagged": 30,
+    "labelled": 0,
+    "precision": null,
+    "false_positive_rate": null
+  },
+  "limits": [
+    "A signal is a review hypothesis, not a task failure or root cause.",
+    "The 60-turn review sample is not labelled yet; no precision, recall, or false-positive rate is available.",
+    "The corpus contains 6 Claude Code turns; comparisons between runtimes are not supported by this sample.",
+    "The signal groups overlap at the turn level.",
+    "The current artifact is a discovery set. Only manually confirmed, anonymized tasks with independent verifiers qualify as executable Cases.",
+    "ClickHouse metadata identifies error-marked turns and shell activity. It does not establish task failure or repeated identical commands."
+  ]
+}

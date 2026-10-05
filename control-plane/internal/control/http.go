@@ -80,7 +80,17 @@ func NewHTTPHandlerWithMemory(
 		memory:           memory,
 		auth:             auth.normalized(),
 	}
+	if active, err := store.ListActiveExperiments(context.Background()); err == nil {
+		for _, experiment := range active {
+			go server.monitorExperiment(experiment)
+		}
+	}
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/experiment-cases", server.experimentCases)
+	mux.HandleFunc("POST /v1/experiments", server.createExperiment)
+	mux.HandleFunc("GET /v1/experiments", server.listExperiments)
+	mux.HandleFunc("GET /v1/experiments/{experiment_id}", server.getExperiment)
+	mux.HandleFunc("GET /v1/experiments/{experiment_id}/trials/{trial_index}", server.getExperimentEvidence)
 	mux.HandleFunc("GET /healthz", server.health)
 	mux.HandleFunc("GET /readyz", server.ready)
 	mux.HandleFunc("GET /v1/system/status", server.systemStatus)
@@ -117,10 +127,10 @@ func NewHTTPHandlerWithMemory(
 	mux.HandleFunc("GET /v1/memories/tasks", server.listMemoryTasks)
 	mux.HandleFunc("GET /v1/memories/tasks/{task_id}", server.memoryTaskStatus)
 	mux.HandleFunc("GET /v1/memories", server.listMemories)
+	mux.HandleFunc("POST /v1/memories", server.createMemoryNote)
 	mux.HandleFunc("POST /v1/memories/search", server.searchMemories)
 	mux.HandleFunc("GET /v1/memories/facts/{fact_id}/graph", server.memoryFactGraph)
 	mux.HandleFunc("POST /v1/otlp/v1/traces", server.ingestOTLPTraces)
-	mux.HandleFunc("POST /v1/ingest/conversations", server.ingestConversations)
 	mux.HandleFunc("GET /v1/conversations", server.listConversations)
 	mux.HandleFunc("GET /v1/conversations/{conversation_id}", server.getConversation)
 	mux.HandleFunc("POST /v1/conversations/{conversation_id}/memories", server.rememberConversation)
@@ -234,7 +244,7 @@ func (s *HTTPServer) systemStatus(w http.ResponseWriter, r *http.Request) {
 		"auth_mode":          map[bool]string{true: "github", false: "local"}[s.auth.Enabled()],
 		"edge_ingest":        "available",
 		"run_bundle":         runBundleSchema,
-		"evolution_protocol": "barena.xiaoba_evolution_request.v1",
+		"evolution_protocol": engineTurnRequestSchema,
 		"evolution_runtime":  evolutionRuntime.Status,
 		"trace_store":        traceStore,
 		"memory_store":       memoryStore,

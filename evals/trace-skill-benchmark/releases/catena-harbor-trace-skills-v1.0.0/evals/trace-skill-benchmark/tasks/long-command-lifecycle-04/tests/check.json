@@ -1,0 +1,11 @@
+{
+  "answer": {
+    "state": "completed",
+    "value": 44
+  },
+  "launch_once": true,
+  "protected": {
+    "experiment.py": "e7d0cf189b7b5b4f8512da66bd11ef07bf076da853f9fa7fcb637a981cc73663",
+    "README.md": "f42d0107788d1c1000e69d1540b81a204a21521aeb38b89d03521132c8319e53"
+  }
+}

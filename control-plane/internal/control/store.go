@@ -18,6 +18,11 @@ var (
 )
 
 type Store interface {
+	CreateExperiment(context.Context, Experiment) (Experiment, bool, error)
+	UpdateExperiment(context.Context, Experiment) error
+	GetExperiment(context.Context, string, string) (Experiment, error)
+	ListExperiments(context.Context, string) ([]Experiment, error)
+	ListActiveExperiments(context.Context) ([]Experiment, error)
 	CreateRun(context.Context, Run) error
 	AdoptScenarioRun(context.Context, Run, []EngineEvent) (Run, bool, error)
 	CreateRunBundle(context.Context, RunBundle) (RunBundle, bool, error)
@@ -86,6 +91,7 @@ type Store interface {
 }
 
 type MemoryStore struct {
+	experiments           map[string]Experiment
 	mu                    sync.RWMutex
 	runs                  map[string]Run
 	events                map[string][]EngineEvent
@@ -109,6 +115,7 @@ type MemoryStore struct {
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
+		experiments:           make(map[string]Experiment),
 		runs:                  make(map[string]Run),
 		events:                make(map[string][]EngineEvent),
 		users:                 make(map[string]User),

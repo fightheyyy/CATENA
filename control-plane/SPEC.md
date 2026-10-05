@@ -148,7 +148,7 @@ The durable worker queue remains the next control-plane reliability milestone.
   human sessions for credential management.
 - `GET /v1/traces` and Agent Trace windows: each summary includes its stable
   Agent identity and an optional exported Session identity.
-- `/v1/ingest/conversations`: `xiaoba.conversation_batch.v1`.
+- `POST /v1/ingest/conversations` is retired; historical Conversation reads remain available.
 - `/v1/ingest/run-bundles`: idempotent `barena.run_bundle.v1`.
 - `/v1/evolution-jobs`: Agent Trace Set creation, listing and detail.
 - `DELETE /v1/evolution-jobs/{job_id}`: owner-scoped terminal analysis deletion; queued and running Jobs return a conflict.

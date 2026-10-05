@@ -1,0 +1,303 @@
+{
+  "schema": "catena.trace_skill_benchmark.v1",
+  "version": "1.0.0",
+  "date": "2026-10-04",
+  "task_count": 28,
+  "skill_count": 7,
+  "model": "gpt-5.5",
+  "target": "Harbor native Codex CLI 0.160.0",
+  "repeats_per_arm": 3,
+  "arms": [
+    "without",
+    "with"
+  ],
+  "planned_rollouts": 168,
+  "environment": "Linux Docker / PowerShell 7 adaptation; not Windows replay",
+  "provenance": "Anonymous reconstruction and synthetic variants derived from audited failure mechanisms. No strict historical held-out claim.",
+  "tasks": [
+    {
+      "id": "powershell-execution-01",
+      "skill": "powershell-execution",
+      "title": "PowerShell processing variant 1",
+      "source_examples": [
+        "T00020/7",
+        "T00146/22"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "powershell-execution-02",
+      "skill": "powershell-execution",
+      "title": "PowerShell processing variant 2",
+      "source_examples": [
+        "T00020/7",
+        "T00146/22"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "powershell-execution-03",
+      "skill": "powershell-execution",
+      "title": "PowerShell processing variant 3",
+      "source_examples": [
+        "T00020/7",
+        "T00146/22"
+      ],
+      "type": "mutation"
+    },
+    {
+      "id": "powershell-execution-04",
+      "skill": "powershell-execution",
+      "title": "PowerShell processing variant 4",
+      "source_examples": [
+        "T00020/7",
+        "T00146/22"
+      ],
+      "type": "cross-project-transfer"
+    },
+    {
+      "id": "path-discovery-01",
+      "skill": "path-discovery",
+      "title": "Discover active configuration 1",
+      "source_examples": [
+        "T00020/16",
+        "T00094/61"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "path-discovery-02",
+      "skill": "path-discovery",
+      "title": "Discover active configuration 2",
+      "source_examples": [
+        "T00020/16",
+        "T00094/61"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "path-discovery-03",
+      "skill": "path-discovery",
+      "title": "Discover active configuration 3",
+      "source_examples": [
+        "T00020/16",
+        "T00094/61"
+      ],
+      "type": "mutation"
+    },
+    {
+      "id": "path-discovery-04",
+      "skill": "path-discovery",
+      "title": "Discover active configuration 4",
+      "source_examples": [
+        "T00020/16",
+        "T00094/61"
+      ],
+      "type": "cross-project-transfer"
+    },
+    {
+      "id": "reliable-file-editing-01",
+      "skill": "reliable-file-editing",
+      "title": "Scoped existing-file edit 1",
+      "source_examples": [
+        "T00310/3",
+        "T00343/14",
+        "T00397/6"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "reliable-file-editing-02",
+      "skill": "reliable-file-editing",
+      "title": "Scoped existing-file edit 2",
+      "source_examples": [
+        "T00310/3",
+        "T00343/14",
+        "T00397/6"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "reliable-file-editing-03",
+      "skill": "reliable-file-editing",
+      "title": "Scoped existing-file edit 3",
+      "source_examples": [
+        "T00310/3",
+        "T00343/14",
+        "T00397/6"
+      ],
+      "type": "mutation"
+    },
+    {
+      "id": "reliable-file-editing-04",
+      "skill": "reliable-file-editing",
+      "title": "Scoped existing-file edit 4",
+      "source_examples": [
+        "T00310/3",
+        "T00343/14",
+        "T00397/6"
+      ],
+      "type": "cross-project-transfer"
+    },
+    {
+      "id": "secret-output-control-01",
+      "skill": "secret-output-control",
+      "title": "Credential-safe configuration audit 1",
+      "source_examples": [
+        "T00002/4",
+        "T00009/14"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "secret-output-control-02",
+      "skill": "secret-output-control",
+      "title": "Credential-safe configuration audit 2",
+      "source_examples": [
+        "T00002/4",
+        "T00009/14"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "secret-output-control-03",
+      "skill": "secret-output-control",
+      "title": "Credential-safe configuration audit 3",
+      "source_examples": [
+        "T00002/4",
+        "T00009/14"
+      ],
+      "type": "mutation"
+    },
+    {
+      "id": "secret-output-control-04",
+      "skill": "secret-output-control",
+      "title": "Credential-safe configuration audit 4",
+      "source_examples": [
+        "T00002/4",
+        "T00009/14"
+      ],
+      "type": "cross-project-transfer"
+    },
+    {
+      "id": "python-environment-selection-01",
+      "skill": "python-environment-selection",
+      "title": "Offline project interpreter selection 1",
+      "source_examples": [
+        "T00572/2",
+        "T01011/12"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "python-environment-selection-02",
+      "skill": "python-environment-selection",
+      "title": "Offline project interpreter selection 2",
+      "source_examples": [
+        "T00572/2",
+        "T01011/12"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "python-environment-selection-03",
+      "skill": "python-environment-selection",
+      "title": "Offline project interpreter selection 3",
+      "source_examples": [
+        "T00572/2",
+        "T01011/12"
+      ],
+      "type": "mutation"
+    },
+    {
+      "id": "python-environment-selection-04",
+      "skill": "python-environment-selection",
+      "title": "Offline project interpreter selection 4",
+      "source_examples": [
+        "T00572/2",
+        "T01011/12"
+      ],
+      "type": "cross-project-transfer"
+    },
+    {
+      "id": "git-context-isolation-01",
+      "skill": "git-context-isolation",
+      "title": "Git context and preservation 1",
+      "source_examples": [
+        "T00057/16",
+        "T00310/19"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "git-context-isolation-02",
+      "skill": "git-context-isolation",
+      "title": "Git context and preservation 2",
+      "source_examples": [
+        "T00057/16",
+        "T00310/19"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "git-context-isolation-03",
+      "skill": "git-context-isolation",
+      "title": "Git context and preservation 3",
+      "source_examples": [
+        "T00057/16",
+        "T00310/19"
+      ],
+      "type": "mutation"
+    },
+    {
+      "id": "git-context-isolation-04",
+      "skill": "git-context-isolation",
+      "title": "Git context and preservation 4",
+      "source_examples": [
+        "T00057/16",
+        "T00310/19"
+      ],
+      "type": "cross-project-transfer"
+    },
+    {
+      "id": "long-command-lifecycle-01",
+      "skill": "long-command-lifecycle",
+      "title": "Delayed execution lifecycle 1",
+      "source_examples": [
+        "T00049/17",
+        "T00252/2"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "long-command-lifecycle-02",
+      "skill": "long-command-lifecycle",
+      "title": "Delayed execution lifecycle 2",
+      "source_examples": [
+        "T00049/17",
+        "T00252/2"
+      ],
+      "type": "historical-reconstruction"
+    },
+    {
+      "id": "long-command-lifecycle-03",
+      "skill": "long-command-lifecycle",
+      "title": "Delayed execution lifecycle 3",
+      "source_examples": [
+        "T00049/17",
+        "T00252/2"
+      ],
+      "type": "mutation"
+    },
+    {
+      "id": "long-command-lifecycle-04",
+      "skill": "long-command-lifecycle",
+      "title": "Delayed execution lifecycle 4",
+      "source_examples": [
+        "T00049/17",
+        "T00252/2"
+      ],
+      "type": "cross-project-transfer"
+    }
+  ]
+}

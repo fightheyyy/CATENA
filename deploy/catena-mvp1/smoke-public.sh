@@ -16,7 +16,7 @@ compose=(
   --env-file "$env_file"
 )
 
-required_services=(catena-core catena-runner caddy clickhouse postgres)
+required_services=(catena-core catena-engine catena-runner caddy clickhouse postgres)
 for service in "${required_services[@]}"; do
   container_id="$("${compose[@]}" ps -q "$service")"
   if [[ -z "$container_id" ]]; then

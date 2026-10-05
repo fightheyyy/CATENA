@@ -38,7 +38,6 @@ const apiCopy = {
     created: "密钥已生成，可从对应行复制。",
     endpoints: "接收地址",
     otlp: "OTLP Trace",
-    conversation: "XiaoBaOS 对话",
     keys: "Agent 接入",
     keysBody: "撤销密钥只会停止后续上传，Agent 与历史数据会继续保留。",
     empty: "还没有接入 Agent。",
@@ -51,7 +50,6 @@ const apiCopy = {
     copy: "复制",
     copied: "已复制",
     copyOtlp: "复制 OTLP Trace 接收地址",
-    copyConversation: "复制 XiaoBaOS 对话接收地址",
     revoke: "撤销密钥",
     confirmRevoke: "确认撤销",
     recreate: "重新生成",
@@ -84,9 +82,8 @@ const apiCopy = {
     create: "Generate ingest key",
     creating: "Generating",
     created: "Key generated. Copy it from the corresponding row.",
-    endpoints: "Ingest endpoints",
+    endpoints: "Ingest endpoint",
     otlp: "OTLP Trace",
-    conversation: "XiaoBaOS conversation",
     keys: "Agent connections",
     keysBody: "Revoking a key stops future ingestion. The Agent and its historical data remain available.",
     empty: "No Agent connected yet.",
@@ -99,7 +96,6 @@ const apiCopy = {
     copy: "Copy",
     copied: "Copied",
     copyOtlp: "Copy OTLP Trace ingest endpoint",
-    copyConversation: "Copy XiaoBaOS conversation ingest endpoint",
     revoke: "Revoke key",
     confirmRevoke: "Confirm revoke",
     recreate: "Regenerate",
@@ -123,7 +119,7 @@ export function ApiManagementPage({ locale, workspace, onRefresh, onOpenAgent }:
   const [credentialBusy, setCredentialBusy] = useState(false);
   const [localCredentials, setLocalCredentials] = useState<Record<string, ApiToken>>({});
   const [copiedID, setCopiedID] = useState("");
-  const [copiedEndpoint, setCopiedEndpoint] = useState<"otlp" | "conversation" | "">("");
+  const [copiedEndpoint, setCopiedEndpoint] = useState(false);
   const [confirmID, setConfirmID] = useState("");
   const [revokedAgentIDs, setRevokedAgentIDs] = useState<Set<string>>(() => new Set());
   const [llm, setLLM] = useState<EvolutionModelSettings>({ provider: "", base_url: "", model: "", api_key_configured: false, configured: false });
@@ -136,7 +132,6 @@ export function ApiManagementPage({ locale, workspace, onRefresh, onOpenAgent }:
   const [llmError, setLLMError] = useState("");
   const [confirmLLMClear, setConfirmLLMClear] = useState(false);
   const otlpEndpoint = `${window.location.origin}/v1/otlp/v1/traces`;
-  const conversationEndpoint = `${window.location.origin}/v1/ingest/conversations`;
 
   useEffect(() => {
     let active = true;
@@ -197,9 +192,9 @@ export function ApiManagementPage({ locale, workspace, onRefresh, onOpenAgent }:
     }
   };
 
-  const copyEndpoint = async (kind: "otlp" | "conversation", value: string) => {
-    const ok = await copyText(value);
-    setCopiedEndpoint(ok ? kind : "");
+  const copyEndpoint = async () => {
+    const ok = await copyText(otlpEndpoint);
+    setCopiedEndpoint(ok);
     if (!ok) setError(locale === "zh" ? "复制失败，请允许剪贴板访问后重试。" : "Copy failed. Allow clipboard access and retry.");
   };
 
@@ -319,17 +314,8 @@ export function ApiManagementPage({ locale, workspace, onRefresh, onOpenAgent }:
             <dt>{t.otlp}</dt>
             <dd>
               <EndpointAddress value={otlpEndpoint} />
-              <button className="endpoint-copy-button" type="button" aria-label={t.copyOtlp} onClick={() => void copyEndpoint("otlp", otlpEndpoint)}>
-                {copiedEndpoint === "otlp" ? t.copied : t.copy}
-              </button>
-            </dd>
-          </div>
-          <div>
-            <dt>{t.conversation}</dt>
-            <dd>
-              <EndpointAddress value={conversationEndpoint} />
-              <button className="endpoint-copy-button" type="button" aria-label={t.copyConversation} onClick={() => void copyEndpoint("conversation", conversationEndpoint)}>
-                {copiedEndpoint === "conversation" ? t.copied : t.copy}
+              <button className="endpoint-copy-button" type="button" aria-label={t.copyOtlp} onClick={() => void copyEndpoint()}>
+                {copiedEndpoint ? t.copied : t.copy}
               </button>
             </dd>
           </div>

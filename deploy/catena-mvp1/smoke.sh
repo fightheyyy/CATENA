@@ -8,7 +8,7 @@ if [[ -f "$deploy_dir/.env" ]]; then
   compose+=(--env-file "$deploy_dir/.env")
 fi
 
-expected=$'catena-core\ncatena-runner\nclickhouse\npostgres'
+expected=$'catena-core\ncatena-engine\ncatena-runner\nclickhouse\npostgres'
 actual="$("${compose[@]}" config --services | sort)"
 if [[ "$actual" != "$expected" ]]; then
   echo "unexpected service set:" >&2
@@ -16,7 +16,7 @@ if [[ "$actual" != "$expected" ]]; then
   exit 1
 fi
 
-for service in catena-core catena-runner clickhouse postgres; do
+for service in catena-core catena-engine catena-runner clickhouse postgres; do
   container_id="$("${compose[@]}" ps -q "$service")"
   if [[ -z "$container_id" ]]; then
     echo "$service has no container" >&2
@@ -80,4 +80,4 @@ fi
 "${compose[@]}" exec -T postgres pg_isready -U postgres -d postgres
 "${compose[@]}" exec -T clickhouse wget -qO- http://127.0.0.1:8123/ping
 echo
-echo "Catena MVP1 smoke passed: React + Go is public, four services are healthy, and ingestion is protected."
+echo "Catena MVP1 smoke passed: React + Go is public, five services are healthy, and ingestion is protected."

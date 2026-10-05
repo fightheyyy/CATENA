@@ -1,0 +1,10 @@
+{
+  "answer": {
+    "paid_count": 6,
+    "paid_cents": 1077
+  },
+  "required_command": "pwsh",
+  "protected": {
+    "input data/orders.json": "0ea67b0db6c7b63332eb50f0ea95b0ab9edc27c427251983e4ea4ea9e29e1f05"
+  }
+}

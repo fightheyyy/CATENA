@@ -666,6 +666,7 @@ type EvolutionJob struct {
 	Candidate          *EvolutionCandidate       `json:"candidate,omitempty"`
 	Review             *EvolutionReview          `json:"review,omitempty"`
 	EvidencePack       *EvolutionEvidencePack    `json:"evidence_pack,omitempty"`
+	MemoryContext      []MemoryRecallItem        `json:"memory_context,omitempty"`
 	Boundary           EvolutionEvidenceBoundary `json:"boundary"`
 	Error              string                    `json:"error,omitempty"`
 	CreatedAt          time.Time                 `json:"created_at"`

@@ -1,0 +1,287 @@
+{
+  "schema": "catena.public_skill_experiment.v1",
+  "created_at": "2026-10-02T22:36:55.660133+00:00",
+  "runtime": "OpenAI Agents SDK",
+  "sdk_version": "0.22.3",
+  "model": "gpt-5.5",
+  "provider": "local CLIProxyAPI 7.3.2",
+  "activation": "explicit_skill_instructions",
+  "design": {
+    "cases": 3,
+    "repeats_per_case_per_arm": 2,
+    "order": "paired alternating",
+    "environment": "Windows PowerShell; rg absent; frozen read-only fixtures",
+    "fixtures": "anonymized tasks derived from real tool errors; not original repository replay"
+  },
+  "baseline": {
+    "passed": 6,
+    "total": 6,
+    "valid_trials": 6,
+    "missing_rg_errors": 4,
+    "command_count": 25,
+    "elapsed_seconds": 82.172,
+    "input_tokens": 19887,
+    "output_tokens": 1367,
+    "cached_input_tokens": 0
+  },
+  "candidate": {
+    "passed": 6,
+    "total": 6,
+    "valid_trials": 6,
+    "missing_rg_errors": 0,
+    "command_count": 26,
+    "elapsed_seconds": 85.593,
+    "input_tokens": 25741,
+    "output_tokens": 1613,
+    "cached_input_tokens": 1536
+  },
+  "runs": [
+    {
+      "case_id": "command-handler",
+      "repeat": 1,
+      "variant": "baseline",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "63d17d85d1a9cb04da14f04dcdce2a78fe219a87515caf71cbf322de42070546",
+      "prompt_sha256": "0181e0b36eb5914715a766b23d460be36770aade49b9735b9d1a30467391cf0b",
+      "policy_rejections": 0,
+      "missing_rg_errors": 1,
+      "command_count": 3,
+      "failed_commands": 1,
+      "elapsed_seconds": 12.281,
+      "usage": {
+        "requests": 4,
+        "input_tokens": 3793,
+        "output_tokens": 201,
+        "cached_input_tokens": 0
+      }
+    },
+    {
+      "case_id": "command-handler",
+      "repeat": 1,
+      "variant": "candidate",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "63d17d85d1a9cb04da14f04dcdce2a78fe219a87515caf71cbf322de42070546",
+      "prompt_sha256": "0181e0b36eb5914715a766b23d460be36770aade49b9735b9d1a30467391cf0b",
+      "policy_rejections": 0,
+      "missing_rg_errors": 0,
+      "command_count": 5,
+      "failed_commands": 0,
+      "elapsed_seconds": 21.484,
+      "usage": {
+        "requests": 6,
+        "input_tokens": 6857,
+        "output_tokens": 447,
+        "cached_input_tokens": 0
+      }
+    },
+    {
+      "case_id": "command-handler",
+      "repeat": 2,
+      "variant": "candidate",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "63d17d85d1a9cb04da14f04dcdce2a78fe219a87515caf71cbf322de42070546",
+      "prompt_sha256": "0181e0b36eb5914715a766b23d460be36770aade49b9735b9d1a30467391cf0b",
+      "policy_rejections": 0,
+      "missing_rg_errors": 0,
+      "command_count": 4,
+      "failed_commands": 0,
+      "elapsed_seconds": 15.078,
+      "usage": {
+        "requests": 5,
+        "input_tokens": 4997,
+        "output_tokens": 210,
+        "cached_input_tokens": 0
+      }
+    },
+    {
+      "case_id": "command-handler",
+      "repeat": 2,
+      "variant": "baseline",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "63d17d85d1a9cb04da14f04dcdce2a78fe219a87515caf71cbf322de42070546",
+      "prompt_sha256": "0181e0b36eb5914715a766b23d460be36770aade49b9735b9d1a30467391cf0b",
+      "policy_rejections": 0,
+      "missing_rg_errors": 1,
+      "command_count": 4,
+      "failed_commands": 1,
+      "elapsed_seconds": 13.937,
+      "usage": {
+        "requests": 4,
+        "input_tokens": 3609,
+        "output_tokens": 247,
+        "cached_input_tokens": 0
+      }
+    },
+    {
+      "case_id": "role-config",
+      "repeat": 1,
+      "variant": "baseline",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "c0620072790f298644721632143b64e51463d90da6c3ca7fa2f701f7dada6a8f",
+      "prompt_sha256": "97f464a1b84a82542fe8a38542dec06e75adc4fb60e6fb4d8c9b41223166d2ab",
+      "policy_rejections": 0,
+      "missing_rg_errors": 0,
+      "command_count": 5,
+      "failed_commands": 0,
+      "elapsed_seconds": 9.875,
+      "usage": {
+        "requests": 3,
+        "input_tokens": 2486,
+        "output_tokens": 178,
+        "cached_input_tokens": 0
+      }
+    },
+    {
+      "case_id": "role-config",
+      "repeat": 1,
+      "variant": "candidate",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "c0620072790f298644721632143b64e51463d90da6c3ca7fa2f701f7dada6a8f",
+      "prompt_sha256": "97f464a1b84a82542fe8a38542dec06e75adc4fb60e6fb4d8c9b41223166d2ab",
+      "policy_rejections": 0,
+      "missing_rg_errors": 0,
+      "command_count": 8,
+      "failed_commands": 0,
+      "elapsed_seconds": 16.219,
+      "usage": {
+        "requests": 4,
+        "input_tokens": 5393,
+        "output_tokens": 354,
+        "cached_input_tokens": 1536
+      }
+    },
+    {
+      "case_id": "role-config",
+      "repeat": 2,
+      "variant": "candidate",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "c0620072790f298644721632143b64e51463d90da6c3ca7fa2f701f7dada6a8f",
+      "prompt_sha256": "97f464a1b84a82542fe8a38542dec06e75adc4fb60e6fb4d8c9b41223166d2ab",
+      "policy_rejections": 0,
+      "missing_rg_errors": 0,
+      "command_count": 5,
+      "failed_commands": 0,
+      "elapsed_seconds": 13.562,
+      "usage": {
+        "requests": 4,
+        "input_tokens": 3720,
+        "output_tokens": 290,
+        "cached_input_tokens": 0
+      }
+    },
+    {
+      "case_id": "role-config",
+      "repeat": 2,
+      "variant": "baseline",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "c0620072790f298644721632143b64e51463d90da6c3ca7fa2f701f7dada6a8f",
+      "prompt_sha256": "97f464a1b84a82542fe8a38542dec06e75adc4fb60e6fb4d8c9b41223166d2ab",
+      "policy_rejections": 0,
+      "missing_rg_errors": 0,
+      "command_count": 5,
+      "failed_commands": 0,
+      "elapsed_seconds": 11.297,
+      "usage": {
+        "requests": 3,
+        "input_tokens": 2356,
+        "output_tokens": 193,
+        "cached_input_tokens": 0
+      }
+    },
+    {
+      "case_id": "absent-symbol",
+      "repeat": 1,
+      "variant": "baseline",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "06796e0d82316176daadcd2912d2f9d9a2bfea5734e7ac8b82172ed17a09befd",
+      "prompt_sha256": "abcf14cd0c52ef415c4ca03f068a5005e9256f23a9c3c8237ca7cf8df264952d",
+      "policy_rejections": 0,
+      "missing_rg_errors": 1,
+      "command_count": 3,
+      "failed_commands": 1,
+      "elapsed_seconds": 17.563,
+      "usage": {
+        "requests": 4,
+        "input_tokens": 3159,
+        "output_tokens": 230,
+        "cached_input_tokens": 0
+      }
+    },
+    {
+      "case_id": "absent-symbol",
+      "repeat": 1,
+      "variant": "candidate",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "06796e0d82316176daadcd2912d2f9d9a2bfea5734e7ac8b82172ed17a09befd",
+      "prompt_sha256": "abcf14cd0c52ef415c4ca03f068a5005e9256f23a9c3c8237ca7cf8df264952d",
+      "policy_rejections": 0,
+      "missing_rg_errors": 0,
+      "command_count": 2,
+      "failed_commands": 0,
+      "elapsed_seconds": 9.75,
+      "usage": {
+        "requests": 3,
+        "input_tokens": 2400,
+        "output_tokens": 162,
+        "cached_input_tokens": 0
+      }
+    },
+    {
+      "case_id": "absent-symbol",
+      "repeat": 2,
+      "variant": "candidate",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "06796e0d82316176daadcd2912d2f9d9a2bfea5734e7ac8b82172ed17a09befd",
+      "prompt_sha256": "abcf14cd0c52ef415c4ca03f068a5005e9256f23a9c3c8237ca7cf8df264952d",
+      "policy_rejections": 0,
+      "missing_rg_errors": 0,
+      "command_count": 2,
+      "failed_commands": 0,
+      "elapsed_seconds": 9.5,
+      "usage": {
+        "requests": 3,
+        "input_tokens": 2374,
+        "output_tokens": 150,
+        "cached_input_tokens": 0
+      }
+    },
+    {
+      "case_id": "absent-symbol",
+      "repeat": 2,
+      "variant": "baseline",
+      "passed": true,
+      "valid_for_comparison": true,
+      "fixture_sha256": "06796e0d82316176daadcd2912d2f9d9a2bfea5734e7ac8b82172ed17a09befd",
+      "prompt_sha256": "abcf14cd0c52ef415c4ca03f068a5005e9256f23a9c3c8237ca7cf8df264952d",
+      "policy_rejections": 0,
+      "missing_rg_errors": 1,
+      "command_count": 5,
+      "failed_commands": 1,
+      "elapsed_seconds": 17.219,
+      "usage": {
+        "requests": 5,
+        "input_tokens": 4484,
+        "output_tokens": 318,
+        "cached_input_tokens": 0
+      }
+    }
+  ],
+  "frozen_sha256": {
+    "evals/rg-missing-search/manifest.json": "647851320fc84e7deb021abd48195b62b59925d2770040c919d61b6eb7b7fe88",
+    "evals/rg-missing-search/read_only_shell.ps1": "c6b48fa310cfef99c5f43ba75a116b2e7334b29f4fa629fc6cb671f2c5c3c7fd",
+    "evals/rg-missing-search/verify.py": "4de1419a3f9e70f603155e0d7abf7e48e1be763f0976d09dc51299cf3da208bd",
+    "evals/rg-missing-search/skill/SKILL.md": "447b3ea74d2657b639f8521d546b3ac58f91c86d2ec9f76270739e023c667857"
+  },
+  "conclusion": "Reduced unavailable-rg calls in this explicitly activated sample; no answer-success improvement or token-efficiency improvement demonstrated."
+}

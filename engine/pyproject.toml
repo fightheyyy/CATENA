@@ -1,0 +1,44 @@
+[project]
+name = "catena-engine"
+version = "0.1.0"
+description = "Catena analysis engine: runs Inspector, Evolution and Reviewer turns on the owner's LLM."
+requires-python = ">=3.12"
+license = "Apache-2.0"
+dependencies = [
+  "openai-agents==0.22.3",
+  "httpx==0.28.1",
+]
+
+[project.scripts]
+catena-engine = "catena_engine.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["catena_engine"]
+
+[project.optional-dependencies]
+evaluation = [
+  "harbor==0.23.0",
+]
+evaluation-e2b = [
+  "harbor[e2b]==0.23.0",
+]
+dev = [
+  "pytest==8.4.2",
+  "ruff==0.13.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-q", "--strict-markers"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]

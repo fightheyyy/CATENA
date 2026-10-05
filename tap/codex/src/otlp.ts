@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { canonicalString, type CanonicalEventGraph, type CanonicalNode, type CanonicalTrace } from "./canonical.js";
 
 export const CATENA_RUNTIME_VERSION = "0.2.0";
+const MAX_PAYLOAD_BYTES = 8 * 1024 * 1024;
 
 type AnyValue =
   | { stringValue: string }
@@ -138,6 +139,67 @@ export function traceToOTLP(graph: CanonicalEventGraph, trace: CanonicalTrace): 
   };
 }
 
+export function splitOTLPPayload(payload: OTLPTracePayload): OTLPTracePayload[] {
+  const resource = payload.resourceSpans[0];
+  const scopes = resource?.scopeSpans as Array<Record<string, unknown>> | undefined;
+  const scope = scopes?.[0];
+  const spans = scope?.spans as OTLPSpan[] | undefined;
+  if (!resource || !scope || !spans) throw new Error("unexpected OTLP trace payload shape");
+  const frame = (selected: OTLPSpan[]): OTLPTracePayload => ({
+    resourceSpans: [{ ...resource, scopeSpans: [{ ...scope, spans: selected }] }],
+  });
+  const overhead = Buffer.byteLength(JSON.stringify(frame([])), "utf-8");
+  const chunks: OTLPTracePayload[] = [];
+  let current: OTLPSpan[] = [];
+  let size = overhead;
+  for (const original of spans) {
+    const span = fitOversizedSpan(original, overhead);
+    const spanBytes = Buffer.byteLength(JSON.stringify(span), "utf-8") + 1;
+    if (overhead + spanBytes > MAX_PAYLOAD_BYTES) throw new Error("one OTLP span exceeds upload limit after attribute truncation");
+    if (current.length && size + spanBytes > MAX_PAYLOAD_BYTES) {
+      chunks.push(frame(current));
+      current = [];
+      size = overhead;
+    }
+    current.push(span);
+    size += spanBytes;
+  }
+  if (current.length || chunks.length === 0) chunks.push(frame(current));
+  return chunks;
+}
+
+function fitOversizedSpan(span: OTLPSpan, overhead: number): OTLPSpan {
+  const limit = MAX_PAYLOAD_BYTES - overhead - 1;
+  if (Buffer.byteLength(JSON.stringify(span), "utf-8") <= limit) return span;
+  const original = (span.attributes as OTLPAttribute[] | undefined) ?? [];
+  const copied = original.map((attribute) => ({ key: attribute.key, value: { ...attribute.value } }));
+  const result: OTLPSpan = { ...span, attributes: copied };
+  const metadata = new Map<string, OTLPAttribute[]>();
+  const candidates = original
+    .map((attribute, index) => ({ attribute, index,
+      bytes: "stringValue" in attribute.value ? Buffer.byteLength(attribute.value.stringValue, "utf-8") : 0 }))
+    .filter((item) => item.bytes > 1024)
+    .sort((left, right) => right.bytes - left.bytes);
+  for (const cap of [128 * 1024, 16 * 1024, 1024]) {
+    for (const { attribute, index, bytes } of candidates) {
+      if (bytes <= cap || !("stringValue" in attribute.value)) continue;
+      const current = copied[index].value;
+      if (!("stringValue" in current) || Buffer.byteLength(current.stringValue, "utf-8") <= cap) continue;
+      const preview = Buffer.from(attribute.value.stringValue).subarray(0, cap).toString("utf-8");
+      copied[index].value = { stringValue: `${preview}\n[Catena truncated this attribute for OTLP; original bytes: ${bytes}]` };
+      if (!metadata.has(attribute.key)) {
+        metadata.set(attribute.key, [
+          { key: `catena.truncated.${attribute.key}.original_bytes`, value: { intValue: String(bytes) } },
+          { key: `catena.truncated.${attribute.key}.sha256`, value: { stringValue: createHash("sha256").update(attribute.value.stringValue).digest("hex") } },
+        ]);
+      }
+      result.attributes = [...copied, ...Array.from(metadata.values()).flat()];
+      if (Buffer.byteLength(JSON.stringify(result), "utf-8") <= limit) return result;
+    }
+  }
+  throw new Error("one OTLP span exceeds upload limit after selective attribute truncation");
+}
+
 export function endpointFromEnvironment(environment = process.env): string {
   const explicit = environment.CATENA_OTLP_ENDPOINT?.trim();
   if (explicit) return explicit;
@@ -191,7 +253,18 @@ export async function exportGraph(
   const uploaded: string[] = [];
   const failed: string[] = [];
   for (const trace of traces) {
-    const ok = await sendOTLP(traceToOTLP(graph, trace), options);
+    let ok = true;
+    try {
+      for (const payload of splitOTLPPayload(traceToOTLP(graph, trace))) {
+        if (!(await sendOTLP(payload, options))) {
+          ok = false;
+          break;
+        }
+      }
+    } catch (error) {
+      if (options.debug) console.error("[catena-runtime] OTLP preparation failed", error);
+      ok = false;
+    }
     (ok ? uploaded : failed).push(trace.turn_id);
   }
   return { uploaded, failed };

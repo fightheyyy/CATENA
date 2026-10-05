@@ -488,6 +488,14 @@ function TraceDetailWorkspace({
   const hasCanonicalNarrative = semanticView.canonicalNodeCount > 0;
   const [lens, setLens] = useState<TraceLens>(hasCanonicalNarrative ? "narrative" : "agent");
   const [stepLimit, setStepLimit] = useState(TRACE_STEP_PAGE_SIZE);
+  const [memoryReady, setMemoryReady] = useState(false);
+  const [remembering, setRemembering] = useState(false);
+  const [memoryMessage, setMemoryMessage] = useState("");
+  useEffect(() => {
+    let active=true;
+    void api.memoryStatus().then((status)=>{if(active)setMemoryReady(status.status==="available");}).catch(()=>{});
+    return ()=>{active=false;};
+  },[]);
   const visible = useMemo(
     () => boundedTraceSteps(semanticView, lens, stepLimit),
     [lens, semanticView, stepLimit],
@@ -541,7 +549,14 @@ function TraceDetailWorkspace({
           <span className={traceState === "ok" && detail.summary.error_count === 0 ? "trace-detail-status" : "trace-detail-status error"}>
             {traceStatus}
           </span>
+          {memoryReady && <button className="text-button" type="button" disabled={remembering} onClick={async()=>{
+            setRemembering(true);setMemoryMessage("");
+            try { await api.rememberTrace(detail.summary.trace_id);setMemoryMessage(locale==="zh"?"已开始提炼，可在记忆页查看进度。":"Extraction started. View progress in Memory."); }
+            catch {setMemoryMessage(locale==="zh"?"暂时无法提炼，请稍后重试。":"Could not extract memory. Please retry.");}
+            finally {setRemembering(false);}
+          }}>{remembering?(locale==="zh"?"正在提交":"Submitting"):(locale==="zh"?"提炼为记忆":"Extract memory")}</button>}
         </div>
+        {memoryMessage && <p role="status">{memoryMessage}</p>}
         <div className="trace-detail-facts">
           <span>{detail.summary.span_count} {t.spans}</span>
           <span className={detail.summary.error_count > 0 ? "has-error" : ""}>{detail.summary.error_count} {t.errors}</span>
