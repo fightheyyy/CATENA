@@ -102,8 +102,10 @@ availability or quality. A real-provider pass must be recorded separately.
 `5m`, valid `1ms` through `15m`). Go sends that budget as `timeout_ms`; its HTTP
 context allows another 10 seconds for Engine process-group termination and response
 transport. The CLI adapter sends SIGTERM, escalates to SIGKILL after one second,
-drains pipes and removes the temporary session before returning. There are no
-implicit model/SDK retries. Three stages may each consume the configured budget.
+drains pipes and removes the temporary session before returning. Codex request
+and stream retries are configured to zero; SDK rollback retains its existing
+provider retry policy. No automatic backend fallback occurs. Three stages may
+each consume the configured budget.
 A disconnected client still does not cancel a running turn; it ends at its own
 budget. A killed Engine/container cannot return a result to Go.
 
