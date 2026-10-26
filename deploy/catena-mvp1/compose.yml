@@ -53,6 +53,8 @@ services:
       dockerfile: deploy/catena-mvp1/Dockerfile.engine
     image: catena/engine:mvp1
     environment:
+      CATENA_ENGINE_BACKEND: ${CATENA_ENGINE_BACKEND:-codex}
+      CATENA_CODEX_REASONING_EFFORT: ${CATENA_CODEX_REASONING_EFFORT:-low}
       CATENA_ENGINE_ADDR: 0.0.0.0:8790
       CATENA_ENGINE_TOKEN: ${CATENA_ENGINE_TOKEN:-catena-local-engine-token-change-me}
     healthcheck:

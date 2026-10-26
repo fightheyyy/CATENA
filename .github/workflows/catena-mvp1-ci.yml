@@ -68,6 +68,17 @@ jobs:
 
   control-plane:
     runs-on: ubuntu-latest
+    services:
+      codex-test-postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: codex-test-only
+          POSTGRES_DB: codex_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s
+          --health-timeout 5s --health-retries 30
     defaults:
       run:
         working-directory: control-plane
@@ -80,6 +91,22 @@ jobs:
       - run: go test ./...
       - run: go vet ./...
       - run: go test -race ./internal/control
+      - name: Build pinned Codex Engine
+        run: |
+          docker build -f ../deploy/catena-mvp1/Dockerfile.engine -t catena-engine-codex ..
+          docker run -d --name codex-test-engine --add-host host.docker.internal:host-gateway -p 18790:8790 catena-engine-codex
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18790/readyz; then exit 0; fi
+            sleep 1
+          done
+          docker logs codex-test-engine
+          exit 1
+      - name: Real CLI three-stage API and PostgreSQL acceptance
+        env:
+          CATENA_CODEX_ACCEPT_ENGINE_URL: http://127.0.0.1:18790
+          CATENA_CODEX_ACCEPT_CALLBACK_HOST: host.docker.internal
+          BARENA_TEST_DATABASE_URL: postgresql://postgres:codex-test-only@127.0.0.1:5432/codex_acceptance?sslmode=disable
+        run: go test -run TestCodexEngineEvolutionAcceptance -v -timeout 10m ./internal/control
 
   tap:
     runs-on: ubuntu-latest

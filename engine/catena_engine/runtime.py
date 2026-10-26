@@ -1,8 +1,9 @@
-"""Role turns on the owner's LLM through the OpenAI Agents SDK."""
+"""Role execution selection; the SDK remains available for explicit rollback."""
 
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from collections.abc import Callable
 from typing import Any
@@ -26,7 +27,20 @@ def openai_compatible_model(config: ModelConfig) -> tuple[Model, Callable[[], An
     return OpenAIChatCompletionsModel(model=config.model, openai_client=client), client.close
 
 
-async def run_turn(request: TurnRequest, model_factory: ModelFactory = openai_compatible_model) -> dict[str, Any]:
+async def run_turn(request: TurnRequest, model_factory: ModelFactory | None = None) -> dict[str, Any]:
+    # An injected factory is the existing SDK test/embedding seam. Production
+    # defaults to Codex; never silently retry evidence on a different harness.
+    backend = os.environ.get("CATENA_ENGINE_BACKEND", "codex")
+    if model_factory is None and backend == "codex":
+        from .codex_runtime import run_codex_turn
+
+        return await run_codex_turn(request)
+    if model_factory is None and backend != "sdk":
+        return _failed("runtime_config", "CATENA_ENGINE_BACKEND must be codex or sdk", time.monotonic())
+    return await _run_sdk_turn(request, model_factory or openai_compatible_model)
+
+
+async def _run_sdk_turn(request: TurnRequest, model_factory: ModelFactory) -> dict[str, Any]:
     role = ROLES[request.role]
     model, close = model_factory(request.model)
     agent = Agent(
