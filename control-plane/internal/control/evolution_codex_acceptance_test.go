@@ -35,7 +35,21 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 	}
 	var mu sync.Mutex
 	var seen []string
+	slowCancelled := make(chan struct{}, 1)
+	stopSlow := make(chan struct{})
 	stub := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/slow/responses" {
+			_, _ = io.Copy(io.Discard, r.Body)
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = io.WriteString(w, "event: response.created\ndata: {\"type\":\"response.created\",\"response\":{\"id\":\"slow\",\"status\":\"in_progress\",\"output\":[]}}\n\n")
+			w.(http.Flusher).Flush()
+			select {
+			case <-r.Context().Done():
+				slowCancelled <- struct{}{}
+			case <-stopSlow:
+			}
+			return
+		}
 		if r.URL.Path != "/v1/responses" {
 			http.NotFound(w, r)
 			return
@@ -112,6 +126,7 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 	stub.Listener = listener
 	stub.Start()
 	defer stub.Close()
+	defer close(stopSlow)
 	base := stub.URL
 	if host := os.Getenv("CATENA_CODEX_ACCEPT_CALLBACK_HOST"); host != "" {
 		base = "http://" + net.JoinHostPort(host, fmt.Sprint(stub.Listener.Addr().(*net.TCPAddr).Port))
@@ -205,7 +220,14 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 		}
 	}
 	for _, stage := range job.Stages {
-		t.Logf("role=%s elapsed=%s raw=%s", stage.Role, stage.FinishedAt.Sub(*stage.StartedAt), stage.RawOutput)
+		var result struct {
+			DurationMS int64            `json:"duration_ms"`
+			Usage      map[string]int64 `json:"usage"`
+		}
+		if err := json.Unmarshal(stage.RawOutput, &result); err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("role=%s elapsed=%s duration_ms=%d usage=%v", stage.Role, stage.FinishedAt.Sub(*stage.StartedAt), result.DurationMS, result.Usage)
 	}
 	mu.Lock()
 	defer mu.Unlock()
@@ -232,6 +254,22 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 		})
 		if err == nil || !strings.Contains(err.Error(), "responses_incompatible") || strings.Contains(err.Error(), credentials.APIKey) {
 			t.Fatal("unsupported Responses endpoint was not safely reported")
+		}
+
+		timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		_, err = manager.RunRoleTurn(timeoutCtx, EvolutionRoleTurnInput{
+			RequestID: newID("codex-timeout"), RunID: job.ID, Role: "inspector",
+			Prompt: "Return a JSON finding.", Timeout: 5 * time.Second,
+			Model: EvolutionModelCredentials{Provider: "openai", BaseURL: base + "/slow", Model: credentials.Model, APIKey: "stub-key"},
+		})
+		if err == nil || !strings.Contains(err.Error(), "turn timeout:") || timeoutCtx.Err() != nil {
+			t.Fatalf("Engine did not terminate and return its own timeout within cleanup grace: %v", err)
+		}
+		select {
+		case <-slowCancelled:
+		case <-time.After(3 * time.Second):
+			t.Fatal("timed-out CLI did not disconnect the stalled provider")
 		}
 	}
 	t.Logf("job=%s completed Inspector → Evolution → Reviewer; candidate=%s review=%s live_provider=%v", job.ID, job.Candidate.Kind, job.Review.Verdict, live)

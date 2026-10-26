@@ -65,3 +65,22 @@ def test_invalid_requests_are_rejected(turn_payload, key, value):
     turn_payload[key] = value
     with pytest.raises(InvalidRequest):
         parse_turn_request(turn_payload)
+
+
+@pytest.mark.parametrize(("role", "key"), [("inspector", "finding"), ("evolution", "candidate"), ("reviewer", "review")])
+def test_sdk_rollback_preserves_all_role_instructions_and_envelopes(monkeypatch, turn_payload, role, key):
+    import json
+
+    import catena_engine.runtime as runtime
+
+    turn_payload["role"] = role
+    answer = json.dumps({key: {"summary": "grounded result"}})
+    model = FakeModel(answer)
+    factory = factory_for(model)
+    monkeypatch.setenv("CATENA_ENGINE_BACKEND", "sdk")
+    monkeypatch.setattr(runtime, "openai_compatible_model", factory)
+    result = asyncio.run(run_turn(parse_turn_request(turn_payload)))
+    assert result["status"] == "completed"
+    assert json.loads(result["assistant"]["content"]) == json.loads(answer)
+    assert model.calls[0]["instructions"] == ROLES[role].instructions
+    assert factory.closed == [True]

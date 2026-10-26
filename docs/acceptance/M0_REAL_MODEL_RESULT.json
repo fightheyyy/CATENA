@@ -1,0 +1,45 @@
+{
+  "base_commit": "ec31cab6951dcb0fdf60b90e70eb3c3bc229dcb6",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "low",
+  "provider": "local CLIProxyAPI 8.0.31 / real Responses SSE upstream",
+  "cli_version": "0.160.0",
+  "job_id": "evolution-job-1793037649534-fa5c6b4942fda8a5",
+  "state": "completed",
+  "candidate_kind": "agent_md",
+  "review_verdict": "pass",
+  "postgres_reopened_readback": true,
+  "total_test_seconds": 54.432,
+  "stages": [
+    {
+      "role": "inspector",
+      "state": "completed",
+      "duration_ms": 40394,
+      "usage": {
+        "requests": 1,
+        "input_tokens": 6970,
+        "output_tokens": 223
+      }
+    },
+    {
+      "role": "evolution",
+      "state": "completed",
+      "duration_ms": 7908,
+      "usage": {
+        "requests": 1,
+        "input_tokens": 6775,
+        "output_tokens": 540
+      }
+    },
+    {
+      "role": "reviewer",
+      "state": "completed",
+      "duration_ms": 5994,
+      "usage": {
+        "requests": 1,
+        "input_tokens": 7582,
+        "output_tokens": 183
+      }
+    }
+  ]
+}
