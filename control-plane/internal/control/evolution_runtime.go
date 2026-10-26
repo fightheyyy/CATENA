@@ -36,6 +36,7 @@ type EvolutionRuntimeConfig struct {
 	URL          string
 	Token        string
 	ProbeTimeout time.Duration
+	TurnTimeout  time.Duration
 	CacheTTL     time.Duration
 	Client       *http.Client
 }
@@ -116,6 +117,12 @@ func NewEvolutionRuntimeManager(config EvolutionRuntimeConfig) (*EvolutionRuntim
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" ||
 		parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
 		return nil, errors.New("engine URL must be an HTTP(S) origin")
+	}
+	if config.TurnTimeout == 0 {
+		config.TurnTimeout = 5 * time.Minute
+	}
+	if config.TurnTimeout < time.Millisecond || config.TurnTimeout > 15*time.Minute {
+		return nil, errors.New("engine turn timeout must be from 1ms to 15m")
 	}
 	if config.ProbeTimeout <= 0 {
 		config.ProbeTimeout = 8 * time.Second

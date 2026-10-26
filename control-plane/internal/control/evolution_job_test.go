@@ -1178,3 +1178,43 @@ func seedTestEvolutionModelConfig(t *testing.T, store *MemoryStore, ownerUserID 
 		t.Fatal(err)
 	}
 }
+
+// The Engine gets the configured run deadline, while Go allows cleanup to
+// finish and persists the failed stage instead of starting Evolution/Reviewer.
+func TestEvolutionStageTimeoutPreservesEngineFailure(t *testing.T) {
+	store := NewMemoryStore()
+	seedTestEvolutionModelConfig(t, store, "local")
+	traceID := "11111111111111111111111111111111"
+	run := seedEvolutionRun(t, store, "", StateCompleted, traceID)
+	observed := make(chan int64, 1)
+	engine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		observed <- int64(req["timeout_ms"].(float64))
+		// Deliberately return after the run deadline to model CLI termination.
+		time.Sleep(100 * time.Millisecond)
+		writeJSON(w, 200, map[string]any{"schema": engineTurnResponseSchema, "request_id": req["request_id"], "status": "ok",
+			"result": map[string]any{"status": "failed", "reason_code": "timeout", "detail": "Codex did not answer before the turn timeout"}})
+	}))
+	defer engine.Close()
+	manager, err := NewEvolutionRuntimeManager(EvolutionRuntimeConfig{URL: engine.URL, TurnTimeout: 50 * time.Millisecond})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := EvolutionJob{ID: newID("timeout"), SourceRunID: run.ID, SourceKind: EvolutionSourceRunTrace, SourceTraceID: traceID, OwnerUserID: run.OwnerUserID, Schema: evolutionJobSchema, State: EvolutionJobQueued, Stages: append([]EvolutionStage(nil), evolutionJobStages...)}
+	if _, _, err := store.CreateEvolutionJob(context.Background(), job); err != nil {
+		t.Fatal(err)
+	}
+	s := &HTTPServer{store: store, evolutionRuntime: manager}
+	raw, ok := s.runEvolutionStage(&job, 0, "Return a finding", EvolutionModelCredentials{Provider: "openai", BaseURL: "http://example.test/v1", Model: "test", APIKey: "test"})
+	if ok || raw != nil || !strings.Contains(job.Error, "timeout") {
+		t.Fatalf("lost Engine timeout: %+v", job)
+	}
+	if got := <-observed; got != 50 {
+		t.Fatalf("timeout_ms=%d", got)
+	}
+	saved, err := store.GetEvolutionJob(context.Background(), job.ID)
+	if err != nil || saved.State != EvolutionJobFailed || saved.Stages[1].State != EvolutionStageQueued {
+		t.Fatal("failed stage was not persisted or later stage started")
+	}
+}

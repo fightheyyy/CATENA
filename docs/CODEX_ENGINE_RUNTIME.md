@@ -49,8 +49,12 @@ continues to advertise `cancellation=false`; the turn's own timeout still applie
 
 ```sh
 cd engine
-python -m pip install -e '.[dev,evaluation-e2b]'
-pytest
+python -m venv /tmp/catena-engine-tests
+/tmp/catena-engine-tests/bin/pip install -e '.[dev,sdk]'
+/tmp/catena-engine-tests/bin/pytest --ignore=tests/test_codex_artifacts.py --ignore=tests/test_experiment_runtime.py --ignore=tests/test_harbor_bridge.py --ignore=tests/test_harbor_e2b.py
+python -m venv /tmp/catena-harbor-tests
+/tmp/catena-harbor-tests/bin/pip install -e '.[dev,evaluation-e2b]'
+/tmp/catena-harbor-tests/bin/pytest
 python ../evals/trace-skill-benchmark/validate_verifiers.py
 cd ../control-plane
 go test ./...
@@ -73,7 +77,7 @@ export CATENA_CODEX_ACCEPT_ENGINE_TOKEN=...
 export BARENA_TEST_DATABASE_URL=postgresql://.../codex_acceptance
 # Optional, when Engine runs in Docker:
 export CATENA_CODEX_ACCEPT_CALLBACK_HOST=host.docker.internal
-go test -run TestCodexEngineEvolutionAcceptance -v -timeout 10m ./internal/control
+go test -run TestCodexEngineEvolutionAcceptance -v -timeout 20m ./internal/control
 ```
 
 The test starts an Evolution Job through the existing Catena API, verifies
@@ -91,3 +95,40 @@ through a secret store or a protected local environment file:
 
 A stub-provider pass verifies the harness and persistence integration, not model
 availability or quality. A real-provider pass must be recorded separately.
+
+## M0 deployment bounds
+
+`CATENA_ENGINE_TURN_TIMEOUT` configures the Go analysis-stage run budget (default
+`5m`, valid `1ms` through `15m`). Go sends that budget as `timeout_ms`; its HTTP
+context allows another 10 seconds for Engine process-group termination and response
+transport. The CLI adapter sends SIGTERM, escalates to SIGKILL after one second,
+drains pipes and removes the temporary session before returning. There are no
+implicit model/SDK retries. Three stages may each consume the configured budget.
+A disconnected client still does not cancel a running turn; it ends at its own
+budget. A killed Engine/container cannot return a result to Go.
+
+`CATENA_ENGINE_MAX_CONCURRENT_TURNS` defaults to `1` (range 1–8). The Engine
+rejects excess `/v1/turn` requests with HTTP 429 / `runtime_busy`, without launching
+a CLI or waiting in an unbounded execution queue. Health, manifest and Harbor
+bridge queries use separate HTTP threads and do not acquire the analysis slot.
+Go persists a capacity rejection as a failed job; the user can submit a new job
+when capacity is available. This is single-process admission control, not a
+multi-replica queue. The existing API has no automatic analysis-job recovery.
+
+For a 2-core / 8GB host, Compose limits the entire Engine (including all CLI
+children) to 1 CPU, 1GiB RAM and 128 PIDs. Leave analysis concurrency at 1. These
+limits reserve headroom; they do not guarantee latency or constrain a separately
+launched Harbor worker. An OOM is reported as a failed turn or transport failure.
+
+Install `.[sdk]` for the analysis Engine / explicit SDK rollback. Install
+`.[evaluation]` or `.[evaluation-e2b]` in a **different virtual environment** for
+Harbor workers. The latter pins Agents SDK 0.12.0 with OpenAI 2.26.0, since
+Agents SDK 0.22.3 requires OpenAI 3.x while LiteLLM requires 2.x. OpenAI 2.54.0
+also breaks the older SDK's token-detail defaults; keep the worker pin. Do not
+install both extras together. CI exercises the Engine contracts in the modern
+SDK environment and the full suite, including Harbor/E2B adapters, in the worker
+environment. The seven Windows-only PowerShell tests remain platform-gated.
+
+`CATENA_CODEX_ACCEPT_REPORT` optionally writes the persisted per-stage outputs,
+durations and usage from the opt-in acceptance test. Keep reports private until
+reviewed: they contain generated role content. Never put owner API keys in reports.

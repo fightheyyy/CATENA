@@ -12,7 +12,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 WORKDIR /opt/catena-engine
 COPY engine/pyproject.toml ./
 COPY engine/catena_engine ./catena_engine
-RUN pip install --no-compile . \
+RUN pip install --no-compile ".[sdk]" \
   && useradd --system --uid 1001 --no-create-home catena-engine
 USER catena-engine
 ENV CATENA_ENGINE_ADDR=0.0.0.0:8790

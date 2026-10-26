@@ -23,8 +23,6 @@ const (
 	evolutionEvidenceSchema        = "catena.evolution_evidence_pack.v1"
 	evolutionAgentEvidenceSchema   = "catena.agent_trace_set_evidence_pack.v1"
 	evolutionReleaseAuthority      = "local_barena"
-	evolutionTurnTimeout           = 2 * time.Minute
-	evolutionStageTimeout          = evolutionTurnTimeout + 10*time.Second
 	maxEvolutionEvidenceSpans      = 64
 	maxEvolutionEvidenceEvents     = 32
 	maxEvolutionEvidenceFieldBytes = 2 * 1024
@@ -561,14 +559,17 @@ func (s *HTTPServer) runEvolutionStage(
 	if err := s.store.UpdateEvolutionJob(context.Background(), *job); err != nil {
 		return nil, false
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), evolutionStageTimeout)
+	// The Engine deadline includes the CLI run; leave transport time for its
+	// process-group termination and temporary-session cleanup before persisting failure.
+	turnTimeout := s.evolutionRuntime.config.TurnTimeout
+	ctx, cancel := context.WithTimeout(context.Background(), turnTimeout+10*time.Second)
 	defer cancel()
 	raw, err := s.evolutionRuntime.RunRoleTurn(ctx, EvolutionRoleTurnInput{
 		RequestID: newID(job.Stages[index].Name),
 		RunID:     job.ID,
 		Role:      job.Stages[index].Name,
 		Prompt:    prompt,
-		Timeout:   evolutionTurnTimeout,
+		Timeout:   turnTimeout,
 		Model:     model,
 	})
 	if err != nil {

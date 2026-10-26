@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import shutil
+import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -25,6 +26,10 @@ def create_server(
     address: str, token: str = "", model_factory: ModelFactory | None = None
 ) -> ThreadingHTTPServer:
     host, _, port = address.rpartition(":")
+    max_turns = int(os.environ.get("CATENA_ENGINE_MAX_CONCURRENT_TURNS", "1"))
+    if not 1 <= max_turns <= 8:
+        raise ValueError("CATENA_ENGINE_MAX_CONCURRENT_TURNS must be from 1 to 8")
+    turn_slots = threading.BoundedSemaphore(max_turns)
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "catena-engine"
@@ -69,7 +74,14 @@ def create_server(
 
                 result = asyncio.run(run_experiment_turn(request, model_factory or openai_compatible_model, payload.get("environment"), payload.get("target_agent", "sdk")))
             else:
-                result = asyncio.run(run_turn(request, model_factory))
+                if not turn_slots.acquire(blocking=False):
+                    self._json(HTTPStatus.TOO_MANY_REQUESTS,
+                               error_response(request.request_id, "runtime_busy", "analysis capacity is full; retry later"))
+                    return
+                try:
+                    result = asyncio.run(run_turn(request, model_factory))
+                finally:
+                    turn_slots.release()
             log.info("turn role=%s run=%s status=%s", request.role, request.run_id, result["status"])
             self._json(HTTPStatus.OK, turn_response(request.request_id, result))
 

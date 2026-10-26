@@ -169,7 +169,7 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 	if err := json.NewDecoder(response.Body).Decode(&job); err != nil {
 		t.Fatal(err)
 	}
-	deadline := time.Now().Add(8 * time.Minute)
+	deadline := time.Now().Add(16 * time.Minute)
 	for time.Now().Before(deadline) {
 		job, err = store.GetEvolutionJob(ctx, job.ID)
 		if err != nil {
@@ -193,6 +193,19 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 		if stage.State != EvolutionStageCompleted || !strings.Contains(string(stage.RawOutput), "input_tokens") {
 			t.Fatal("stage output or usage missing")
 		}
+	}
+	report := map[string]any{"job_id": job.ID, "live_provider": live, "model": credentials.Model, "state": job.State, "stages": job.Stages}
+	if reportPath := os.Getenv("CATENA_CODEX_ACCEPT_REPORT"); reportPath != "" {
+		encoded, err := json.MarshalIndent(report, "", "  ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(reportPath, encoded, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, stage := range job.Stages {
+		t.Logf("role=%s elapsed=%s raw=%s", stage.Role, stage.FinishedAt.Sub(*stage.StartedAt), stage.RawOutput)
 	}
 	mu.Lock()
 	defer mu.Unlock()
