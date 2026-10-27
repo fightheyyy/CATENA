@@ -7,6 +7,7 @@ import hmac
 import json
 import logging
 import os
+import shutil
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -21,7 +22,7 @@ log = logging.getLogger("catena_engine")
 
 
 def create_server(
-    address: str, token: str = "", model_factory: ModelFactory = openai_compatible_model
+    address: str, token: str = "", model_factory: ModelFactory | None = None
 ) -> ThreadingHTTPServer:
     host, _, port = address.rpartition(":")
 
@@ -30,11 +31,15 @@ def create_server(
         sys_version = ""
 
         def do_GET(self) -> None:
-            if self.path in ("/healthz", "/readyz"):
+            if self.path == "/healthz":
                 self._json(HTTPStatus.OK, {"status": "ready", "service": "catena-engine"})
+            elif self.path == "/readyz":
+                state = self._manifest()
+                self._json(HTTPStatus.OK if state["status"] == "ready" else HTTPStatus.SERVICE_UNAVAILABLE,
+                           {"status": state["status"], "service": "catena-engine"})
             elif self.path == "/v1/manifest":
                 if self._authorized():
-                    self._json(HTTPStatus.OK, manifest())
+                    self._json(HTTPStatus.OK, self._manifest())
             else:
                 self._json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
 
@@ -62,11 +67,20 @@ def create_server(
             if self.path == "/v1/experiment":
                 from .experiment_runtime import run_experiment_turn
 
-                result = asyncio.run(run_experiment_turn(request, model_factory, payload.get("environment"), payload.get("target_agent", "sdk")))
+                result = asyncio.run(run_experiment_turn(request, model_factory or openai_compatible_model, payload.get("environment"), payload.get("target_agent", "sdk")))
             else:
                 result = asyncio.run(run_turn(request, model_factory))
             log.info("turn role=%s run=%s status=%s", request.role, request.run_id, result["status"])
             self._json(HTTPStatus.OK, turn_response(request.request_id, result))
+
+        def _manifest(self) -> dict[str, Any]:
+            backend = os.environ.get("CATENA_ENGINE_BACKEND", "codex")
+            if model_factory is None:
+                if backend not in ("codex", "sdk"):
+                    return manifest("blocked", "runtime_config", "CATENA_ENGINE_BACKEND must be codex or sdk")
+                if backend == "codex" and shutil.which(os.environ.get("CATENA_CODEX_BIN", "codex")) is None:
+                    return manifest("blocked", "runtime_unavailable", "Codex CLI is not installed")
+            return manifest()
 
         def _authorized(self) -> bool:
             if not token:

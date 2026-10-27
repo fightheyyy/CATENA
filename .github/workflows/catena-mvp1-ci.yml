@@ -106,6 +106,21 @@ jobs:
       - run: go test ./...
       - run: go vet ./...
       - run: go test -race ./internal/control
+      - name: Build pinned Codex Engine
+        run: |
+          docker build -f ../deploy/catena-mvp1/Dockerfile.engine -t catena-engine-codex ..
+          docker run -d --name codex-test-engine --add-host host.docker.internal:host-gateway -p 18790:8790 catena-engine-codex
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18790/readyz; then exit 0; fi
+            sleep 1
+          done
+          docker logs codex-test-engine
+          exit 1
+      - name: Real CLI three-stage API and PostgreSQL acceptance
+        env:
+          CATENA_CODEX_ACCEPT_ENGINE_URL: http://127.0.0.1:18790
+          CATENA_CODEX_ACCEPT_CALLBACK_HOST: host.docker.internal
+        run: go test -run TestCodexEngineEvolutionAcceptance -v -timeout 10m ./internal/control
 
   tap:
     runs-on: ubuntu-latest

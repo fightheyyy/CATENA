@@ -25,11 +25,13 @@ Codex CLI 对照未通过环境验收，旧 3/3 试跑不能作为效果证据�
 本地 CLIProxyAPI 的 GPT-5.5 完成 12 次有效 SDK 对照：两组均 6/6 答对，
 Skill 将缺失 rg 错误调用从 4 次降到 0 次，但输入令牌增加 29.4%，未证明
 成功率或效率提升。[实验结论](docs/CASE_RG_MISSING_20261003.md)。
-平台运行时采用 OpenAI Agents SDK；随后完成
+当时的平台运行时采用 OpenAI Agents SDK；随后完成
 [平台 Agent 调用 Harbor 的 Docker 实验](docs/HARBOR_EXPERIMENT_20261003.md)，
 6 次有效 Trial，两组均 3/3，缺失 rg 错误调用 2→0。
 现已提供 [Case 实验页面](docs/HARBOR_WEB_EXPERIMENTS.md)，支持发起、查看与恢复实验。
 E2B 接入仍未完成云端验收；本地评测使用 Docker。
+
+当前分析角色默认通过隔离的 Codex CLI 执行，可显式切回 SDK；接口和三阶段业务校验保持兼容。配置与验收范围见 [Codex Engine 说明](docs/CODEX_ENGINE_RUNTIME.md)。
 
 ## 冻结实验：7 Skills / 28 Tasks / 168 Rollouts
 

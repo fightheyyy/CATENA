@@ -2,6 +2,10 @@
 
 日期：2026-10-27。范围是 Evolution 分析任务和 OTLP 接入。Harbor Experiment、旧 Barena Run、记忆服务的调度没有迁移到本队列。
 
+GitHub 同步时合并了上游 `ec31cab` 的 Codex Engine 迁移：分析角色默认使用隔离的 Codex CLI，SDK 保留为显式回退。CI 合并保留真实 CLI 验收，并共用新的 PostgreSQL 测试服务。本轮合成负载没有调用模型或分析引擎。性能报告的源文件哈希对应合并前实现快照（提交 `86816c4`），不代表上游合并后的所有文件字节。
+
+合并后新增的 Codex CLI Python 测试在本机 Windows 下未通过：fixture 使用可执行 shebang 文件，运行时包含 POSIX 进程组操作；不能据此声称 Windows 原生 CLI 验收通过。Linux Docker 路径由 CI 继续验证，结果以对应提交的 Actions 为准。
+
 ## 1. 可靠任务执行
 
 ```mermaid
