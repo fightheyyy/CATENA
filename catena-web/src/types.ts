@@ -137,6 +137,9 @@ export type EvolutionBoundary = {
 };
 
 export type EvolutionJob = {
+  attempt?: number;
+  next_attempt_at?: string;
+  cancel_requested?: boolean;
   schema?: string;
   job_id: string;
   source_kind?: "trace" | "run_trace" | "agent_trace_set";

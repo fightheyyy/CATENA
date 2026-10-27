@@ -466,10 +466,11 @@ const (
 	EvolutionJobRunning   EvolutionJobState = "running"
 	EvolutionJobCompleted EvolutionJobState = "completed"
 	EvolutionJobFailed    EvolutionJobState = "failed"
+	EvolutionJobCancelled EvolutionJobState = "cancelled"
 )
 
 func (s EvolutionJobState) Terminal() bool {
-	return s == EvolutionJobCompleted || s == EvolutionJobFailed
+	return s == EvolutionJobCompleted || s == EvolutionJobFailed || s == EvolutionJobCancelled
 }
 
 type EvolutionSourceKind string
@@ -643,6 +644,9 @@ type EvolutionEvidencePack struct {
 }
 
 type EvolutionJob struct {
+	Attempt            int                       `json:"attempt,omitempty"`
+	NextAttemptAt      *time.Time                `json:"next_attempt_at,omitempty"`
+	CancelRequested    bool                      `json:"cancel_requested,omitempty"`
 	Schema             string                    `json:"schema"`
 	ID                 string                    `json:"job_id"`
 	OwnerUserID        string                    `json:"-"`

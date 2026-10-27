@@ -26,6 +26,7 @@ func TestEvolutionJobRunsThreeEvidenceStagesAndIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -159,6 +160,7 @@ func TestTraceEvolutionJobUsesStoredToolEvidenceWithoutSyntheticRun(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -278,6 +280,7 @@ func TestAgentEvolutionJobFreezesMultipleTracesAndKeepsPluralProvenance(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -372,6 +375,7 @@ func TestAgentEvolutionJobUsesOnlyBarenaTargetEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -534,6 +538,7 @@ func TestEvolutionJobRejectsNonterminalOrUnretainedEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -743,6 +748,7 @@ func TestEvolutionJobFailsTerminallyWhenRuntimeStageFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 

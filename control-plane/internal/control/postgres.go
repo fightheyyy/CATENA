@@ -19,6 +19,12 @@ func OpenPostgres(ctx context.Context, databaseURL string) (*PostgresStore, erro
 	if err != nil {
 		return nil, err
 	}
+	// Bound connection growth when HTTP authentication and workers compete.
+	// Pool waits obey each operation's context; never open one connection per request.
+	db.SetMaxOpenConns(16)
+	db.SetMaxIdleConns(8)
+	db.SetConnMaxIdleTime(5 * time.Minute)
+	db.SetConnMaxLifetime(30 * time.Minute)
 	store := &PostgresStore{db: db}
 	if err := store.Ping(ctx); err != nil {
 		db.Close()
@@ -201,7 +207,7 @@ CREATE TABLE IF NOT EXISTS spiral_evolution_jobs (
   source_agent_id TEXT NOT NULL DEFAULT '',
   idempotency_key TEXT NOT NULL,
   request_fingerprint TEXT NOT NULL,
-  state TEXT NOT NULL CHECK (state IN ('queued','running','completed','failed')),
+  state TEXT NOT NULL CHECK (state IN ('queued','running','completed','failed','cancelled')),
   current_stage TEXT NOT NULL DEFAULT '',
   document JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL,
@@ -211,6 +217,23 @@ ALTER TABLE spiral_evolution_jobs
   ALTER COLUMN source_run_id DROP NOT NULL;
 ALTER TABLE spiral_evolution_jobs
   ADD COLUMN IF NOT EXISTS source_agent_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE spiral_evolution_jobs
+  ADD COLUMN IF NOT EXISTS worker_id TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS fencing_token BIGINT NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS attempt INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS cancel_requested BOOLEAN NOT NULL DEFAULT false;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='spiral_evolution_jobs'::regclass
+    AND conname='spiral_evolution_jobs_state_check' AND pg_get_constraintdef(oid) NOT LIKE '%cancelled%') THEN
+    ALTER TABLE spiral_evolution_jobs DROP CONSTRAINT spiral_evolution_jobs_state_check;
+    ALTER TABLE spiral_evolution_jobs ADD CONSTRAINT spiral_evolution_jobs_state_check
+      CHECK (state IN ('queued','running','completed','failed','cancelled'));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS spiral_evolution_jobs_runnable_idx
+  ON spiral_evolution_jobs (next_attempt_at,created_at,job_id) WHERE state IN ('queued','running');
 DROP INDEX IF EXISTS spiral_evolution_jobs_request_key_idx;
 CREATE UNIQUE INDEX IF NOT EXISTS spiral_evolution_jobs_request_key_idx
   ON spiral_evolution_jobs
@@ -701,7 +724,36 @@ func (s *PostgresStore) CreateEvolutionJob(
 	if err != nil {
 		return EvolutionJob{}, false, err
 	}
-	created, err := scanEvolutionJob(s.db.QueryRowContext(ctx, `
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return EvolutionJob{}, false, err
+	}
+	defer tx.Rollback()
+	// Serialize only admission, not execution. Idempotent retries remain valid
+	// even when the queue is full. The fixed lock key is shared by all replicas.
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1943287102)`); err != nil {
+		return EvolutionJob{}, false, err
+	}
+	existing, lookupErr := scanEvolutionJob(tx.QueryRowContext(ctx, `SELECT COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,document
+FROM spiral_evolution_jobs WHERE COALESCE(owner_user_id,'')=$1 AND source_trace_id=$2 AND source_agent_id=$3 AND idempotency_key=$4`,
+		job.OwnerUserID, job.SourceTraceID, job.SourceAgentID, job.IdempotencyKey))
+	if lookupErr == nil {
+		if existing.RequestFingerprint != job.RequestFingerprint {
+			return EvolutionJob{}, false, ErrConflict
+		}
+		return existing, false, tx.Commit()
+	}
+	if !errors.Is(lookupErr, ErrNotFound) {
+		return EvolutionJob{}, false, lookupErr
+	}
+	var active, owned int
+	if err = tx.QueryRowContext(ctx, `SELECT count(*),count(*) FILTER(WHERE COALESCE(owner_user_id,'')=$1) FROM spiral_evolution_jobs WHERE state IN ('queued','running')`, job.OwnerUserID).Scan(&active, &owned); err != nil {
+		return EvolutionJob{}, false, err
+	}
+	if active >= evolutionQueueCapacity || owned >= evolutionOwnerQueueCapacity {
+		return EvolutionJob{}, false, ErrQueueFull
+	}
+	created, err := scanEvolutionJob(tx.QueryRowContext(ctx, `
 INSERT INTO spiral_evolution_jobs
   (job_id,owner_user_id,source_run_id,source_trace_id,source_agent_id,idempotency_key,
    request_fingerprint,state,current_stage,document,created_at,updated_at)
@@ -719,12 +771,12 @@ RETURNING COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,documen
 		job.IdempotencyKey, job.RequestFingerprint, job.State,
 		job.CurrentStage, document, job.CreatedAt, job.UpdatedAt, job.SourceKind))
 	if err == nil {
-		return created, true, nil
+		return created, true, tx.Commit()
 	}
 	if !errors.Is(err, ErrNotFound) {
 		return EvolutionJob{}, false, err
 	}
-	existing, lookupErr := scanEvolutionJob(s.db.QueryRowContext(ctx, `
+	existing, lookupErr = scanEvolutionJob(tx.QueryRowContext(ctx, `
 SELECT COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,document
 FROM spiral_evolution_jobs
 WHERE COALESCE(owner_user_id,'')=$1 AND source_trace_id=$2 AND source_agent_id=$3 AND idempotency_key=$4`,
@@ -733,15 +785,10 @@ WHERE COALESCE(owner_user_id,'')=$1 AND source_trace_id=$2 AND source_agent_id=$
 		if existing.RequestFingerprint != job.RequestFingerprint {
 			return EvolutionJob{}, false, ErrConflict
 		}
-		return existing, false, nil
+		return existing, false, tx.Commit()
 	}
 	if !errors.Is(lookupErr, ErrNotFound) {
 		return EvolutionJob{}, false, lookupErr
-	}
-	if job.SourceRunID != "" {
-		if _, runErr := s.GetRun(ctx, job.SourceRunID); runErr != nil {
-			return EvolutionJob{}, false, runErr
-		}
 	}
 	return EvolutionJob{}, false, ErrConflict
 }
@@ -755,6 +802,7 @@ func (s *PostgresStore) UpdateEvolutionJob(ctx context.Context, job EvolutionJob
 UPDATE spiral_evolution_jobs
 SET state=$8,current_stage=$9,document=$10,updated_at=$11
 WHERE job_id=$1
+  AND fencing_token=0
   AND COALESCE(owner_user_id,'')=$2
 	  AND COALESCE(source_run_id,'')=$3
   AND source_trace_id=$4

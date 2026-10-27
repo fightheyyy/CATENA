@@ -134,6 +134,9 @@ export const api = {
     `/v1/evolution-jobs/${encodeURIComponent(jobID)}`,
     { method: "DELETE" },
   ),
+  cancelEvolutionJob: async (jobID: string) => normalizeEvolutionJob(
+    await request<unknown>(`/v1/evolution-jobs/${encodeURIComponent(jobID)}/cancel`, { method: "POST" }),
+  ),
   startAgentEvolutionJob: async (
     agentID: string,
     input: { window_start: string; window_end: string; objective?: string; output_language: "zh-CN" | "en" },

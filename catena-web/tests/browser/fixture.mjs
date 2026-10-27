@@ -26,11 +26,14 @@ const completed = { ...baseJob, state: "completed", current_stage: "complete", u
 
 export async function fixtureServer(overrides = {}) {
   const state = { requests: [], agents: [structuredClone(agent)], jobComplete: false, jobs: true,
+    jobCancelRequested: false, jobCancelled: false, failCancel: false,
     connected: false, failAgents: false, failConnection: false, failTrace: false, emptyTraces: false,
     holdAgents: false, heldClosed: false, failTraceList: false, failJobs: false,
     traces: structuredClone(traces), completedJob: structuredClone(completed),
     memoryReady: false, failMemories: false, failSearch: false, memories: [], memorySearch: null, conversations: [],
     ...overrides };
+  const currentJob = () => state.jobCancelled ? { ...baseJob, state: "cancelled", cancel_requested: true }
+    : state.jobComplete ? state.completedJob : { ...baseJob, cancel_requested: state.jobCancelRequested };
   const json = (res, value, status = 200) => { res.writeHead(status, { "Content-Type": "application/json" }); res.end(JSON.stringify(value)); };
   const server = http.createServer(async (req, res) => {
     const pathname = new URL(req.url, "http://localhost").pathname;
@@ -72,8 +75,13 @@ export async function fixtureServer(overrides = {}) {
           input: summary.input_preview, output: `完成 ${id}`,
           attributes: { "catena.node.kind": "turn", "catena.state": "ok" } }] });
       }
-      if (pathname === "/v1/evolution-jobs") return state.failJobs ? json(res, { detail: "Output query temporarily failed" }, 503) : json(res, { evolution_jobs: state.jobs ? [state.jobComplete ? state.completedJob : baseJob] : [] });
-      if (pathname === "/v1/evolution-jobs/job-fixture") return json(res, state.jobComplete ? state.completedJob : baseJob);
+      if (pathname === "/v1/evolution-jobs") return state.failJobs ? json(res, { detail: "Output query temporarily failed" }, 503) : json(res, { evolution_jobs: state.jobs ? [currentJob()] : [] });
+      if (pathname === "/v1/evolution-jobs/job-fixture") return json(res, currentJob());
+      if (pathname === "/v1/evolution-jobs/job-fixture/cancel" && req.method === "POST") {
+        if (state.failCancel) return json(res, { detail: "Cancellation temporarily unavailable" }, 503);
+        state.jobCancelRequested = true;
+        return json(res, currentJob());
+      }
       if (pathname === "/v1/me/llm-config") return json(res, { provider: "", base_url: "", model: "", api_key_configured: false, configured: false });
       if (pathname === "/v1/system/status") return json(res, { status: "ok", memory_store: state.memoryReady ? "available" : "unavailable", trace_store: "available" });
       if (pathname === "/v1/memories") return state.failMemories ? json(res, { detail: "Memory query temporarily failed" }, 503) : json(res, { memories: state.memories, total: state.memories.length });

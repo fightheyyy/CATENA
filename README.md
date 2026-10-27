@@ -4,13 +4,18 @@
 
 <h1 align="center">Catena</h1>
 
-<p align="center"><strong>从编程 Agent 的真实运行中，找到可修复的问题。</strong></p>
+<p align="center"><strong>基于 Go 的 Agent Trace 接入与异步分析平台。</strong></p>
 
 <p align="center">
-  Traceable failure patterns and reviewable Skill drafts from Codex and Claude Code sessions.
+  Go control plane · PostgreSQL job queue · ClickHouse trace storage · OTLP ingestion.
 </p>
 
-Catena 收集 Codex 和 Claude Code 的运行证据，按 Turn 回看工具调用，帮助维护者找出值得核对的重复问题并生成 Skill 候选。主界面围绕工作台、经历、产出、记忆和 Case 实验展开。Catena Agent 帮助用户分析和规划，Harbor 执行目标 Agent 的评测。候选仍需独立回归验证，Reviewer 的通过不代表目标 Agent 已改善。
+Catena 接收 Codex、Claude Code 及其他 Agent 的 OTLP Trace，用 ClickHouse 保存运行证据，用 PostgreSQL 保存业务状态和分析任务。Go Worker 通过租约、心跳和 fencing token 执行异步分析，支持阶段检查点、重试、取消和过期接管。接入端在读取请求体前限制并发，只有 ClickHouse 写入成功才确认接收。
+
+分析引擎帮助用户核对重复问题并生成 Skill 候选；Harbor 负责目标 Agent 的评测。Trace 错误信号与模型审查不能代替交付质量评价，候选是否有效仍由独立实验决定。
+
+- [后端改造范围与发布门槛](docs/GO_BACKEND_RELEASE_PLAN_20261027.md)
+- [任务队列、故障验收与部署说明](docs/BACKEND_ENGINEERING_20261027.md)
 
 当前支持 Codex、Claude Code 的本地采集插件，以及通用 OTLP Trace 接收；可读取的信息取决于来源实际导出的内容。Agent 不原生输出 OTLP 时，需要采集插件或适配器。离线失败线索扫描、人工标注表和独立的 Skill 配对实验入口已可复跑，尚未接入问题卡 UI。首个 3 题合成试跑为基线 3/3、候选 3/3，尚无真实失败修复率结果。
 

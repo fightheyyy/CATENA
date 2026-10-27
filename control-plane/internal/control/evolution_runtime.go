@@ -196,7 +196,16 @@ func (m *EvolutionRuntimeManager) RunRoleTurn(
 	var response engineTurnResponse
 	status, err := m.do(ctx, http.MethodPost, "/v1/turn", request, &response)
 	if err != nil {
+		if status == http.StatusTooManyRequests || status >= 500 {
+			return nil, fmt.Errorf("%w: engine HTTP %d", errEvolutionTemporary, status)
+		}
 		return nil, err
+	}
+	if status == http.StatusTooManyRequests || status >= 500 {
+		return nil, fmt.Errorf("%w: engine HTTP %d", errEvolutionTemporary, status)
+	}
+	if status != http.StatusOK {
+		return nil, fmt.Errorf("Catena Engine rejected HTTP %d", status)
 	}
 	if response.Schema != engineTurnResponseSchema {
 		return nil, fmt.Errorf("Catena Engine returned HTTP %d with an unsupported schema", status)
@@ -259,12 +268,12 @@ func (m *EvolutionRuntimeManager) do(
 			return 0, ctx.Err()
 		}
 		// Transport errors can echo the URL but never the request body.
-		return 0, errors.New("Catena Engine is unreachable")
+		return 0, fmt.Errorf("%w: Catena Engine is unreachable", errEvolutionTemporary)
 	}
 	defer response.Body.Close()
 	payload, err := io.ReadAll(io.LimitReader(response.Body, engineMaxResponseBytes+1))
 	if err != nil {
-		return response.StatusCode, errors.New("Catena Engine response could not be read")
+		return response.StatusCode, fmt.Errorf("%w: Catena Engine response could not be read", errEvolutionTemporary)
 	}
 	if len(payload) > engineMaxResponseBytes {
 		return response.StatusCode, errors.New("Catena Engine response exceeded the size limit")

@@ -12,6 +12,7 @@ import {
   evolutionStages,
   normalizeEvolutionJob,
   normalizeEvolutionJobs,
+  isEvolutionJobTerminal,
 } from "../src/evolution.ts";
 
 const completedJob = {
@@ -49,6 +50,15 @@ const completedJob = {
   created_at: "2026-08-05T10:00:00Z",
   updated_at: "2026-08-05T10:01:00Z",
 };
+
+test("cancellation intent keeps polling until acknowledged, then becomes terminal", () => {
+  const pending = normalizeEvolutionJob({ ...completedJob, state: "running", attempt: 2, cancel_requested: true });
+  assert.equal(pending.attempt, 2);
+  assert.equal(pending.cancel_requested, true);
+  assert.equal(isEvolutionJobTerminal(pending), false);
+  const cancelled = normalizeEvolutionJob({ ...pending, state: "cancelled" });
+  assert.equal(isEvolutionJobTerminal(cancelled), true);
+});
 
 test("normalizes current stage outputs into structured draft proposals", () => {
   const job = normalizeEvolutionJob(completedJob);

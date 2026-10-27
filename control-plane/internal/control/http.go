@@ -21,12 +21,14 @@ type HTTPServer struct {
 	evolutionRuntime *EvolutionRuntimeManager
 	memory           MemoryBackend
 	auth             AuthConfig
+	jobs             *evolutionWorker
+	ingestion        *traceAdmission
 }
 
 //go:embed web/*
 var webAssets embed.FS
 
-func NewHTTPHandler(store Store, runner *RunnerManager) http.Handler {
+func NewHTTPHandler(store Store, runner *RunnerManager) *ManagedHTTPHandler {
 	handler, err := NewHTTPHandlerWithConfig(store, runner, AuthConfig{})
 	if err != nil {
 		panic(err)
@@ -38,7 +40,7 @@ func NewHTTPHandlerWithConfig(
 	store Store,
 	runner *RunnerManager,
 	auth AuthConfig,
-) (http.Handler, error) {
+) (*ManagedHTTPHandler, error) {
 	return NewHTTPHandlerWithRuntime(store, runner, auth, nil)
 }
 
@@ -47,7 +49,7 @@ func NewHTTPHandlerWithRuntime(
 	runner *RunnerManager,
 	auth AuthConfig,
 	evolutionRuntime *EvolutionRuntimeManager,
-) (http.Handler, error) {
+) (*ManagedHTTPHandler, error) {
 	return NewHTTPHandlerWithServices(store, runner, auth, evolutionRuntime, nil)
 }
 
@@ -57,7 +59,7 @@ func NewHTTPHandlerWithServices(
 	auth AuthConfig,
 	evolutionRuntime *EvolutionRuntimeManager,
 	traces TraceStore,
-) (http.Handler, error) {
+) (*ManagedHTTPHandler, error) {
 	return NewHTTPHandlerWithMemory(store, runner, auth, evolutionRuntime, traces, nil)
 }
 
@@ -68,8 +70,27 @@ func NewHTTPHandlerWithMemory(
 	evolutionRuntime *EvolutionRuntimeManager,
 	traces TraceStore,
 	memory MemoryBackend,
-) (http.Handler, error) {
+) (*ManagedHTTPHandler, error) {
+	return NewHTTPHandlerWithWorkerConfig(store, runner, auth, evolutionRuntime, traces, memory, DefaultEvolutionWorkerConfig())
+}
+
+func NewHTTPHandlerWithWorkerConfig(
+	store Store, runner *RunnerManager, auth AuthConfig,
+	evolutionRuntime *EvolutionRuntimeManager, traces TraceStore, memory MemoryBackend,
+	workers EvolutionWorkerConfig,
+) (*ManagedHTTPHandler, error) {
+	return NewHTTPHandlerWithBackendConfig(store, runner, auth, evolutionRuntime, traces, memory, workers, DefaultTraceIngestConfig())
+}
+
+func NewHTTPHandlerWithBackendConfig(
+	store Store, runner *RunnerManager, auth AuthConfig,
+	evolutionRuntime *EvolutionRuntimeManager, traces TraceStore, memory MemoryBackend,
+	workers EvolutionWorkerConfig, ingestion TraceIngestConfig,
+) (*ManagedHTTPHandler, error) {
 	if err := auth.Validate(); err != nil {
+		return nil, err
+	}
+	if err := ingestion.validate(); err != nil {
 		return nil, err
 	}
 	server := &HTTPServer{
@@ -79,6 +100,14 @@ func NewHTTPHandlerWithMemory(
 		evolutionRuntime: evolutionRuntime,
 		memory:           memory,
 		auth:             auth.normalized(),
+		ingestion:        &traceAdmission{config: ingestion, owners: make(map[string]int)},
+	}
+	if evolutionRuntime != nil {
+		pool, err := newEvolutionWorker(store, workers, server.executeEvolutionJob)
+		if err != nil {
+			return nil, err
+		}
+		server.jobs = pool
 	}
 	if active, err := store.ListActiveExperiments(context.Background()); err == nil {
 		for _, experiment := range active {
@@ -141,7 +170,9 @@ func NewHTTPHandlerWithMemory(
 	mux.HandleFunc("GET /v1/runs/{run_id}/events", server.runEvents)
 	mux.HandleFunc("POST /v1/runs/{run_id}/evolution-jobs", server.createEvolutionJob)
 	mux.HandleFunc("GET /v1/evolution-jobs", server.listEvolutionJobs)
+	mux.HandleFunc("GET /v1/evolution-jobs/queue", server.evolutionQueueStatus)
 	mux.HandleFunc("GET /v1/evolution-jobs/{job_id}", server.getEvolutionJob)
+	mux.HandleFunc("POST /v1/evolution-jobs/{job_id}/cancel", server.cancelEvolutionJob)
 	mux.HandleFunc("DELETE /v1/evolution-jobs/{job_id}", server.deleteEvolutionJob)
 	mux.HandleFunc("POST /v1/runs/{run_id}/issues", server.createIssue)
 	mux.HandleFunc("GET /v1/issues", server.listIssues)
@@ -171,7 +202,7 @@ func NewHTTPHandlerWithMemory(
 		panic(err)
 	}
 	mux.Handle("GET /", newSPAHandler(webRoot))
-	return requestMiddleware(mux), nil
+	return &ManagedHTTPHandler{Handler: requestMiddleware(mux), workers: server.jobs}, nil
 }
 
 type spaHandler struct {
@@ -463,6 +494,9 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 }
 
 func writeProblem(w http.ResponseWriter, status int, detail string) {
+	if status == http.StatusTooManyRequests {
+		w.Header().Set("Retry-After", "1")
+	}
 	writeJSON(w, status, map[string]any{
 		"type":   "about:blank",
 		"title":  http.StatusText(status),
@@ -472,6 +506,9 @@ func writeProblem(w http.ResponseWriter, status int, detail string) {
 }
 
 func statusFor(err error) int {
+	if errors.Is(err, ErrQueueFull) {
+		return http.StatusTooManyRequests
+	}
 	if errors.Is(err, ErrNotFound) {
 		return http.StatusNotFound
 	}

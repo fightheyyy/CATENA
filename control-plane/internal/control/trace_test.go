@@ -305,8 +305,9 @@ func TestOTLPHandlerAuthenticatesAndStoresByOwner(t *testing.T) {
 	}
 	traces := &recordingTraceStore{}
 	server := &HTTPServer{
-		store:  store,
-		traces: traces,
+		ingestion: &traceAdmission{config: DefaultTraceIngestConfig(), owners: make(map[string]int)},
+		store:     store,
+		traces:    traces,
 		auth: AuthConfig{
 			GitHubClientID:     "client",
 			GitHubClientSecret: "secret",

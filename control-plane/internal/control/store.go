@@ -13,8 +13,10 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("not found")
-	ErrConflict = errors.New("conflict")
+	ErrNotFound  = errors.New("not found")
+	ErrConflict  = errors.New("conflict")
+	ErrLeaseLost = errors.New("job lease lost")
+	ErrQueueFull = errors.New("analysis queue capacity reached")
 )
 
 type Store interface {
@@ -43,6 +45,12 @@ type Store interface {
 	ListEvolutionJobs(context.Context, int) ([]EvolutionJob, error)
 	ListEvolutionJobsByOwner(context.Context, string, int) ([]EvolutionJob, error)
 	DeleteEvolutionJob(context.Context, string, string) error
+	ClaimEvolutionJob(context.Context, string, time.Duration, int) (EvolutionJob, EvolutionLease, error)
+	HeartbeatEvolutionJob(context.Context, EvolutionLease, time.Duration) (bool, error)
+	SaveLeasedEvolutionJob(context.Context, EvolutionLease, EvolutionJob) error
+	ReleaseEvolutionJob(context.Context, EvolutionLease, string, bool, time.Duration, int) error
+	CancelEvolutionJob(context.Context, string, string) (EvolutionJob, error)
+	EvolutionQueueStats(context.Context, *string) (EvolutionQueueStats, error)
 	CreateIssue(context.Context, Issue) error
 	GetIssue(context.Context, string) (Issue, error)
 	ListIssues(context.Context, int) ([]Issue, error)
@@ -107,6 +115,7 @@ type MemoryStore struct {
 	evaluations           map[string]Evaluation
 	releases              map[string]Release
 	evolutionJobs         map[string]EvolutionJob
+	evolutionLeases       map[string]EvolutionLease
 	runBundles            map[string]RunBundle
 	conversationMessages  map[string]ConversationMessage
 	evolutionModelConfigs map[string]EvolutionModelConfig
@@ -130,6 +139,7 @@ func NewMemoryStore() *MemoryStore {
 		evaluations:           make(map[string]Evaluation),
 		releases:              make(map[string]Release),
 		evolutionJobs:         make(map[string]EvolutionJob),
+		evolutionLeases:       make(map[string]EvolutionLease),
 		runBundles:            make(map[string]RunBundle),
 		conversationMessages:  make(map[string]ConversationMessage),
 		evolutionModelConfigs: make(map[string]EvolutionModelConfig),
@@ -410,6 +420,18 @@ func (s *MemoryStore) CreateEvolutionJob(
 			return cloneEvolutionJob(existing), false, nil
 		}
 	}
+	active, owned := 0, 0
+	for _, existing := range s.evolutionJobs {
+		if !existing.State.Terminal() {
+			active++
+			if existing.OwnerUserID == job.OwnerUserID {
+				owned++
+			}
+		}
+	}
+	if active >= evolutionQueueCapacity || owned >= evolutionOwnerQueueCapacity {
+		return EvolutionJob{}, false, ErrQueueFull
+	}
 	if _, exists := s.evolutionJobs[job.ID]; exists {
 		return EvolutionJob{}, false, ErrConflict
 	}
@@ -423,6 +445,9 @@ func (s *MemoryStore) UpdateEvolutionJob(_ context.Context, job EvolutionJob) er
 	existing, exists := s.evolutionJobs[job.ID]
 	if !exists {
 		return ErrNotFound
+	}
+	if s.evolutionLeases[job.ID].Fence != 0 {
+		return ErrLeaseLost
 	}
 	if existing.OwnerUserID != job.OwnerUserID ||
 		existing.SourceRunID != job.SourceRunID ||

@@ -62,8 +62,9 @@ func TestLocalModeCreatesAgentAndAcceptsItsBoundKey(t *testing.T) {
 	store := NewMemoryStore()
 	traces := &recordingTraceStore{}
 	server := &HTTPServer{
-		store:  store,
-		traces: traces,
+		ingestion: &traceAdmission{config: DefaultTraceIngestConfig(), owners: make(map[string]int)},
+		store:     store,
+		traces:    traces,
 		auth: AuthConfig{
 			APITokenEncryptionKey: "local-test-agent-token-encryption-key",
 		}.normalized(),
@@ -149,7 +150,7 @@ func TestGetRegisteredAgentReturnsCheapConnectionStatus(t *testing.T) {
 func TestBoundAgentKeyOwnsOTLPIdentityAndDetectsRuntime(t *testing.T) {
 	store, user, agent, plaintext := registeredAgentFixture(t, "大狗")
 	traces := &recordingTraceStore{}
-	server := &HTTPServer{store: store, traces: traces, auth: testAgentAuthConfig()}
+	server := &HTTPServer{store: store, traces: traces, auth: testAgentAuthConfig(), ingestion: &traceAdmission{config: DefaultTraceIngestConfig(), owners: make(map[string]int)}}
 	body := mustProtoMarshal(t, testOTLPRequest(false))
 	request := httptest.NewRequest(http.MethodPost, "/v1/otlp/v1/traces", nil)
 	request.Body = io.NopCloser(bytes.NewReader(body))

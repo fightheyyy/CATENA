@@ -68,6 +68,10 @@ const workspaceCopy = {
     analyzing: "正在分析",
     analysisCompleted: "分析完成",
     analysisFailed: "分析失败",
+    analysisCancelled: "分析已取消",
+    cancelAnalysis: "取消分析",
+    cancellingAnalysis: "正在取消",
+    cancelAnalysisFailed: "取消失败",
     resultReady: "产出已生成，等待你确认",
     resultPending: "完成质量检查后，资产会出现在这里。",
     assetCount: "项资产",
@@ -142,6 +146,7 @@ const workspaceCopy = {
       running: "进行中",
       completed: "已完成",
       failed: "失败",
+      cancelled: "已取消",
       not_reported: "未开始",
     },
   },
@@ -194,6 +199,10 @@ const workspaceCopy = {
     analyzing: "Analyzing",
     analysisCompleted: "Analysis complete",
     analysisFailed: "Analysis failed",
+    analysisCancelled: "Analysis cancelled",
+    cancelAnalysis: "Cancel analysis",
+    cancellingAnalysis: "Cancelling",
+    cancelAnalysisFailed: "Could not cancel analysis",
     resultReady: "Outputs are ready for your review",
     resultPending: "Assets will appear here after the quality check.",
     assetCount: "assets",
@@ -268,6 +277,7 @@ const workspaceCopy = {
       running: "In progress",
       completed: "Completed",
       failed: "Failed",
+      cancelled: "Cancelled",
       not_reported: "Not started",
     },
   },
@@ -379,6 +389,10 @@ export function EvolutionWorkspace({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [listError, setListError] = useState("");
+  const [cancellingID, setCancellingID] = useState("");
+  const [cancelError, setCancelError] = useState("");
+  const selectedIDRef = useRef(selectedID);
+  selectedIDRef.current = selectedID;
   const jobsRef = useRef(jobs);
   jobsRef.current = jobs;
   const backgroundJobs = jobs.filter((item) => item.job_id !== selectedID && !isEvolutionJobTerminal(item))
@@ -392,6 +406,7 @@ export function EvolutionWorkspace({
   useEffect(() => {
     setDeleteConfirming(false);
     setDeleteError("");
+    setCancelError("");
   }, [selectedID]);
 
   useEffect(() => {
@@ -453,6 +468,22 @@ export function EvolutionWorkspace({
     void refresh();
     return () => { controller.abort(); window.clearTimeout(timer); };
   }, [backgroundJobs, selectedID, reload, onJobsUpdated, t.loadFailed, refreshVersion]);
+
+  const handleCancelJob = async () => {
+    if (!job || isEvolutionJobTerminal(job) || cancellingID === job.job_id || job.cancel_requested) return;
+    const id = job.job_id;
+    setCancellingID(id);
+    setCancelError("");
+    try {
+      const next = await api.cancelEvolutionJob(id);
+      if (selectedIDRef.current === id) setJob(next);
+      onJobsUpdated([next]);
+    } catch (cause) {
+      if (selectedIDRef.current === id) setCancelError(cause instanceof Error ? cause.message : t.cancelAnalysisFailed);
+    } finally {
+      setCancellingID((current) => current === id ? "" : current);
+    }
+  };
 
   const handleDeleteJob = async () => {
     if (!job || !isEvolutionJobTerminal(job) || deleting) return;
@@ -540,6 +571,7 @@ export function EvolutionWorkspace({
             </div>
           ) : null}
           {deleteError ? <p className="inline-note error" role="alert">{t.deleteFailed}: {deleteError}</p> : null}
+            {cancelError ? <p className="inline-note error" role="alert">{t.cancelAnalysisFailed}: {cancelError}</p> : null}
           {job ? <EvolutionJobDetail
             key={job.job_id}
             job={job}
@@ -548,7 +580,7 @@ export function EvolutionWorkspace({
             agentName={agentName(job.source_agent_id)}
             action={isEvolutionJobTerminal(job) ? (
               deleteConfirming ? null : <button className="text-button danger" type="button" onClick={() => setDeleteConfirming(true)}>{t.deleteAnalysis}</button>
-            ) : <span className="job-delete-hint">{t.deleteAfterFinish}</span>}
+              ) : <button className="secondary-button" type="button" onClick={() => void handleCancelJob()} disabled={cancellingID === job.job_id || job.cancel_requested}>{cancellingID === job.job_id || job.cancel_requested ? t.cancellingAnalysis : t.cancelAnalysis}</button>}
             notice={deleteConfirming ? (
               <div className="job-delete-confirmation" role="group" aria-label={t.confirmDeleteTitle}>
                 <div>
@@ -1019,7 +1051,7 @@ function EvolutionJobDetail({ job, locale, t, agentName, action, notice }: { job
   const objective = job.objective || job.finding?.title || t.defaultObjective;
   const resultLabel = job.state === "completed"
     ? assets.length > 0 ? t.resultReady : t.analysisCompleted
-    : job.state === "failed" ? t.analysisFailed : t.analyzing;
+    : job.state === "failed" ? t.analysisFailed : job.state === "cancelled" ? t.analysisCancelled : job.cancel_requested ? t.cancellingAnalysis : t.analyzing;
 
   return (
     <article className="evolution-job-detail">
@@ -1044,7 +1076,7 @@ function EvolutionJobDetail({ job, locale, t, agentName, action, notice }: { job
       {job.state !== "completed" ? <section className="job-progress-section">
         <div className="section-heading stacked">
           <h3>{t.progress}</h3>
-          <p>{job.state === "completed" ? resultLabel : t.progressBody}</p>
+          <p>{isEvolutionJobTerminal(job) ? resultLabel : t.progressBody}</p>
         </div>
         <div className="progress-steps">
           {stages.map((stage) => (
