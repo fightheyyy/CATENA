@@ -121,7 +121,8 @@ separate host protocols; registry/host composition has no Harness² imports.
 
 Sequential composition feeds each candidate to the next adapter and retains
 intermediate candidates. Parallel composition gives each adapter the same input
-baseline; it does not automatically rank or adopt the outputs. The complete
+baseline; it does not automatically rank or adopt the outputs. A failed branch
+cancels siblings and waits for their host-operation cleanup. The complete
 composition shares a single operation slot, wall deadline and budget ledger.
 Algorithm computations may overlap; model calls and Harbor trials are serialized.
 
@@ -139,6 +140,10 @@ as named file contents in the prompt; context above the input cap is rejected,
 not silently truncated. This differs from upstream's tool-enabled file browsing
 and unrestricted editable surface; do not transfer upstream performance claims.
 Historical Trace evidence is supplemental: fresh probes are still performed.
+The first evaluator presents the final assistant answer and native tool trajectory,
+not rendered office documents or arbitrary generated files. Use answer-oriented
+Cases when assessing optimizer behavior. Its per-run upstream library is temporary;
+cross-request improvement-memory persistence is not enabled.
 
 ## Feedback, budgets and results
 
@@ -153,7 +158,9 @@ calls. Preflight checks the minimum budget; all attempts, including failures,
 consume the shared counters. `model_calls` bounds **optimizer invocations**, not
 the target Agent's individual model requests. Target execution is bounded by
 trial count, task limits and remaining wall time. Tokens are measured separately
-for optimizer and target trials; unknown usage remains null. Dollar cost is
+for optimizer and target trials; unknown trial usage remains null. Completeness
+flags identify missing usage from failed operations; optimizer totals sum only
+completed-call usage. Dollar cost is
 unknown, never reported as zero. This is not a provider-enforced token/money cap.
 
 Optional validation Case IDs must differ from the optimization Case. Their

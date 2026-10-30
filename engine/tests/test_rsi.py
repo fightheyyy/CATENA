@@ -196,3 +196,35 @@ def test_inflight_cancellation_awaits_operation_cleanup():
     with pytest.raises(OptimizationError, match="cancelled"):
         asyncio.run(cancellable(operation(), cancelled))
     assert stopped.is_set()
+
+
+def test_parallel_failure_cancels_siblings_before_pool_drain():
+    import threading
+
+    started = threading.Event()
+
+    class Broken(Strategy):
+        name = "broken"
+
+        def requirements(self, options):
+            return Requirements(0, 0)
+
+        def optimize(self, ctx, services, options):
+            assert started.wait(1)
+            raise OptimizationError("rejected edit")
+
+    class Waiting(Broken):
+        name = "waiting"
+
+        def optimize(self, ctx, services, options):
+            started.set()
+            assert services.cancelled.wait(1), "parallel sibling was not cancelled"
+            raise OptimizationError("cancelled")
+
+    reg = Registry()
+    reg.register(Broken())
+    reg.register(Waiting())
+    services = Services(context(), Runtime(), Evaluator(), Budget())
+    with pytest.raises(OptimizationError, match="rejected edit"):
+        optimize(context(), [Algorithm("broken"), Algorithm("waiting")], "parallel", reg, services)
+    assert services.calls == services.attempted_trials == 0

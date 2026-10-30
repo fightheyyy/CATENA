@@ -153,15 +153,21 @@ def optimize(context: Context, algorithms: list[Algorithm], composition: str,
     candidates: list[Candidate] = []
 
     def run(spec: Algorithm, ctx: Context) -> OptimizationResult:
-        services.remaining()
-        result = registry.get(spec.name).optimize(ctx, services, dict(spec.options))
-        services.remaining()
-        if len(result.candidates) != 1:
-            raise OptimizationError("RSI adapters must produce exactly one candidate per invocation")
-        for candidate in result.candidates:
-            if ctx.baseline.id not in candidate.parents:
-                raise OptimizationError("candidate must cite its input harness as a parent")
-        return result
+        try:
+            services.remaining()
+            result = registry.get(spec.name).optimize(ctx, services, dict(spec.options))
+            services.remaining()
+            if len(result.candidates) != 1:
+                raise OptimizationError("RSI adapters must produce exactly one candidate per invocation")
+            for candidate in result.candidates:
+                if ctx.baseline.id not in candidate.parents:
+                    raise OptimizationError("candidate must cite its input harness as a parent")
+            return result
+        except BaseException:
+            # Stop siblings, including an in-flight hosted operation, before
+            # draining the pool. A rejected branch must not leave paid work running.
+            services.cancelled.set()
+            raise
 
     if composition == "sequential":
         current = context
