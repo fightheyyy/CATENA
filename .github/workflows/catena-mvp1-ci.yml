@@ -45,7 +45,7 @@ jobs:
       - name: Install isolated Harbor test environment
         run: |
           python -m venv /tmp/catena-harbor-tests
-          /tmp/catena-harbor-tests/bin/pip install -e '.[dev,evaluation-e2b]'
+          /tmp/catena-harbor-tests/bin/pip install -e '.[dev,evaluation-e2b,rsi]'
           /tmp/catena-harbor-tests/bin/pip check
       - name: Harbor, E2B adapters and SDK compatibility tests
         run: /tmp/catena-harbor-tests/bin/pytest

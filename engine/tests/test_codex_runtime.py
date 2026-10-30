@@ -247,3 +247,21 @@ def test_http_timeout_cleans_cli_before_releasing_capacity(cli, turn_payload):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_rsi_json_operation_reuses_cli_isolation_without_role_changes(cli, turn_payload):
+    import tomllib
+
+    from catena_engine.codex_runtime import run_codex_json
+    from catena_engine.rsi.runtime import EDIT_SCHEMA, INSTRUCTIONS
+
+    snapshot = cli(output='{"text":"<notes>Check inputs</notes>","files":[]}')
+    result = asyncio.run(run_codex_json(parse_turn_request(turn_payload), INSTRUCTIONS, EDIT_SCHEMA))
+    assert result["status"] == "completed"
+    state = json.loads(snapshot.read_text())
+    config = tomllib.loads(state["config"])
+    assert config["developer_instructions"] == INSTRUCTIONS
+    assert config["sandbox_mode"] == "read-only"
+    assert config["features"]["shell_tool"] is False
+    assert state["schema"] == EDIT_SCHEMA
+    assert not Path(state["cwd"]).exists()
