@@ -5,7 +5,6 @@ description = "Catena analysis engine: runs Inspector, Evolution and Reviewer tu
 requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = [
-  "openai-agents==0.22.3",
   "httpx==0.28.1",
 ]
 
@@ -20,11 +19,17 @@ build-backend = "setuptools.build_meta"
 packages = ["catena_engine"]
 
 [project.optional-dependencies]
+# SDK rollback and Harbor require different OpenAI major versions.
+sdk = ["openai-agents==0.22.3"]
 evaluation = [
   "harbor==0.23.0",
+  "openai-agents==0.12.0",
+  "openai==2.26.0",
 ]
 evaluation-e2b = [
   "harbor[e2b]==0.23.0",
+  "openai-agents==0.12.0",
+  "openai==2.26.0",
 ]
 dev = [
   "pytest==8.4.2",

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -134,12 +135,14 @@ type queueRoundTripFunc func(*http.Request) (*http.Response, error)
 func (f queueRoundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
 func TestEvolutionTransientStageRetryReusesCommittedInspector(t *testing.T) {
-	for _, role := range []string{"evolution", "reviewer"} {
-		t.Run(role, func(t *testing.T) { testEvolutionStageRetry(t, role) })
+	for _, status := range []int{http.StatusTooManyRequests, http.StatusServiceUnavailable} {
+		for _, role := range []string{"evolution", "reviewer"} {
+			t.Run(fmt.Sprintf("%d/%s", status, role), func(t *testing.T) { testEvolutionStageRetry(t, role, status) })
+		}
 	}
 }
 
-func testEvolutionStageRetry(t *testing.T, failedRole string) {
+func testEvolutionStageRetry(t *testing.T, failedRole string, status int) {
 	s := NewMemoryStore()
 	seedTestEvolutionModelConfig(t, s, "local")
 	run := seedEvolutionRun(t, s, "", StateCompleted, "00112233445566778899aabbccddeeff")
@@ -167,7 +170,7 @@ func testEvolutionStageRetry(t *testing.T, failedRole string) {
 			ids[req.Role] = append(ids[req.Role], req.ID)
 			mu.Unlock()
 			if req.Role == failedRole && n == 1 {
-				return &http.Response{StatusCode: 503, Body: io.NopCloser(bytes.NewBufferString(`{"error":"temporary"}`)), Header: make(http.Header)}, nil
+				return &http.Response{StatusCode: status, Body: io.NopCloser(bytes.NewBufferString(`{"error":"temporary"}`)), Header: make(http.Header)}, nil
 			}
 		}
 		return http.DefaultTransport.RoundTrip(r)

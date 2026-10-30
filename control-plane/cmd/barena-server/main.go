@@ -106,10 +106,15 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	turnTimeout, err := time.ParseDuration(env("CATENA_ENGINE_TURN_TIMEOUT", "5m"))
+	if err != nil {
+		return fmt.Errorf("CATENA_ENGINE_TURN_TIMEOUT: %w", err)
+	}
 	evolutionRuntime, err := control.NewEvolutionRuntimeManager(control.EvolutionRuntimeConfig{
 		URL:          os.Getenv("CATENA_ENGINE_URL"),
 		Token:        os.Getenv("CATENA_ENGINE_TOKEN"),
 		ProbeTimeout: 8 * time.Second,
+		TurnTimeout:  turnTimeout,
 		CacheTTL:     5 * time.Second,
 	})
 	if err != nil {

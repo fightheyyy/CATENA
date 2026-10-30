@@ -25,7 +25,7 @@ type EvolutionWorkerConfig struct {
 }
 
 func DefaultEvolutionWorkerConfig() EvolutionWorkerConfig {
-	return EvolutionWorkerConfig{Workers: 2, LeaseTTL: 30 * time.Second, HeartbeatInterval: 5 * time.Second, PollInterval: 500 * time.Millisecond, JobTimeout: 10 * time.Minute, MaxAttempts: 3, RetryBase: time.Second, RetryMax: 30 * time.Second}
+	return EvolutionWorkerConfig{Workers: 1, LeaseTTL: 30 * time.Second, HeartbeatInterval: 5 * time.Second, PollInterval: 500 * time.Millisecond, JobTimeout: 20 * time.Minute, MaxAttempts: 3, RetryBase: time.Second, RetryMax: 30 * time.Second}
 }
 
 func EvolutionWorkerConfigFromEnv(get func(string) string) (EvolutionWorkerConfig, error) {

@@ -1,6 +1,13 @@
 # Catena 技术采用决策
 
-## 2026-10-03 当前决定（覆盖下方 9 月 30 日的运行时选择）
+## 当前运行时（覆盖下方历史选择）
+
+Inspector / Evolution / Reviewer 默认使用隔离的 Codex CLI 0.160.0；设置
+`CATENA_ENGINE_BACKEND=sdk` 可显式回退，失败不会自动切换后端。
+Harbor 与实验协调逻辑保留原实现。SDK 0.22.3 和 Harbor/LiteLLM 的
+OpenAI 依赖使用独立环境，见 [运行时与验收说明](../CODEX_ENGINE_RUNTIME.md)。
+
+## 2026-10-03 历史决定
 
 用户已确认：Catena 的分析与主动 Agent 运行时统一采用 **OpenAI Agents SDK（Python）**，
 不采用 Pi；Agents API 不再作为默认 Engineer 后端。现有 engine 已使用 SDK，

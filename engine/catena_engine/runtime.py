@@ -8,21 +8,19 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from agents import Agent, Model, ModelSettings, OpenAIChatCompletionsModel, RunConfig, Runner, set_tracing_disabled
-from openai import AsyncOpenAI
-
 from .protocol import ModelConfig, TurnRequest
 from .roles import ROLES
 
-# The SDK exports traces to OpenAI by default. Owner evidence and keys must
-# never leave through that path, so tracing stays disabled process-wide.
-set_tracing_disabled(True)
-
-ModelFactory = Callable[[ModelConfig], tuple[Model, Callable[[], Any] | None]]
+# Keep the Codex/HTTP path importable without the optional SDK or Harbor.
+ModelFactory = Callable[[ModelConfig], tuple[Any, Callable[[], Any] | None]]
 
 
-def openai_compatible_model(config: ModelConfig) -> tuple[Model, Callable[[], Any]]:
+def openai_compatible_model(config: ModelConfig) -> tuple[Any, Callable[[], Any]]:
     """Chat Completions is the lowest common denominator across BYOK providers."""
+    from agents import OpenAIChatCompletionsModel, set_tracing_disabled
+    from openai import AsyncOpenAI
+
+    set_tracing_disabled(True)
     client = AsyncOpenAI(api_key=config.api_key, base_url=config.base_url, max_retries=1)
     return OpenAIChatCompletionsModel(model=config.model, openai_client=client), client.close
 
@@ -41,6 +39,9 @@ async def run_turn(request: TurnRequest, model_factory: ModelFactory | None = No
 
 
 async def _run_sdk_turn(request: TurnRequest, model_factory: ModelFactory) -> dict[str, Any]:
+    from agents import Agent, ModelSettings, RunConfig, Runner, set_tracing_disabled
+
+    set_tracing_disabled(True)
     role = ROLES[request.role]
     model, close = model_factory(request.model)
     agent = Agent(

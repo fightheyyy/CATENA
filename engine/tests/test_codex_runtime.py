@@ -227,3 +227,23 @@ def test_manifest_reports_missing_cli(monkeypatch):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_http_timeout_cleans_cli_before_releasing_capacity(cli, turn_payload):
+    import threading
+
+    snapshot = cli(body="signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(60)")
+    turn_payload["timeout_ms"] = 200
+    server = create_server("127.0.0.1:0")
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{server.server_port}"
+    try:
+        status, body = call(base + "/v1/turn", turn_payload)
+        assert status == 200
+        assert body["result"]["reason_code"] == "timeout"
+        assert not Path(json.loads(snapshot.read_text())["cwd"]).exists()
+        cli()
+        assert call(base + "/v1/turn", turn_payload)[1]["result"]["status"] == "completed"
+    finally:
+        server.shutdown()
+        server.server_close()

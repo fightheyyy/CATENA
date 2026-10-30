@@ -25,17 +25,32 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 	}
 	ctx := context.Background()
 	var store Store = NewMemoryStore()
-	if databaseURL := os.Getenv("BARENA_TEST_DATABASE_URL"); databaseURL != "" {
-		pg, err := OpenPostgres(ctx, databaseURL)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer pg.Close()
+	databaseURL := ""
+	if os.Getenv("BARENA_TEST_DATABASE_URL") != "" {
+		// A leased Worker drains all eligible jobs in its store. Give this
+		// acceptance its own schema so prior integration fixtures cannot run
+		// against the stub/provider or alter the exact three-Role assertion.
+		pg, isolatedURL := isolatedQueuePostgres(t)
 		store = pg
+		databaseURL = isolatedURL
 	}
 	var mu sync.Mutex
 	var seen []string
+	slowCancelled := make(chan struct{}, 1)
+	stopSlow := make(chan struct{})
 	stub := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/slow/responses" {
+			_, _ = io.Copy(io.Discard, r.Body)
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = io.WriteString(w, "event: response.created\ndata: {\"type\":\"response.created\",\"response\":{\"id\":\"slow\",\"status\":\"in_progress\",\"output\":[]}}\n\n")
+			w.(http.Flusher).Flush()
+			select {
+			case <-r.Context().Done():
+				slowCancelled <- struct{}{}
+			case <-stopSlow:
+			}
+			return
+		}
 		if r.URL.Path != "/v1/responses" {
 			http.NotFound(w, r)
 			return
@@ -112,6 +127,7 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 	stub.Listener = listener
 	stub.Start()
 	defer stub.Close()
+	defer close(stopSlow)
 	base := stub.URL
 	if host := os.Getenv("CATENA_CODEX_ACCEPT_CALLBACK_HOST"); host != "" {
 		base = "http://" + net.JoinHostPort(host, fmt.Sprint(stub.Listener.Addr().(*net.TCPAddr).Port))
@@ -170,7 +186,7 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 	if err := json.NewDecoder(response.Body).Decode(&job); err != nil {
 		t.Fatal(err)
 	}
-	deadline := time.Now().Add(8 * time.Minute)
+	deadline := time.Now().Add(16 * time.Minute)
 	for time.Now().Before(deadline) {
 		job, err = store.GetEvolutionJob(ctx, job.ID)
 		if err != nil {
@@ -195,13 +211,33 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 			t.Fatal("stage output or usage missing")
 		}
 	}
+	report := map[string]any{"job_id": job.ID, "live_provider": live, "model": credentials.Model, "state": job.State, "stages": job.Stages}
+	if reportPath := os.Getenv("CATENA_CODEX_ACCEPT_REPORT"); reportPath != "" {
+		encoded, err := json.MarshalIndent(report, "", "  ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(reportPath, encoded, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, stage := range job.Stages {
+		var result struct {
+			DurationMS int64            `json:"duration_ms"`
+			Usage      map[string]int64 `json:"usage"`
+		}
+		if err := json.Unmarshal(stage.RawOutput, &result); err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("role=%s elapsed=%s duration_ms=%d usage=%v", stage.Role, stage.FinishedAt.Sub(*stage.StartedAt), result.DurationMS, result.Usage)
+	}
 	mu.Lock()
 	defer mu.Unlock()
 	if !live && strings.Join(seen, ",") != "inspector,evolution,reviewer" {
 		t.Fatalf("unexpected Role order: %v", seen)
 	}
 	// A fresh DB connection confirms this was committed, not just in memory.
-	if databaseURL := os.Getenv("BARENA_TEST_DATABASE_URL"); databaseURL != "" {
+	if databaseURL != "" {
 		reopened, err := OpenPostgres(ctx, databaseURL)
 		if err != nil {
 			t.Fatal(err)
@@ -220,6 +256,22 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 		})
 		if err == nil || !strings.Contains(err.Error(), "responses_incompatible") || strings.Contains(err.Error(), credentials.APIKey) {
 			t.Fatal("unsupported Responses endpoint was not safely reported")
+		}
+
+		timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		_, err = manager.RunRoleTurn(timeoutCtx, EvolutionRoleTurnInput{
+			RequestID: newID("codex-timeout"), RunID: job.ID, Role: "inspector",
+			Prompt: "Return a JSON finding.", Timeout: 5 * time.Second,
+			Model: EvolutionModelCredentials{Provider: "openai", BaseURL: base + "/slow", Model: credentials.Model, APIKey: "stub-key"},
+		})
+		if err == nil || !strings.Contains(err.Error(), "turn timeout:") || timeoutCtx.Err() != nil {
+			t.Fatalf("Engine did not terminate and return its own timeout within cleanup grace: %v", err)
+		}
+		select {
+		case <-slowCancelled:
+		case <-time.After(3 * time.Second):
+			t.Fatal("timed-out CLI did not disconnect the stalled provider")
 		}
 	}
 	t.Logf("job=%s completed Inspector → Evolution → Reviewer; candidate=%s review=%s live_provider=%v", job.ID, job.Candidate.Kind, job.Review.Verdict, live)

@@ -1184,3 +1184,113 @@ func seedTestEvolutionModelConfig(t *testing.T, store *MemoryStore, ownerUserID 
 		t.Fatal(err)
 	}
 }
+
+// The Engine gets the configured run deadline, while Go allows cleanup to
+// finish and persists the failed stage instead of starting Evolution/Reviewer.
+func TestEvolutionStageTimeoutPreservesEngineFailure(t *testing.T) {
+	store := NewMemoryStore()
+	seedTestEvolutionModelConfig(t, store, "local")
+	traceID := "11111111111111111111111111111111"
+	run := seedEvolutionRun(t, store, "", StateCompleted, traceID)
+	observed := make(chan int64, 1)
+	engine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		observed <- int64(req["timeout_ms"].(float64))
+		// Deliberately return after the run deadline to model CLI termination.
+		time.Sleep(100 * time.Millisecond)
+		writeJSON(w, 200, map[string]any{"schema": engineTurnResponseSchema, "request_id": req["request_id"], "status": "ok",
+			"result": map[string]any{"status": "failed", "reason_code": "timeout", "detail": "Codex did not answer before the turn timeout"}})
+	}))
+	defer engine.Close()
+	manager, err := NewEvolutionRuntimeManager(EvolutionRuntimeConfig{URL: engine.URL, TurnTimeout: 50 * time.Millisecond})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := EvolutionJob{ID: newID("timeout"), SourceRunID: run.ID, SourceKind: EvolutionSourceRunTrace, SourceTraceID: traceID, OwnerUserID: run.OwnerUserID, Schema: evolutionJobSchema, State: EvolutionJobQueued, Stages: append([]EvolutionStage(nil), evolutionJobStages...)}
+	if _, _, err := store.CreateEvolutionJob(context.Background(), job); err != nil {
+		t.Fatal(err)
+	}
+	s := &HTTPServer{store: store, evolutionRuntime: manager}
+	job, lease, err := store.ClaimEvolutionJob(context.Background(), "timeout-test", time.Minute, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, stageErr := s.runEvolutionStage(context.Background(), lease, &job, 0, "Return a finding", EvolutionModelCredentials{Provider: "openai", BaseURL: "http://example.test/v1", Model: "test", APIKey: "test"})
+	if stageErr == nil || raw != nil || !strings.Contains(stageErr.Error(), "timeout") {
+		t.Fatalf("lost Engine timeout: %v", stageErr)
+	}
+	if got := <-observed; got != 50 {
+		t.Fatalf("timeout_ms=%d", got)
+	}
+	// The leased Worker owns terminal-state persistence after a failed stage.
+	if err := store.ReleaseEvolutionJob(context.Background(), lease, stageErr.Error(), false, 0, 3); err != nil {
+		t.Fatal(err)
+	}
+	saved, err := store.GetEvolutionJob(context.Background(), job.ID)
+	if err != nil || saved.State != EvolutionJobFailed || saved.Stages[0].State != EvolutionStageFailed || saved.Stages[1].State != EvolutionStageQueued {
+		t.Fatal("failed stage was not persisted or later stage started")
+	}
+}
+
+func TestEvolutionStageInheritsWorkerCancellationAndDeadline(t *testing.T) {
+	for _, deadline := range []bool{false, true} {
+		t.Run(fmt.Sprintf("deadline=%v", deadline), func(t *testing.T) {
+			store := NewMemoryStore()
+			seedQueueJob(t, store)
+			job, lease, err := store.ClaimEvolutionJob(context.Background(), "cancel-test", time.Minute, 3)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			if deadline {
+				cancel()
+				ctx, cancel = context.WithTimeout(context.Background(), time.Second)
+			}
+			defer cancel()
+			started := make(chan struct{})
+			manager, err := NewEvolutionRuntimeManager(EvolutionRuntimeConfig{
+				URL: "http://engine.test", TurnTimeout: 5 * time.Minute,
+				Client: &http.Client{Transport: queueRoundTripFunc(func(r *http.Request) (*http.Response, error) {
+					if deadline {
+						want, _ := ctx.Deadline()
+						got, ok := r.Context().Deadline()
+						if !ok || !got.Equal(want) {
+							t.Error("stage discarded the worker deadline")
+						}
+					}
+					close(started)
+					<-r.Context().Done()
+					return nil, r.Context().Err()
+				})},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			s := &HTTPServer{store: store, evolutionRuntime: manager}
+			done := make(chan error, 1)
+			go func() {
+				_, err := s.runEvolutionStage(ctx, lease, &job, 0, "Inspect evidence", testEvolutionModelCredentials())
+				done <- err
+			}()
+			select {
+			case <-started:
+			case <-time.After(2 * time.Second):
+				t.Fatal("stage did not start")
+			}
+			want := context.DeadlineExceeded
+			if !deadline {
+				cancel() // Same signal used for worker shutdown, cancellation and lease loss.
+				want = context.Canceled
+			}
+			select {
+			case err := <-done:
+				if !errors.Is(err, want) {
+					t.Fatalf("stage error=%v, want %v", err, want)
+				}
+			case <-time.After(2 * time.Second):
+				t.Fatal("stage ignored worker cancellation/deadline")
+			}
+		})
+	}
+}
