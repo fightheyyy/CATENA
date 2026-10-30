@@ -25,13 +25,14 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 	}
 	ctx := context.Background()
 	var store Store = NewMemoryStore()
-	if databaseURL := os.Getenv("BARENA_TEST_DATABASE_URL"); databaseURL != "" {
-		pg, err := OpenPostgres(ctx, databaseURL)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer pg.Close()
+	databaseURL := ""
+	if os.Getenv("BARENA_TEST_DATABASE_URL") != "" {
+		// A leased Worker drains all eligible jobs in its store. Give this
+		// acceptance its own schema so prior integration fixtures cannot run
+		// against the stub/provider or alter the exact three-Role assertion.
+		pg, isolatedURL := isolatedQueuePostgres(t)
 		store = pg
+		databaseURL = isolatedURL
 	}
 	var mu sync.Mutex
 	var seen []string
@@ -236,7 +237,7 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 		t.Fatalf("unexpected Role order: %v", seen)
 	}
 	// A fresh DB connection confirms this was committed, not just in memory.
-	if databaseURL := os.Getenv("BARENA_TEST_DATABASE_URL"); databaseURL != "" {
+	if databaseURL != "" {
 		reopened, err := OpenPostgres(ctx, databaseURL)
 		if err != nil {
 			t.Fatal(err)

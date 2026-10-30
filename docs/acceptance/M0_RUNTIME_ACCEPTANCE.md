@@ -30,6 +30,11 @@ These measurements are retained as historical evidence, not a fresh model run
 on the integrated revision. Current CI separately runs the real CLI against a
 synthetic Responses provider and disposable PostgreSQL.
 
+The first integrated CI run exposed shared test-queue contamination: the Worker
+also drained pending jobs left by preceding integration tests. The CLI acceptance
+now reuses `isolatedQueuePostgres` for a dedicated schema, including its fresh
+connection read-back and cleanup. The exact three-Role assertion is retained.
+
 A real `gpt-5.6-luna` / **low** turn used CLIProxyAPI 8.0.31, pinned Codex CLI
 0.160.0 and the existing Go acceptance test. The test PUTs owner model configuration
 through the Go API, POSTs an Evolution Job, executes the three Roles through the
