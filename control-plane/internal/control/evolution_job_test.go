@@ -26,6 +26,7 @@ func TestEvolutionJobRunsThreeEvidenceStagesAndIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -159,6 +160,7 @@ func TestTraceEvolutionJobUsesStoredToolEvidenceWithoutSyntheticRun(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -278,6 +280,7 @@ func TestAgentEvolutionJobFreezesMultipleTracesAndKeepsPluralProvenance(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -372,6 +375,7 @@ func TestAgentEvolutionJobUsesOnlyBarenaTargetEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -534,6 +538,7 @@ func TestEvolutionJobRejectsNonterminalOrUnretainedEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -743,6 +748,7 @@ func TestEvolutionJobFailsTerminallyWhenRuntimeStageFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -1206,15 +1212,85 @@ func TestEvolutionStageTimeoutPreservesEngineFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := &HTTPServer{store: store, evolutionRuntime: manager}
-	raw, ok := s.runEvolutionStage(&job, 0, "Return a finding", EvolutionModelCredentials{Provider: "openai", BaseURL: "http://example.test/v1", Model: "test", APIKey: "test"})
-	if ok || raw != nil || !strings.Contains(job.Error, "timeout") {
-		t.Fatalf("lost Engine timeout: %+v", job)
+	job, lease, err := store.ClaimEvolutionJob(context.Background(), "timeout-test", time.Minute, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, stageErr := s.runEvolutionStage(context.Background(), lease, &job, 0, "Return a finding", EvolutionModelCredentials{Provider: "openai", BaseURL: "http://example.test/v1", Model: "test", APIKey: "test"})
+	if stageErr == nil || raw != nil || !strings.Contains(stageErr.Error(), "timeout") {
+		t.Fatalf("lost Engine timeout: %v", stageErr)
 	}
 	if got := <-observed; got != 50 {
 		t.Fatalf("timeout_ms=%d", got)
 	}
+	// The leased Worker owns terminal-state persistence after a failed stage.
+	if err := store.ReleaseEvolutionJob(context.Background(), lease, stageErr.Error(), false, 0, 3); err != nil {
+		t.Fatal(err)
+	}
 	saved, err := store.GetEvolutionJob(context.Background(), job.ID)
-	if err != nil || saved.State != EvolutionJobFailed || saved.Stages[1].State != EvolutionStageQueued {
+	if err != nil || saved.State != EvolutionJobFailed || saved.Stages[0].State != EvolutionStageFailed || saved.Stages[1].State != EvolutionStageQueued {
 		t.Fatal("failed stage was not persisted or later stage started")
+	}
+}
+
+func TestEvolutionStageInheritsWorkerCancellationAndDeadline(t *testing.T) {
+	for _, deadline := range []bool{false, true} {
+		t.Run(fmt.Sprintf("deadline=%v", deadline), func(t *testing.T) {
+			store := NewMemoryStore()
+			seedQueueJob(t, store)
+			job, lease, err := store.ClaimEvolutionJob(context.Background(), "cancel-test", time.Minute, 3)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			if deadline {
+				cancel()
+				ctx, cancel = context.WithTimeout(context.Background(), time.Second)
+			}
+			defer cancel()
+			started := make(chan struct{})
+			manager, err := NewEvolutionRuntimeManager(EvolutionRuntimeConfig{
+				URL: "http://engine.test", TurnTimeout: 5 * time.Minute,
+				Client: &http.Client{Transport: queueRoundTripFunc(func(r *http.Request) (*http.Response, error) {
+					if deadline {
+						want, _ := ctx.Deadline()
+						got, ok := r.Context().Deadline()
+						if !ok || !got.Equal(want) {
+							t.Error("stage discarded the worker deadline")
+						}
+					}
+					close(started)
+					<-r.Context().Done()
+					return nil, r.Context().Err()
+				})},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			s := &HTTPServer{store: store, evolutionRuntime: manager}
+			done := make(chan error, 1)
+			go func() {
+				_, err := s.runEvolutionStage(ctx, lease, &job, 0, "Inspect evidence", testEvolutionModelCredentials())
+				done <- err
+			}()
+			select {
+			case <-started:
+			case <-time.After(2 * time.Second):
+				t.Fatal("stage did not start")
+			}
+			want := context.DeadlineExceeded
+			if !deadline {
+				cancel() // Same signal used for worker shutdown, cancellation and lease loss.
+				want = context.Canceled
+			}
+			select {
+			case err := <-done:
+				if !errors.Is(err, want) {
+					t.Fatalf("stage error=%v, want %v", err, want)
+				}
+			case <-time.After(2 * time.Second):
+				t.Fatal("stage ignored worker cancellation/deadline")
+			}
+		})
 	}
 }

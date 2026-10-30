@@ -217,6 +217,9 @@ export function normalizeEvolutionJob(value: unknown): EvolutionJob {
 
   return {
     schema: stringValue(source.schema) || undefined,
+    attempt: typeof source.attempt === "number" && Number.isInteger(source.attempt) && source.attempt >= 0 ? source.attempt : undefined,
+    next_attempt_at: stringValue(source.next_attempt_at) || undefined,
+    cancel_requested: source.cancel_requested === true,
     job_id: jobID,
     source_kind: stringValue(source.source_kind) === "agent_trace_set"
       ? "agent_trace_set"
@@ -276,7 +279,7 @@ export function evolutionStages(job: EvolutionJob): EvolutionStage[] {
 }
 
 export function isEvolutionJobTerminal(job: EvolutionJob): boolean {
-  return job.state === "completed" || job.state === "failed";
+  return job.state === "completed" || job.state === "failed" || job.state === "cancelled";
 }
 
 export function evolutionTraceCounts(job: EvolutionJob) {

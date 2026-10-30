@@ -120,17 +120,26 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler, err := control.NewHTTPHandlerWithMemory(store, runner, control.AuthConfig{
+	workerConfig, err := control.EvolutionWorkerConfigFromEnv(os.Getenv)
+	if err != nil {
+		return err
+	}
+	ingestConfig, err := control.TraceIngestConfigFromEnv(os.Getenv)
+	if err != nil {
+		return err
+	}
+	handler, err := control.NewHTTPHandlerWithBackendConfig(store, runner, control.AuthConfig{
 		GitHubClientID:        githubClientID,
 		GitHubClientSecret:    githubClientSecret,
 		RedirectURL:           redirectURL,
 		SecureCookies:         strings.HasPrefix(redirectURL, "https://"),
 		GatewaySecret:         gatewaySecret,
 		APITokenEncryptionKey: apiTokenEncryptionKey,
-	}, evolutionRuntime, traceStore, memoryStore)
+	}, evolutionRuntime, traceStore, memoryStore, workerConfig, ingestConfig)
 	if err != nil {
 		return err
 	}
+	defer handler.Close()
 	server := &http.Server{
 		Addr:              address,
 		Handler:           handler,

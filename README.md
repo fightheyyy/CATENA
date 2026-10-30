@@ -4,13 +4,18 @@
 
 <h1 align="center">Catena</h1>
 
-<p align="center"><strong>从编程 Agent 的真实运行中，找到可修复的问题。</strong></p>
+<p align="center"><strong>基于 Go 的 Agent Trace 接入与异步分析平台。</strong></p>
 
 <p align="center">
-  Traceable failure patterns and reviewable Skill drafts from Codex and Claude Code sessions.
+  Go control plane · PostgreSQL job queue · ClickHouse trace storage · OTLP ingestion.
 </p>
 
-Catena 收集 Codex 和 Claude Code 的运行证据，按 Turn 回看工具调用，帮助维护者找出值得核对的重复问题并生成 Skill 候选。主界面围绕工作台、经历、产出、记忆和 Case 实验展开。Catena Agent 帮助用户分析和规划，Harbor 执行目标 Agent 的评测。候选仍需独立回归验证，Reviewer 的通过不代表目标 Agent 已改善。
+Catena 接收 Codex、Claude Code 及其他 Agent 的 OTLP Trace，用 ClickHouse 保存运行证据，用 PostgreSQL 保存业务状态和分析任务。Go Worker 通过租约、心跳和 fencing token 执行异步分析，支持阶段检查点、重试、取消和过期接管。接入端在读取请求体前限制并发，只有 ClickHouse 写入成功才确认接收。
+
+分析引擎帮助用户核对重复问题并生成 Skill 候选；Harbor 负责目标 Agent 的评测。Trace 错误信号与模型审查不能代替交付质量评价，候选是否有效仍由独立实验决定。
+
+- [后端改造范围与发布门槛](docs/GO_BACKEND_RELEASE_PLAN_20261027.md)
+- [任务队列、故障验收与部署说明](docs/BACKEND_ENGINEERING_20261027.md)
 
 当前支持 Codex、Claude Code 的本地采集插件，以及通用 OTLP Trace 接收；可读取的信息取决于来源实际导出的内容。Agent 不原生输出 OTLP 时，需要采集插件或适配器。离线失败线索扫描、人工标注表和独立的 Skill 配对实验入口已可复跑，尚未接入问题卡 UI。首个 3 题合成试跑为基线 3/3、候选 3/3，尚无真实失败修复率结果。
 
@@ -20,11 +25,13 @@ Codex CLI 对照未通过环境验收，旧 3/3 试跑不能作为效果证据�
 本地 CLIProxyAPI 的 GPT-5.5 完成 12 次有效 SDK 对照：两组均 6/6 答对，
 Skill 将缺失 rg 错误调用从 4 次降到 0 次，但输入令牌增加 29.4%，未证明
 成功率或效率提升。[实验结论](docs/CASE_RG_MISSING_20261003.md)。
-平台三个分析 Role 默认使用隔离的 Codex CLI（[运行时说明](docs/CODEX_ENGINE_RUNTIME.md)）；SDK 保留为显式回退，Harbor 协调路径仍使用 SDK。此前完成
+当时的平台运行时采用 OpenAI Agents SDK；随后完成
 [平台 Agent 调用 Harbor 的 Docker 实验](docs/HARBOR_EXPERIMENT_20261003.md)，
 6 次有效 Trial，两组均 3/3，缺失 rg 错误调用 2→0。
 现已提供 [Case 实验页面](docs/HARBOR_WEB_EXPERIMENTS.md)，支持发起、查看与恢复实验。
 E2B 接入仍未完成云端验收；本地评测使用 Docker。
+
+当前分析角色默认通过隔离的 Codex CLI 执行，可显式切回 SDK；接口和三阶段业务校验保持兼容。配置与验收范围见 [Codex Engine 说明](docs/CODEX_ENGINE_RUNTIME.md)。
 
 ## 冻结实验：7 Skills / 28 Tasks / 168 Rollouts
 
@@ -188,7 +195,7 @@ Trace 链接保留精确记录，Trace Farm 的任务完成状态会同步到资
 这些界面行为有独立的浏览器回归测试；模拟数据测试不代替真实接入、模型执行
 或生成产物的效果验收。
 
-MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、用户自带 LLM、OTLP 导入、Runtime 自动识别、Agent 聚合、Span 瀑布、进化候选与中英文 UI。DeepSeek Harness 已打通 DSH → Barena Explore → Catena Trace Farm → DSH Plugin 产出与本地安装验收。当前定位是 single-node Beta；多 Worker lease、备份恢复、配额与完整 RBAC 尚未完成。
+MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、用户自带 LLM、OTLP 导入、Runtime 自动识别、Agent 聚合、Span 瀑布、进化候选与中英文 UI。DeepSeek Harness 已打通 DSH → Barena Explore → Catena Trace Farm → DSH Plugin 产出与本地安装验收。当前定位是 single-node Beta；已实现多 Worker 租约与任务恢复，备份恢复验收、配额与完整 RBAC 尚未完成。
 
 ```bash
 cd catena-web && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm typecheck && pnpm build

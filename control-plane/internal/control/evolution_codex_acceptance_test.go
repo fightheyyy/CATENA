@@ -146,6 +146,7 @@ func TestCodexEngineEvolutionAcceptance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer handler.Close()
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	configured := putLLMConfig(t, server.URL, map[string]string{

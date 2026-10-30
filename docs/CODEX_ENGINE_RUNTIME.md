@@ -105,7 +105,11 @@ transport. The CLI adapter sends SIGTERM, escalates to SIGKILL after one second,
 drains pipes and removes the temporary session before returning. Codex request
 and stream retries are configured to zero; SDK rollback retains its existing
 provider retry policy. No automatic backend fallback occurs. Three stages may
-each consume the configured budget.
+each consume the configured budget. The Worker attempt deadline is an outer
+bound: `CATENA_JOB_TIMEOUT` defaults to `20m`, covering three default 5m stages,
+three 10s cleanup allowances and persistence. Increase it explicitly if raising
+the stage budget; a shorter configured job deadline takes precedence. Stage
+contexts inherit Worker cancellation, shutdown and lease-loss signals.
 A disconnected client still does not cancel a running turn; it ends at its own
 budget. A killed Engine/container cannot return a result to Go.
 
@@ -113,9 +117,18 @@ budget. A killed Engine/container cannot return a result to Go.
 rejects excess `/v1/turn` requests with HTTP 429 / `runtime_busy`, without launching
 a CLI or waiting in an unbounded execution queue. Health, manifest and Harbor
 bridge queries use separate HTTP threads and do not acquire the analysis slot.
-Go persists a capacity rejection as a failed job; the user can submit a new job
-when capacity is available. This is single-process admission control, not a
-multi-replica queue. The existing API has no automatic analysis-job recovery.
+Go treats HTTP 429/5xx as transient: the PostgreSQL-backed leased queue retries
+with bounded backoff and the configured attempt limit. Completed stage checkpoints
+are reused. `CATENA_JOB_WORKERS` defaults to `1`, matching the Engine's single
+analysis slot; increase both only after measuring capacity. Pending jobs stay in
+the existing queue. Leases, heartbeats and fencing protect job commits and allow
+expired-worker takeover; Engine admission itself remains per process.
+
+Cancelling a job or losing its lease cancels the Go HTTP request. The synchronous
+Engine protocol does not propagate that disconnect into its running coroutine;
+the CLI may continue until its own timeout and occupy the Engine slot. A retry
+can therefore encounter 429, and interrupted uncommitted stages may execute again.
+Fencing protects persistence, not exactly-once model execution or model costs.
 
 For a 2-core / 8GB host, Compose limits the entire Engine (including all CLI
 children) to 1 CPU, 1GiB RAM and 128 PIDs. Leave analysis concurrency at 1. These

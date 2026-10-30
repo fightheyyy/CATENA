@@ -133,15 +133,37 @@ func (s *HTTPServer) ingestOTLPTraces(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !s.ingestion.acquire(principal.User.ID) {
+		writeProblem(w, http.StatusTooManyRequests, "Trace ingestion is busy; retry with backoff")
+		return
+	}
+	defer s.ingestion.release(principal.User.ID)
+	ctx, cancel := context.WithTimeout(r.Context(), s.ingestion.config.Timeout)
+	defer cancel()
+	r = r.WithContext(ctx)
+	// Bound slow request bodies as well as the database call. Unsupported
+	// controllers (e.g. unit-test recorders) still get the context deadline.
+	controller := http.NewResponseController(w)
+	_ = controller.SetReadDeadline(time.Now().Add(s.ingestion.config.Timeout))
+	defer controller.SetReadDeadline(time.Time{})
 	r.Body = http.MaxBytesReader(w, r.Body, maxOTLPRequestBytes)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		writeProblem(w, http.StatusRequestEntityTooLarge, "OTLP request exceeds 16 MiB")
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			writeProblem(w, http.StatusRequestEntityTooLarge, "OTLP request exceeds 16 MiB")
+		} else {
+			writeProblem(w, http.StatusBadRequest, "Could not read OTLP request")
+		}
 		return
 	}
 	decoded, encoding, err := decodeOTLPRequest(body, r.Header.Get("Content-Type"))
 	if err != nil {
 		writeProblem(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if len(decoded.Spans)+int(decoded.Rejected) > s.ingestion.config.MaxSpans {
+		writeProblem(w, http.StatusRequestEntityTooLarge, "OTLP span count exceeds the configured limit; split the batch")
 		return
 	}
 	if len(decoded.Spans) > 0 {

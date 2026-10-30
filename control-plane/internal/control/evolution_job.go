@@ -266,7 +266,7 @@ func (s *HTTPServer) createAgentEvolutionJob(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if created {
-		go s.executeEvolutionJob(stored.ID)
+		s.jobs.notify()
 		writeJSON(w, http.StatusAccepted, stored)
 		return
 	}
@@ -341,7 +341,7 @@ func (s *HTTPServer) createEvolutionJobFromEvidence(
 		return
 	}
 	if created {
-		go s.executeEvolutionJob(stored.ID)
+		s.jobs.notify()
 		writeJSON(w, http.StatusAccepted, stored)
 		return
 	}
@@ -444,33 +444,21 @@ func (s *HTTPServer) deleteEvolutionJob(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *HTTPServer) executeEvolutionJob(jobID string) {
-	job, err := s.store.GetEvolutionJob(context.Background(), jobID)
-	if err != nil {
-		return
-	}
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			s.failEvolutionJob(&job, -1, "Evolution Job stopped unexpectedly")
-		}
-	}()
+func (s *HTTPServer) executeEvolutionJob(ctx context.Context, lease EvolutionLease, job EvolutionJob) error {
 	if job.EvidencePack == nil || !validEvolutionEvidencePack(*job.EvidencePack, job) {
-		s.failEvolutionJob(&job, -1, "stored Evolution Evidence Pack is unavailable")
-		return
+		return errors.New("stored Evolution Evidence Pack is unavailable")
 	}
-	model, err := s.evolutionModelCredentials(context.Background(), job.OwnerUserID)
+	model, err := s.evolutionModelCredentials(ctx, job.OwnerUserID)
 	if err != nil {
-		s.failEvolutionJob(&job, -1, bounded(err.Error(), 1000))
-		return
+		return err
 	}
 	evidence, err := json.Marshal(job.EvidencePack)
 	if err != nil {
-		s.failEvolutionJob(&job, -1, "Evolution Evidence Pack could not be encoded")
-		return
+		return errors.New("Evolution Evidence Pack could not be encoded")
 	}
 
 	inspectorPrompt := buildInspectorPrompt(job, evidence)
-	if s.memory != nil {
+	if s.memory != nil && len(job.MemoryContext) == 0 && job.Stages[0].State != EvolutionStageCompleted {
 		owner := job.OwnerUserID
 		if owner == "" {
 			owner = "local"
@@ -479,7 +467,7 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 		if query == "" {
 			query = "Reusable experiences and preferences for " + job.SourceAgentID + " " + job.SourceRuntimeKind
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		recall, recallErr := s.memory.Search(ctx, owner, MemorySearchRequest{Query: query, TopK: 4})
 		cancel()
 		if recallErr == nil {
@@ -505,67 +493,74 @@ func (s *HTTPServer) executeEvolutionJob(jobID string) {
 		}
 	}
 	inspectorPrompt += evolutionMemoryContextPrompt(job.MemoryContext)
-	inspectorRaw, ok := s.runEvolutionStage(&job, 0, inspectorPrompt, model)
-	if !ok {
-		return
+	inspectorRaw, err := s.runEvolutionStage(ctx, lease, &job, 0, inspectorPrompt, model)
+	if err != nil {
+		return err
 	}
 	finding := inspectorOutput(inspectorRaw)
 	job.Finding = &finding
 	job.UpdatedAt = time.Now().UTC()
-	if err := s.store.UpdateEvolutionJob(context.Background(), job); err != nil {
-		return
+	if err := s.saveEvolutionProgress(ctx, lease, job); err != nil {
+		return err
 	}
 
 	evolutionPrompt := buildCandidatePrompt(job)
 	evolutionPrompt += evolutionMemoryContextPrompt(job.MemoryContext)
-	candidateRaw, ok := s.runEvolutionStage(&job, 1, evolutionPrompt, model)
-	if !ok {
-		return
+	candidateRaw, err := s.runEvolutionStage(ctx, lease, &job, 1, evolutionPrompt, model)
+	if err != nil {
+		return err
 	}
 	candidate := candidateOutput(candidateRaw, job.SourceAgentID, job.SourceRuntimeKind)
 	enrichEvolutionCandidate(&candidate, job)
 	job.Candidate = &candidate
 	job.UpdatedAt = time.Now().UTC()
-	if err := s.store.UpdateEvolutionJob(context.Background(), job); err != nil {
-		return
+	if err := s.saveEvolutionProgress(ctx, lease, job); err != nil {
+		return err
 	}
 
 	reviewerPrompt := buildReviewerPrompt(job, evidence)
 	reviewerPrompt += evolutionMemoryContextPrompt(job.MemoryContext)
-	reviewerRaw, ok := s.runEvolutionStage(&job, 2, reviewerPrompt, model)
-	if !ok {
-		return
+	reviewerRaw, err := s.runEvolutionStage(ctx, lease, &job, 2, reviewerPrompt, model)
+	if err != nil {
+		return err
 	}
 	review := reviewOutput(reviewerRaw)
 	job.Review = &review
 	job.State = EvolutionJobCompleted
 	job.CurrentStage = "complete"
 	job.UpdatedAt = time.Now().UTC()
-	_ = s.store.UpdateEvolutionJob(context.Background(), job)
+	return s.saveEvolutionProgress(ctx, lease, job)
 }
 
 func (s *HTTPServer) runEvolutionStage(
+	ctx context.Context,
+	lease EvolutionLease,
 	job *EvolutionJob,
 	index int,
 	prompt string,
 	model EvolutionModelCredentials,
-) (json.RawMessage, bool) {
+) (json.RawMessage, error) {
+	if job.Stages[index].State == EvolutionStageCompleted && len(job.Stages[index].RawOutput) > 0 {
+		return append(json.RawMessage(nil), job.Stages[index].RawOutput...), nil
+	}
 	now := time.Now().UTC()
 	job.State = EvolutionJobRunning
 	job.CurrentStage = job.Stages[index].Name
 	job.Stages[index].State = EvolutionStageRunning
+	job.Stages[index].Error = ""
+	job.Stages[index].FinishedAt = nil
 	job.Stages[index].StartedAt = &now
 	job.UpdatedAt = now
-	if err := s.store.UpdateEvolutionJob(context.Background(), *job); err != nil {
-		return nil, false
+	if err := s.saveEvolutionProgress(ctx, lease, *job); err != nil {
+		return nil, err
 	}
-	// The Engine deadline includes the CLI run; leave transport time for its
-	// process-group termination and temporary-session cleanup before persisting failure.
+	// Preserve worker cancellation and lease loss while allowing the Engine
+	// time to terminate CLI children and clean its temporary session.
 	turnTimeout := s.evolutionRuntime.config.TurnTimeout
-	ctx, cancel := context.WithTimeout(context.Background(), turnTimeout+10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, turnTimeout+10*time.Second)
 	defer cancel()
 	raw, err := s.evolutionRuntime.RunRoleTurn(ctx, EvolutionRoleTurnInput{
-		RequestID: newID(job.Stages[index].Name),
+		RequestID: job.ID + "-" + job.Stages[index].Name,
 		RunID:     job.ID,
 		Role:      job.Stages[index].Name,
 		Prompt:    prompt,
@@ -573,32 +568,63 @@ func (s *HTTPServer) runEvolutionStage(
 		Model:     model,
 	})
 	if err != nil {
-		s.failEvolutionJob(job, index, bounded(err.Error(), 1000))
-		return nil, false
+		return nil, err
 	}
 	finishedAt := time.Now().UTC()
 	job.Stages[index].State = EvolutionStageCompleted
 	job.Stages[index].RawOutput = sanitizeEvolutionJSON(raw, 128*1024)
 	job.Stages[index].FinishedAt = &finishedAt
 	job.UpdatedAt = finishedAt
-	if err := s.store.UpdateEvolutionJob(context.Background(), *job); err != nil {
-		return nil, false
+	if err := s.saveEvolutionProgress(ctx, lease, *job); err != nil {
+		return nil, err
 	}
-	return raw, true
+	return raw, nil
 }
 
-func (s *HTTPServer) failEvolutionJob(job *EvolutionJob, stageIndex int, detail string) {
-	now := time.Now().UTC()
-	job.State = EvolutionJobFailed
-	job.Error = bounded(strings.TrimSpace(detail), 1000)
-	job.UpdatedAt = now
-	if stageIndex >= 0 && stageIndex < len(job.Stages) {
-		job.CurrentStage = job.Stages[stageIndex].Name
-		job.Stages[stageIndex].State = EvolutionStageFailed
-		job.Stages[stageIndex].Error = job.Error
-		job.Stages[stageIndex].FinishedAt = &now
+func (s *HTTPServer) saveEvolutionProgress(ctx context.Context, lease EvolutionLease, job EvolutionJob) error {
+	call, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	err := s.store.SaveLeasedEvolutionJob(call, lease, job)
+	if err == nil || errors.Is(err, ErrLeaseLost) || ctx.Err() != nil {
+		return err
 	}
-	_ = s.store.UpdateEvolutionJob(context.Background(), *job)
+	return fmt.Errorf("%w: stage persistence unavailable", errEvolutionTemporary)
+}
+
+func (s *HTTPServer) cancelEvolutionJob(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	job, err := s.store.GetEvolutionJob(r.Context(), r.PathValue("job_id"))
+	if err != nil || !resourceOwnedBy(job.OwnerUserID, user) {
+		writeProblem(w, http.StatusNotFound, "Evolution Job not found")
+		return
+	}
+	job, err = s.store.CancelEvolutionJob(r.Context(), job.OwnerUserID, job.ID)
+	if err != nil {
+		writeProblem(w, statusFor(err), "Evolution Job cancellation failed")
+		return
+	}
+	s.jobs.notify()
+	writeJSON(w, http.StatusOK, job)
+}
+
+func (s *HTTPServer) evolutionQueueStatus(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	var owner *string
+	if user != nil {
+		owner = &user.ID
+	}
+	stats, err := s.store.EvolutionQueueStats(r.Context(), owner)
+	if err != nil {
+		writeProblem(w, http.StatusServiceUnavailable, "Analysis queue status unavailable")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"queue": stats, "owner_capacity": evolutionOwnerQueueCapacity})
 }
 
 func evolutionSourceRequestFingerprint(
@@ -1230,6 +1256,9 @@ func inspectorOutput(raw json.RawMessage) EvolutionFinding {
 }
 
 func enrichEvolutionCandidate(candidate *EvolutionCandidate, job EvolutionJob) {
+	// A checkpoint may be decoded again after a crash or reviewer retry. Keep
+	// the public result identity stable instead of accepting a fresh model ID.
+	candidate.ID = job.ID + "-candidate"
 	candidate.Status = evolutionCandidateStatus
 	candidate.SourceRunID = job.SourceRunID
 	candidate.SourceTraceID = job.SourceTraceID

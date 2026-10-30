@@ -130,6 +130,29 @@ test("A polled analysis publishes its asset into the shared library without relo
   await screenshot(page, "assets-desktop");
 });
 
+test("Analysis cancellation remains pending until acknowledged and stops terminal polling", async (t) => {
+  const { page, origin, state } = await setup(t);
+  await page.goto(origin + "/evolution?job=job-fixture");
+  const cancel = page.getByRole("button", { name: "取消分析", exact: true });
+  await visible(cancel);
+  state.failCancel = true;
+  await cancel.click();
+  await visible(page.getByText(/取消失败: Cancellation temporarily unavailable/));
+  state.failCancel = false;
+  await cancel.click();
+  const pending = page.getByRole("button", { name: "正在取消", exact: true });
+  await visible(pending);
+  assert.equal(await pending.isDisabled(), true);
+  state.jobCancelled = true;
+  await visible(page.getByText("分析已取消", { exact: true }).first());
+  await visible(page.getByRole("button", { name: "删除分析", exact: true }));
+  const count = state.requests.filter((r) => r.path === "/v1/evolution-jobs/job-fixture").length;
+  await page.waitForTimeout(1900);
+  assert.equal(state.requests.filter((r) => r.path === "/v1/evolution-jobs/job-fixture").length, count);
+  assert.equal(state.requests.filter((r) => r.path.endsWith("/cancel")).length, 2);
+  await screenshot(page, "analysis-cancelled");
+});
+
 test("An analysis finishes while the asset library is open, in both narrow and desktop layouts", async (t) => {
   const { page, origin, state } = await setup(t, { viewport: { width: 390, height: 844 } });
   await page.goto(origin + "/evolution");

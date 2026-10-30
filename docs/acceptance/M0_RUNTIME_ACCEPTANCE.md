@@ -1,6 +1,7 @@
 # M0 runtime infrastructure acceptance
 
-Base: `ec31cab6951dcb0fdf60b90e70eb3c3bc229dcb6`. Scope is dependency isolation,
+Original base: `ec31cab6951dcb0fdf60b90e70eb3c3bc229dcb6`; integrated with
+`2164ec4` (leased Workers / ingestion backpressure). Scope is dependency isolation,
 timeout/admission bounds, existing runtime contracts and documentation. No Agent
 runtime replacement, Memory/OpenViking, MCP tools, frontend, database schema or
 Harbor evaluation-logic changes.
@@ -23,6 +24,11 @@ Harbor evaluation-logic changes.
   (all five jobs passed). Final PR check links are available on the PR.
 
 ## Real model acceptance
+
+Historical run on the original PR revision, before the leased Worker integration.
+These measurements are retained as historical evidence, not a fresh model run
+on the integrated revision. Current CI separately runs the real CLI against a
+synthetic Responses provider and disposable PostgreSQL.
 
 A real `gpt-5.6-luna` / **low** turn used CLIProxyAPI 8.0.31, pinned Codex CLI
 0.160.0 and the existing Go acceptance test. The test PUTs owner model configuration
@@ -58,8 +64,9 @@ No provider key, raw Trace, prompt or generated asset is included in this report
   provides operational allowance for CLI startup/provider stalls; operators can
   retain `2m` when they prefer earlier failure. It is not a throughput claim.
 - Go forwards the exact run budget and retains a 10 s transport/cleanup allowance.
-  A Go test verifies a delayed Engine timeout is preserved in the persisted failed
-  stage and that later stages remain queued.
+  Go tests verify a delayed Engine timeout is preserved through leased Worker
+  failure persistence, later stages remain queued, and stage HTTP contexts inherit
+  Worker cancellation and the earlier job deadline.
 - The real CLI + synthetic Responses acceptance also stalls an SSE stream:
   Engine returns its own `timeout` before the Go transport deadline, and the
   provider observes connection cancellation. The local acceptance passed in
@@ -87,10 +94,17 @@ No provider key, raw Trace, prompt or generated asset is included in this report
 - Client disconnect cancellation is still unsupported (`cancellation=false`).
   A disconnected call can occupy its slot until the run deadline. Three stages
   can consume up to about 15 minutes at the default budget.
-- Admission is per Engine process; multiple replicas need external coordination.
-  Busy jobs fail explicitly and need a new submission. Analysis job restart
-  recovery is unchanged; unexpected control-plane/Engine termination can interrupt
-  jobs. No queue/schema changes are included.
+- Engine admission is per process. The existing PostgreSQL queue now supplies
+  leased Worker recovery and bounded retry of HTTP 429/5xx, preserving committed
+  stage checkpoints and fencing writes. Tests cover both 429 and 503 recovery.
+  Default Go Worker count is 1, matching the default Engine slot; the per-attempt
+  deadline is 20m, covering the three 5m stages and cleanup/persistence. A custom
+  shorter job deadline takes precedence; increase it when increasing stage limits.
+- Go cancels stage HTTP requests on Worker cancellation, shutdown and lease loss.
+  The synchronous Engine still does not cancel a CLI on client disconnect: it can
+  run until its own budget and cause temporary 429 responses during recovery.
+  Interrupted uncommitted stages can execute again, incurring duplicate model
+  costs. Fencing guarantees apply to job writes, not exactly-once model execution.
 - Engine CPU/memory/PID limits do not constrain separate Harbor workers, Postgres
   or ClickHouse. Host-wide overload can still affect HTTP latency; an OOM can
   become a failed turn/transport error. No full-host production load test was run.
@@ -103,5 +117,5 @@ No provider key, raw Trace, prompt or generated asset is included in this report
 - SDK worker version is intentionally older. Keep the two environments separate
   and revalidate both dependency sets when upgrading Harbor/LiteLLM/SDK.
 
-The PR description lists all changed files and final checks. This PR is not
-configured for automatic merge.
+The PR description lists current changes and check results. Merge requires
+passing the integrated revision checks; historical green runs are not sufficient.

@@ -159,7 +159,8 @@ func TestPostgresRegisteredAgentAndBoundKeyAreAtomic(t *testing.T) {
 	if err != nil || bound.AgentID != agent.ID {
 		t.Fatalf("bound key = %#v, %v", bound, err)
 	}
-	seenAt := now.Add(time.Minute)
+	// PostgreSQL timestamps have microsecond precision, not Go nanoseconds.
+	seenAt := now.Add(time.Minute).Truncate(time.Microsecond)
 	if err := store.ObserveRegisteredAgent(ctx, user.ID, agent.ID, "codex", seenAt); err != nil {
 		t.Fatal(err)
 	}

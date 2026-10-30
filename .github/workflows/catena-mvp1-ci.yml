@@ -79,16 +79,31 @@ jobs:
   control-plane:
     runs-on: ubuntu-latest
     services:
-      codex-test-postgres:
+      clickhouse:
+        image: clickhouse/clickhouse-server:25.10.2.65-alpine
+        env:
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: catena-ci-test-only
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+        ports:
+          - 8123:8123
+        options: >-
+          --health-cmd "wget -qO- http://127.0.0.1:8123/ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_PASSWORD: codex-test-only
-          POSTGRES_DB: codex_acceptance
+          POSTGRES_USER: catena_test
+          POSTGRES_PASSWORD: catena-ci-test-only
+          POSTGRES_DB: catena_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 2s
-          --health-timeout 5s --health-retries 30
+          --health-cmd "pg_isready -U catena_test -d catena_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      BARENA_TEST_DATABASE_URL: postgres://catena_test:catena-ci-test-only@127.0.0.1:5432/catena_test?sslmode=disable
+      CATENA_CLICKHOUSE_TEST_DSN: http://default:catena-ci-test-only@127.0.0.1:8123/default?dial_timeout=5s
     defaults:
       run:
         working-directory: control-plane
@@ -115,7 +130,6 @@ jobs:
         env:
           CATENA_CODEX_ACCEPT_ENGINE_URL: http://127.0.0.1:18790
           CATENA_CODEX_ACCEPT_CALLBACK_HOST: host.docker.internal
-          BARENA_TEST_DATABASE_URL: postgresql://postgres:codex-test-only@127.0.0.1:5432/codex_acceptance?sslmode=disable
         run: go test -run TestCodexEngineEvolutionAcceptance -v -timeout 10m ./internal/control
 
   tap:
