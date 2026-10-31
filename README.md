@@ -218,3 +218,10 @@ Apache License 2.0。第三方归属见 [NOTICE](./NOTICE)。
 本地 embedding 使用 CPU 上的 BGE-small-zh，无需 embedding API Key。记忆提炼复用配置的模型服务。部署、隔离边界和实测结果见 [接入说明](docs/OPENVIKING_INTEGRATION.md)。团队共享空间尚未实现。
 
 2026-10-04 完成 [历史记忆 / Skill 的 Harbor 三组对照](docs/MEMORY_SKILL_EXPERIMENT_20261004.md)：18 次有效 Trial，三组答案均 6/6，缺失 rg 错误为 4 / 3 / 0。Skill 总 token 增加约 15.2%，没有成功率或耗时改善。实验页可查看来源 Trace、冻结记忆及逐次工具日志。
+
+## 可插拔 RSI 后端（实验入口）
+
+RSI 算法通过统一协议消费 Trace 证据与冻结 Case，生成有版本和来源关系的候选。
+首个适配器为固定版本的 Harness²，支持串行/并行组合；模型调用复用隔离 Codex CLI，
+试跑与独立验证使用 Harbor。入口为私有 Engine API / CLI，尚未接入 Go 持久任务队列或前端，
+默认三 Role 流程保持原样。安装、协议、预算和真实验收边界见 [RSI Adapter](docs/RSI_ADAPTERS.md)。

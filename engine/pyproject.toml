@@ -10,15 +10,21 @@ dependencies = [
 
 [project.scripts]
 catena-engine = "catena_engine.server:main"
+catena-rsi = "catena_engine.rsi.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["catena_engine"]
+[tool.setuptools.packages.find]
+include = ["catena_engine*"]
 
 [project.optional-dependencies]
+# Keep in the Harbor environment, separate from the modern SDK extra.
+rsi = [
+  "harness2 @ git+https://github.com/google-research/harness2.git@1cfe254e8d25b15f37048c3730134686abe60335",
+  "harbor==0.23.0",
+]
 # SDK rollback and Harbor require different OpenAI major versions.
 sdk = ["openai-agents==0.22.3"]
 evaluation = [

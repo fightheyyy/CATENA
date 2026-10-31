@@ -11,7 +11,7 @@ import shutil
 import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any
+from typing import Any, Callable
 
 from .protocol import InvalidRequest, error_response, manifest, parse_turn_request, turn_response
 from .runtime import ModelFactory, openai_compatible_model, run_turn
@@ -23,7 +23,8 @@ log = logging.getLogger("catena_engine")
 
 
 def create_server(
-    address: str, token: str = "", model_factory: ModelFactory | None = None
+    address: str, token: str = "", model_factory: ModelFactory | None = None,
+    rsi_handler: Callable[[dict], dict] | None = None,
 ) -> ThreadingHTTPServer:
     host, _, port = address.rpartition(":")
     max_turns = int(os.environ.get("CATENA_ENGINE_MAX_CONCURRENT_TURNS", "1"))
@@ -45,17 +46,39 @@ def create_server(
             elif self.path == "/v1/manifest":
                 if self._authorized():
                     self._json(HTTPStatus.OK, self._manifest())
+            elif self.path == "/v1/rsi/adapters":
+                if self._authorized():
+                    from .rsi.registry import default_registry
+
+                    self._json(HTTPStatus.OK, {"schema": "catena.rsi_adapters.v1",
+                                               "adapters": default_registry().describe()})
             else:
                 self._json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
 
         def do_POST(self) -> None:
-            if self.path not in ("/v1/turn", "/v1/experiment", "/v1/harbor/submit", "/v1/harbor/status", "/v1/harbor/lookup", "/v1/harbor/evidence"):
+            if self.path not in ("/v1/turn", "/v1/experiment", "/v1/harbor/submit", "/v1/harbor/status", "/v1/harbor/lookup", "/v1/harbor/evidence", "/v1/rsi/optimize"):
                 self._json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
                 return
             if not self._authorized():
                 return
             payload = self._read_json()
             if payload is None:
+                return
+            if self.path == "/v1/rsi/optimize":
+                from .rsi.api import run_payload
+                from .rsi.contracts import OptimizationError
+
+                if not turn_slots.acquire(blocking=False):
+                    self._json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "analysis capacity is full"})
+                    return
+                try:
+                    self._json(HTTPStatus.OK, (rsi_handler or run_payload)(payload))
+                except OptimizationError as error:
+                    self._json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+                except Exception:
+                    self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "RSI operation failed"})
+                finally:
+                    turn_slots.release()
                 return
             if self.path.startswith("/v1/harbor/"):
                 from .harbor_bridge import harbor_request
