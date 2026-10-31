@@ -18,7 +18,7 @@
 
 - `/tmp/go/bin/go test ./...`：通过（未配置数据库的集成测试仍按原条件跳过）。
 - 独立 Harbor Engine 环境 `pytest`：104 passed / 7 Windows-only skipped。
-- 前端测试、类型检查、构建：安装后补充实际结果。
+- 前端 pnpm test、typecheck、build：均通过，日志 /tmp/catena-v2-baseline-web.log。
 - 核心源码计数：103 个文件 / 30,658 行。口径为 control-plane、engine、catena-web/src、tap/catena_tap 中 .go/.py/.ts/.tsx，排除 *_test.go、tests、Go 内嵌 Web。最终使用同一口径，不将冻结实验快照计入核心。
 
 ## 迁移与验收边界
@@ -28,3 +28,7 @@
 数据库采用增量、可版本化迁移；历史认证和业务表保留，不执行 DROP/清空。旧执行请求不得被 V2 当作新模型任务重放。Engine 的执行 receipt 只消除重复外部启动，不提供第二套轮询队列或租约。
 
 本任务不自动调用收费模型、不发布公网服务。真实模型、Docker Harbor、OpenViking 提炼缺少实际条件时记录 BLOCKED，不用 fixture 通过率冒充真实评测。
+
+## Phase 2：基础契约
+
+增加 Artifact Envelope 与 Job pipeline/adapter/options/checkpoint 字段，暂时允许旧编排共存。Artifact 存在原 Job JSON 文档中，通过原 SaveLeasedJob 原子落库，不新增第二套队列或产物数据库。写入验证 owner/job/evidence，读取按 owner 过滤；认证和历史表不变。Go 全套单元测试及新增 owner/fenced Artifact 回归通过。

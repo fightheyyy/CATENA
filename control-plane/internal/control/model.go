@@ -644,6 +644,12 @@ type EvolutionEvidencePack struct {
 }
 
 type EvolutionJob struct {
+	Pipeline   string          `json:"pipeline,omitempty"`
+	Adapter    string          `json:"adapter,omitempty"`
+	Options    json.RawMessage `json:"options,omitempty"`
+	Artifacts  []Artifact      `json:"artifacts"`
+	Checkpoint json.RawMessage `json:"checkpoint,omitempty"`
+
 	Attempt            int                       `json:"attempt,omitempty"`
 	NextAttemptAt      *time.Time                `json:"next_attempt_at,omitempty"`
 	CancelRequested    bool                      `json:"cancel_requested,omitempty"`

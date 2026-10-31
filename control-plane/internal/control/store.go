@@ -20,6 +20,7 @@ var (
 )
 
 type Store interface {
+	ListArtifactsByOwner(context.Context, string, string, int) ([]Artifact, error)
 	CreateExperiment(context.Context, Experiment) (Experiment, bool, error)
 	UpdateExperiment(context.Context, Experiment) error
 	GetExperiment(context.Context, string, string) (Experiment, error)

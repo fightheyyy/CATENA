@@ -90,6 +90,10 @@ AND state='running' AND lease_until>clock_timestamp() RETURNING cancel_requested
 }
 
 func (s *PostgresStore) SaveLeasedEvolutionJob(ctx context.Context, l EvolutionLease, j EvolutionJob) error {
+	if err := validJobArtifacts(j); err != nil {
+		return err
+	}
+
 	if j.ID != l.JobID || (j.State != EvolutionJobRunning && j.State != EvolutionJobCompleted) {
 		return ErrConflict
 	}

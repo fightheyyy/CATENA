@@ -114,6 +114,10 @@ func sameEvolutionIdentity(a, b EvolutionJob) bool {
 }
 
 func (s *MemoryStore) SaveLeasedEvolutionJob(ctx context.Context, l EvolutionLease, j EvolutionJob) error {
+	if err := validJobArtifacts(j); err != nil {
+		return err
+	}
+
 	if err := ctx.Err(); err != nil {
 		return err
 	}
