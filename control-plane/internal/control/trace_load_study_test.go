@@ -151,7 +151,7 @@ func runTraceLoadTrial(t *testing.T, ctx context.Context, admin *ClickHouseTrace
 		c.Concurrency = 64
 		c.PerOwner = 64
 	}
-	h, err := NewHTTPHandlerWithBackendConfig(store, nil, testAgentAuthConfig(), nil, ch, nil, DefaultEvolutionWorkerConfig(), c)
+	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testAgentAuthConfig(), Engine: nil, Traces: ch, Memory: nil, Workers: DefaultEvolutionWorkerConfig(), Ingestion: c})
 	if err != nil {
 		t.Fatal(err)
 	}

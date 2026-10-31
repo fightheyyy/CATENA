@@ -17,9 +17,6 @@ services:
       BARENA_GITHUB_REDIRECT_URL: ${CATENA_GITHUB_REDIRECT_URL:-}
       BARENA_DATABASE_URL: postgresql://catena_core:${CATENA_CORE_DB_PASSWORD:-catena-core-local}@postgres:5432/catena_core?sslmode=disable
       CATENA_CLICKHOUSE_DSN: ${CATENA_CLICKHOUSE_DSN:-http://default:catena@clickhouse:8123/catena?dial_timeout=5s}
-      BARENA_NODE: /usr/local/bin/catena-runner-client
-      BARENA_ENGINE_WORKER: /opt/catena/engine-worker.js
-      BARENA_RUNS_ROOT: /var/lib/catena/runs
       # Private analysis engine; never published outside the Compose network.
       CATENA_ENGINE_URL: http://catena-engine:8790
       CATENA_ENGINE_TURN_TIMEOUT: ${CATENA_ENGINE_TURN_TIMEOUT:-5m}
@@ -73,48 +70,6 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8790/readyz', timeout=3)"]
       interval: 5s
       timeout: 5s
-      retries: 30
-      start_period: 10s
-    restart: unless-stopped
-
-  catena-runner:
-    build:
-      context: ../..
-      dockerfile: deploy/catena-mvp1/Dockerfile.runner
-      additional_contexts:
-        barena-source: "${CATENA_BARENA_CONTEXT:-https://github.com/fightheyyy/barena.git#catena-mvp1-engine-20260807}"
-        xiaoba-source: "${CATENA_XIAOBA_CONTEXT:-https://github.com/fightheyyy/xiaobaOS.git#b4d5af58a0fa171c372a875618c5f46ab15ddb36}"
-    image: catena/runner:mvp1
-    environment:
-      CATENA_RUNNER_MODE: evolution
-      SPIRAL_RUNNER_ADDR: 0.0.0.0:8790
-      SPIRAL_RUNS_ROOT: /var/lib/catena/runs
-      SPIRAL_EVOLUTION_ROOT: /var/lib/catena/evolution
-      SPIRAL_EVOLUTION_TURN_TIMEOUT_MS: "120000"
-      SPIRAL_XIAOBA_COMMAND: /usr/local/bin/xiaoba
-      SPIRAL_XIAOBA_PROJECT_ROOT: /opt/xiaoba
-      SPIRAL_XIAOBA_ROLES_ROOT: /opt/xiaoba/roles
-      SPIRAL_XIAOBA_SKILLS_ROOT: /opt/xiaoba/skills
-      XIAOBA_OBSERVABILITY_ENABLED: ${XIAOBA_OBSERVABILITY_ENABLED:-false}
-      XIAOBA_OBSERVABILITY_TRACES_EXPORTER: otlp
-      OTEL_SERVICE_NAME: catena-evolution-runtime
-      # Disabled by default. When enabled, the embedded Evolution Runtime emits
-      # through the same canonical OTLP receiver as every external Agent.
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://catena-core:8787/v1/otlp
-    ports:
-      - "127.0.0.1:${CATENA_RUNNER_PORT:-8790}:8790"
-    volumes:
-      - catena-data:/var/lib/catena
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:8790/readyz').then(r=>{if(!r.ok)process.exit(1)})",
-        ]
-      interval: 5s
-      timeout: 10s
       retries: 30
       start_period: 10s
     restart: unless-stopped

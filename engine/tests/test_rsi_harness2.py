@@ -79,7 +79,7 @@ def test_private_http_runs_registered_algorithm_and_persists_private_report(monk
     from test_server import call
 
     from catena_engine.rsi import api
-    from catena_engine.rsi.harbor import task_digest
+    from catena_engine.evaluation.harbor import task_digest
     from catena_engine.server import create_server
 
     class LocalEditor(Editor):

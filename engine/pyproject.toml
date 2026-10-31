@@ -10,7 +10,6 @@ dependencies = [
 
 [project.scripts]
 catena-engine = "catena_engine.server:main"
-catena-rsi = "catena_engine.rsi.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -1,4 +1,4 @@
-"""Private opt-in backend entry; no change to the existing Role job protocol."""
+"""Private RSI adapter invoked by the Go analysis queue."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 
 from ..protocol import InvalidRequest, _model_config
 from .contracts import SCHEMA, Algorithm, Budget, Candidate, Context, OptimizationError, safe_id
-from .harbor import HarborCase, HarborEvaluator
+from ..evaluation.harbor import HarborCase, HarborEvaluator
 from .host import Services, optimize, preflight, trial_summary
 from .registry import default_registry
 from .runtime import CodexRuntime

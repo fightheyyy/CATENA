@@ -110,7 +110,7 @@ func (s *MemoryStore) HeartbeatEvolutionJob(ctx context.Context, l EvolutionLeas
 }
 
 func sameEvolutionIdentity(a, b EvolutionJob) bool {
-	return a.ID == b.ID && a.OwnerUserID == b.OwnerUserID && a.SourceRunID == b.SourceRunID && a.SourceTraceID == b.SourceTraceID && a.SourceAgentID == b.SourceAgentID && a.IdempotencyKey == b.IdempotencyKey && a.RequestFingerprint == b.RequestFingerprint && equalStringSlices(a.SourceTraceIDs, b.SourceTraceIDs)
+	return a.ID == b.ID && a.OwnerUserID == b.OwnerUserID && a.SourceTraceID == b.SourceTraceID && a.SourceAgentID == b.SourceAgentID && a.IdempotencyKey == b.IdempotencyKey && a.RequestFingerprint == b.RequestFingerprint && equalStringSlices(a.SourceTraceIDs, b.SourceTraceIDs)
 }
 
 func (s *MemoryStore) SaveLeasedEvolutionJob(ctx context.Context, l EvolutionLease, j EvolutionJob) error {

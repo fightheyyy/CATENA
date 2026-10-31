@@ -38,3 +38,11 @@ func seedTestEvolutionModelConfig(t *testing.T, store *MemoryStore, ownerUserID 
 		t.Fatal(err)
 	}
 }
+
+func mustHTTPHandler(store Store) *ManagedHTTPHandler {
+	h, e := NewHTTPHandler(store, HTTPConfig{})
+	if e != nil {
+		panic(e)
+	}
+	return h
+}

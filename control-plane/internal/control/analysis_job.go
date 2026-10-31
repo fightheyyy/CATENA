@@ -13,14 +13,15 @@ import (
 )
 
 type CreateAnalysisRequest struct {
-	Pipeline    string          `json:"pipeline"`
-	Adapter     string          `json:"adapter,omitempty"`
-	TraceID     string          `json:"trace_id,omitempty"`
-	AgentID     string          `json:"agent_id,omitempty"`
-	WindowStart time.Time       `json:"window_start,omitempty"`
-	WindowEnd   time.Time       `json:"window_end,omitempty"`
-	Objective   string          `json:"objective,omitempty"`
-	Options     json.RawMessage `json:"options,omitempty"`
+	ConversationID string          `json:"conversation_id,omitempty"`
+	Pipeline       string          `json:"pipeline"`
+	Adapter        string          `json:"adapter,omitempty"`
+	TraceID        string          `json:"trace_id,omitempty"`
+	AgentID        string          `json:"agent_id,omitempty"`
+	WindowStart    time.Time       `json:"window_start,omitempty"`
+	WindowEnd      time.Time       `json:"window_end,omitempty"`
+	Objective      string          `json:"objective,omitempty"`
+	Options        json.RawMessage `json:"options,omitempty"`
 }
 
 func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +65,17 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	var pack EvolutionEvidencePack
 	var err error
-	if req.AgentID != "" {
+	if req.ConversationID != "" {
+		if req.Pipeline != "memory" || req.AgentID == "" || req.TraceID != "" || !req.WindowStart.IsZero() || !req.WindowEnd.IsZero() {
+			writeProblem(w, 400, "invalid conversation memory request")
+			return
+		}
+		var messages []ConversationMessage
+		messages, err = s.store.ListConversationMessagesByOwner(r.Context(), owner, req.AgentID, req.ConversationID, 2000)
+		if err == nil {
+			pack, err = conversationEvidencePack(req.AgentID, req.ConversationID, messages, now)
+		}
+	} else if req.AgentID != "" {
 		if req.TraceID != "" || req.WindowStart.IsZero() || !req.WindowEnd.After(req.WindowStart) || req.WindowEnd.Sub(req.WindowStart) > 31*24*time.Hour || req.WindowEnd.After(now.Add(5*time.Minute)) {
 			writeProblem(w, 400, "invalid Agent Trace window")
 			return
@@ -93,7 +104,7 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 			var trace TraceDetail
 			trace, err = s.traces.GetTrace(r.Context(), traceOwnerID(user), id)
 			if err == nil {
-				pack, err = buildEvolutionEvidencePack(EvolutionSourceTrace, nil, id, &trace, nil, now)
+				pack, err = buildEvolutionEvidencePack(EvolutionSourceTrace, id, &trace, now)
 			}
 		}
 	}
@@ -103,7 +114,7 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 	}
 	raw, _ := json.Marshal(req)
 	hash := sha256.Sum256(append(raw, []byte(pack.SHA256)...))
-	job := EvolutionJob{Schema: "catena.analysis_job.v2", ID: newID("analysis-job"), OwnerUserID: owner, Pipeline: req.Pipeline, Adapter: req.Adapter, Options: req.Options, SourceKind: pack.SourceKind, SourceTraceID: pack.SourceTraceID, SourceTraceIDs: pack.SourceTraceIDs, SourceAgentID: pack.SourceAgentID, SourceRuntimeKind: pack.SourceRuntimeKind, WindowStart: pack.WindowStart, WindowEnd: pack.WindowEnd, Objective: sanitizeEvolutionText(req.Objective, 4000), IdempotencyKey: key, RequestFingerprint: hex.EncodeToString(hash[:]), State: EvolutionJobQueued, Stages: []EvolutionStage{{Name: "generate", State: EvolutionStageQueued}}, Artifacts: []Artifact{}, EvidencePack: &pack, CreatedAt: now, UpdatedAt: now}
+	job := EvolutionJob{Schema: "catena.analysis_job.v2", ID: newID("analysis-job"), OwnerUserID: owner, Pipeline: req.Pipeline, Adapter: req.Adapter, Options: req.Options, SourceKind: pack.SourceKind, SourceConversationID: pack.SourceConversationID, SourceTraceID: pack.SourceTraceID, SourceTraceIDs: pack.SourceTraceIDs, SourceAgentID: pack.SourceAgentID, SourceRuntimeKind: pack.SourceRuntimeKind, WindowStart: pack.WindowStart, WindowEnd: pack.WindowEnd, Objective: sanitizeEvolutionText(req.Objective, 4000), IdempotencyKey: key, RequestFingerprint: hex.EncodeToString(hash[:]), State: EvolutionJobQueued, Stages: []EvolutionStage{{Name: "generate", State: EvolutionStageQueued}}, Artifacts: []Artifact{}, EvidencePack: &pack, CreatedAt: now, UpdatedAt: now}
 	stored, created, err := s.store.CreateEvolutionJob(r.Context(), job)
 	if err != nil {
 		writeProblem(w, statusFor(err), err.Error())

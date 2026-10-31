@@ -9,8 +9,8 @@ pytest.importorskip("harbor")
 
 from catena_engine.protocol import ModelConfig
 from catena_engine.rsi.contracts import Candidate, OptimizationError
-from catena_engine.rsi.harbor import HarborCase, HarborEvaluator, task_digest
-from catena_engine.rsi.harbor_agent import CREDENTIALS, RSICodex
+from catena_engine.evaluation.harbor import HarborCase, HarborEvaluator, task_digest
+from catena_engine.evaluation.harbor_agent import CREDENTIALS, RSICodex
 
 
 @pytest.fixture

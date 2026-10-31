@@ -9,7 +9,6 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -17,7 +16,6 @@ import (
 type HTTPServer struct {
 	store            Store
 	traces           TraceStore
-	runner           *RunnerManager
 	evolutionRuntime *EvolutionRuntimeManager
 	memory           MemoryBackend
 	auth             AuthConfig
@@ -28,65 +26,24 @@ type HTTPServer struct {
 //go:embed web/*
 var webAssets embed.FS
 
-func NewHTTPHandler(store Store, runner *RunnerManager) *ManagedHTTPHandler {
-	handler, err := NewHTTPHandlerWithConfig(store, runner, AuthConfig{})
-	if err != nil {
-		panic(err)
+type HTTPConfig struct {
+	Auth      AuthConfig
+	Engine    *EvolutionRuntimeManager
+	Traces    TraceStore
+	Memory    MemoryBackend
+	Workers   EvolutionWorkerConfig
+	Ingestion TraceIngestConfig
+}
+
+func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error) {
+	auth, evolutionRuntime, traces, memory, workers, ingestion := config.Auth, config.Engine, config.Traces, config.Memory, config.Workers, config.Ingestion
+	if workers.Workers == 0 {
+		workers = DefaultEvolutionWorkerConfig()
 	}
-	return handler
-}
+	if ingestion.Concurrency == 0 {
+		ingestion = DefaultTraceIngestConfig()
+	}
 
-func NewHTTPHandlerWithConfig(
-	store Store,
-	runner *RunnerManager,
-	auth AuthConfig,
-) (*ManagedHTTPHandler, error) {
-	return NewHTTPHandlerWithRuntime(store, runner, auth, nil)
-}
-
-func NewHTTPHandlerWithRuntime(
-	store Store,
-	runner *RunnerManager,
-	auth AuthConfig,
-	evolutionRuntime *EvolutionRuntimeManager,
-) (*ManagedHTTPHandler, error) {
-	return NewHTTPHandlerWithServices(store, runner, auth, evolutionRuntime, nil)
-}
-
-func NewHTTPHandlerWithServices(
-	store Store,
-	runner *RunnerManager,
-	auth AuthConfig,
-	evolutionRuntime *EvolutionRuntimeManager,
-	traces TraceStore,
-) (*ManagedHTTPHandler, error) {
-	return NewHTTPHandlerWithMemory(store, runner, auth, evolutionRuntime, traces, nil)
-}
-
-func NewHTTPHandlerWithMemory(
-	store Store,
-	runner *RunnerManager,
-	auth AuthConfig,
-	evolutionRuntime *EvolutionRuntimeManager,
-	traces TraceStore,
-	memory MemoryBackend,
-) (*ManagedHTTPHandler, error) {
-	return NewHTTPHandlerWithWorkerConfig(store, runner, auth, evolutionRuntime, traces, memory, DefaultEvolutionWorkerConfig())
-}
-
-func NewHTTPHandlerWithWorkerConfig(
-	store Store, runner *RunnerManager, auth AuthConfig,
-	evolutionRuntime *EvolutionRuntimeManager, traces TraceStore, memory MemoryBackend,
-	workers EvolutionWorkerConfig,
-) (*ManagedHTTPHandler, error) {
-	return NewHTTPHandlerWithBackendConfig(store, runner, auth, evolutionRuntime, traces, memory, workers, DefaultTraceIngestConfig())
-}
-
-func NewHTTPHandlerWithBackendConfig(
-	store Store, runner *RunnerManager, auth AuthConfig,
-	evolutionRuntime *EvolutionRuntimeManager, traces TraceStore, memory MemoryBackend,
-	workers EvolutionWorkerConfig, ingestion TraceIngestConfig,
-) (*ManagedHTTPHandler, error) {
 	if err := auth.Validate(); err != nil {
 		return nil, err
 	}
@@ -96,7 +53,6 @@ func NewHTTPHandlerWithBackendConfig(
 	server := &HTTPServer{
 		store:            store,
 		traces:           traces,
-		runner:           runner,
 		evolutionRuntime: evolutionRuntime,
 		memory:           memory,
 		auth:             auth.normalized(),
@@ -109,25 +65,15 @@ func NewHTTPHandlerWithBackendConfig(
 		}
 		server.jobs = pool
 	}
-	if active, err := store.ListActiveExperiments(context.Background()); err == nil {
-		for _, experiment := range active {
-			go server.monitorExperiment(experiment)
-		}
-	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/analysis-jobs", server.createAnalysisJob)
- mux.HandleFunc("GET /v1/analysis-jobs", server.listEvolutionJobs)
- mux.HandleFunc("GET /v1/analysis-jobs/queue", server.evolutionQueueStatus)
- mux.HandleFunc("GET /v1/analysis-jobs/{job_id}", server.getEvolutionJob)
- mux.HandleFunc("POST /v1/analysis-jobs/{job_id}/cancel", server.cancelEvolutionJob)
- mux.HandleFunc("DELETE /v1/analysis-jobs/{job_id}", server.deleteEvolutionJob)
- mux.HandleFunc("GET /v1/artifacts", server.listArtifacts)
- mux.HandleFunc("GET /v1/evaluation-cases", server.evaluationCases)
- mux.HandleFunc("GET /v1/experiment-cases", server.experimentCases)
-	mux.HandleFunc("POST /v1/experiments", server.createExperiment)
-	mux.HandleFunc("GET /v1/experiments", server.listExperiments)
-	mux.HandleFunc("GET /v1/experiments/{experiment_id}", server.getExperiment)
-	mux.HandleFunc("GET /v1/experiments/{experiment_id}/trials/{trial_index}", server.getExperimentEvidence)
+	mux.HandleFunc("GET /v1/analysis-jobs", server.listEvolutionJobs)
+	mux.HandleFunc("GET /v1/analysis-jobs/queue", server.evolutionQueueStatus)
+	mux.HandleFunc("GET /v1/analysis-jobs/{job_id}", server.getEvolutionJob)
+	mux.HandleFunc("POST /v1/analysis-jobs/{job_id}/cancel", server.cancelEvolutionJob)
+	mux.HandleFunc("DELETE /v1/analysis-jobs/{job_id}", server.deleteEvolutionJob)
+	mux.HandleFunc("GET /v1/artifacts", server.listArtifacts)
+	mux.HandleFunc("GET /v1/evaluation-cases", server.evaluationCases)
 	mux.HandleFunc("GET /healthz", server.health)
 	mux.HandleFunc("GET /readyz", server.ready)
 	mux.HandleFunc("GET /v1/system/status", server.systemStatus)
@@ -167,33 +113,6 @@ func NewHTTPHandlerWithBackendConfig(
 	mux.HandleFunc("POST /v1/otlp/v1/traces", server.ingestOTLPTraces)
 	mux.HandleFunc("GET /v1/conversations", server.listConversations)
 	mux.HandleFunc("GET /v1/conversations/{conversation_id}", server.getConversation)
-	mux.HandleFunc("POST /v1/runs", server.createRun)
-	mux.HandleFunc("GET /v1/runs", server.listRuns)
-	mux.HandleFunc("GET /v1/runs/{run_id}", server.getRun)
-	mux.HandleFunc("POST /v1/runs/{run_id}/cancel", server.cancelRun)
-	mux.HandleFunc("GET /v1/runs/{run_id}/events", server.runEvents)
-	mux.HandleFunc("GET /v1/evolution-jobs", server.listEvolutionJobs)
-	mux.HandleFunc("GET /v1/evolution-jobs/queue", server.evolutionQueueStatus)
-	mux.HandleFunc("GET /v1/evolution-jobs/{job_id}", server.getEvolutionJob)
-	mux.HandleFunc("POST /v1/evolution-jobs/{job_id}/cancel", server.cancelEvolutionJob)
-	mux.HandleFunc("DELETE /v1/evolution-jobs/{job_id}", server.deleteEvolutionJob)
-	mux.HandleFunc("POST /v1/runs/{run_id}/issues", server.createIssue)
-	mux.HandleFunc("GET /v1/issues", server.listIssues)
-	mux.HandleFunc("GET /v1/issues/{issue_id}", server.getIssue)
-	mux.HandleFunc("POST /v1/issues/{issue_id}/promote", server.promoteIssue)
-	mux.HandleFunc("GET /v1/cases", server.listCases)
-	mux.HandleFunc("GET /v1/cases/{case_id}", server.getCase)
-	mux.HandleFunc("POST /v1/cases/{case_id}/replay", server.replayCase)
-	mux.HandleFunc("GET /v1/evaluations", server.listEvaluations)
-	mux.HandleFunc("GET /v1/evaluations/{evaluation_id}", server.getEvaluation)
-	mux.HandleFunc("GET /v1/releases", server.listReleases)
-	mux.HandleFunc("GET /v1/releases/{release_id}", server.getRelease)
-	mux.HandleFunc("POST /v1/platform/scenario-runs/adopt", server.adoptScenarioRun)
-	mux.HandleFunc("POST /v1/ingest/run-bundles", server.createRunBundle)
-	mux.HandleFunc("GET /v1/run-bundles/{bundle_id}", server.getRunBundle)
-	mux.HandleFunc("POST /v1/ingest/runs", server.createEdgeRun)
-	mux.HandleFunc("POST /v1/ingest/runs/{run_id}/events", server.appendEdgeRunEvent)
-	mux.HandleFunc("POST /v1/ingest/runs/{run_id}/finish", server.finishEdgeRun)
 	apiNotFound := func(w http.ResponseWriter, _ *http.Request) {
 		writeProblem(w, http.StatusNotFound, "API endpoint not found")
 	}
@@ -277,7 +196,6 @@ func (s *HTTPServer) systemStatus(w http.ResponseWriter, r *http.Request) {
 		"status":             "ready",
 		"auth_mode":          map[bool]string{true: "github", false: "local"}[s.auth.Enabled()],
 		"edge_ingest":        "available",
-		"run_bundle":         runBundleSchema,
 		"evolution_protocol": engineTurnRequestSchema,
 		"evolution_runtime":  evolutionRuntime.Status,
 		"trace_store":        traceStore,
@@ -291,179 +209,6 @@ func (s *HTTPServer) runtimes(w http.ResponseWriter, r *http.Request) {
 		"runtimes":              []EvolutionRuntimeManifest{runtime},
 		"target_runtime_hosted": false,
 	})
-}
-
-func (s *HTTPServer) createRun(w http.ResponseWriter, r *http.Request) {
-	user, ok := s.requireUser(w, r)
-	if !ok {
-		return
-	}
-	var request CreateRunRequest
-	if err := decodeJSON(w, r, &request); err != nil {
-		writeProblem(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := request.Validate(); err != nil {
-		writeProblem(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	ownerUserID := ""
-	if user != nil {
-		ownerUserID = user.ID
-	}
-	run, err := s.runner.StartOwned(r.Context(), request, ownerUserID)
-	if err != nil {
-		writeProblem(w, statusFor(err), err.Error())
-		return
-	}
-	writeJSON(w, http.StatusAccepted, run)
-}
-
-func (s *HTTPServer) listRuns(w http.ResponseWriter, r *http.Request) {
-	user, ok := s.requireUser(w, r)
-	if !ok {
-		return
-	}
-	limit := 100
-	if raw := r.URL.Query().Get("limit"); raw != "" {
-		value, err := strconv.Atoi(raw)
-		if err != nil || value < 1 || value > 1000 {
-			writeProblem(w, http.StatusBadRequest, "limit must be from 1 to 1000")
-			return
-		}
-		limit = value
-	}
-	var runs []Run
-	var err error
-	if user == nil {
-		runs, err = s.store.ListRuns(r.Context(), limit)
-	} else {
-		runs, err = s.store.ListRunsByOwner(r.Context(), user.ID, limit)
-	}
-	if err != nil {
-		writeProblem(w, statusFor(err), err.Error())
-		return
-	}
-	if runs == nil {
-		runs = []Run{}
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"runs": runs})
-}
-
-func (s *HTTPServer) getRun(w http.ResponseWriter, r *http.Request) {
-	user, ok := s.requireUser(w, r)
-	if !ok {
-		return
-	}
-	run, err := s.store.GetRun(r.Context(), r.PathValue("run_id"))
-	if err != nil {
-		writeProblem(w, statusFor(err), err.Error())
-		return
-	}
-	if user != nil && run.OwnerUserID != user.ID {
-		writeProblem(w, http.StatusNotFound, "Run not found")
-		return
-	}
-	writeJSON(w, http.StatusOK, run)
-}
-
-func (s *HTTPServer) cancelRun(w http.ResponseWriter, r *http.Request) {
-	user, ok := s.requireUser(w, r)
-	if !ok {
-		return
-	}
-	existing, err := s.store.GetRun(r.Context(), r.PathValue("run_id"))
-	if err != nil {
-		writeProblem(w, statusFor(err), err.Error())
-		return
-	}
-	if user != nil && existing.OwnerUserID != user.ID {
-		writeProblem(w, http.StatusNotFound, "Run not found")
-		return
-	}
-	run, err := s.runner.Cancel(r.Context(), r.PathValue("run_id"))
-	if err != nil {
-		writeProblem(w, statusFor(err), err.Error())
-		return
-	}
-	writeJSON(w, http.StatusAccepted, run)
-}
-
-func (s *HTTPServer) runEvents(w http.ResponseWriter, r *http.Request) {
-	user, ok := s.requireUser(w, r)
-	if !ok {
-		return
-	}
-	runID := r.PathValue("run_id")
-	run, err := s.store.GetRun(r.Context(), runID)
-	if err != nil {
-		writeProblem(w, statusFor(err), err.Error())
-		return
-	}
-	if user != nil && run.OwnerUserID != user.ID {
-		writeProblem(w, http.StatusNotFound, "Run not found")
-		return
-	}
-	after, err := lastSequence(r.Header.Get("Last-Event-ID"), runID)
-	if err != nil {
-		writeProblem(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		writeProblem(w, http.StatusInternalServerError, "streaming is unavailable")
-		return
-	}
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.WriteHeader(http.StatusOK)
-	ticker := time.NewTicker(200 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		events, listErr := s.store.ListEventsAfter(r.Context(), runID, after, 1000)
-		if listErr != nil {
-			return
-		}
-		for _, event := range events {
-			bytes, marshalErr := json.Marshal(event)
-			if marshalErr != nil {
-				return
-			}
-			_, _ = fmt.Fprintf(w, "id: %s\nevent: engine\ndata: %s\n\n", event.EventID, bytes)
-			after = event.Sequence
-		}
-		if len(events) > 0 {
-			flusher.Flush()
-		}
-		run, err = s.store.GetRun(r.Context(), runID)
-		if err != nil {
-			return
-		}
-		if run.State.Terminal() && len(events) == 0 {
-			return
-		}
-		select {
-		case <-r.Context().Done():
-			return
-		case <-ticker.C:
-		}
-	}
-}
-
-func lastSequence(lastEventID, runID string) (int64, error) {
-	if lastEventID == "" {
-		return 0, nil
-	}
-	prefix := runID + "."
-	if !strings.HasPrefix(lastEventID, prefix) {
-		return 0, errors.New("Last-Event-ID does not belong to this Run")
-	}
-	value, err := strconv.ParseInt(strings.TrimPrefix(lastEventID, prefix), 10, 64)
-	if err != nil || value < 0 {
-		return 0, errors.New("Last-Event-ID is invalid")
-	}
-	return value, nil
 }
 
 func requestMiddleware(next http.Handler) http.Handler {

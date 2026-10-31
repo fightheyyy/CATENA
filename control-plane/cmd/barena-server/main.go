@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -78,25 +77,6 @@ func run() error {
 		}
 		memoryStore = control.NewEngineMemoryClient(manager)
 	}
-	if interrupted, err := store.InterruptActiveRuns(ctx); err != nil {
-		return err
-	} else if interrupted > 0 {
-		slog.Warn("marked stale Runs interrupted", "count", interrupted)
-	}
-
-	repoRoot, err := filepath.Abs(env("BARENA_REPO_ROOT", ".."))
-	if err != nil {
-		return err
-	}
-	runner, err := control.NewRunnerManager(store, control.RunnerConfig{
-		NodeCommand: env("BARENA_NODE", "node"),
-		WorkerPath:  env("BARENA_ENGINE_WORKER", filepath.Join(repoRoot, "dist", "engine-worker.js")),
-		RunsRoot:    env("BARENA_RUNS_ROOT", filepath.Join(repoRoot, "runs")),
-		KillGrace:   5 * time.Second,
-	})
-	if err != nil {
-		return err
-	}
 	turnTimeout, err := time.ParseDuration(env("CATENA_ENGINE_TURN_TIMEOUT", "5m"))
 	if err != nil {
 		return fmt.Errorf("CATENA_ENGINE_TURN_TIMEOUT: %w", err)
@@ -119,14 +99,14 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler, err := control.NewHTTPHandlerWithBackendConfig(store, runner, control.AuthConfig{
+	handler, err := control.NewHTTPHandler(store, control.HTTPConfig{Auth: control.AuthConfig{
 		GitHubClientID:        githubClientID,
 		GitHubClientSecret:    githubClientSecret,
 		RedirectURL:           redirectURL,
 		SecureCookies:         strings.HasPrefix(redirectURL, "https://"),
 		GatewaySecret:         gatewaySecret,
 		APITokenEncryptionKey: apiTokenEncryptionKey,
-	}, evolutionRuntime, traceStore, memoryStore, workerConfig, ingestConfig)
+	}, Engine: evolutionRuntime, Traces: traceStore, Memory: memoryStore, Workers: workerConfig, Ingestion: ingestConfig})
 	if err != nil {
 		return err
 	}

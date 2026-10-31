@@ -8,7 +8,7 @@ from pathlib import Path, PurePosixPath
 
 from harbor.agents.installed.codex import Codex, CodexOptions
 
-from .contracts import validate_files
+from ..rsi.contracts import validate_files
 
 # Credentials are in-process references, never AgentConfig/JobConfig fields.
 CREDENTIALS: dict[str, dict[str, str]] = {}

@@ -48,3 +48,11 @@ OpenViking HTTP、trusted identity、owner URI 检查、文件/关系/搜索与�
 Memory 独立 `pipeline=memory`：先保存 provider task ID checkpoint，再轮询；临时失败的重试只恢复 status，不重复 commit。Artifact 保存原 Evidence 引用/哈希、提供方任务和原生结果，不把整个 owner 的现有文件冒认成本次提炼结果，状态为 extracted 而非 confirmed。旧直接提炼 API 退役，Trace 提炼按钮进入同一队列。provider 已接受的远程提炼在 Go 取消后可能继续，Catena 停止轮询、不发布其产物；未宣称具备提供方事务回滚。
 
 验证：Go 全套通过，含持久化 checkpoint 后临时失败/重试/只提炼一次；Engine 57 tests 通过，新增原 owner 哈希、越界 URI、跨 owner task/搜索/文件、跨 Engine receipt 重启不重复 commit。均为协议 fixtures；此环境未配置 OpenViking/模型凭证，真实提炼 BLOCKED。
+
+## Phase 5：退役 Barena
+
+删除 Node Runner、Runner client、Run bundle、Scenario adoption、Issue→Case→Replay→Release 自动晋级及固定 Experiment HTTP/Store/内存/PG 实现。先迁移 newID/bounded/Trace ID 校验等共享函数。认证表、用户/Agent/API token、Go MemoryStore、历史会话读和队列保留。公共 Profile 保留基本资料，移除以旧 Run 推算能力评级。HTTP 构造收敛为 `NewHTTPHandler(Store, HTTPConfig)`。
+
+前端移除专用 Experiment 导航/页面；输出页读 Artifact/来源/Harbor 结果。历史 Conversation 的记忆操作也进入同一 Analysis Job，通过 owner-scoped 历史读取生成脱敏 Evidence，不再有独立提炼任务调度器。Harbor Adapter 移至 `engine/evaluation`，固定实验 Worker 已归档；删除同步 RSI CLI，Go Queue 为唯一正式启动路径。Compose 和 core image 不再构建 Runner/XiaoBaOS。
+
+本阶段 Go tests、React typecheck 通过。研究数据、冻结 Release、Verifier 结果及报告原位保留；过时代码在 research/legacy-engine 并标注仅历史用途。生产旧表数据不 DROP/DELETE。

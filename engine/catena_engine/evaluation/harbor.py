@@ -13,8 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..protocol import ModelConfig
-from .cancellation import cancellable
-from .contracts import Candidate, OptimizationError, Trial, safe_id
+from ..rsi.cancellation import cancellable
+from ..rsi.contracts import Candidate, OptimizationError, Trial, safe_id
 
 
 def task_digest(root: Path) -> str:
@@ -86,7 +86,7 @@ class HarborEvaluator:
         config = JobConfig(
             job_name=trial_id, jobs_dir=self.output, n_concurrent_trials=1, n_attempts=1, quiet=True,
             environment=EnvironmentConfig(type="docker", delete=True, override_cpus=1, override_memory_mb=1024),
-            agents=[AgentConfig(import_path="catena_engine.rsi.harbor_agent:RSICodex", model_name=self.model.model,
+            agents=[AgentConfig(import_path="catena_engine.evaluation.harbor_agent:RSICodex", model_name=self.model.model,
                                 kwargs={"credential_ref": trial_id, "harness_files": dict(candidate.files),
                                         "version": "0.160.0", "reasoning_effort": "low", "web_search": "disabled"})],
             tasks=[TaskConfig(path=case.path)],

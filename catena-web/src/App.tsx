@@ -15,7 +15,6 @@ const ConversationWorkspace = lazy(() => import("./ConversationWorkspace").then(
 const EvolutionWorkspace = lazy(() => import("./EvolutionWorkspace").then((module) => ({ default: module.EvolutionWorkspace })));
 const MemoryGraphCanvas = lazy(() => import("./MemoryGraphCanvas").then((module) => ({ default: module.MemoryGraphCanvas })));
 const TraceExplorer = lazy(() => import("./TraceExplorer").then((module) => ({ default: module.TraceExplorer })));
-const ExperimentWorkspace = lazy(() => import("./ExperimentWorkspace").then((module) => ({ default: module.ExperimentWorkspace })));
 
 type Locale = "zh" | "en";
 type Theme = "system" | "light" | "dark";
@@ -600,7 +599,7 @@ function Sidebar({
   refreshing: boolean;
 }) {
   const t = copy[locale];
-  const icons: Record<Route, IconName> = { home: "home", assistant: "assistant", cases: "book", traces: "history", memory: "memory", evolution: "outputs", agents: "agents", apiKeys: "plug", settings: "settings", conversations: "book" };
+  const icons: Record<Route, IconName> = { home: "home", assistant: "assistant", traces: "history", memory: "memory", evolution: "outputs", agents: "agents", apiKeys: "plug", settings: "settings", conversations: "book" };
   return (
     <aside className="sidebar">
       <div className="sidebar-brand"><Brand />{onRefresh && <button className="text-button icon-button" type="button" aria-label={locale === "zh" ? "刷新" : "Refresh"} title={locale === "zh" ? "刷新" : "Refresh"} disabled={refreshing} onClick={() => void onRefresh()}><Icon name="refresh" /></button>}</div>
@@ -689,7 +688,6 @@ function RouteView({
   let content: React.ReactNode;
   const historyTabs = route === "conversations" ? <div className="history-tabs" role="group" aria-label={locale === "zh" ? "经历视图" : "History view"}><button type="button" onClick={() => onNavigate("traces")}><Icon name="history" />Trace</button><button className="active" type="button" aria-pressed="true"><Icon name="book" />{locale === "zh" ? "对话" : "Conversations"}</button></div> : null;
   if (route === "home" && !selectedEvolutionJobID) content = <WorkbenchWorkspace key={session.user?.id ?? "local"} locale={locale} workspace={workspace} ownerID={session.user?.id ?? "local"} initialAgentID={selectedAgentID} onOpenTrace={onOpenAgentTraces} onOpenJob={onOpenEvolutionJob} onConnectAgent={onConnectAgent} onRefresh={onRefresh} />;
-  else if (route === "cases") content = <ExperimentWorkspace key={session.user?.id ?? "local"} locale={locale} />;
   else if (route === "agents") content = <AgentWorkspace locale={locale} workspace={workspace} initialAgentID={selectedAgentID} onSelectAgent={onOpenAgent} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} onConnect={onConnectAgent} />;
   else if (route === "apiKeys") content = <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} onOpenAgent={onOpenAgent} />;
   else if (route === "conversations") content = <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} onOpenMemory={onOpenMemory} navigation={historyTabs} />;

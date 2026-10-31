@@ -154,12 +154,12 @@ func TestEvolutionWorkerPermanentFailureDoesNotRetry(t *testing.T) {
 func TestEvolutionCancelQueuedJobHTTP(t *testing.T) {
 	s := NewMemoryStore()
 	j := seedQueueJob(t, s)
-	h, err := NewHTTPHandlerWithMemory(s, nil, AuthConfig{}, nil, nil, nil)
+	h, err := NewHTTPHandler(s, HTTPConfig{Auth: AuthConfig{}, Engine: nil, Traces: nil, Memory: nil})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	r := httptest.NewRequest(http.MethodPost, "/v1/evolution-jobs/"+j.ID+"/cancel", nil)
+	r := httptest.NewRequest(http.MethodPost, "/v1/analysis-jobs/"+j.ID+"/cancel", nil)
 	out := httptest.NewRecorder()
 	h.ServeHTTP(out, r)
 	if out.Code != http.StatusOK {
@@ -170,7 +170,7 @@ func TestEvolutionCancelQueuedJobHTTP(t *testing.T) {
 		t.Fatalf("cancel result: %#v %v", got, err)
 	}
 	stats := httptest.NewRecorder()
-	h.ServeHTTP(stats, httptest.NewRequest(http.MethodGet, "/v1/evolution-jobs/queue", nil))
+	h.ServeHTTP(stats, httptest.NewRequest(http.MethodGet, "/v1/analysis-jobs/queue", nil))
 	if stats.Code != 200 {
 		t.Fatalf("queue HTTP %d", stats.Code)
 	}
@@ -185,13 +185,13 @@ func TestLocalModeCanCancelLocalTraceSetOwner(t *testing.T) {
 	if _, _, err := s.CreateEvolutionJob(context.Background(), j); err != nil {
 		t.Fatal(err)
 	}
-	h, err := NewHTTPHandlerWithMemory(s, nil, AuthConfig{}, nil, nil, nil)
+	h, err := NewHTTPHandler(s, HTTPConfig{Auth: AuthConfig{}, Engine: nil, Traces: nil, Memory: nil})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer h.Close()
 	out := httptest.NewRecorder()
-	h.ServeHTTP(out, httptest.NewRequest(http.MethodPost, "/v1/evolution-jobs/"+j.ID+"/cancel", nil))
+	h.ServeHTTP(out, httptest.NewRequest(http.MethodPost, "/v1/analysis-jobs/"+j.ID+"/cancel", nil))
 	if out.Code != 200 {
 		t.Fatalf("local owned job cancellation: HTTP %d", out.Code)
 	}

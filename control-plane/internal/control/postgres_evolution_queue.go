@@ -112,7 +112,7 @@ WHERE job_id=$1 AND worker_id=$2 AND fencing_token=$3 AND fencing_token>0
 AND state='running' AND lease_until>clock_timestamp() AND NOT cancel_requested
 AND COALESCE(owner_user_id,'')=$7 AND COALESCE(source_run_id,'')=$8
 AND source_trace_id=$9 AND source_agent_id=$10 AND idempotency_key=$11 AND request_fingerprint=$12 AND attempt=$13`,
-		l.JobID, l.WorkerID, l.Fence, j.State, j.CurrentStage, doc, j.OwnerUserID, j.SourceRunID, j.SourceTraceID, j.SourceAgentID, j.IdempotencyKey, j.RequestFingerprint, j.Attempt)
+		l.JobID, l.WorkerID, l.Fence, j.State, j.CurrentStage, doc, j.OwnerUserID, "", j.SourceTraceID, j.SourceAgentID, j.IdempotencyKey, j.RequestFingerprint, j.Attempt)
 	if err != nil {
 		return err
 	}

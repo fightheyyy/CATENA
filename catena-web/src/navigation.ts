@@ -1,8 +1,8 @@
-export const primaryNavigationRoutes = ["home", "traces", "memory", "cases", "evolution"] as const;
+export const primaryNavigationRoutes = ["home", "traces", "memory", "evolution"] as const;
 
 export const routePaths = {
   home: "/", assistant: "/assistant", agents: "/agents", apiKeys: "/api-keys", conversations: "/conversations",
-  traces: "/traces", cases: "/cases", evolution: "/evolution", memory: "/memory", settings: "/settings",
+  traces: "/traces", evolution: "/evolution", memory: "/memory", settings: "/settings",
 } as const;
 
 export type Route = keyof typeof routePaths;

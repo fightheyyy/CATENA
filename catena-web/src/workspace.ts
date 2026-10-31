@@ -11,7 +11,6 @@ export const workspaceResources = {
 export const routeResources: Record<Route, Array<keyof typeof workspaceResources>> = {
   home: ["agents", "traces", "evolutionJobs"],
   assistant: ["agents", "traces", "evolutionJobs"],
-  cases: [],
   agents: ["agents"], apiKeys: ["agents"], traces: ["agents", "traces"],
   evolution: ["agents", "evolutionJobs"], conversations: ["system"], memory: ["system"], settings: [],
 };

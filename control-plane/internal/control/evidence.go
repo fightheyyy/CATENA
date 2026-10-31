@@ -18,7 +18,7 @@ const (
 	evolutionReviewScope           = "proposal_only"
 	evolutionEvidenceSchema        = "catena.evolution_evidence_pack.v1"
 	evolutionAgentEvidenceSchema   = "catena.agent_trace_set_evidence_pack.v1"
-	evolutionReleaseAuthority      = "local_barena"
+	evolutionReleaseAuthority      = "human"
 	maxEvolutionEvidenceSpans      = 64
 	maxEvolutionEvidenceEvents     = 32
 	maxEvolutionEvidenceFieldBytes = 2 * 1024
@@ -71,20 +71,12 @@ func normalizedEvolutionTraceID(value string) (string, error) {
 
 func buildEvolutionEvidencePack(
 	sourceKind EvolutionSourceKind,
-	run *Run,
 	traceID string,
 	trace *TraceDetail,
-	events []EngineEvent,
 	createdAt time.Time,
 ) (EvolutionEvidencePack, error) {
 	if !sourceKind.Valid() || strings.TrimSpace(traceID) == "" {
 		return EvolutionEvidencePack{}, fmt.Errorf("Evolution evidence source is invalid")
-	}
-	if sourceKind == EvolutionSourceTrace && run != nil {
-		return EvolutionEvidencePack{}, fmt.Errorf("Trace-only Evolution cannot include a synthetic Run")
-	}
-	if sourceKind == EvolutionSourceRunTrace && run == nil {
-		return EvolutionEvidencePack{}, fmt.Errorf("Run-backed Evolution requires a retained Run")
 	}
 	if trace == nil && sourceKind == EvolutionSourceTrace {
 		return EvolutionEvidencePack{}, fmt.Errorf("stored Trace evidence is required")
@@ -94,7 +86,6 @@ func buildEvolutionEvidencePack(
 		SourceKind:    sourceKind,
 		SourceTraceID: traceID,
 		Spans:         []EvolutionEvidenceSpan{},
-		RunEvents:     []EngineEvent{},
 		Redacted:      true,
 		Boundary: EvolutionEvidenceBoundary{
 			TargetAgentExecutedByCatena: false,
@@ -104,23 +95,6 @@ func buildEvolutionEvidencePack(
 			ReviewScope:                 evolutionReviewScope,
 		},
 		CreatedAt: createdAt.UTC(),
-	}
-	if run != nil {
-		if len(run.Input) > 24*1024 || len(run.Runtime) > 12*1024 {
-			pack.Truncated = true
-		}
-		pack.SourceRunID = run.ID
-		pack.Run = &EvolutionEvidenceRun{
-			RunID:     run.ID,
-			Origin:    run.Origin,
-			Operation: run.Operation,
-			State:     run.State,
-			Input:     sanitizeEvolutionJSON(run.Input, 24*1024),
-			Runtime:   sanitizeEvolutionJSON(run.Runtime, 12*1024),
-			Error:     bounded(redactMemoryText(run.Error), 2000),
-			CreatedAt: run.CreatedAt,
-			UpdatedAt: run.UpdatedAt,
-		}
 	}
 	if trace != nil {
 		if trace.Summary.TraceID != traceID {
@@ -192,25 +166,6 @@ func buildEvolutionEvidencePack(
 		}
 	}
 	pack.IncludedSpanCount = len(pack.Spans)
-	relevant := make([]EngineEvent, 0)
-	for _, event := range events {
-		if event.TraceID == traceID || event.Kind == "terminal" {
-			copy := event
-			if len(copy.Payload) > 12*1024 {
-				pack.Truncated = true
-			}
-			copy.Payload = sanitizeEvolutionJSON(copy.Payload, 12*1024)
-			relevant = append(relevant, copy)
-		}
-	}
-	if len(relevant) > maxEvolutionEvidenceEvents {
-		relevant = append(
-			append([]EngineEvent(nil), relevant[:16]...),
-			relevant[len(relevant)-16:]...,
-		)
-		pack.Truncated = true
-	}
-	pack.RunEvents = relevant
 	for {
 		encoded, err := evolutionEvidenceDigestInput(pack)
 		if err != nil {
@@ -225,10 +180,6 @@ func buildEvolutionEvidencePack(
 		if len(pack.Spans) > 1 {
 			pack.Spans = pack.Spans[:len(pack.Spans)-1]
 			pack.IncludedSpanCount = len(pack.Spans)
-			continue
-		}
-		if len(pack.RunEvents) > 1 {
-			pack.RunEvents = pack.RunEvents[:len(pack.RunEvents)-1]
 			continue
 		}
 		return EvolutionEvidencePack{}, fmt.Errorf("Evolution Evidence Pack exceeds the safe prompt limit")
@@ -258,7 +209,6 @@ func buildAgentTraceSetEvidencePack(
 		SourceTraceIDs:    []string{},
 		Spans:             []EvolutionEvidenceSpan{},
 		Traces:            []EvolutionEvidenceTrace{},
-		RunEvents:         []EngineEvent{},
 		TotalTraceCount:   totalTraceCount,
 		Redacted:          true,
 		Boundary: EvolutionEvidenceBoundary{
@@ -289,7 +239,7 @@ func buildAgentTraceSetEvidencePack(
 			return EvolutionEvidencePack{}, fmt.Errorf("stored Trace is outside the selected Agent window")
 		}
 		legacy, err := buildEvolutionEvidencePack(
-			EvolutionSourceTrace, nil, trace.Summary.TraceID, &trace, nil, createdAt,
+			EvolutionSourceTrace, trace.Summary.TraceID, &trace, createdAt,
 		)
 		if err != nil {
 			return EvolutionEvidencePack{}, err
@@ -443,8 +393,12 @@ func validEvolutionEvidencePack(pack EvolutionEvidencePack, job EvolutionJob) bo
 			pack.IncludedTraceCount != len(pack.Traces) || len(pack.Traces) < 2 {
 			return false
 		}
+	} else if job.SourceKind == EvolutionSourceConversation {
+		if pack.Schema != "catena.conversation_evidence.v2" || pack.SourceConversationID != job.SourceConversationID || pack.SourceAgentID != job.SourceAgentID || pack.Document == "" {
+			return false
+		}
 	} else if pack.Schema != evolutionEvidenceSchema ||
-		pack.SourceRunID != job.SourceRunID || pack.SourceTraceID != job.SourceTraceID {
+		pack.SourceTraceID != job.SourceTraceID {
 		return false
 	}
 	encoded, err := evolutionEvidenceDigestInput(pack)
@@ -526,6 +480,9 @@ func sanitizeEvolutionValue(key string, value any) any {
 }
 
 func evolutionJobTraceIDs(job EvolutionJob) []string {
+	if job.SourceKind == EvolutionSourceConversation {
+		return []string{"conversation:" + job.SourceAgentID + ":" + job.SourceConversationID}
+	}
 	if len(job.SourceTraceIDs) > 0 {
 		return append([]string(nil), job.SourceTraceIDs...)
 	}
@@ -537,14 +494,13 @@ func evolutionJobTraceIDs(job EvolutionJob) []string {
 
 func validEvolutionJobSource(job EvolutionJob) bool {
 	switch job.SourceKind {
+	case EvolutionSourceConversation:
+		return job.SourceConversationID != "" && job.SourceAgentID != "" && job.SourceTraceID == "" && job.Pipeline == "memory"
 	case EvolutionSourceTrace:
-		return job.SourceTraceID != "" && job.SourceRunID == "" &&
-			job.SourceAgentID == "" && len(job.SourceTraceIDs) == 0
-	case EvolutionSourceRunTrace:
-		return job.SourceTraceID != "" && job.SourceRunID != "" &&
+		return job.SourceTraceID != "" &&
 			job.SourceAgentID == "" && len(job.SourceTraceIDs) == 0
 	case EvolutionSourceAgentTraceSet:
-		return job.SourceRunID == "" && job.SourceTraceID == "" &&
+		return job.SourceTraceID == "" &&
 			job.SourceAgentID != "" && len(job.SourceTraceIDs) >= 2 &&
 			job.WindowStart != nil && job.WindowEnd != nil && job.WindowEnd.After(*job.WindowStart)
 	default:
@@ -553,6 +509,9 @@ func validEvolutionJobSource(job EvolutionJob) bool {
 }
 
 func evolutionJobSourceKey(job EvolutionJob) string {
+	if job.SourceKind == EvolutionSourceConversation {
+		return "conversation:" + job.SourceAgentID + ":" + job.SourceConversationID
+	}
 	if job.SourceKind == EvolutionSourceAgentTraceSet {
 		return "agent:" + job.SourceAgentID
 	}
@@ -615,4 +574,19 @@ func boundedEvolutionJSON(value json.RawMessage, max int, reason string) json.Ra
 		"sha256":  fmt.Sprintf("%x", digest[:]),
 	})
 	return encoded
+}
+
+func conversationEvidencePack(agent, id string, messages []ConversationMessage, now time.Time) (EvolutionEvidencePack, error) {
+	if len(messages) == 0 {
+		return EvolutionEvidencePack{}, ErrNotFound
+	}
+	doc := ConversationDocument{Summary: summarizeConversation(messages), Messages: messages}
+	pack := EvolutionEvidencePack{Schema: "catena.conversation_evidence.v2", SourceKind: EvolutionSourceConversation, SourceConversationID: id, SourceAgentID: agent, Document: conversationMemoryDocument(doc), Redacted: true, CreatedAt: now, Boundary: EvolutionEvidenceBoundary{ReleaseAuthority: evolutionReleaseAuthority, CandidateStatus: evolutionCandidateStatus, ReviewScope: evolutionReviewScope}}
+	encoded, err := evolutionEvidenceDigestInput(pack)
+	if err != nil {
+		return pack, err
+	}
+	hash := sha256.Sum256(encoded)
+	pack.SHA256 = hex.EncodeToString(hash[:])
+	return pack, nil
 }

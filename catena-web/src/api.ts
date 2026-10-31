@@ -22,7 +22,6 @@ import type {
 import { normalizeEvolutionJob, normalizeEvolutionJobs } from "./evolution";
 import { routeResources, workspaceResources } from "./workspace";
 import type { Route } from "./navigation";
-import type { Experiment, ExperimentCase } from "./experiments";
 
 type Problem = {
   detail?: string;
@@ -68,10 +67,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  experimentCases: (signal?: AbortSignal) => request<{ cases: ExperimentCase[] }>("/v1/experiment-cases", { signal }),
-  experiments: (signal?: AbortSignal) => request<{ experiments: Experiment[] }>("/v1/experiments", { signal }),
-  createExperiment: (caseID: string, requestID: string, includeMemory = false, targetAgent = "sdk") => request<Experiment>("/v1/experiments", { method: "POST", body: JSON.stringify({ case_id: caseID, request_id: requestID, include_memory: includeMemory, target_agent: targetAgent }) }),
-  experimentEvidence: (experimentID: string, index: number) => request<{ answer: string; calls: { command: string; exit_code: number | null; stdout: string; stderr: string }[] }>(`/v1/experiments/${encodeURIComponent(experimentID)}/trials/${index}`),
   session: () => request<Session>("/v1/auth/session"),
   logout: () => request<void>("/v1/auth/logout", { method: "POST" }),
   workspace: async (route: Route, signal: AbortSignal): Promise<Partial<WorkspaceData>> => {
@@ -148,12 +143,7 @@ export const api = {
       body: JSON.stringify({ pipeline: input.pipeline ?? "rsi", agent_id: agentID, window_start: input.window_start, window_end: input.window_end, objective: input.objective, options: input.options }),
     }),
   ),
-  rememberConversation: (agentID: string, conversationID: string) => {
-    const query = new URLSearchParams({ agent_id: agentID });
-    return request<MemoryIngestReceipt>(`/v1/conversations/${encodeURIComponent(conversationID)}/memories?${query}`, {
-      method: "POST",
-    });
-  },
+  startConversationMemory: (agentID: string, conversationID: string) => request<EvolutionJob>("/v1/analysis-jobs", {method:"POST",headers:{"Idempotency-Key":crypto.randomUUID()},body:JSON.stringify({pipeline:"memory",agent_id:agentID,conversation_id:conversationID})}),
   memoryTask: (taskID: string) =>
     request<MemoryTaskStatus>(`/v1/memories/tasks/${encodeURIComponent(taskID)}`, {
       signal: AbortSignal.timeout(8000),

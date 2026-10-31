@@ -34,7 +34,7 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	}))
 	defer engine.Close()
 	manager, _ := NewEvolutionRuntimeManager(EvolutionRuntimeConfig{URL: engine.URL, Token: "private"})
-	h, err := NewHTTPHandlerWithBackendConfig(store, nil, testEvolutionAuthConfig(), manager, &analysisTraceFixture{}, nil, fastWorkerConfig(), DefaultTraceIngestConfig())
+	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testEvolutionAuthConfig(), Engine: manager, Traces: &analysisTraceFixture{}, Memory: nil, Workers: fastWorkerConfig(), Ingestion: DefaultTraceIngestConfig()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestMemoryJobResumesNativeTaskWithoutRepeatingExtraction(t *testing.T) {
 	}))
 	defer engine.Close()
 	manager, _ := NewEvolutionRuntimeManager(EvolutionRuntimeConfig{URL: engine.URL, Token: "private"})
-	h, err := NewHTTPHandlerWithBackendConfig(store, nil, testEvolutionAuthConfig(), manager, &analysisTraceFixture{}, nil, fastWorkerConfig(), DefaultTraceIngestConfig())
+	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testEvolutionAuthConfig(), Engine: manager, Traces: &analysisTraceFixture{}, Memory: nil, Workers: fastWorkerConfig(), Ingestion: DefaultTraceIngestConfig()})
 	if err != nil {
 		t.Fatal(err)
 	}

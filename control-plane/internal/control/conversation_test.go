@@ -11,20 +11,20 @@ import (
 )
 
 func TestConversationIngestEndpointIsRetired(t *testing.T) {
-    handler, err := NewHTTPHandlerWithConfig(NewMemoryStore(), nil, AuthConfig{GatewaySecret: testGatewaySecret})
-    if err != nil {
-        t.Fatal(err)
-    }
-    response := httptest.NewRecorder()
-    handler.ServeHTTP(response, signedPlatformRequest(t, http.MethodPost, "/v1/ingest/conversations", "legacy-project", "xiaobaos", []byte(`{}`)))
-    if response.Code != http.StatusNotFound {
-        t.Fatalf("retired Conversation ingest returned %d: %s", response.Code, response.Body.String())
-    }
+	handler, err := NewHTTPHandler(NewMemoryStore(), HTTPConfig{Auth: AuthConfig{GatewaySecret: testGatewaySecret}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, signedPlatformRequest(t, http.MethodPost, "/v1/ingest/conversations", "legacy-project", "xiaobaos", []byte(`{}`)))
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("retired Conversation ingest returned %d: %s", response.Code, response.Body.String())
+	}
 }
 
 func TestHistoricalConversationRemainsReadable(t *testing.T) {
 	store := NewMemoryStore()
-	handler, err := NewHTTPHandlerWithConfig(store, nil, AuthConfig{GatewaySecret: testGatewaySecret})
+	handler, err := NewHTTPHandler(store, HTTPConfig{Auth: AuthConfig{GatewaySecret: testGatewaySecret}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,9 @@ func TestHistoricalConversationRemainsReadable(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("historical Conversation list returned %d: %s", response.Code, response.Body.String())
 	}
-	var result struct { Conversations []ConversationSummary `json:"conversations"` }
+	var result struct {
+		Conversations []ConversationSummary `json:"conversations"`
+	}
 	if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil {
 		t.Fatal(err)
 	}

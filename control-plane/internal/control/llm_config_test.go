@@ -14,7 +14,7 @@ import (
 
 func TestEvolutionModelConfigLifecycleNeverReturnsSecret(t *testing.T) {
 	store := NewMemoryStore()
-	handler, err := NewHTTPHandlerWithConfig(store, nil, testEvolutionAuthConfig())
+	handler, err := NewHTTPHandler(store, HTTPConfig{Auth: testEvolutionAuthConfig()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestEvolutionModelConfigLifecycleNeverReturnsSecret(t *testing.T) {
 }
 
 func TestEvolutionModelConfigRejectsCredentialBearingBaseURL(t *testing.T) {
-	handler, err := NewHTTPHandlerWithConfig(NewMemoryStore(), nil, testEvolutionAuthConfig())
+	handler, err := NewHTTPHandler(NewMemoryStore(), HTTPConfig{Auth: testEvolutionAuthConfig()})
 	if err != nil {
 		t.Fatal(err)
 	}
