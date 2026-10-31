@@ -424,9 +424,8 @@ func agentTraceWindowFromQuery(r *http.Request, now time.Time) (time.Time, time.
 			return time.Time{}, time.Time{}, errors.New("to must be an RFC3339 timestamp")
 		}
 	}
-	request := CreateAgentEvolutionJobRequest{WindowStart: windowStart, WindowEnd: windowEnd}
-	if err := request.Validate(now.UTC()); err != nil {
-		return time.Time{}, time.Time{}, err
+	if !windowEnd.After(windowStart) || windowEnd.Sub(windowStart) > 31*24*time.Hour || windowEnd.After(now.Add(5*time.Minute)) {
+		return time.Time{}, time.Time{}, errors.New("invalid Trace time window")
 	}
 	return windowStart.UTC(), windowEnd.UTC(), nil
 }

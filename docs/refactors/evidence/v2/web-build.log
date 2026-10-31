@@ -1,0 +1,24 @@
+
+> @catena/web@0.1.0 build /workspace/CATENA/catena-web
+> tsc -b && vite build
+
+vite v8.2.0 building client environment for production...
+[2Ktransforming...✓ 198 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                  0.64 kB │ gzip:  0.38 kB
+dist/assets/MemoryGraphCanvas-DLioOiRN.css      15.41 kB │ gzip:  2.56 kB
+dist/assets/index-DrGEivYq.css                 131.59 kB │ gzip: 22.91 kB
+dist/assets/agentConnection-CIHdTvsZ.js          0.83 kB │ gzip:  0.43 kB
+dist/assets/useAgentTraceWindow-D6RkK4n3.js      0.83 kB │ gzip:  0.46 kB
+dist/assets/AnalysisWorkspace-DbCCgA4j.js        3.16 kB │ gzip:  1.45 kB
+dist/assets/AgentWorkspace-FnZk0_d6.js           8.28 kB │ gzip:  3.00 kB
+dist/assets/ConversationWorkspace-Dm6s15hj.js    9.63 kB │ gzip:  3.64 kB
+dist/assets/traceView-Dwvm0wua.js               11.72 kB │ gzip:  4.28 kB
+dist/assets/WorkbenchWorkspace-BTFild-1.js      14.20 kB │ gzip:  5.52 kB
+dist/assets/ApiManagementPage-QwXp6c5E.js       16.67 kB │ gzip:  5.82 kB
+dist/assets/TraceExplorer-F8Dj4OtM.js           37.77 kB │ gzip: 11.29 kB
+dist/assets/MemoryGraphCanvas-BS6HKikA.js      181.04 kB │ gzip: 58.85 kB
+dist/assets/index-C6eiNoS8.js                  241.87 kB │ gzip: 76.78 kB
+
+✓ built in 247ms

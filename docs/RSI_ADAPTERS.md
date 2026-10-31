@@ -8,48 +8,18 @@ and sequential/parallel composition. HarnessPro is **not implemented**.
 
 ## Current scope
 
-The entry points are the **private** Engine's `GET /v1/rsi/adapters`,
-`POST /v1/rsi/optimize`, and `catena-rsi`. The POST consumes the same bounded
-analysis slot as `/v1/turn`; excess requests return 429. Health and Harbor bridge
-queries remain independent. Existing Roles, Go job schemas, memory and frontend
-are unchanged. RSI is not wired into PostgreSQL Job Queue or the product UI yet.
-It is an explicit experimental backend, not the new default analysis workflow.
+The single formal entry is authenticated Go `POST /v1/analysis-jobs` with pipeline=rsi. Go owns durable scheduling, leases, heartbeat, fencing, retries and artifacts. Engine privately serves `/v2/rsi`, `/v2/rsi/adapters`, `/v2/cases` and execution receipts. No synchronous public optimization entry, RSI CLI, fixed Role protocol or SDK rollback remains.
 
-The standard Engine image does not install the RSI extra or expose a Docker
-socket. Run this opt-in worker on a Linux Docker host in the isolated Harbor
-Python environment. Merely adding an algorithm to the registry does not install
-its optional dependencies. There is no automatic installation or execution.
+Install Python 3.12 `pip install -e '.[dev,rsi]'`. The pinned upstream Harness² and reusable Harbor adapter share one environment; no OpenAI Agents SDK extra is needed. The Engine image includes this extra and Codex CLI 0.160.0. Docker access and Case mounts are explicit operator configuration, never automatically granted.
 
-## Install without model calls
-
-```sh
-cd engine
-python3.12 -m venv /tmp/catena-rsi
-/tmp/catena-rsi/bin/pip install -e '.[evaluation-e2b,rsi]'
-/tmp/catena-rsi/bin/pip check
-/tmp/catena-rsi/bin/catena-rsi --list
-```
-
-Keep `.[sdk]` / OpenAI 3.x in a separate environment. The optional RSI extra pins
-the upstream source revision; it does not vendor or fork the algorithm. Its
-runtime imports are lazy. Improver and selector calls go through Catena's Codex
-adapter, so no OpenCode/Claude CLI or Vertex credentials are needed. The upstream
-`ChannelSpec("opencode", "catena/host")` is channel identity metadata only;
-`HostProposer` handles every invocation.
-
-The host needs pinned `codex-cli 0.160.0` (`CATENA_CODEX_BIN` may select it), Docker,
-and a container-reachable Responses-compatible model endpoint. The improver uses
-`CATENA_CODEX_REASONING_EFFORT` (default low); Harbor's target Codex is pinned to
-0.160.0 / low. The model ID is owner-supplied, with no deployment-wide fallback.
-Codex version, Docker and task fingerprints are checked before starting paid
-operations. Model endpoint availability is not claimed by a preflight pass.
+The owner supplies the model through Connections. Default reasoning effort is low. No model/provider availability is inferred from a preflight. The registry remains explicit; HarnessPro is not implemented. The public request options are the existing case_id/baseline/algorithms/composition/budget/validation_case_ids. Go creates evidence and attaches credentials internally; clients cannot supply paths, import classes or owner headers to the private Engine.
 
 ## Register existing Cases
 
 Reuse checked-in Harbor tasks, for example
 `evals/trace-skill-benchmark/tasks/python-environment-selection-01`. Create a
 private operator manifest mapping a stable Case ID to an absolute task directory
-and `task_digest(path)` from `catena_engine.rsi.harbor`. It fingerprints all task
+and `task_digest(path)` from `catena_engine.evaluation.harbor`. It fingerprints all task
 files, including environment and verifier files; symlinks are rejected. Example
 shape (replace the path and digest; this is not a runnable fingerprint):
 
@@ -74,7 +44,7 @@ The task directory is hashed again before and after each trial.
 
 ## Request
 
-`catena.rsi_request.v1`:
+Private Engine payload `catena.rsi_request.v1` (Go constructs this, not a public request):
 
 ```json
 {
@@ -181,14 +151,7 @@ in the report. These are configured limits, not measured performance guarantees.
 
 ## Lifecycle and deployment limits
 
-Library callers can set `Services.cancelled`: Codex operations cancel and await
-process-group cleanup; Harbor operations cancel and await its environment cleanup.
-The deadline passes through both transports. Docker cleanup may extend wall time.
-Client disconnect does not set that event in the synchronous Engine HTTP server.
-A process/host crash interrupts an RSI operation: no RSI lease recovery,
-idempotent resume or cross-process capacity coordination is provided in this
-first backend. A POST retry can incur duplicate costs. Existing Go Role-job
-recovery does not imply RSI recovery.
+Go cancellation, lease loss and timeout issue private DELETE to the owner-scoped Engine receipt. Codex and Harbor await cancellation/cleanup. HTTP disconnect alone is not cancellation: a retried Go lease can reconnect to the same active execution. Completed receipts reuse results; interrupted running receipts after Engine restart reject automatic replay. Receipt directories must be persisted and used by one Engine instance. This is external-operation deduplication, not a second queue or distributed transaction. See [Engine lifecycle](CODEX_ENGINE_RUNTIME.md).
 
 Harbor's native Codex executes tools inside Docker and does not inherit the
 analysis CLI's read-only/tool-disabled constraints. Use trusted task images and
@@ -199,16 +162,17 @@ processes remain within the model-key trust boundary.
 
 ## Validation
 
-CI installs `.[dev,evaluation-e2b,rsi]` into the existing isolated Harbor venv and
-runs the full suite. The modern SDK environment still runs the dependency-free
-registry/budget/protocol/HTTP tests; only optional-dependency suites are gated.
-Tests cover the actual pinned upstream loop with deterministic runtime/evaluator
-fixtures, k=1/k=2 in both modes, composition, lineage, budget exhaustion, hidden
-verifier isolation, candidate freeze, private HTTP/report persistence, native
-Harbor config/installation, cancellation and credential-reference cleanup.
-The original Role/CLI lifecycle tests continue to run.
+CI installs `.[dev,rsi]` into one clean Python environment and runs the full suite, including pinned upstream Harness², Harbor adapter, bounded Codex transport, private receipt idempotency/cancellation and Memory owner isolation contracts. Go separately tests the existing durable queue against PostgreSQL and a cross-process Engine protocol fixture. No deterministic fixture measures real model quality or improvement.
 
 These tests make **no paid model calls**. Harbor adapter tests use simulated Job
 execution with real Harbor config classes; they are not a real Docker benchmark.
 No claim is made yet that Harness² improves Catena's real-model success rate,
 Token usage or cost.
+
+## Public queued request
+
+```json
+{"pipeline":"rsi","trace_id":"<retained-32-hex-trace>","adapter":"harness2","options":{"case_id":"python-env-01","budget":{"model_calls":6,"trials":6,"seconds":900}}}
+```
+
+Send with a stable `Idempotency-Key` to `/v1/analysis-jobs`. Alternatively supply agent_id/window_start/window_end. Result Artifacts retain complete candidate/trial provenance in the original Job JSON. No successful Harbor rate or real model validation is claimed by protocol fixtures; see V2 acceptance.

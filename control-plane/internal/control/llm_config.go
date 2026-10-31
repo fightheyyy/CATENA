@@ -9,16 +9,16 @@ import (
 	"time"
 )
 
-const evolutionModelEnvelopePrefix = "catena-evolution-model:"
+const analysisModelEnvelopePrefix = "catena-evolution-model:"
 
-type evolutionModelConfigRequest struct {
+type analysisModelConfigRequest struct {
 	Provider string `json:"provider"`
 	BaseURL  string `json:"base_url"`
 	Model    string `json:"model"`
 	APIKey   string `json:"api_key"`
 }
 
-type EvolutionModelSettings struct {
+type AnalysisModelSettings struct {
 	Provider         string    `json:"provider"`
 	BaseURL          string    `json:"base_url"`
 	Model            string    `json:"model"`
@@ -27,22 +27,22 @@ type EvolutionModelSettings struct {
 	UpdatedAt        time.Time `json:"updated_at,omitempty"`
 }
 
-type EvolutionModelCredentials struct {
+type AnalysisModelCredentials struct {
 	Provider string
 	BaseURL  string
 	Model    string
 	APIKey   string
 }
 
-func (s *HTTPServer) getEvolutionModelConfig(w http.ResponseWriter, r *http.Request) {
+func (s *HTTPServer) getAnalysisModelConfig(w http.ResponseWriter, r *http.Request) {
 	user, ok := s.requireUser(w, r)
 	if !ok {
 		return
 	}
-	config, err := s.store.GetEvolutionModelConfigByOwner(r.Context(), traceOwnerID(user))
+	config, err := s.store.GetAnalysisModelConfigByOwner(r.Context(), traceOwnerID(user))
 	if errors.Is(err, ErrNotFound) {
 		w.Header().Set("Cache-Control", "no-store")
-		writeJSON(w, http.StatusOK, EvolutionModelSettings{})
+		writeJSON(w, http.StatusOK, AnalysisModelSettings{})
 		return
 	}
 	if err != nil {
@@ -50,10 +50,10 @@ func (s *HTTPServer) getEvolutionModelConfig(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, http.StatusOK, presentEvolutionModelConfig(config))
+	writeJSON(w, http.StatusOK, presentAnalysisModelConfig(config))
 }
 
-func (s *HTTPServer) putEvolutionModelConfig(w http.ResponseWriter, r *http.Request) {
+func (s *HTTPServer) putAnalysisModelConfig(w http.ResponseWriter, r *http.Request) {
 	user, ok := s.requireUser(w, r)
 	if !ok {
 		return
@@ -74,7 +74,7 @@ func (s *HTTPServer) putEvolutionModelConfig(w http.ResponseWriter, r *http.Requ
 		}
 		user = &persisted
 	}
-	var request evolutionModelConfigRequest
+	var request analysisModelConfigRequest
 	if err := decodeJSON(w, r, &request); err != nil {
 		writeProblem(w, http.StatusBadRequest, err.Error())
 		return
@@ -82,12 +82,12 @@ func (s *HTTPServer) putEvolutionModelConfig(w http.ResponseWriter, r *http.Requ
 	request.Provider = strings.TrimSpace(request.Provider)
 	request.BaseURL = strings.TrimSpace(request.BaseURL)
 	request.Model = strings.TrimSpace(request.Model)
-	if err := validateEvolutionModelConfigRequest(request); err != nil {
+	if err := validateAnalysisModelConfigRequest(request); err != nil {
 		writeProblem(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	ownerUserID := traceOwnerID(user)
-	existing, existingErr := s.store.GetEvolutionModelConfigByOwner(r.Context(), ownerUserID)
+	existing, existingErr := s.store.GetAnalysisModelConfigByOwner(r.Context(), ownerUserID)
 	if existingErr != nil && !errors.Is(existingErr, ErrNotFound) {
 		writeProblem(w, statusFor(existingErr), existingErr.Error())
 		return
@@ -99,7 +99,7 @@ func (s *HTTPServer) putEvolutionModelConfig(w http.ResponseWriter, r *http.Requ
 		var err error
 		encrypted, err = encryptAPIToken(
 			request.APIKey,
-			evolutionModelEnvelopePrefix+ownerUserID,
+			analysisModelEnvelopePrefix+ownerUserID,
 			s.auth.APITokenEncryptionKey,
 		)
 		if err != nil {
@@ -111,7 +111,7 @@ func (s *HTTPServer) putEvolutionModelConfig(w http.ResponseWriter, r *http.Requ
 		writeProblem(w, http.StatusBadRequest, "api_key is required when creating an LLM configuration")
 		return
 	}
-	stored, err := s.store.UpsertEvolutionModelConfig(r.Context(), EvolutionModelConfig{
+	stored, err := s.store.UpsertAnalysisModelConfig(r.Context(), AnalysisModelConfig{
 		OwnerUserID:     ownerUserID,
 		Provider:        request.Provider,
 		BaseURL:         request.BaseURL,
@@ -124,15 +124,15 @@ func (s *HTTPServer) putEvolutionModelConfig(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, http.StatusOK, presentEvolutionModelConfig(stored))
+	writeJSON(w, http.StatusOK, presentAnalysisModelConfig(stored))
 }
 
-func (s *HTTPServer) deleteEvolutionModelConfig(w http.ResponseWriter, r *http.Request) {
+func (s *HTTPServer) deleteAnalysisModelConfig(w http.ResponseWriter, r *http.Request) {
 	user, ok := s.requireUser(w, r)
 	if !ok {
 		return
 	}
-	err := s.store.DeleteEvolutionModelConfigByOwner(r.Context(), traceOwnerID(user))
+	err := s.store.DeleteAnalysisModelConfigByOwner(r.Context(), traceOwnerID(user))
 	if errors.Is(err, ErrNotFound) {
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -144,47 +144,47 @@ func (s *HTTPServer) deleteEvolutionModelConfig(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *HTTPServer) evolutionModelCredentials(
+func (s *HTTPServer) analysisModelCredentials(
 	ctx context.Context,
 	ownerUserID string,
-) (EvolutionModelCredentials, error) {
+) (AnalysisModelCredentials, error) {
 	if strings.TrimSpace(ownerUserID) == "" {
 		ownerUserID = "local"
 	}
-	config, err := s.store.GetEvolutionModelConfigByOwner(ctx, ownerUserID)
+	config, err := s.store.GetAnalysisModelConfigByOwner(ctx, ownerUserID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			return EvolutionModelCredentials{}, errors.New("请先在 API 管理中配置 LLM")
+			return AnalysisModelCredentials{}, errors.New("请先在 API 管理中配置 LLM")
 		}
-		return EvolutionModelCredentials{}, err
+		return AnalysisModelCredentials{}, err
 	}
 	apiKey, err := decryptAPIToken(
 		config.EncryptedAPIKey,
-		evolutionModelEnvelopePrefix+ownerUserID,
+		analysisModelEnvelopePrefix+ownerUserID,
 		s.auth.APITokenEncryptionKey,
 	)
 	if err != nil {
-		return EvolutionModelCredentials{}, errors.New("LLM credential recovery failed")
+		return AnalysisModelCredentials{}, errors.New("LLM credential recovery failed")
 	}
-	credentials := EvolutionModelCredentials{
+	credentials := AnalysisModelCredentials{
 		Provider: config.Provider,
 		BaseURL:  config.BaseURL,
 		Model:    config.Model,
 		APIKey:   apiKey,
 	}
 	if !credentials.Valid() {
-		return EvolutionModelCredentials{}, errors.New("LLM configuration is incomplete")
+		return AnalysisModelCredentials{}, errors.New("LLM configuration is incomplete")
 	}
 	return credentials, nil
 }
 
-func (c EvolutionModelCredentials) Valid() bool {
+func (c AnalysisModelCredentials) Valid() bool {
 	return c.Provider != "" && c.BaseURL != "" && c.Model != "" && c.APIKey != ""
 }
 
-func presentEvolutionModelConfig(config EvolutionModelConfig) EvolutionModelSettings {
+func presentAnalysisModelConfig(config AnalysisModelConfig) AnalysisModelSettings {
 	configured := config.Provider != "" && config.BaseURL != "" && config.Model != "" && config.EncryptedAPIKey != ""
-	return EvolutionModelSettings{
+	return AnalysisModelSettings{
 		Provider:         config.Provider,
 		BaseURL:          config.BaseURL,
 		Model:            config.Model,
@@ -194,7 +194,7 @@ func presentEvolutionModelConfig(config EvolutionModelConfig) EvolutionModelSett
 	}
 }
 
-func validateEvolutionModelConfigRequest(request evolutionModelConfigRequest) error {
+func validateAnalysisModelConfigRequest(request analysisModelConfigRequest) error {
 	if !safeRuntimeID.MatchString(request.Provider) {
 		return errors.New("provider must contain from 1 to 128 letters, numbers, dots, dashes, or underscores")
 	}

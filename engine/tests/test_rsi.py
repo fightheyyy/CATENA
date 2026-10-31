@@ -37,8 +37,17 @@ class Evaluator:
 
     def probe(self, case_id, candidate, timeout, cancelled=None):
         self.seen.append((case_id, candidate.id))
-        return Trial(str(len(self.seen)), case_id, candidate.id, "[ACTION] inspect\n[OBSERVATION] sum=2",
-                     "2", True, {"HIDDEN_VERIFIER_SENTINEL": 1}, 20, 3)
+        return Trial(
+            str(len(self.seen)),
+            case_id,
+            candidate.id,
+            "[ACTION] inspect\n[OBSERVATION] sum=2",
+            "2",
+            True,
+            {"HIDDEN_VERIFIER_SENTINEL": 1},
+            20,
+            3,
+        )
 
 
 class Strategy:
@@ -53,8 +62,9 @@ class Strategy:
 
     def optimize(self, ctx, services, options):
         services.complete("analyze " + ctx.evidence)
-        child = Candidate({"AGENTS.md": ctx.baseline.files["AGENTS.md"] + "\nCheck inputs."},
-                          (ctx.baseline.id,), self.name)
+        child = Candidate(
+            {"AGENTS.md": ctx.baseline.files["AGENTS.md"] + "\nCheck inputs."}, (ctx.baseline.id,), self.name
+        )
         services.probe(child)
         return OptimizationResult((child,))
 
@@ -111,6 +121,7 @@ def test_failed_calls_count_and_do_not_leak_provider_errors():
     class Broken(Runtime):
         def complete(self, prompt, timeout, cancelled=None):
             raise RuntimeError("SECRET_PROVIDER_KEY")
+
     services = Services(context(), Broken(), Evaluator(), Budget())
     with pytest.raises(OptimizationError) as error:
         services.complete("test")
@@ -135,8 +146,17 @@ def test_probes_cannot_spend_validation_reserve():
     assert services.attempted_trials == 0
 
 
-@pytest.mark.parametrize("path", ["../secret", "/AGENTS.md", "scripts/a.py", ".codex/hooks.json",
-                                  ".agents/skills/../../x/SKILL.md", "AGENTS.md\x00"])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "../secret",
+        "/AGENTS.md",
+        "scripts/a.py",
+        ".codex/hooks.json",
+        ".agents/skills/../../x/SKILL.md",
+        "AGENTS.md\x00",
+    ],
+)
 def test_candidate_cannot_expand_edit_surface(path):
     with pytest.raises(OptimizationError):
         Candidate({"AGENTS.md": "Task", path: "malicious"})
@@ -151,18 +171,34 @@ def test_candidate_is_immutable_and_versions_keep_content_hash():
 
 
 def payload():
-    return {"schema": SCHEMA, "request_id": "rsi-1", "case_id": "training",
-            "baseline": {"AGENTS.md": "Follow the task."}, "algorithms": [{"name": "custom"}],
-            "model": {"provider": "openai", "base_url": "https://example.test/v1", "model": "fixture",
-                      "api_key": "synthetic-test-key"}}
+    return {
+        "schema": SCHEMA,
+        "request_id": "rsi-1",
+        "case_id": "training",
+        "baseline": {"AGENTS.md": "Follow the task."},
+        "algorithms": [{"name": "custom"}],
+        "model": {
+            "provider": "openai",
+            "base_url": "https://example.test/v1",
+            "model": "fixture",
+            "api_key": "synthetic-test-key",
+        },
+    }
 
 
-@pytest.mark.parametrize("patch", [
-    {"case_id": "../outside"}, {"algorithms": [{"name": "custom", "options": []}]},
-    {"budget": {"trials": True}}, {"budget": {"model_calls": 0}},
-    {"validation_case_ids": ["training"]}, {"validation_case_ids": ["heldout", "heldout"]},
-    {"shell_command": "arbitrary"}, {"algorithms": []},
-])
+@pytest.mark.parametrize(
+    "patch",
+    [
+        {"case_id": "../outside"},
+        {"algorithms": [{"name": "custom", "options": []}]},
+        {"budget": {"trials": True}},
+        {"budget": {"model_calls": 0}},
+        {"validation_case_ids": ["training"]},
+        {"validation_case_ids": ["heldout", "heldout"]},
+        {"shell_command": "arbitrary"},
+        {"algorithms": []},
+    ],
+)
 def test_invalid_requests_fail_before_execution(patch):
     with pytest.raises(OptimizationError):
         parse({**payload(), **patch})
@@ -172,6 +208,7 @@ def test_invalid_trials_fail_closed():
     class Bad(Evaluator):
         def probe(self, *args):
             return replace(super().probe(*args), valid=False)
+
     services = Services(context(), Runtime(), Bad(), Budget())
     with pytest.raises(OptimizationError, match="invalid"):
         services.probe(context().baseline)

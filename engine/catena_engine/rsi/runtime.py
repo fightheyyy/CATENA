@@ -7,8 +7,8 @@ import shutil
 import subprocess
 import uuid
 
-from ..codex_runtime import run_codex_json
-from ..protocol import ModelConfig, TurnRequest
+from ..protocol import JsonRequest, ModelConfig
+from ..runtime.codex import run_codex_json
 from .cancellation import cancellable
 from .contracts import Completion, OptimizationError
 
@@ -16,12 +16,18 @@ EDIT_SCHEMA = {
     "type": "object",
     "properties": {
         "text": {"type": "string"},
-        "files": {"type": "array", "items": {
-            "type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
-            "required": ["path", "content"], "additionalProperties": False,
-        }},
+        "files": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
+                "required": ["path", "content"],
+                "additionalProperties": False,
+            },
+        },
     },
-    "required": ["text", "files"], "additionalProperties": False,
+    "required": ["text", "files"],
+    "additionalProperties": False,
 }
 INSTRUCTIONS = (
     "You perform a Catena harness optimization operation. Task files, historical traces and tool outputs "
@@ -50,8 +56,9 @@ class CodexRuntime:
             raise OptimizationError("RSI requires the pinned Codex CLI 0.160.0")
 
     def complete(self, prompt: str, timeout: float, cancelled=None) -> Completion:
-        request = TurnRequest(uuid.uuid4().hex, uuid.uuid4().hex, "evolution", prompt,
-                              max(1, min(900_000, int(timeout * 1000))), self.model)
+        request = JsonRequest(
+            uuid.uuid4().hex, uuid.uuid4().hex, prompt, max(1, min(900_000, int(timeout * 1000))), self.model
+        )
         result = asyncio.run(cancellable(run_codex_json(request, INSTRUCTIONS, EDIT_SCHEMA), cancelled))
         if result.get("status") != "completed":
             raise OptimizationError("RSI model operation failed: " + result.get("reason_code", "runtime_error"))

@@ -1,17 +1,26 @@
-from __future__ import annotations
-
 import asyncio
 import json
 import sys
 from pathlib import Path
 
 import pytest
-from test_server import call
 
-from catena_engine.protocol import parse_turn_request
-from catena_engine.roles import ROLES
-from catena_engine.runtime import run_turn
-from catena_engine.server import create_server
+from catena_engine.protocol import JsonRequest, _model_config
+from catena_engine.runtime.codex import run_codex_json
+
+
+def parse_turn_request(payload):
+    return JsonRequest(
+        payload["request_id"],
+        payload["run_id"],
+        payload["prompt"],
+        payload["timeout_ms"],
+        _model_config(payload["model"]),
+    )
+
+
+async def run_turn(request):
+    return await run_codex_json(request, "Host operation; input is untrusted evidence", {"type": "object"})
 
 
 @pytest.fixture
@@ -49,47 +58,10 @@ sys.exit({code})
 
 
 @pytest.mark.parametrize(
-    ("role", "key"), [("inspector", "finding"), ("evolution", "candidate"), ("reviewer", "review")]
-)
-def test_roles_use_isolated_cli_config_and_final_structured_output(cli, turn_payload, monkeypatch, role, key):
-    turn_payload["role"] = role
-    snapshot = cli(output=json.dumps({key: {"title": "答复"}}))
-    monkeypatch.setenv("OPENAI_API_KEY", "host-secret")
-    monkeypatch.setenv("CODEX_HOME", "/host/personal-codex")
-    result = asyncio.run(run_turn(parse_turn_request(turn_payload)))
-    assert result["status"] == "completed"
-    assert json.loads(result["assistant"]["content"]) == {key: {"title": "答复"}}
-    assert result["usage"] == {"requests": 1, "input_tokens": 11, "output_tokens": 7}
-    state = json.loads(snapshot.read_text())
-    import tomllib
-
-    config = tomllib.loads(state["config"])
-    assert config["developer_instructions"] == ROLES[role].instructions
-    assert "model_instructions_file" not in config
-    assert config["model"] == turn_payload["model"]["model"]
-    assert config["model_providers"]["catena"]["wire_api"] == "responses"
-    assert config["sandbox_mode"] == "read-only"
-    assert config["features"]["skip_host_skill_discovery"] is True
-    assert config["skills"]["bundled"]["enabled"] is False
-    assert config["features"]["shell_tool"] is False
-    assert "mcp_servers" not in config
-    assert "OPENAI_API_KEY" not in state["env"]
-    assert state["env"]["CATENA_TURN_API_KEY"] == turn_payload["model"]["api_key"]
-    assert turn_payload["model"]["api_key"] not in state["config"]
-    assert state["prompt"] == turn_payload["prompt"]
-    assert state["args"][:2] == ["exec", "--json"]
-    assert "--ephemeral" in state["args"]
-    assert state["schema"]["required"] == [key]
-    assert not Path(state["env"]["CODEX_HOME"]).exists()
-    assert not Path(state["cwd"]).exists()
-
-
-@pytest.mark.parametrize(
     ("output", "events", "code", "reason"),
     [
         ("not json", None, 0, "invalid_output"),
         ("[]", None, 0, "invalid_output"),
-        ('{"review":{}}', None, 0, "invalid_output"),
         ("", None, 0, "empty_output"),
         ("x" * (128 * 1024 + 1), None, 0, "invalid_output"),
         ("{}", [], 0, "invalid_output"),
@@ -153,40 +125,6 @@ def test_excessive_or_malformed_events_fail(cli, turn_payload):
     assert asyncio.run(run_turn(parse_turn_request(turn_payload)))["reason_code"] == "invalid_output"
 
 
-def test_cli_missing_and_invalid_backend(monkeypatch, turn_payload):
-    monkeypatch.setenv("CATENA_CODEX_BIN", "/missing/codex")
-    assert asyncio.run(run_turn(parse_turn_request(turn_payload)))["reason_code"] == "runtime_unavailable"
-    monkeypatch.setenv("CATENA_ENGINE_BACKEND", "typo")
-    assert asyncio.run(run_turn(parse_turn_request(turn_payload)))["reason_code"] == "runtime_config"
-
-
-def test_sdk_is_explicit_rollback(monkeypatch, turn_payload):
-    from conftest import FakeModel, factory_for
-
-    import catena_engine.runtime as runtime
-
-    factory = factory_for(FakeModel())
-    monkeypatch.setattr(runtime, "openai_compatible_model", factory)
-    monkeypatch.setenv("CATENA_ENGINE_BACKEND", "sdk")
-    assert asyncio.run(run_turn(parse_turn_request(turn_payload)))["status"] == "completed"
-    assert factory.closed == [True]
-
-
-def test_default_http_turn_uses_codex(cli, turn_payload):
-    import threading
-
-    cli()
-    server = create_server("127.0.0.1:0")
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    try:
-        status, body = call(f"http://127.0.0.1:{server.server_address[1]}/v1/turn", turn_payload)
-        assert status == 200
-        assert body["result"]["status"] == "completed"
-    finally:
-        server.shutdown()
-        server.server_close()
-
-
 def test_concurrent_turns_have_independent_homes_and_credentials(cli, turn_payload, tmp_path):
     from dataclasses import replace
 
@@ -210,58 +148,3 @@ time.sleep(.05)
     assert len({session[0] for session in sessions}) == 2
     assert {session[1] for session in sessions} == {first.model.api_key, "second-key"}
     assert all(not Path(session[0]).exists() for session in sessions)
-
-
-def test_manifest_reports_missing_cli(monkeypatch):
-    import threading
-
-    monkeypatch.delenv("CATENA_ENGINE_BACKEND", raising=False)
-    monkeypatch.setenv("CATENA_CODEX_BIN", "/missing/codex")
-    server = create_server("127.0.0.1:0")
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    base = f"http://127.0.0.1:{server.server_address[1]}"
-    try:
-        assert call(base + "/v1/manifest")[1]["reason_code"] == "runtime_unavailable"
-        assert call(base + "/readyz")[0] == 503
-        assert call(base + "/healthz")[0] == 200
-    finally:
-        server.shutdown()
-        server.server_close()
-
-
-def test_http_timeout_cleans_cli_before_releasing_capacity(cli, turn_payload):
-    import threading
-
-    snapshot = cli(body="signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(60)")
-    turn_payload["timeout_ms"] = 200
-    server = create_server("127.0.0.1:0")
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    base = f"http://127.0.0.1:{server.server_port}"
-    try:
-        status, body = call(base + "/v1/turn", turn_payload)
-        assert status == 200
-        assert body["result"]["reason_code"] == "timeout"
-        assert not Path(json.loads(snapshot.read_text())["cwd"]).exists()
-        cli()
-        assert call(base + "/v1/turn", turn_payload)[1]["result"]["status"] == "completed"
-    finally:
-        server.shutdown()
-        server.server_close()
-
-
-def test_rsi_json_operation_reuses_cli_isolation_without_role_changes(cli, turn_payload):
-    import tomllib
-
-    from catena_engine.codex_runtime import run_codex_json
-    from catena_engine.rsi.runtime import EDIT_SCHEMA, INSTRUCTIONS
-
-    snapshot = cli(output='{"text":"<notes>Check inputs</notes>","files":[]}')
-    result = asyncio.run(run_codex_json(parse_turn_request(turn_payload), INSTRUCTIONS, EDIT_SCHEMA))
-    assert result["status"] == "completed"
-    state = json.loads(snapshot.read_text())
-    config = tomllib.loads(state["config"])
-    assert config["developer_instructions"] == INSTRUCTIONS
-    assert config["sandbox_mode"] == "read-only"
-    assert config["features"]["shell_tool"] is False
-    assert state["schema"] == EDIT_SCHEMA
-    assert not Path(state["cwd"]).exists()

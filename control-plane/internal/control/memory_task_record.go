@@ -24,37 +24,6 @@ type MemoryTaskRecord struct {
 	UpdatedAtTime           time.Time `json:"-"`
 }
 
-func newMemoryTaskRecord(
-	ownerUserID string,
-	document ConversationDocument,
-	receipt MemoryIngestReceipt,
-	now time.Time,
-) MemoryTaskRecord {
-	status := strings.TrimSpace(receipt.Status)
-	if !validMemoryTaskState(status) {
-		status = "pending"
-	}
-	return MemoryTaskRecord{
-		MemoryTaskStatus: MemoryTaskStatus{
-			TaskID:         receipt.TaskID,
-			Status:         status,
-			Progress:       memoryTaskInitialProgress(status),
-			Message:        receipt.Message,
-			ConversationID: receipt.ConversationID,
-			CreatedAt:      now.UTC().Format(time.RFC3339Nano),
-			UpdatedAt:      now.UTC().Format(time.RFC3339Nano),
-			Steps:          []MemoryTaskStep{},
-		},
-		OwnerUserID:             ownerUserID,
-		SourceConversationID:    document.Summary.ConversationID,
-		SourceConversationTitle: bounded(document.Summary.Title, 500),
-		AgentID:                 document.Summary.AgentID,
-		AgentName:               bounded(document.Summary.AgentName, 160),
-		CreatedAtTime:           now.UTC(),
-		UpdatedAtTime:           now.UTC(),
-	}
-}
-
 func memoryTaskInitialProgress(status string) float64 {
 	if status == "completed" {
 		return 1

@@ -1,7 +1,7 @@
 [project]
 name = "catena-engine"
 version = "0.1.0"
-description = "Catena analysis engine: runs Inspector, Evolution and Reviewer turns on the owner's LLM."
+description = "Catena independent RSI and engineering-memory pipelines."
 requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = [
@@ -10,7 +10,6 @@ dependencies = [
 
 [project.scripts]
 catena-engine = "catena_engine.server:main"
-catena-rsi = "catena_engine.rsi.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -20,22 +19,9 @@ build-backend = "setuptools.build_meta"
 include = ["catena_engine*"]
 
 [project.optional-dependencies]
-# Keep in the Harbor environment, separate from the modern SDK extra.
 rsi = [
   "harness2 @ git+https://github.com/google-research/harness2.git@1cfe254e8d25b15f37048c3730134686abe60335",
   "harbor==0.23.0",
-]
-# SDK rollback and Harbor require different OpenAI major versions.
-sdk = ["openai-agents==0.22.3"]
-evaluation = [
-  "harbor==0.23.0",
-  "openai-agents==0.12.0",
-  "openai==2.26.0",
-]
-evaluation-e2b = [
-  "harbor[e2b]==0.23.0",
-  "openai-agents==0.12.0",
-  "openai==2.26.0",
 ]
 dev = [
   "pytest==8.4.2",

@@ -6,16 +6,15 @@ import { primaryNavigationRoutes, readNavigation, navigationURL, type Route, typ
 import { useWorkspace } from "./useWorkspace";
 import { Icon, type IconName } from "./Icons";
 import { isMemoryTaskActive, memoryTaskDisplayPercent } from "./memoryTaskView";
-import type { EvolutionJob, MemoryFactGraph, MemoryRecallBundle, MemoryRecallItem, MemoryRecord, MemoryTaskRecord, Session, WorkspaceData } from "./types";
+import type { AnalysisJob, MemoryFactGraph, MemoryRecallBundle, MemoryRecallItem, MemoryRecord, MemoryTaskRecord, Session, WorkspaceData } from "./types";
 
 const AgentWorkspace = lazy(() => import("./AgentWorkspace").then((module) => ({ default: module.AgentWorkspace })));
 const ApiManagementPage = lazy(() => import("./ApiManagementPage").then((module) => ({ default: module.ApiManagementPage })));
 const WorkbenchWorkspace = lazy(() => import("./WorkbenchWorkspace").then((module) => ({ default: module.WorkbenchWorkspace })));
 const ConversationWorkspace = lazy(() => import("./ConversationWorkspace").then((module) => ({ default: module.ConversationWorkspace })));
-const EvolutionWorkspace = lazy(() => import("./EvolutionWorkspace").then((module) => ({ default: module.EvolutionWorkspace })));
+const AnalysisWorkspace = lazy(() => import("./AnalysisWorkspace").then((module) => ({ default: module.AnalysisWorkspace })));
 const MemoryGraphCanvas = lazy(() => import("./MemoryGraphCanvas").then((module) => ({ default: module.MemoryGraphCanvas })));
 const TraceExplorer = lazy(() => import("./TraceExplorer").then((module) => ({ default: module.TraceExplorer })));
-const ExperimentWorkspace = lazy(() => import("./ExperimentWorkspace").then((module) => ({ default: module.ExperimentWorkspace })));
 
 type Locale = "zh" | "en";
 type Theme = "system" | "light" | "dark";
@@ -31,7 +30,7 @@ const copy = {
     landingBody: "回看 Codex 和 Claude Code 的运行证据，提炼可审查的 Skill 候选。",
     landingNote: "原始运行留在端侧；Catena 保存可追溯的分析证据。",
     homeTitle: "今天的 Agent 状态",
-    homeBody: "汇聚不同 Agent 的 Trace，由 XiaoBaOS 提炼可复用的 Agent 资产。",
+    homeBody: "汇聚不同 Agent 的 Trace，通过独立的 RSI 和 Memory 分析生成产物。",
     agentsTitle: "Agent",
     agentsBody: "这里只展示被观测和进化的目标 Agent；编排器与评测角色保留在 Trace 执行链中。",
     tracesTitle: "Trace",
@@ -114,9 +113,9 @@ const copy = {
     releases: "发布结论",
     recentRuns: "最近运行",
     noRuns: "还没有运行证据。接入 Agent 后，从一次 Explore 开始。",
-    noRuntime: "XiaoBaOS 进化大脑尚未就绪。",
+    noRuntime: "Catena Engine尚未就绪。",
     observedAgents: "已观测 Agent",
-    cloudRuntime: "XiaoBaOS 进化大脑",
+    cloudRuntime: "Catena Engine",
     noAgents: "还没有接入 Agent。先到 Agent 页面输入名称并生成专属接入密钥。",
     traceUnavailable: "Trace 存储尚未配置",
     traceUnavailableBody: "为 Catena Server 配置 ClickHouse 后，Go 会直接接收和查询 OTLP Trace。",
@@ -146,7 +145,7 @@ const copy = {
     landingBody: "Review Codex and Claude Code evidence, then draft Skills grounded in the observed behavior.",
     landingNote: "Your Agents run locally; Catena keeps the analysis traceable.",
     homeTitle: "Your Agent state today",
-    homeBody: "Unify Traces across Agents and distill reusable Agent assets with XiaoBaOS.",
+    homeBody: "Unify Traces across Agents and generate artifacts through independent RSI and Memory analyses.",
     agentsTitle: "Agents",
     agentsBody: "Only target Agents appear here. Orchestrators and evaluator roles stay in the Trace execution chain.",
     tracesTitle: "Traces",
@@ -229,9 +228,9 @@ const copy = {
     releases: "Release decisions",
     recentRuns: "Recent runs",
     noRuns: "No execution evidence yet. Connect an Agent and begin with Explore.",
-    noRuntime: "The XiaoBaOS evolution brain is not ready.",
+    noRuntime: "The Catena Engine is not ready.",
     observedAgents: "Observed Agents",
-    cloudRuntime: "XiaoBaOS evolution brain",
+    cloudRuntime: "Catena Engine",
     noAgents: "No Agent yet. Open Agents, name it, and generate its dedicated connection key.",
     traceUnavailable: "Trace storage is not configured",
     traceUnavailableBody: "Configure ClickHouse for Catena Server. Go then receives and queries OTLP Trace directly.",
@@ -322,7 +321,7 @@ export function App() {
     void load();
   }, [load]);
 
-  const openEvolutionJob = useCallback((job: EvolutionJob) => {
+  const openAnalysisJob = useCallback((job: AnalysisJob) => {
     updateJobs([job]);
     navigate("home", { agentID: job.source_agent_id, jobID: job.job_id });
   }, [navigate, updateJobs]);
@@ -331,11 +330,11 @@ export function App() {
     navigate("home", { agentID });
   }, [navigate]);
 
-  const selectEvolutionJob = useCallback((jobID: string) => {
+  const selectAnalysisJob = useCallback((jobID: string) => {
     navigate(selection.route === "home" ? "home" : "evolution", { agentID: selection.agentID, jobID });
   }, [navigate, selection.agentID, selection.route]);
 
-  const removeEvolutionJob = useCallback((jobID: string) => {
+  const removeAnalysisJob = useCallback((jobID: string) => {
     removeJob(jobID);
     navigate("evolution", { agentID: selection.agentID });
   }, [navigate, removeJob, selection.agentID]);
@@ -401,15 +400,15 @@ export function App() {
             workspace={workspace}
             session={session}
             onNavigate={navigateFromSidebar}
-            selectedEvolutionJobID={selection.jobID}
-            selectedEvolutionAgentID={selection.agentID}
+            selectedAnalysisJobID={selection.jobID}
+            selectedAnalysisAgentID={selection.agentID}
             selectedTraceAgentID={selection.agentID}
             selectedTraceID={selection.traceID}
             selectedAgentID={selection.agentID}
             refreshVersion={workspaceState.updatedAt}
-            onOpenEvolutionJob={openEvolutionJob}
-            onSelectEvolutionJob={selectEvolutionJob}
-            onDeleteEvolutionJob={removeEvolutionJob}
+            onOpenAnalysisJob={openAnalysisJob}
+            onSelectAnalysisJob={selectAnalysisJob}
+            onDeleteAnalysisJob={removeAnalysisJob}
             onJobsUpdated={updateJobs}
             onAnalyzeAgent={analyzeAgent}
             onOpenAgentTraces={openAgentTraces}
@@ -600,7 +599,7 @@ function Sidebar({
   refreshing: boolean;
 }) {
   const t = copy[locale];
-  const icons: Record<Route, IconName> = { home: "home", assistant: "assistant", cases: "book", traces: "history", memory: "memory", evolution: "outputs", agents: "agents", apiKeys: "plug", settings: "settings", conversations: "book" };
+  const icons: Record<Route, IconName> = { home: "home", assistant: "assistant", traces: "history", memory: "memory", evolution: "outputs", agents: "agents", apiKeys: "plug", settings: "settings", conversations: "book" };
   return (
     <aside className="sidebar">
       <div className="sidebar-brand"><Brand />{onRefresh && <button className="text-button icon-button" type="button" aria-label={locale === "zh" ? "刷新" : "Refresh"} title={locale === "zh" ? "刷新" : "Refresh"} disabled={refreshing} onClick={() => void onRefresh()}><Icon name="refresh" /></button>}</div>
@@ -639,15 +638,15 @@ function RouteView({
   workspace,
   session,
   onNavigate,
-  selectedEvolutionJobID,
-  selectedEvolutionAgentID,
+  selectedAnalysisJobID,
+  selectedAnalysisAgentID,
   selectedTraceAgentID,
   selectedTraceID,
   selectedAgentID,
   refreshVersion,
-  onOpenEvolutionJob,
-  onSelectEvolutionJob,
-  onDeleteEvolutionJob,
+  onOpenAnalysisJob,
+  onSelectAnalysisJob,
+  onDeleteAnalysisJob,
   onJobsUpdated,
   onAnalyzeAgent,
   onOpenAgentTraces,
@@ -665,16 +664,16 @@ function RouteView({
   workspace: WorkspaceData;
   session: Session;
   onNavigate: (route: Route) => void;
-  selectedEvolutionJobID: string;
-  selectedEvolutionAgentID: string;
+  selectedAnalysisJobID: string;
+  selectedAnalysisAgentID: string;
   selectedTraceAgentID: string;
   selectedTraceID: string;
   selectedAgentID: string;
   refreshVersion: string;
-  onOpenEvolutionJob: (job: EvolutionJob) => void;
-  onSelectEvolutionJob: (jobID: string) => void;
-  onDeleteEvolutionJob: (jobID: string) => void;
-  onJobsUpdated: (jobs: EvolutionJob[]) => void;
+  onOpenAnalysisJob: (job: AnalysisJob) => void;
+  onSelectAnalysisJob: (jobID: string) => void;
+  onDeleteAnalysisJob: (jobID: string) => void;
+  onJobsUpdated: (jobs: AnalysisJob[]) => void;
   onAnalyzeAgent: (agentID: string) => void;
   onOpenAgentTraces: (agentID: string, traceID?: string) => void;
   onConnectAgent: () => void;
@@ -688,22 +687,21 @@ function RouteView({
 }) {
   let content: React.ReactNode;
   const historyTabs = route === "conversations" ? <div className="history-tabs" role="group" aria-label={locale === "zh" ? "经历视图" : "History view"}><button type="button" onClick={() => onNavigate("traces")}><Icon name="history" />Trace</button><button className="active" type="button" aria-pressed="true"><Icon name="book" />{locale === "zh" ? "对话" : "Conversations"}</button></div> : null;
-  if (route === "home" && !selectedEvolutionJobID) content = <WorkbenchWorkspace key={session.user?.id ?? "local"} locale={locale} workspace={workspace} ownerID={session.user?.id ?? "local"} initialAgentID={selectedAgentID} onOpenTrace={onOpenAgentTraces} onOpenJob={onOpenEvolutionJob} onConnectAgent={onConnectAgent} onRefresh={onRefresh} />;
-  else if (route === "cases") content = <ExperimentWorkspace key={session.user?.id ?? "local"} locale={locale} />;
+  if (route === "home" && !selectedAnalysisJobID) content = <WorkbenchWorkspace key={session.user?.id ?? "local"} locale={locale} workspace={workspace} ownerID={session.user?.id ?? "local"} initialAgentID={selectedAgentID} onOpenTrace={onOpenAgentTraces} onOpenJob={onOpenAnalysisJob} onConnectAgent={onConnectAgent} onRefresh={onRefresh} />;
   else if (route === "agents") content = <AgentWorkspace locale={locale} workspace={workspace} initialAgentID={selectedAgentID} onSelectAgent={onOpenAgent} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} onConnect={onConnectAgent} />;
   else if (route === "apiKeys") content = <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} onOpenAgent={onOpenAgent} />;
   else if (route === "conversations") content = <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} onOpenMemory={onOpenMemory} navigation={historyTabs} />;
   else if (route === "traces") content = <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} initialTraceID={selectedTraceID} onSelectTrace={onOpenAgentTraces} refreshVersion={refreshVersion} navigation={historyTabs} />;
   else if (route === "evolution" || route === "home") content = (
-    <EvolutionWorkspace
+    <AnalysisWorkspace
       locale={locale}
-      jobs={workspace.evolutionJobs}
+      jobs={workspace.analysisJobs}
       agents={workspace.agents}
-      initialJobID={selectedEvolutionJobID}
+      initialJobID={selectedAnalysisJobID}
       analysisOnly={route === "home"}
-      onAnalyze={() => onAnalyzeAgent(selectedEvolutionAgentID)}
-      onJobSelected={onSelectEvolutionJob}
-      onJobDeleted={onDeleteEvolutionJob}
+      onAnalyze={() => onAnalyzeAgent(selectedAnalysisAgentID)}
+      onJobSelected={onSelectAnalysisJob}
+      onJobDeleted={onDeleteAnalysisJob}
       onJobsUpdated={onJobsUpdated}
       refreshVersion={refreshVersion}
     />

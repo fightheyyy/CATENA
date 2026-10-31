@@ -1,0 +1,33 @@
+{
+  "baseline": "8ac6708",
+  "scope": {
+    "prefixes": [
+      "control-plane/",
+      "engine/",
+      "catena-web/src/",
+      "tap/catena_tap/"
+    ],
+    "extensions": [
+      ".go",
+      ".py",
+      ".ts",
+      ".tsx"
+    ],
+    "excluded": [
+      "*_test.go",
+      "tests",
+      "Go embedded web",
+      "CSS",
+      "research/evals archives"
+    ]
+  },
+  "before": {
+    "files": 103,
+    "lines": 30658
+  },
+  "after": {
+    "files": 93,
+    "lines": 19868
+  },
+  "delta_lines": -10790
+}

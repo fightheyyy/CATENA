@@ -1,10 +1,9 @@
 # Overlay: docker compose -f compose.yml -f compose.openviking.yml up -d
 services:
-  catena-core:
+  catena-engine:
     environment:
-      CATENA_MEMORY_PROVIDER: openviking
-      CATENA_MEMORY_URL: http://openviking:1933
-      CATENA_MEMORY_API_KEY: ${CATENA_OPENVIKING_API_KEY:?configure CATENA_OPENVIKING_API_KEY}
+      CATENA_OPENVIKING_URL: http://openviking:1933
+      CATENA_OPENVIKING_API_KEY: ${CATENA_OPENVIKING_API_KEY:?configure CATENA_OPENVIKING_API_KEY}
     depends_on:
       openviking:
         condition: service_healthy

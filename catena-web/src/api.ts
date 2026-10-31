@@ -5,8 +5,8 @@ import type {
   RegisteredAgentConnection,
   ConversationDocument,
   ConversationSummary,
-  EvolutionJob,
-  EvolutionModelSettings,
+  AnalysisJob,
+  AnalysisModelSettings,
   MemoryIngestReceipt,
   MemoryTaskStatus,
   MemoryTaskRecord,
@@ -19,10 +19,9 @@ import type {
   TraceSummary,
   WorkspaceData,
 } from "./types";
-import { normalizeEvolutionJob, normalizeEvolutionJobs } from "./evolution";
+import { normalizeAnalysisJob, normalizeAnalysisJobs } from "./analysis";
 import { routeResources, workspaceResources } from "./workspace";
 import type { Route } from "./navigation";
-import type { Experiment, ExperimentCase } from "./experiments";
 
 type Problem = {
   detail?: string;
@@ -68,10 +67,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  experimentCases: (signal?: AbortSignal) => request<{ cases: ExperimentCase[] }>("/v1/experiment-cases", { signal }),
-  experiments: (signal?: AbortSignal) => request<{ experiments: Experiment[] }>("/v1/experiments", { signal }),
-  createExperiment: (caseID: string, requestID: string, includeMemory = false, targetAgent = "sdk") => request<Experiment>("/v1/experiments", { method: "POST", body: JSON.stringify({ case_id: caseID, request_id: requestID, include_memory: includeMemory, target_agent: targetAgent }) }),
-  experimentEvidence: (experimentID: string, index: number) => request<{ answer: string; calls: { command: string; exit_code: number | null; stdout: string; stderr: string }[] }>(`/v1/experiments/${encodeURIComponent(experimentID)}/trials/${index}`),
+ evaluationCases: () => request<{cases:{id:string}[]}>("/v1/evaluation-cases"),
   session: () => request<Session>("/v1/auth/session"),
   logout: () => request<void>("/v1/auth/logout", { method: "POST" }),
   workspace: async (route: Route, signal: AbortSignal): Promise<Partial<WorkspaceData>> => {
@@ -79,7 +75,7 @@ export const api = {
     const reads = resources.map(async (resource) => {
       const result = await request<Record<string, unknown>>(workspaceResources[resource], { signal });
       if (resource === "system") return { system: result };
-      if (resource === "evolutionJobs") return { evolutionJobs: normalizeEvolutionJobs(result.evolution_jobs) };
+      if (resource === "analysisJobs") return { analysisJobs: normalizeAnalysisJobs(result.analysis_jobs) };
       if (resource === "agents") return { agents: result.agents, agentAvailable: result.available };
       if (resource === "traces") return { traces: result.traces, traceAvailable: result.available };
       return { [resource]: result[resource] };
@@ -91,7 +87,7 @@ export const api = {
       parts.forEach((part, index) => {
         if (part.status === "fulfilled") Object.assign(patch, part.value);
         else {
-          const resource = resources[index] as "agents" | "traces" | "evolutionJobs";
+          const resource = resources[index] as "agents" | "traces" | "analysisJobs";
           patch.overviewErrors![resource] = part.reason instanceof Error ? part.reason.message : "Request failed";
         }
       });
@@ -101,7 +97,7 @@ export const api = {
     return Object.assign({}, ...parts) as Partial<WorkspaceData>;
   },
   trace: (traceID: string, signal?: AbortSignal) => request<TraceDetail>(`/v1/traces/${encodeURIComponent(traceID)}`, { signal }),
-  rememberTrace: (traceID: string) => request<MemoryIngestReceipt>(`/v1/traces/${encodeURIComponent(traceID)}/memories`, {method:"POST"}),
+  rememberTrace: (traceID: string) => request<AnalysisJob>("/v1/analysis-jobs", {method:"POST", headers: {"Idempotency-Key": `memory-${traceID}-${crypto.randomUUID()}`}, body: JSON.stringify({pipeline:"memory", trace_id:traceID})}),
   traces: (limit = 100, signal?: AbortSignal) => request<{ available: boolean; traces: TraceSummary[] }>(`/v1/traces?limit=${limit}`, { signal }),
   agentTraces: (agentID: string, windowStart: string, windowEnd: string, limit = 100, signal?: AbortSignal) => {
     const query = new URLSearchParams({
@@ -123,37 +119,32 @@ export const api = {
       `/v1/agents/${encodeURIComponent(agentID)}/api-key`,
       { method: "POST" },
     ),
-  evolutionJobs: async (signal?: AbortSignal) => {
-    const result = await request<{ evolution_jobs: EvolutionJob[] }>(workspaceResources.evolutionJobs, { signal });
-    return normalizeEvolutionJobs(result.evolution_jobs);
+  analysisJobs: async (signal?: AbortSignal) => {
+    const result = await request<{ analysis_jobs: AnalysisJob[] }>(workspaceResources.analysisJobs, { signal });
+    return normalizeAnalysisJobs(result.analysis_jobs);
   },
-  evolutionJob: async (jobID: string, signal?: AbortSignal) => normalizeEvolutionJob(
-    await request<unknown>(`/v1/evolution-jobs/${encodeURIComponent(jobID)}`, { signal }),
+  analysisJob: async (jobID: string, signal?: AbortSignal) => normalizeAnalysisJob(
+    await request<unknown>(`/v1/analysis-jobs/${encodeURIComponent(jobID)}`, { signal }),
   ),
-  deleteEvolutionJob: (jobID: string) => request<void>(
-    `/v1/evolution-jobs/${encodeURIComponent(jobID)}`,
+  deleteAnalysisJob: (jobID: string) => request<void>(
+    `/v1/analysis-jobs/${encodeURIComponent(jobID)}`,
     { method: "DELETE" },
   ),
-  cancelEvolutionJob: async (jobID: string) => normalizeEvolutionJob(
-    await request<unknown>(`/v1/evolution-jobs/${encodeURIComponent(jobID)}/cancel`, { method: "POST" }),
+  cancelAnalysisJob: async (jobID: string) => normalizeAnalysisJob(
+    await request<unknown>(`/v1/analysis-jobs/${encodeURIComponent(jobID)}/cancel`, { method: "POST" }),
   ),
-  startAgentEvolutionJob: async (
+  startAgentAnalysisJob: async (
     agentID: string,
-    input: { window_start: string; window_end: string; objective?: string; output_language: "zh-CN" | "en" },
+    input: { window_start: string; window_end: string; objective?: string; pipeline?: "rsi" | "memory"; options?: Record<string, unknown>; output_language: "zh-CN" | "en" },
     idempotencyKey: string,
-  ) => normalizeEvolutionJob(
-    await request<unknown>(`/v1/agents/${encodeURIComponent(agentID)}/evolution-jobs`, {
+  ) => normalizeAnalysisJob(
+    await request<unknown>("/v1/analysis-jobs", {
       method: "POST",
       headers: { "Idempotency-Key": idempotencyKey },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ pipeline: input.pipeline ?? "rsi", agent_id: agentID, window_start: input.window_start, window_end: input.window_end, objective: input.objective, options: input.options }),
     }),
   ),
-  rememberConversation: (agentID: string, conversationID: string) => {
-    const query = new URLSearchParams({ agent_id: agentID });
-    return request<MemoryIngestReceipt>(`/v1/conversations/${encodeURIComponent(conversationID)}/memories?${query}`, {
-      method: "POST",
-    });
-  },
+  startConversationMemory: (agentID: string, conversationID: string) => request<AnalysisJob>("/v1/analysis-jobs", {method:"POST",headers:{"Idempotency-Key":crypto.randomUUID()},body:JSON.stringify({pipeline:"memory",agent_id:agentID,conversation_id:conversationID})}),
   memoryTask: (taskID: string) =>
     request<MemoryTaskStatus>(`/v1/memories/tasks/${encodeURIComponent(taskID)}`, {
       signal: AbortSignal.timeout(8000),
@@ -192,9 +183,9 @@ export const api = {
     }),
   deleteApiToken: (id: string) =>
     request<void>(`/v1/me/api-tokens/${encodeURIComponent(id)}`, { method: "DELETE" }),
-  llmConfig: () => request<EvolutionModelSettings>("/v1/me/llm-config"),
+  llmConfig: () => request<AnalysisModelSettings>("/v1/me/llm-config"),
   saveLLMConfig: (input: { provider: string; base_url: string; model: string; api_key: string }) =>
-    request<EvolutionModelSettings>("/v1/me/llm-config", {
+    request<AnalysisModelSettings>("/v1/me/llm-config", {
       method: "PUT",
       body: JSON.stringify(input),
     }),

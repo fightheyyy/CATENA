@@ -62,7 +62,7 @@ test("An empty workspace offers an Agent connection and labels its sample counts
   await page.goto(origin + "/");
   await visible(page.getByRole("button", { name: "接入 Agent", exact: true }));
   await visible(page.getByText("统计基于最近 100 条 Trace；错误状态不等同于任务失败。", { exact: true }));
-  assert.deepEqual(state.requests.map((item) => item.path).sort(), ["/v1/auth/session", "/v1/agents", "/v1/traces", "/v1/evolution-jobs", "/v1/me/llm-config"].sort());
+  assert.deepEqual(state.requests.map((item) => item.path).sort(), ["/v1/auth/session", "/v1/agents", "/v1/traces", "/v1/analysis-jobs", "/v1/me/llm-config", "/v1/evaluation-cases"].sort());
   assert.deepEqual(await page.locator(".proactive-metrics strong").allTextContents(), ["0", "0", "0"]);
   await screenshot(page, "overview-empty");
   await page.getByRole("button", { name: "接入 Agent", exact: true }).click();
@@ -118,49 +118,20 @@ test("Trace mobile detail supports direct links, failures, retry and return to t
   assert.equal(await page.locator(".trace-detail-shell").isVisible(), false);
 });
 
-test("A polled analysis publishes its asset into the shared library without reloading", async (t) => {
-  const { page, origin, state } = await setup(t);
-  await page.goto(origin + "/evolution?job=job-fixture");
-  await visible(page.locator(".job-detail-column"));
-  state.jobComplete = true;
-  await visible(page.getByRole("button", { name: "删除分析", exact: true }));
-  await page.getByRole("button", { name: "返回产出", exact: true }).click();
-  await visible(page.getByText("先核对再回答", { exact: true }).first());
-  assert.ok(state.requests.filter((item) => item.path.endsWith("/job-fixture")).length < 8, "poll results must not retrigger an immediate fetch loop");
-  await screenshot(page, "assets-desktop");
-});
-
-test("Analysis cancellation remains pending until acknowledged and stops terminal polling", async (t) => {
-  const { page, origin, state } = await setup(t);
-  await page.goto(origin + "/evolution?job=job-fixture");
-  const cancel = page.getByRole("button", { name: "取消分析", exact: true });
-  await visible(cancel);
-  state.failCancel = true;
-  await cancel.click();
-  await visible(page.getByText(/取消失败: Cancellation temporarily unavailable/));
-  state.failCancel = false;
-  await cancel.click();
-  const pending = page.getByRole("button", { name: "正在取消", exact: true });
-  await visible(pending);
-  assert.equal(await pending.isDisabled(), true);
-  state.jobCancelled = true;
-  await visible(page.getByText("分析已取消", { exact: true }).first());
-  await visible(page.getByRole("button", { name: "删除分析", exact: true }));
-  const count = state.requests.filter((r) => r.path === "/v1/evolution-jobs/job-fixture").length;
-  await page.waitForTimeout(1900);
-  assert.equal(state.requests.filter((r) => r.path === "/v1/evolution-jobs/job-fixture").length, count);
-  assert.equal(state.requests.filter((r) => r.path.endsWith("/cancel")).length, 2);
-  await screenshot(page, "analysis-cancelled");
-});
-
-test("An analysis finishes while the asset library is open, in both narrow and desktop layouts", async (t) => {
-  const { page, origin, state } = await setup(t, { viewport: { width: 390, height: 844 } });
-  await page.goto(origin + "/evolution");
-  await visible(page.locator(".evolution-empty"));
-  state.jobComplete = true;
-  await visible(page.getByText("先核对再回答", { exact: true }).first());
-  await noOverflow(page);
-  await screenshot(page, "assets-mobile");
+test("Analysis polling publishes sourced unverified artifacts and cancellation retains acknowledgement", async (t) => {
+ const {page,origin,state}=await setup(t);
+ await page.goto(origin+"/evolution?job=job-fixture");
+ await visible(page.getByRole("heading",{name:"分析任务与产物"}));
+ await page.getByRole("button",{name:"Cancel",exact:true}).click();
+ await page.getByRole("button",{name:"Cancel",exact:true}).waitFor();
+ state.jobComplete=true;
+ await visible(page.getByRole("heading",{name:"rsi_candidate · unverified"}));
+ await visible(page.getByText('Inspect evidence before acting.',{exact:false}));
+ await page.getByText("Provenance / evaluation",{exact:true}).click();
+ await visible(page.getByText("No real verifier executed",{exact:false}));
+ assert.equal(state.requests.some(r=>r.path==="/v1/analysis-jobs/job-fixture/cancel"),true);
+ assert.equal(state.requests.some(r=>r.path.startsWith("/v1/experiments")||r.path.startsWith("/v1/evolution-jobs")),false);
+ await page.setViewportSize({width:390,height:844}); await noOverflow(page);
 });
 
 test("Agent setup copies a shell-safe secret only to clipboard and recovers first-data checks", async (t) => {
@@ -211,7 +182,7 @@ test("Workspace retains exact recent evidence and analysis links", async (t) => 
   const history = page.locator(".proactive-list").filter({ has: page.getByRole("heading", { name: "最近经历", exact: true }) });
   const analyses = page.locator(".proactive-list").filter({ has: page.getByRole("heading", { name: /^分析记录/ }) });
   await visible(history.getByRole("button").first());
-  assert.deepEqual(await page.locator(".sidebar nav button").allTextContents(), ["工作台", "经历", "记忆", "实验", "产出"]);
+  assert.deepEqual(await page.locator(".sidebar nav button").allTextContents(), ["工作台", "经历", "记忆", "产出"]);
   assert.equal(await history.getByRole("button").count(), 4);
   assert.equal(await history.locator("small").first().innerText(), state.traces[0].input_preview);
   await noOverflow(page);
@@ -222,7 +193,7 @@ test("Workspace retains exact recent evidence and analysis links", async (t) => 
   await page.goBack();
   await analyses.getByRole("button").first().click();
   await page.waitForURL(/job=job-fixture/);
-  await visible(page.locator(".job-detail-column"));
+  await visible(page.getByRole("heading",{name:"分析任务与产物"}));
 });
 
 test("Workspace retains analyses when history fails and can retry the failed read", async (t) => {

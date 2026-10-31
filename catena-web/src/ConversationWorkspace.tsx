@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { conversationKey, orderedConversationMessages } from "./conversationView";
-import { isMemoryTaskActive, memoryTaskDisplayPercent, memoryTaskFromReceipt, memoryTaskStorageKey } from "./memoryTaskView";
+import { isMemoryTaskActive, memoryTaskDisplayPercent, memoryTaskStorageKey } from "./memoryTaskView";
 import type { ConversationDocument, ConversationMessage, ConversationSummary, MemoryTaskStatus } from "./types";
 
 type Locale = "zh" | "en";
@@ -254,20 +254,11 @@ function ConversationThread({
   }, [memoryTask?.task_id, memoryTask?.status, storageKey, t.memoryExpired]);
 
   const startMemoryTask = async () => {
-    setSubmittingMemory(true);
-    setMemoryError("");
-    setMemoryTask(null);
-    removeStoredTaskID(storageKey);
+    setSubmittingMemory(true); setMemoryError("");
     try {
-      const receipt = await api.rememberConversation(document.conversation.agent_id, document.conversation.conversation_id);
-      const next = memoryTaskFromReceipt(receipt);
-      setMemoryTask(next);
-      storeTaskID(storageKey, next.task_id);
-    } catch (cause) {
-      setMemoryError(cause instanceof Error ? cause.message : t.memoryFailed);
-    } finally {
-      setSubmittingMemory(false);
-    }
+      const job=await api.startConversationMemory(document.conversation.agent_id, document.conversation.conversation_id);
+      window.location.assign(`/evolution?job=${encodeURIComponent(job.job_id)}`);
+    } catch(cause) {setMemoryError(String(cause));} finally {setSubmittingMemory(false);}
   };
 
   const activeTask = isMemoryTaskActive(memoryTask);
@@ -395,14 +386,6 @@ function readStoredTaskID(key: string) {
     return window.localStorage.getItem(key) ?? "";
   } catch {
     return "";
-  }
-}
-
-function storeTaskID(key: string, taskID: string) {
-  try {
-    window.localStorage.setItem(key, taskID);
-  } catch {
-    // Polling still works in the current tab when storage is unavailable.
   }
 }
 

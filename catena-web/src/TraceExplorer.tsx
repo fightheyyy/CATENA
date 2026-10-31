@@ -551,7 +551,7 @@ function TraceDetailWorkspace({
           </span>
           {memoryReady && <button className="text-button" type="button" disabled={remembering} onClick={async()=>{
             setRemembering(true);setMemoryMessage("");
-            try { await api.rememberTrace(detail.summary.trace_id);setMemoryMessage(locale==="zh"?"已开始提炼，可在记忆页查看进度。":"Extraction started. View progress in Memory."); }
+            try { await api.rememberTrace(detail.summary.trace_id);setMemoryMessage(locale==="zh"?"已开始提炼，可在分析任务中查看进度。":"Extraction started. View progress in Analysis jobs."); }
             catch {setMemoryMessage(locale==="zh"?"暂时无法提炼，请稍后重试。":"Could not extract memory. Please retry.");}
             finally {setRemembering(false);}
           }}>{remembering?(locale==="zh"?"正在提交":"Submitting"):(locale==="zh"?"提炼为记忆":"Extract memory")}</button>}

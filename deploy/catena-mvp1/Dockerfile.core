@@ -22,21 +22,14 @@ RUN rm -rf internal/control/web
 COPY --from=web-build /src/catena-web/dist ./internal/control/web
 RUN --mount=type=cache,target=/root/.cache/go-build \
   --mount=type=cache,target=/go/pkg/mod \
-  CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/catena-server ./cmd/barena-server \
-  && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/catena-runner-client ./cmd/spiral-runner-client
+  CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/catena-server ./cmd/catena-server
 
 FROM alpine:3.22
 RUN apk add --no-cache ca-certificates
 COPY --from=build /out/catena-server /usr/local/bin/catena-server
-COPY --from=build /out/catena-runner-client /usr/local/bin/catena-runner-client
-COPY deploy/catena-mvp1/worker-markers /opt/catena
-# The shared catena-data volume is also written by the Node runner image,
-# whose non-root `node` account is UID/GID 1000. Keep the Go control plane on
-# the same numeric identity so both services can create run/evolution
-# workspaces without making the volume world-writable.
 RUN addgroup -S -g 1000 catena \
   && adduser -S -D -H -u 1000 -G catena catena \
-  && mkdir -p /var/lib/catena/runs /var/lib/catena/evolution \
+  && mkdir -p /var/lib/catena \
   && chown -R catena:catena /var/lib/catena
 USER catena
 EXPOSE 8787

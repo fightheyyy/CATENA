@@ -17,17 +17,9 @@ services:
       BARENA_GITHUB_REDIRECT_URL: ${CATENA_GITHUB_REDIRECT_URL:-}
       BARENA_DATABASE_URL: postgresql://catena_core:${CATENA_CORE_DB_PASSWORD:-catena-core-local}@postgres:5432/catena_core?sslmode=disable
       CATENA_CLICKHOUSE_DSN: ${CATENA_CLICKHOUSE_DSN:-http://default:catena@clickhouse:8123/catena?dial_timeout=5s}
-      # Set CATENA_MEMORY_URL=http://gauzmem:1235 together with the `memory`
-      # Compose profile after configuring the model and embedding credentials.
-      CATENA_MEMORY_URL: ${CATENA_MEMORY_URL:-}
-      CATENA_MEMORY_PROVIDER: ${CATENA_MEMORY_PROVIDER:-gauzmem}
-      CATENA_MEMORY_API_KEY: ${CATENA_MEMORY_API_KEY:-}
-      BARENA_NODE: /usr/local/bin/catena-runner-client
-      BARENA_ENGINE_WORKER: /opt/catena/engine-worker.js
-      BARENA_RUNS_ROOT: /var/lib/catena/runs
       # Private analysis engine; never published outside the Compose network.
       CATENA_ENGINE_URL: http://catena-engine:8790
-      CATENA_ENGINE_TURN_TIMEOUT: ${CATENA_ENGINE_TURN_TIMEOUT:-5m}
+      CATENA_ENGINE_REQUEST_TIMEOUT: ${CATENA_ENGINE_REQUEST_TIMEOUT:-20m}
       CATENA_ENGINE_TOKEN: ${CATENA_ENGINE_TOKEN:-catena-local-engine-token-change-me}
       CATENA_JOB_WORKERS: ${CATENA_JOB_WORKERS:-1}
       CATENA_JOB_MAX_ATTEMPTS: ${CATENA_JOB_MAX_ATTEMPTS:-3}
@@ -69,57 +61,18 @@ services:
     mem_limit: 1g
     pids_limit: 128
     environment:
-      CATENA_ENGINE_MAX_CONCURRENT_TURNS: ${CATENA_ENGINE_MAX_CONCURRENT_TURNS:-1}
-      CATENA_ENGINE_BACKEND: ${CATENA_ENGINE_BACKEND:-codex}
       CATENA_CODEX_REASONING_EFFORT: ${CATENA_CODEX_REASONING_EFFORT:-low}
+      CATENA_ENGINE_EXECUTIONS_ROOT: /var/lib/catena-engine/executions
+      CATENA_RSI_RUNS_ROOT: /var/lib/catena-engine/runs
+      CATENA_RSI_CASES_MANIFEST: ${CATENA_RSI_CASES_MANIFEST:-}
       CATENA_ENGINE_ADDR: 0.0.0.0:8790
       CATENA_ENGINE_TOKEN: ${CATENA_ENGINE_TOKEN:-catena-local-engine-token-change-me}
+    volumes:
+      - catena-engine-data:/var/lib/catena-engine
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8790/readyz', timeout=3)"]
       interval: 5s
       timeout: 5s
-      retries: 30
-      start_period: 10s
-    restart: unless-stopped
-
-  catena-runner:
-    build:
-      context: ../..
-      dockerfile: deploy/catena-mvp1/Dockerfile.runner
-      additional_contexts:
-        barena-source: "${CATENA_BARENA_CONTEXT:-https://github.com/fightheyyy/barena.git#catena-mvp1-engine-20260807}"
-        xiaoba-source: "${CATENA_XIAOBA_CONTEXT:-https://github.com/fightheyyy/xiaobaOS.git#b4d5af58a0fa171c372a875618c5f46ab15ddb36}"
-    image: catena/runner:mvp1
-    environment:
-      CATENA_RUNNER_MODE: evolution
-      SPIRAL_RUNNER_ADDR: 0.0.0.0:8790
-      SPIRAL_RUNS_ROOT: /var/lib/catena/runs
-      SPIRAL_EVOLUTION_ROOT: /var/lib/catena/evolution
-      SPIRAL_EVOLUTION_TURN_TIMEOUT_MS: "120000"
-      SPIRAL_XIAOBA_COMMAND: /usr/local/bin/xiaoba
-      SPIRAL_XIAOBA_PROJECT_ROOT: /opt/xiaoba
-      SPIRAL_XIAOBA_ROLES_ROOT: /opt/xiaoba/roles
-      SPIRAL_XIAOBA_SKILLS_ROOT: /opt/xiaoba/skills
-      XIAOBA_OBSERVABILITY_ENABLED: ${XIAOBA_OBSERVABILITY_ENABLED:-false}
-      XIAOBA_OBSERVABILITY_TRACES_EXPORTER: otlp
-      OTEL_SERVICE_NAME: catena-evolution-runtime
-      # Disabled by default. When enabled, the embedded Evolution Runtime emits
-      # through the same canonical OTLP receiver as every external Agent.
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://catena-core:8787/v1/otlp
-    ports:
-      - "127.0.0.1:${CATENA_RUNNER_PORT:-8790}:8790"
-    volumes:
-      - catena-data:/var/lib/catena
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:8790/readyz').then(r=>{if(!r.ok)process.exit(1)})",
-        ]
-      interval: 5s
-      timeout: 10s
       retries: 30
       start_period: 10s
     restart: unless-stopped
@@ -162,123 +115,9 @@ services:
       start_period: 20s
     restart: unless-stopped
 
-  gauzmem:
-    profiles: ["memory"]
-    build:
-      context: ../..
-      dockerfile: deploy/catena-mvp1/Dockerfile.gauzmem
-      additional_contexts:
-        gauzmem-source: "${CATENA_GAUZMEM_CONTEXT:-https://github.com/fightheyyy/gauzrag.git#27750ccf3611bb4dc9e5bca0e77023a277d677fe}"
-    image: catena/gauzmem:mvp1
-    environment:
-      GAUZ_ENV: development
-      GAUZ_DEV_SKIP_AUTH: "true"
-      GAUZ_JSON_LOGS: "true"
-      GAUZ_LOG_FILE: ""
-      GAUZ_LLM_PROVIDER: openai
-      GAUZ_LLM_API_BASE: ${GAUZ_LLM_API_BASE:-http://host.docker.internal:8317/v1}
-      GAUZ_LLM_API_KEY: ${GAUZ_LLM_API_KEY:-catena-local}
-      GAUZ_LLM_MODEL: ${GAUZ_LLM_MODEL:-gpt-5.6-sol}
-      GAUZ_LLM_MAX_TOKENS: ${GAUZ_LLM_MAX_TOKENS:-4096}
-      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-memory-embedding-key-not-configured}
-      DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
-      DASHSCOPE_EMBEDDING_MODEL: ${DASHSCOPE_EMBEDDING_MODEL:-text-embedding-v4}
-      MYSQL_HOST: gauzmem-mysql
-      MYSQL_PORT: "3306"
-      MYSQL_USER: gauzmem
-      MYSQL_PASSWORD: ${CATENA_GAUZMEM_MYSQL_PASSWORD:-gauzmem-local-change-me}
-      MYSQL_DB: gauzmem
-      QDRANT_MODE: server
-      QDRANT_URL: http://qdrant:6333
-      NEO4J_URI: bolt://neo4j:7687
-      NEO4J_USER: neo4j
-      NEO4J_PASSWORD: ${CATENA_NEO4J_PASSWORD:-catena-neo4j-local}
-      # Redis and MinIO are deliberately absent. GauzMem falls back to in-process task state and file ingestion
-      # remains outside this product boundary.
-      REDIS_URL: ""
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - gauzmem-data:/app/output
-    depends_on:
-      gauzmem-mysql:
-        condition: service_healthy
-      neo4j:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:1235/health', timeout=3)"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 45s
-    restart: unless-stopped
-
-  qdrant:
-    profiles: ["memory"]
-    image: qdrant/qdrant:v1.18.2
-    volumes:
-      - qdrant-data:/qdrant/storage
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333'"]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 10s
-    restart: unless-stopped
-
-  gauzmem-mysql:
-    profiles: ["memory"]
-    image: mysql:8.0.46
-    environment:
-      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
-      MYSQL_DATABASE: gauzmem
-      MYSQL_USER: gauzmem
-      MYSQL_PASSWORD: ${CATENA_GAUZMEM_MYSQL_PASSWORD:-gauzmem-local-change-me}
-      MYSQL_CHARSET: utf8mb4
-      MYSQL_COLLATION: utf8mb4_unicode_ci
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    volumes:
-      - gauzmem-mysql-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u gauzmem -p\"$$MYSQL_PASSWORD\" --silent"]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 30s
-    restart: unless-stopped
-
-  neo4j:
-    profiles: ["memory"]
-    image: neo4j:5.15.0
-    environment:
-      NEO4J_AUTH: neo4j/${CATENA_NEO4J_PASSWORD:-catena-neo4j-local}
-      NEO4J_PLUGINS: '${CATENA_NEO4J_PLUGINS:-["apoc", "graph-data-science"]}'
-      NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
-      NEO4J_dbms_security_procedures_allowlist: apoc.*,gds.*
-      NEO4J_server_memory_heap_initial__size: 256m
-      NEO4J_server_memory_heap_max__size: 768m
-      NEO4J_server_memory_pagecache_size: 256m
-    volumes:
-      - neo4j-data:/data
-      - neo4j-logs:/logs
-      - neo4j-plugins:/plugins
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:7474 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 60s
-    restart: unless-stopped
 
 volumes:
+  catena-engine-data:
   catena-data:
   postgres-data:
   clickhouse-data:
-  gauzmem-data:
-  gauzmem-mysql-data:
-  qdrant-data:
-  neo4j-data:
-  neo4j-logs:
-  neo4j-plugins:

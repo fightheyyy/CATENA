@@ -1,71 +1,13 @@
-# OpenViking memory integration
+# OpenViking：V2 Engine Memory Adapter
 
-Catena uses the official OpenViking **0.4.23** image pinned by digest. The Go control plane implements the existing `MemoryBackend` interface over its HTTP API. GauzMem remains selectable for existing installations; the OpenViking Compose overlay selects the new provider.
+Go 不再直接调用 OpenViking。路径为 authenticated Go → durable Analysis Job → private Engine Memory Adapter → OpenViking。Memory 与 RSI 平级，无需配置 RSI/Harbor Case 即可从 Trace 或历史 Session 提炼。
 
-## Available paths
+`POST /v1/analysis-jobs` 请求：`{"pipeline":"memory","trace_id":"<retained trace>"}`，或 agent_id/window_start/window_end，或 agent_id/conversation_id（历史会话）。必须发送 Idempotency-Key。Artifact 保存在原任务 document 中，关联 Evidence refs/SHA、provider task ID 和 result，状态 extracted，不表示确认事实。
 
-- `/memory`: browse and search memory files, add an explicit note, inspect file references and extraction tasks.
-- Trace detail → **提炼为记忆**: a bounded, redacted evidence snapshot is submitted as an OpenViking session and committed for asynchronous extraction.
-- Existing conversation extraction uses original message roles and chronological order, in batches of up to 100 messages.
-- Platform analysis retrieves up to four relevant retained memories once, stores that snapshot as `memory_context` in its job, and supplies it as reference context to the inspector, candidate generator and reviewer. It is kept separate from current-run evidence.
-- Existing memory IDs and graph routes remain compatible: a deterministic 48-bit hash identifies each canonical file URI. The URI is also returned in metadata.
+Engine 环境配置 `CATENA_OPENVIKING_URL` / `CATENA_OPENVIKING_API_KEY`；提供方 trusted mode。Go 私有请求 X-Catena-Owner 只从认证上下文生成，浏览器不能指定。Engine 沿用原 `catena_` + SHA256(`catena-memory:` + owner)[:24] 作为 user，account=catena、role=user；`viking://user/<derived>/memories` 和原 48-bit file ID 保持兼容。URI 与任务 ID 必须属于同 owner，拒绝路径穿越/编码逃逸。
 
-## Start
+提炼 commit 有持久化 execution receipt；Go 在查询前保存 native task checkpoint。重试不再提炼；Engine 崩溃后的不确定 running receipt 要求人工核查。Go 取消/超时不会撤销 OpenViking 已接受的任务；Catena 停止跟踪且不发布产物。提供方原生结果没有列出文件时只记录任务结果，不把整个记忆库归因给该任务。
 
-Set `CATENA_LLM_API_KEY`, optionally `CATENA_LLM_BASE_URL` and `CATENA_LLM_MODEL`, then run:
+检索、列表、文件关系与手写 Note 继续由 Go 认证后经 Engine 转发。文件关系只是来源/链接，不冒充实体推断图。旧 Memory task ledger 只保留历史状态查询，不是新队列。GauzMem 及专属数据库服务已删除，数据卷需运维自行备份保管，本轮不删卷。
 
-```sh
-python deploy/catena-mvp1/setup_openviking.py
-cd deploy/catena-mvp1
-docker compose --env-file ../../.local/openviking/service.env \
-  -f compose.yml -f compose.openviking.yml up -d --build
-```
-
-If your existing deployment uses a separate environment file, keep passing it as well:
-
-```sh
-docker compose --env-file .env --env-file ../../.local/openviking/service.env \
-  -f compose.yml -f compose.openviking.yml up -d --build
-```
-
-The generated configuration is ignored by Git. Configuration and OV data persist in `.local/openviking`; the embedding model cache persists in a Docker volume. For a Linux deployment, change the LLM URL to a reachable endpoint. The model proxy is not part of this overlay.
-
-Neither memory nor embedding services publish host ports. Catena sends a private service key and owner-derived identity headers to OV in **trusted** mode. The browser never receives these credentials or controls those headers. The adapter restricts retrieval to the owner's memory root, rejects foreign result URIs and path escapes, and binds public task IDs to the owner.
-
-## Local embedding
-
-`BAAI/bge-small-zh-v1.5` runs on CPU through FastEmbed/ONNX Runtime, returning 512-dimensional vectors. FastEmbed lists an approximately 90 MB model, Chinese focus and a 512-token input limit. This is a small starting model, not a measured best model for all languages or code retrieval.
-
-The service serializes inference, limits requests to 128 strings and 1 MiB, and responds to health checks independently. Runtime limits are 768 MiB / 1 CPU for embedding and 2 GiB / 1 CPU for OV. These are limits, not measured peak consumption.
-
-On this workstation, downloads from the container failed with TLS errors. We downloaded the official Qdrant ONNX files through the existing host proxy into `.local/openviking/bge-small-zh`, then mounted that directory at `/prefetched` in an ignored local overlay with `CATENA_EMBEDDING_MODEL_PATH=/prefetched`. Normal deployments can use the automatic model download and persistent cache. No synthetic embedding fallback is used.
-
-## Graph behavior
-
-OV memory-link extraction is enabled with `memory.link_enabled=true`. Catena displays typed outgoing links from a file's native `MEMORY_FIELDS.links` metadata and explicit local Markdown links. Metadata-only relations are not assigned a fabricated confidence score. Cross-owner links are excluded. A `STORED_IN` edge represents file identity, not a semantic inference.
-
-This adapter does not call the old standalone `relations/link` routes: they are absent from the tested 0.4.23 image. It does not yet implement a general multi-hop graph query, editing relations in the UI, or knowledge-graph compilation.
-
-## Limits and scope
-
-- Personal memory is implemented. Team spaces and grants are not implemented by this integration; do not equate OpenViking account support with completed Catena team sharing.
-- Listing scans at most 1,000 OV nodes; `total` counts visible memory files within that scan. The existing numeric graph lookup uses the same bounded scan. File reads show at most 200 lines / 16,000 bytes.
-- Trace extraction includes at most 64 spans / 64 KiB; individual evidence fields are bounded to 2 KiB. Conversation extraction has a 64 KiB text budget. Original evidence remains in Catena.
-- Repeat extraction creates a new OV session; memory merging is handled by OV. There is no ingestion idempotency guarantee yet.
-- Failed recall does not prevent platform analysis. No automatic bulk extraction of the historical dataset is enabled.
-- GPT-5.5 calls still consume the existing proxy allowance. Local embedding removes the embedding API requirement, not extraction costs.
-- Harbor Cases and Skills remain Catena's verified artifacts; this integration does not enable OV's separate Agent Evolution pipeline.
-
-## Verification
-
-During the local integration on 2026-10-03/04:
-
-- Real manual-note write returned `vector_status=complete`; a Chinese query recalled the note (observed score about 0.79).
-- One real Codex Trace committed successfully. OV reported **8 memory-write operations**, **37.5 seconds** processing, and **57,881 total LLM tokens**. This is one integration sample, not eight distinct facts or a quality benchmark.
-- Native task polling initially failed because timestamps are numeric; mapping the provided ISO fields fixed it.
-- A second explicit note linked the first and produced `FILE_LINK` plus `STORED_IN` edges.
-- Owner isolation, foreign task rejection, secret redaction, stable IDs, and cross-owner graph filtering are covered by Go adapter tests.
-- Go memory / evolution job tests and the server tests passed; frontend typecheck and production build passed.
-- Live browser checks passed for adding a note, Chinese search, the detail reader and graph switching. These were performed against the running services, without mocked memory APIs.
-
-Sources: [OpenViking context types](https://docs.openviking.ai/en/concepts/02-context-types), [session API](https://docs.openviking.ai/en/api/05-sessions), [FastEmbed models](https://qdrant.github.io/fastembed/examples/Supported_Models/).
+可选部署 overlay 为 `deploy/catena-mvp1/compose.openviking.yml`。原 `setup_openviking.py` 生成配置的功能保留；其模型/embedding 选择需要操作人明确授权。真实 OpenViking 测试尚需服务与凭据，协议 fixture 不代替实际提炼验收。

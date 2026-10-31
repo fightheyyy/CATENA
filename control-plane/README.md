@@ -1,41 +1,9 @@
-# Catena Control Plane
+# Go Control Plane V2
 
-The Go control plane is Catena's only public backend. It serves the React build and owns:
+当前职责：身份/Agent、OTLP/ClickHouse、PostgreSQL Analysis Job 与 Artifact。
 
-- GitHub OAuth, sessions and personal API keys;
-- owner/project isolation;
-- OTLP ingestion and Trace/Span queries;
-- XiaoBaOS Conversation ingestion;
-- canonical Agent grouping;
-- Run Bundles, Evolution Jobs, Candidate lineage and audit;
-- calls to the private XiaoBaOS Evolution Runtime and optional GauzMem service.
+- [根规格](../SPEC.md)
+- [V2 重构与验证](../docs/refactors/CATENA_V2.md)
+- [部署](../deploy/catena-mvp1/README.md)
 
-The target Agent and Barena run in the user environment or CI. The embedded Runtime consumes Evidence Packs only.
-
-## Run locally
-
-The supported path is the repository Compose stack:
-
-```bash
-./deploy/catena-mvp1/demo.sh up
-```
-
-For backend-only development:
-
-```bash
-export BARENA_DATABASE_URL='postgres://catena_core:catena-core-local@127.0.0.1:54329/catena_core?sslmode=disable'
-export CATENA_CLICKHOUSE_DSN='http://default:catena@127.0.0.1:8123/catena?dial_timeout=5s'
-go run ./cmd/barena-server
-```
-
-The server binds to `127.0.0.1:8787` by default. Remote binding requires explicit opt-in, GitHub OAuth and an HTTPS callback.
-
-## Verification
-
-```bash
-go test ./...
-go vet ./...
-go test -race ./internal/control
-```
-
-Architecture and invariants are defined in [SPEC.md](./SPEC.md); active work is tracked in [PLAN.md](./PLAN.md).
+旧计划已归档，不再维护固定 Role 或 Barena Runner。

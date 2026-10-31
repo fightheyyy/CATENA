@@ -66,7 +66,7 @@ case "$action" in
     "${compose[@]}" config
     ;;
   build)
-    "${compose[@]}" build catena-engine catena-runner catena-core
+    "${compose[@]}" build catena-engine catena-core
     ;;
   up)
     "${compose[@]}" up -d --build --wait --wait-timeout 1200
@@ -83,7 +83,7 @@ case "$action" in
     "$deploy_dir/smoke-public.sh"
     ;;
   logs)
-    "${compose[@]}" logs -f --tail=200 caddy catena-core catena-engine catena-runner
+    "${compose[@]}" logs -f --tail=200 caddy catena-core catena-engine
     ;;
   down)
     "${compose[@]}" down --remove-orphans

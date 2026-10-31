@@ -4,7 +4,12 @@
 FROM node:22-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d AS codex
 RUN npm install -g @openai/codex@0.160.0 && codex --version
 
+FROM docker:28.4.0-cli AS docker-cli
+
 FROM python:3.12-slim
+COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=docker-cli /usr/local/libexec/docker/cli-plugins/ /usr/local/libexec/docker/cli-plugins/
+RUN docker --version && docker compose version
 COPY --from=codex /usr/local/bin/node /usr/local/bin/node
 COPY --from=codex /usr/local/lib/node_modules/@openai /usr/local/lib/node_modules/@openai
 RUN ln -s /usr/local/lib/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex
@@ -12,10 +17,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 WORKDIR /opt/catena-engine
 COPY engine/pyproject.toml ./
 COPY engine/catena_engine ./catena_engine
-RUN pip install --no-compile ".[sdk]" \
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-compile ".[rsi]" \
   && useradd --system --uid 1001 --no-create-home catena-engine
+RUN mkdir -p /var/lib/catena-engine/executions /var/lib/catena-engine/runs && chown -R catena-engine:catena-engine /var/lib/catena-engine
 USER catena-engine
-ENV CATENA_ENGINE_ADDR=0.0.0.0:8790
+ENV CATENA_ENGINE_ADDR=0.0.0.0:8790 CATENA_ENGINE_EXECUTIONS_ROOT=/var/lib/catena-engine/executions CATENA_RSI_RUNS_ROOT=/var/lib/catena-engine/runs
 EXPOSE 8790
 HEALTHCHECK --interval=5s --timeout=5s --retries=30 \
   CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8790/readyz', timeout=3).status == 200 else 1)"]

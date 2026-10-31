@@ -39,8 +39,9 @@ def trial_summary(trial: Trial) -> dict:
 class Services:
     """One ledger and one execution slot shared across all composed algorithms."""
 
-    def __init__(self, context: Context, runtime: Runtime, evaluator: Evaluator, budget: Budget,
-                 reserved_trials: int = 0):
+    def __init__(
+        self, context: Context, runtime: Runtime, evaluator: Evaluator, budget: Budget, reserved_trials: int = 0
+    ):
         self.context, self.runtime, self.evaluator, self.budget = context, runtime, evaluator, budget
         self.deadline = time.monotonic() + budget.seconds
         self.lock = threading.RLock()
@@ -123,17 +124,22 @@ class Services:
             return trial
 
     def usage(self) -> dict:
-        return {"model_calls": self.calls, "attempted_trials": self.attempted_trials,
-                "input_tokens": self.input_tokens, "output_tokens": self.output_tokens,
-                "optimizer_usage_complete": self.calls == self.completed_calls,
-                "trial_usage_complete": len(self.trials) == self.attempted_trials and all(
-                    t.input_tokens is not None and t.output_tokens is not None for t in self.trials),
-                "trial_input_tokens": [t.input_tokens for t in self.trials],
-                "trial_output_tokens": [t.output_tokens for t in self.trials]}
+        return {
+            "model_calls": self.calls,
+            "attempted_trials": self.attempted_trials,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "optimizer_usage_complete": self.calls == self.completed_calls,
+            "trial_usage_complete": len(self.trials) == self.attempted_trials
+            and all(t.input_tokens is not None and t.output_tokens is not None for t in self.trials),
+            "trial_input_tokens": [t.input_tokens for t in self.trials],
+            "trial_output_tokens": [t.output_tokens for t in self.trials],
+        }
 
 
-def preflight(algorithms: list[Algorithm], composition: str, registry: Registry,
-              budget: Budget, reserved_trials: int = 0):
+def preflight(
+    algorithms: list[Algorithm], composition: str, registry: Registry, budget: Budget, reserved_trials: int = 0
+):
     if composition not in ("sequential", "parallel") or not 1 <= len(algorithms) <= 4:
         raise OptimizationError("select sequential/parallel composition and 1–4 algorithms")
     # Validate every adapter before the first potentially billable operation.
@@ -146,8 +152,9 @@ def preflight(algorithms: list[Algorithm], composition: str, registry: Registry,
         raise OptimizationError("trial budget does not cover adapter requirements and validation")
 
 
-def optimize(context: Context, algorithms: list[Algorithm], composition: str,
-             registry: Registry, services: Services) -> dict:
+def optimize(
+    context: Context, algorithms: list[Algorithm], composition: str, registry: Registry, services: Services
+) -> dict:
     preflight(algorithms, composition, registry, services.budget, services.reserved_trials)
     results: list[OptimizationResult] = []
     candidates: list[Candidate] = []
@@ -183,10 +190,19 @@ def optimize(context: Context, algorithms: list[Algorithm], composition: str,
         with ThreadPoolExecutor(max_workers=len(algorithms)) as pool:
             results = list(pool.map(lambda spec: run(spec, context), algorithms))
         candidates = [candidate for result in results for candidate in result.candidates]
-    return {"schema": RESULT_SCHEMA, "request_id": context.request_id, "status": "completed",
-            "decision": "evidence_insufficient", "composition": composition,
-            "evidence_refs": list(context.evidence_refs), "baseline_id": context.baseline.id,
-            "candidates": [c.to_dict() for c in candidates], "usage": services.usage(),
-            "trials": [trial_summary(t) for t in services.trials],
-            "algorithms": [{"name": s.name, "version": registry.get(s.name).version,
-                            "diagnostics": r.diagnostics} for s, r in zip(algorithms, results, strict=True)]}
+    return {
+        "schema": RESULT_SCHEMA,
+        "request_id": context.request_id,
+        "status": "completed",
+        "decision": "evidence_insufficient",
+        "composition": composition,
+        "evidence_refs": list(context.evidence_refs),
+        "baseline_id": context.baseline.id,
+        "candidates": [c.to_dict() for c in candidates],
+        "usage": services.usage(),
+        "trials": [trial_summary(t) for t in services.trials],
+        "algorithms": [
+            {"name": s.name, "version": registry.get(s.name).version, "diagnostics": r.diagnostics}
+            for s, r in zip(algorithms, results, strict=True)
+        ],
+    }

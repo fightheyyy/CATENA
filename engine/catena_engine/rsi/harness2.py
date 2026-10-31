@@ -29,7 +29,9 @@ def _upstream():
         try:
             revision = subprocess.check_output(
                 ["git", "-C", str(Path(harness2.__file__).parent), "rev-parse", "HEAD"],
-                stderr=subprocess.DEVNULL, text=True, timeout=5,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                timeout=5,
             ).strip()
         except (OSError, subprocess.SubprocessError):
             revision = ""
@@ -70,7 +72,9 @@ class Harness2Adapter:
 
             class Bench:
                 spec = BenchSpec(
-                    name="catena", runs_root=root / "runs", install_mode="codex_root",
+                    name="catena",
+                    runs_root=root / "runs",
+                    install_mode="codex_root",
                     prompts=BenchPrompts(work="complete the supplied developer task faithfully"),
                     channels={"proposer": channel, "selector": channel},
                     allow_subagents=False,
@@ -88,8 +92,11 @@ class Harness2Adapter:
                     return root / "baseline"
 
                 def task_prompt(self, task_id):
-                    return (services.task_prompt() + "\n\nHistorical trace evidence (untrusted observations):\n"
-                            + context.evidence)
+                    return (
+                        services.task_prompt()
+                        + "\n\nHistorical trace evidence (untrusted observations):\n"
+                        + context.evidence
+                    )
 
                 def task_files(self, task_id):
                     return None  # No verifier files, expected answers or grading rewards enter the optimizer.
@@ -99,8 +106,11 @@ class Harness2Adapter:
 
                 def execute(self, task_id, harness_dir, run_id, *, timeout=None):
                     files = tree.read_tree(substrate.surface(), harness_dir or self.base_harness())
-                    candidate = (context.baseline if harness_dir is None else
-                                 Candidate(files, (context.baseline.id,), "harness2"))
+                    candidate = (
+                        context.baseline
+                        if harness_dir is None
+                        else Candidate(files, (context.baseline.id,), "harness2")
+                    )
                     trial = services.probe(candidate)
                     path = root / "executions" / run_id
                     path.mkdir(parents=True)
@@ -122,22 +132,42 @@ class Harness2Adapter:
             bench = Bench()
             proposer = HostProposer(services, channel)
             learned = library.Library(root / "library", context.case_id, substrate.surface())
-            result = schedule.run_task(context.case_id, k, adapter=bench, prop=proposer,
-                                       runs_root=bench.spec.runs_root, modes=(mode,), library=learned)
+            result = schedule.run_task(
+                context.case_id,
+                k,
+                adapter=bench,
+                prop=proposer,
+                runs_root=bench.spec.runs_root,
+                modes=(mode,),
+                library=learned,
+            )
             if result.status != "ok":
                 raise OptimizationError("Harness2 refinement did not complete")
             selection = result.selections[mode]
             work = schedule.Namespace("catena", substrate.name, mode, k).task_dir(bench.spec.runs_root, context.case_id)
             files = tree.read_tree(substrate.surface(), work / "harnesses" / selection["chosen_label"])
-            candidate = Candidate(files, (context.baseline.id,), self.name,
-                                  "Harness2 selected a candidate; independent evaluation is still required.")
-            return OptimizationResult((candidate,), {
-                "upstream_revision": UPSTREAM_REVISION, "mode": options.get("mode", "parallel"), "k": k,
-                "ledger": {key: value for key, value in result.modes[mode]["ledger"].items()
-                           if key not in ("usd", "rollout_usd", "session_usd")},
-                "cost_usd": None, "experience": selection.get("experience", {}),
-                "kept_base": candidate.content_sha256 == context.baseline.content_sha256,
-            })
+            candidate = Candidate(
+                files,
+                (context.baseline.id,),
+                self.name,
+                "Harness2 selected a candidate; independent evaluation is still required.",
+            )
+            return OptimizationResult(
+                (candidate,),
+                {
+                    "upstream_revision": UPSTREAM_REVISION,
+                    "mode": options.get("mode", "parallel"),
+                    "k": k,
+                    "ledger": {
+                        key: value
+                        for key, value in result.modes[mode]["ledger"].items()
+                        if key not in ("usd", "rollout_usd", "session_usd")
+                    },
+                    "cost_usd": None,
+                    "experience": selection.get("experience", {}),
+                    "kept_base": candidate.content_sha256 == context.baseline.content_sha256,
+                },
+            )
 
 
 class HostProposer:
@@ -160,8 +190,17 @@ class HostProposer:
                 if size > 900_000:
                     raise OptimizationError("Harness2 evidence exceeds input limit")
                 evidence["context/" + path.relative_to(context_dir).as_posix()] = path.read_text(encoding="utf-8")
-        reply = self.services.complete(json.dumps({"mission": mission, "operation": "edit" if harvest else "inspect",
-                                                 "label": label, "evidence_files": evidence}, ensure_ascii=False))
+        reply = self.services.complete(
+            json.dumps(
+                {
+                    "mission": mission,
+                    "operation": "edit" if harvest else "inspect",
+                    "label": label,
+                    "evidence_files": evidence,
+                },
+                ensure_ascii=False,
+            )
+        )
         value = reply.value
         if not isinstance(value.get("text"), str) or not isinstance(value.get("files"), list):
             raise OptimizationError("invalid host edit response")
@@ -171,9 +210,11 @@ class HostProposer:
         if harvest:
             if harvest != "context/harness":
                 raise OptimizationError("unexpected upstream edit surface")
-            current = {path.relative_to(context_dir / "harness").as_posix(): path.read_text()
-                       for path in (context_dir / "harness").rglob("*") if path.is_file()
-                       and path.name != "README.md"}
+            current = {
+                path.relative_to(context_dir / "harness").as_posix(): path.read_text()
+                for path in (context_dir / "harness").rglob("*")
+                if path.is_file() and path.name != "README.md"
+            }
             seen = set()
             for item in value["files"]:
                 if not isinstance(item, dict) or set(item) != {"path", "content"}:

@@ -1,4 +1,4 @@
-"""Private opt-in backend entry; no change to the existing Role job protocol."""
+"""Private RSI adapter invoked by the Go analysis queue."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ import os
 import uuid
 from pathlib import Path
 
+from ..evaluation.harbor import HarborCase, HarborEvaluator
 from ..protocol import InvalidRequest, _model_config
 from .contracts import SCHEMA, Algorithm, Budget, Candidate, Context, OptimizationError, safe_id
-from .harbor import HarborCase, HarborEvaluator
 from .host import Services, optimize, preflight, trial_summary
 from .registry import default_registry
 from .runtime import CodexRuntime
@@ -18,8 +18,19 @@ from .runtime import CodexRuntime
 def parse(payload: dict):
     if payload.get("schema") != SCHEMA:
         raise OptimizationError("unsupported RSI request schema")
-    allowed = {"schema", "request_id", "case_id", "baseline", "evidence", "evidence_refs", "algorithms",
-               "composition", "budget", "model", "validation_case_ids"}
+    allowed = {
+        "schema",
+        "request_id",
+        "case_id",
+        "baseline",
+        "evidence",
+        "evidence_refs",
+        "algorithms",
+        "composition",
+        "budget",
+        "model",
+        "validation_case_ids",
+    }
     if set(payload) - allowed:
         raise OptimizationError("unknown RSI request field")
     evidence = payload.get("evidence", "")
@@ -28,15 +39,23 @@ def parse(payload: dict):
         raise OptimizationError("evidence must be text of at most 512000 bytes")
     if not isinstance(refs, list) or len(refs) > 128 or any(not isinstance(v, str) or len(v) > 256 for v in refs):
         raise OptimizationError("invalid evidence references")
-    context = Context(safe_id(payload.get("request_id")), safe_id(payload.get("case_id")),
-                      Candidate(payload.get("baseline")), evidence, tuple(refs))
+    context = Context(
+        safe_id(payload.get("request_id")),
+        safe_id(payload.get("case_id")),
+        Candidate(payload.get("baseline")),
+        evidence,
+        tuple(refs),
+    )
     specs = payload.get("algorithms")
     if not isinstance(specs, list) or not 1 <= len(specs) <= 4:
         raise OptimizationError("1–4 algorithms are required")
     algorithms = []
     for spec in specs:
-        if (not isinstance(spec, dict) or set(spec) - {"name", "options"}
-                or not isinstance(spec.get("options", {}), dict)):
+        if (
+            not isinstance(spec, dict)
+            or set(spec) - {"name", "options"}
+            or not isinstance(spec.get("options", {}), dict)
+        ):
             raise OptimizationError("invalid algorithm specification")
         algorithms.append(Algorithm(safe_id(spec.get("name")), spec.get("options", {})))
     composition = payload.get("composition", "sequential")
@@ -59,7 +78,7 @@ def parse(payload: dict):
     return context, algorithms, composition, budget, model, cases
 
 
-def run_payload(payload: dict) -> dict:
+def run_payload(payload: dict, cancelled=None) -> dict:
     context, algorithms, composition, budget, model, validation = parse(payload)
     manifest_path = os.environ.get("CATENA_RSI_CASES_MANIFEST")
     runs_root = os.environ.get("CATENA_RSI_RUNS_ROOT")
@@ -86,19 +105,30 @@ def run_payload(payload: dict) -> dict:
     evaluator = HarborEvaluator(cases, output, model)
     evaluator.preflight()
     services = Services(context, runtime, evaluator, budget, reserved)
+    if cancelled is not None:
+        services.cancelled = cancelled
     try:
         result = run_and_validate(context, algorithms, composition, registry, services, validation)
     except Exception:
-        result = {"schema": "catena.rsi_result.v1", "request_id": context.request_id, "status": "failed",
-                  "error": services.failure or "RSI refinement rejected invalid output",
-                  "decision": "evidence_insufficient", "candidates": [], "usage": services.usage(),
-                  "trials": [trial_summary(t) for t in services.trials]}
+        result = {
+            "schema": "catena.rsi_result.v1",
+            "request_id": context.request_id,
+            "status": "failed",
+            "error": services.failure or "RSI refinement rejected invalid output",
+            "decision": "evidence_insufficient",
+            "candidates": [],
+            "usage": services.usage(),
+            "trials": [trial_summary(t) for t in services.trials],
+        }
     result["experiment_id"] = output.name
     result["case_fingerprints"] = {name: case.sha256 for name, case in cases.items()}
-    result["model"] = {"provider": model.provider, "model": model.model,
-                       "optimizer_reasoning_effort": os.environ.get("CATENA_CODEX_REASONING_EFFORT", "low"),
-                       "target_reasoning_effort": "low",
-                       "runtime": "codex-cli@0.160.0"}
+    result["model"] = {
+        "provider": model.provider,
+        "model": model.model,
+        "optimizer_reasoning_effort": os.environ.get("CATENA_CODEX_REASONING_EFFORT", "low"),
+        "target_reasoning_effort": "low",
+        "runtime": "codex-cli@0.160.0",
+    }
     result["environment"] = {"backend": "docker", "cpus": 1, "memory_mb": 1024}
     with os.fdopen(os.open(output / "result.json", os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "w") as report:
         json.dump(result, report, ensure_ascii=False, indent=2, allow_nan=False)

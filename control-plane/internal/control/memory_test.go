@@ -36,7 +36,7 @@ func TestTraceMemoryDocumentIsBoundedOrderedAndRedacted(t *testing.T) {
 				Name:        "tool.first",
 				ServiceName: "codex",
 				StartTime:   now,
-				Output:      "api_key=sk_abcdefghijklmnop",
+				Output:      "api_key=sk_abcdefghijklmnop plain sk-demo-token-abcdefghijklmnop",
 			},
 		},
 	}
@@ -48,195 +48,13 @@ func TestTraceMemoryDocumentIsBoundedOrderedAndRedacted(t *testing.T) {
 	if strings.Index(document, "tool.first") > strings.Index(document, "tool.second") {
 		t.Fatalf("spans were not ordered by start time: %s", document)
 	}
-	for _, secret := range []string{"abcdefghijklmnop", "sk_abcdefghijklmnop"} {
+	for _, secret := range []string{"abcdefghijklmnop", "sk_abcdefghijklmnop", "sk-demo-token-abcdefghijklmnop"} {
 		if strings.Contains(document, secret) {
 			t.Fatalf("memory document leaked %q: %s", secret, document)
 		}
 	}
 	if !strings.Contains(document, "[REDACTED]") {
 		t.Fatalf("memory document did not mark redaction: %s", document)
-	}
-}
-
-func TestGauzMemoryClientUsesThreePathRecallAndStableOwnerScope(t *testing.T) {
-	var ingestProject string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/health" && r.Header.Get("X-API-Key") != "service-key" {
-			t.Fatalf("missing GauzMem service API key for %s", r.URL.Path)
-		}
-		switch r.URL.Path {
-		case "/health":
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"status":"ok"}`))
-		case "/api/v1/memories/extract":
-			var body map[string]any
-			decodeHTTPRequestJSON(t, r, &body)
-			ingestProject, _ = body["project_id"].(string)
-			metadata, _ := body["metadata"].(map[string]any)
-			if metadata["trace_id"] != "00112233445566778899aabbccddeeff" {
-				t.Fatalf("trace provenance missing: %#v", metadata)
-			}
-			if body["replace"] != true || metadata["chunk_index"] != float64(0) || metadata["file_hash"] == "" {
-				t.Fatalf("trace ingest is not idempotent: %#v", body)
-			}
-			writeTestJSON(t, w, map[string]any{
-				"success": true, "conversation_id": 42, "task_id": "memory-task-1",
-				"status": "indexing", "indexed": false,
-			})
-		case "/api/v1/memories/get":
-			var body map[string]any
-			decodeHTTPRequestJSON(t, r, &body)
-			if body["project_id"] != ingestProject {
-				t.Fatalf("list scope %v did not match ingest scope %q", body["project_id"], ingestProject)
-			}
-			writeTestJSON(t, w, map[string]any{
-				"memories": []map[string]any{{
-					"id": "7", "memory": "The tool failed", "created_at": "2026-08-05T00:00:00Z",
-					"metadata": map[string]any{"trace_id": "00112233445566778899aabbccddeeff"},
-				}},
-				"total": 1,
-			})
-		case "/api/v1/memories/search/bundle":
-			var body map[string]any
-			decodeHTTPRequestJSON(t, r, &body)
-			if body["project_id"] != ingestProject {
-				t.Fatalf("search scope %v did not match ingest scope %q", body["project_id"], ingestProject)
-			}
-			expansions, _ := body["expansions"].(map[string]any)
-			graph, _ := expansions["graph"].(map[string]any)
-			temporal, _ := expansions["temporal"].(map[string]any)
-			if graph["enabled"] != true || temporal["enabled"] != true {
-				t.Fatalf("three-path recall was not enabled: %#v", expansions)
-			}
-			writeTestJSON(t, w, map[string]any{
-				"success": true,
-				"query":   body["query"],
-				"facts": []map[string]any{{
-					"id": "7", "content": "The tool failed", "score": 0.93,
-				}},
-				"conversations": []any{},
-				"topics":        []any{},
-			})
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	defer server.Close()
-
-	client, err := NewGauzMemoryClient(server.URL, "service-key")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := client.Ping(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	trace := TraceDetail{Summary: TraceSummary{
-		TraceID:     "00112233445566778899aabbccddeeff",
-		RootName:    "agent.run",
-		ServiceName: "codex",
-		StartTime:   time.Now().UTC(),
-		EndTime:     time.Now().UTC(),
-		SpanCount:   1,
-	}}
-	receipt, err := client.IngestTrace(context.Background(), "owner-one", trace)
-	if err != nil || receipt.ConversationID != 42 || receipt.TraceID != trace.Summary.TraceID {
-		t.Fatalf("unexpected receipt: %#v err=%v", receipt, err)
-	}
-	memories, err := client.List(context.Background(), "owner-one", 12)
-	if err != nil || memories.Total != 1 || len(memories.Memories) != 1 || memories.Memories[0].Content != "The tool failed" {
-		t.Fatalf("unexpected memories: %#v err=%v", memories, err)
-	}
-	bundle, err := client.Search(context.Background(), "owner-one", MemorySearchRequest{Query: "why", TopK: 5})
-	if err != nil || len(bundle.Facts) != 1 || bundle.Facts[0].Content != "The tool failed" {
-		t.Fatalf("unexpected bundle: %#v err=%v", bundle, err)
-	}
-	if ingestProject == "" || ingestProject == "owner-one" {
-		t.Fatalf("owner scope was not converted to an opaque project: %q", ingestProject)
-	}
-	if ingestProject == memoryProjectID("owner-two") {
-		t.Fatal("different owners resolved to the same memory project")
-	}
-}
-
-func TestGauzMemoryClientProjectsOwnerScopedTaskProgress(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/tasks/task-42" || r.Header.Get("X-API-Key") != "service-key" {
-			http.NotFound(w, r)
-			return
-		}
-		writeTestJSON(t, w, map[string]any{
-			"task_id": "task-42", "project_id": memoryProjectID("owner-one"),
-			"status": "processing", "current_step": "向量化", "progress": 0.75,
-			"message": "api_key=sk_private_value", "conversation_id": 7,
-			"steps": []map[string]any{{"step_name": "事实抽取", "status": "completed"}, {"step_name": "向量化", "status": "processing"}},
-		})
-	}))
-	defer server.Close()
-	client, err := NewGauzMemoryClient(server.URL, "service-key")
-	if err != nil {
-		t.Fatal(err)
-	}
-	task, err := client.Task(t.Context(), "owner-one", "task-42")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if task.Status != "processing" || task.Progress != 0.75 || task.CurrentStep != "向量化" || len(task.Steps) != 2 {
-		t.Fatalf("unexpected task: %#v", task)
-	}
-	encoded, _ := json.Marshal(task)
-	if strings.Contains(string(encoded), "project_id") || strings.Contains(string(encoded), "sk_private_value") {
-		t.Fatalf("private task data leaked: %s", encoded)
-	}
-	if _, err := client.Task(t.Context(), "owner-two", "task-42"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("foreign owner task should be hidden, got %v", err)
-	}
-}
-
-func TestGauzMemoryClientReadsOwnerScopedFactGraph(t *testing.T) {
-	var projectID string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet || r.URL.Path != "/api/v1/graph/facts/27" {
-			http.NotFound(w, r)
-			return
-		}
-		if r.Header.Get("X-API-Key") != "service-key" {
-			t.Fatal("missing private service credential")
-		}
-		projectID = r.URL.Query().Get("project_id")
-		writeTestJSON(t, w, map[string]any{
-			"fact_id":    27,
-			"project_id": projectID,
-			"content":    "The user requested a release brief.",
-			"entities":   []map[string]any{{"name": "release brief", "type": "unknown"}},
-			"relations": []map[string]any{{
-				"source":     "The user requested a release brief.",
-				"target":     "The assistant delivered release-brief.md.",
-				"type":       "DELIVEREDAS",
-				"confidence": 0.95,
-			}},
-			"total_entities":  1,
-			"total_relations": 1,
-		})
-	}))
-	defer server.Close()
-
-	client, err := NewGauzMemoryClient(server.URL, "service-key")
-	if err != nil {
-		t.Fatal(err)
-	}
-	graph, err := client.Graph(context.Background(), "owner-one", 27)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if projectID != memoryProjectID("owner-one") || projectID == "owner-one" {
-		t.Fatalf("unexpected graph project scope: %q", projectID)
-	}
-	if graph.FactID != 27 || len(graph.Entities) != 1 || len(graph.Relations) != 1 || graph.Relations[0].Type != "DELIVEREDAS" {
-		t.Fatalf("unexpected graph: %#v", graph)
-	}
-	result, _ := json.Marshal(graph)
-	if strings.Contains(string(result), projectID) || strings.Contains(string(result), "project_id") {
-		t.Fatalf("private project scope leaked: %s", result)
 	}
 }
 
@@ -265,107 +83,6 @@ func TestConversationMemoryDocumentContainsOnlyVisibleConversationEvidence(t *te
 	}
 	if strings.Contains(result, "visible-secret-value") || strings.Contains(result, "Trace Evidence") {
 		t.Fatalf("conversation memory leaked or used Trace evidence: %s", result)
-	}
-}
-
-func TestGauzMemoryClientIngestsConversationWithStableProvenance(t *testing.T) {
-	var captured map[string]any
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/memories/extract" {
-			http.NotFound(w, r)
-			return
-		}
-		decodeHTTPRequestJSON(t, r, &captured)
-		writeTestJSON(t, w, map[string]any{
-			"success": true, "conversation_id": 77, "task_id": "conversation-memory-1", "status": "indexing",
-		})
-	}))
-	defer server.Close()
-	client, err := NewGauzMemoryClient(server.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	now := time.Now().UTC()
-	document := ConversationDocument{
-		Schema: conversationReadSchema,
-		Summary: ConversationSummary{
-			ConversationID: "pet-42", AgentID: "xiaoba-base", Runtime: "xiaobaos", Surface: "pet",
-			CreatedAt: now, UpdatedAt: now, MessageCount: 1,
-		},
-		Messages: []ConversationMessage{{Sequence: 1, OccurredAt: now, Role: "user", Content: []ConversationContentPart{{Type: "text", Text: "remember this"}}}},
-	}
-	receipt, err := client.IngestConversation(context.Background(), "owner-one", document)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if receipt.SourceConversationID != "pet-42" || receipt.ConversationID != 77 {
-		t.Fatalf("unexpected receipt: %#v", receipt)
-	}
-	metadata, _ := captured["metadata"].(map[string]any)
-	if metadata["source_type"] != "catena_conversation" || metadata["conversation_id"] != "pet-42" || metadata["agent_id"] != "xiaoba-base" {
-		t.Fatalf("conversation provenance missing: %#v", metadata)
-	}
-	if captured["replace"] != true || metadata["file_hash"] == "" {
-		t.Fatalf("conversation ingest is not idempotent: %#v", captured)
-	}
-}
-
-func TestRememberTraceReadsOnlyTheAuthenticatedOwnerScope(t *testing.T) {
-	traceID := "00112233445566778899aabbccddeeff"
-	traces := &memoryTraceStore{trace: TraceDetail{Summary: TraceSummary{TraceID: traceID}}}
-	memory := &recordingMemoryBackend{}
-	server := &HTTPServer{
-		store:  NewMemoryStore(),
-		traces: traces,
-		memory: memory,
-		auth:   AuthConfig{}.normalized(),
-	}
-	request := httptest.NewRequest(http.MethodPost, "/v1/traces/"+traceID+"/memories", nil)
-	request.SetPathValue("trace_id", traceID)
-	recorder := httptest.NewRecorder()
-
-	server.rememberTrace(recorder, request)
-
-	if recorder.Code != http.StatusAccepted {
-		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
-	}
-	if traces.ownerID != "local" || memory.ownerID != "local" || memory.traceID != traceID {
-		t.Fatalf("owner/trace boundary mismatch: traces=%q memory=%q trace=%q", traces.ownerID, memory.ownerID, memory.traceID)
-	}
-}
-
-func TestRememberConversationReadsOnlyTheAuthenticatedOwnerScope(t *testing.T) {
-	store := NewMemoryStore()
-	now := time.Now().UTC()
-	_, _, err := store.IngestConversationMessages(context.Background(), "", []ConversationMessage{{
-		Schema: conversationMessageSchema, MessageID: "message-1", ConversationID: "conversation-1",
-		Sequence: 1, OccurredAt: now, Runtime: "xiaobaos", AgentID: "xiaoba-base", Surface: "pet",
-		Role: "user", Content: []ConversationContentPart{{Type: "text", Text: "please remember"}},
-		Delivery: ConversationDelivery{Status: "received"},
-	}}, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	memory := &recordingMemoryBackend{}
-	server := &HTTPServer{store: store, memory: memory, auth: AuthConfig{}.normalized()}
-	request := httptest.NewRequest(http.MethodPost, "/v1/conversations/conversation-1/memories?agent_id=xiaoba-base", nil)
-	request.SetPathValue("conversation_id", "conversation-1")
-	recorder := httptest.NewRecorder()
-
-	server.rememberConversation(recorder, request)
-
-	if recorder.Code != http.StatusAccepted {
-		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
-	}
-	if memory.ownerID != "local" || memory.conversationID != "conversation-1" {
-		t.Fatalf("owner/conversation boundary mismatch: owner=%q conversation=%q", memory.ownerID, memory.conversationID)
-	}
-	tasks, err := store.ListMemoryTasksByOwner(t.Context(), "local", 10)
-	if err != nil || len(tasks) != 1 {
-		t.Fatalf("memory task was not persisted: tasks=%#v err=%v", tasks, err)
-	}
-	if tasks[0].TaskID != "task" || tasks[0].SourceConversationID != "conversation-1" || tasks[0].AgentID != "xiaoba-base" {
-		t.Fatalf("memory task lost source identity: %#v", tasks[0])
 	}
 }
 
@@ -434,7 +151,7 @@ func TestMemoryRecallDoesNotExposeProviderErrors(t *testing.T) {
 		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 	if strings.Contains(recorder.Body.String(), "sk_private_value") ||
-		!strings.Contains(recorder.Body.String(), "GauzMem recall failed") {
+		!strings.Contains(recorder.Body.String(), "Memory provider recall failed") {
 		t.Fatalf("provider detail leaked or safe message missing: %s", recorder.Body.String())
 	}
 }

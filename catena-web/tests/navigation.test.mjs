@@ -3,7 +3,7 @@ import test from "node:test";
 import { primaryNavigationRoutes, readNavigation, navigationURL } from "../src/navigation.ts";
 
 test("primary navigation follows the focused cloud workspace", () => {
-  assert.deepEqual(primaryNavigationRoutes, ["home", "traces", "memory", "cases", "evolution"]);
+  assert.deepEqual(primaryNavigationRoutes, ["home", "traces", "memory", "evolution"]);
   assert.equal(primaryNavigationRoutes.includes("home"), true);
   assert.equal(primaryNavigationRoutes.includes("settings"), false);
 });

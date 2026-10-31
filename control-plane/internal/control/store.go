@@ -1,11 +1,9 @@
 package control
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -20,54 +18,22 @@ var (
 )
 
 type Store interface {
-	CreateExperiment(context.Context, Experiment) (Experiment, bool, error)
-	UpdateExperiment(context.Context, Experiment) error
-	GetExperiment(context.Context, string, string) (Experiment, error)
-	ListExperiments(context.Context, string) ([]Experiment, error)
-	ListActiveExperiments(context.Context) ([]Experiment, error)
-	CreateRun(context.Context, Run) error
-	AdoptScenarioRun(context.Context, Run, []EngineEvent) (Run, bool, error)
-	CreateRunBundle(context.Context, RunBundle) (RunBundle, bool, error)
-	GetRunBundle(context.Context, string) (RunBundle, error)
+	ListArtifactsByOwner(context.Context, string, string, int) ([]Artifact, error)
 	IngestConversationMessages(context.Context, string, []ConversationMessage, time.Time) (int, int, error)
 	ListConversationSummariesByOwner(context.Context, string, string, int) ([]ConversationSummary, error)
 	ListConversationMessagesByOwner(context.Context, string, string, string, int) ([]ConversationMessage, error)
-	GetRun(context.Context, string) (Run, error)
-	ListRuns(context.Context, int) ([]Run, error)
-	ListRunsByOwner(context.Context, string, int) ([]Run, error)
-	UpdateRun(context.Context, Run) error
-	AppendEvent(context.Context, EngineEvent) error
-	ListEventsAfter(context.Context, string, int64, int) ([]EngineEvent, error)
-	RunHasTrace(context.Context, string, string) (bool, error)
-	CreateEvolutionJob(context.Context, EvolutionJob) (EvolutionJob, bool, error)
-	UpdateEvolutionJob(context.Context, EvolutionJob) error
-	GetEvolutionJob(context.Context, string) (EvolutionJob, error)
-	ListEvolutionJobs(context.Context, int) ([]EvolutionJob, error)
-	ListEvolutionJobsByOwner(context.Context, string, int) ([]EvolutionJob, error)
-	DeleteEvolutionJob(context.Context, string, string) error
-	ClaimEvolutionJob(context.Context, string, time.Duration, int) (EvolutionJob, EvolutionLease, error)
-	HeartbeatEvolutionJob(context.Context, EvolutionLease, time.Duration) (bool, error)
-	SaveLeasedEvolutionJob(context.Context, EvolutionLease, EvolutionJob) error
-	ReleaseEvolutionJob(context.Context, EvolutionLease, string, bool, time.Duration, int) error
-	CancelEvolutionJob(context.Context, string, string) (EvolutionJob, error)
-	EvolutionQueueStats(context.Context, *string) (EvolutionQueueStats, error)
-	CreateIssue(context.Context, Issue) error
-	GetIssue(context.Context, string) (Issue, error)
-	ListIssues(context.Context, int) ([]Issue, error)
-	ListIssuesByOwner(context.Context, string, int) ([]Issue, error)
-	PromoteIssue(context.Context, string, Case, time.Time) (Case, bool, error)
-	GetCase(context.Context, string) (Case, error)
-	ListCases(context.Context, int) ([]Case, error)
-	ListCasesByOwner(context.Context, string, int) ([]Case, error)
-	CreateReplay(context.Context, Run, HarnessVersion) (Run, HarnessVersion, bool, error)
-	GetHarnessVersionByRun(context.Context, string) (HarnessVersion, error)
-	FinalizeReplay(context.Context, string, ReplayFact, time.Time) (Evaluation, Release, bool, error)
-	GetEvaluation(context.Context, string) (Evaluation, error)
-	ListEvaluations(context.Context, int) ([]Evaluation, error)
-	ListEvaluationsByOwner(context.Context, string, int) ([]Evaluation, error)
-	GetRelease(context.Context, string) (Release, error)
-	ListReleases(context.Context, int) ([]Release, error)
-	ListReleasesByOwner(context.Context, string, int) ([]Release, error)
+	CreateAnalysisJob(context.Context, AnalysisJob) (AnalysisJob, bool, error)
+	UpdateAnalysisJob(context.Context, AnalysisJob) error
+	GetAnalysisJob(context.Context, string) (AnalysisJob, error)
+	ListAnalysisJobs(context.Context, int) ([]AnalysisJob, error)
+	ListAnalysisJobsByOwner(context.Context, string, int) ([]AnalysisJob, error)
+	DeleteAnalysisJob(context.Context, string, string) error
+	ClaimAnalysisJob(context.Context, string, time.Duration, int) (AnalysisJob, AnalysisLease, error)
+	HeartbeatAnalysisJob(context.Context, AnalysisLease, time.Duration) (bool, error)
+	SaveLeasedAnalysisJob(context.Context, AnalysisLease, AnalysisJob) error
+	ReleaseAnalysisJob(context.Context, AnalysisLease, string, bool, time.Duration, int) error
+	CancelAnalysisJob(context.Context, string, string) (AnalysisJob, error)
+	AnalysisQueueStats(context.Context, *string) (AnalysisQueueStats, error)
 	UpsertUser(context.Context, User) (User, error)
 	GetUserBySessionHash(context.Context, string, time.Time) (User, error)
 	CreateSession(context.Context, Session) error
@@ -82,9 +48,9 @@ type Store interface {
 	GetAPITokenByHash(context.Context, string) (APIToken, error)
 	GetUserByAPITokenHash(context.Context, string) (User, error)
 	DeleteAPIToken(context.Context, string, string) error
-	UpsertEvolutionModelConfig(context.Context, EvolutionModelConfig) (EvolutionModelConfig, error)
-	GetEvolutionModelConfigByOwner(context.Context, string) (EvolutionModelConfig, error)
-	DeleteEvolutionModelConfigByOwner(context.Context, string) error
+	UpsertAnalysisModelConfig(context.Context, AnalysisModelConfig) (AnalysisModelConfig, error)
+	GetAnalysisModelConfigByOwner(context.Context, string) (AnalysisModelConfig, error)
+	DeleteAnalysisModelConfigByOwner(context.Context, string) error
 	UpsertMemoryTask(context.Context, MemoryTaskRecord) error
 	GetMemoryTaskByOwner(context.Context, string, string) (MemoryTaskRecord, error)
 	ListMemoryTasksByOwner(context.Context, string, int) ([]MemoryTaskRecord, error)
@@ -93,335 +59,102 @@ type Store interface {
 	UpdateAgentProfile(context.Context, AgentProfile) (AgentProfile, error)
 	ListPublicAgentProfiles(context.Context, int) ([]ProfileRecord, error)
 	GetPublicAgentProfile(context.Context, string) (ProfileRecord, error)
-	InterruptActiveRuns(context.Context) (int64, error)
 	Ping(context.Context) error
 	Close()
 }
 
 type MemoryStore struct {
-	experiments           map[string]Experiment
-	mu                    sync.RWMutex
-	runs                  map[string]Run
-	events                map[string][]EngineEvent
-	users                 map[string]User
-	userByGitHubID        map[int64]string
-	sessions              map[string]Session
-	apiTokens             map[string]APIToken
-	registeredAgents      map[string]RegisteredAgent
-	profiles              map[string]AgentProfile
-	issues                map[string]Issue
-	cases                 map[string]Case
-	harnessVersions       map[string]HarnessVersion
-	evaluations           map[string]Evaluation
-	releases              map[string]Release
-	evolutionJobs         map[string]EvolutionJob
-	evolutionLeases       map[string]EvolutionLease
-	runBundles            map[string]RunBundle
-	conversationMessages  map[string]ConversationMessage
-	evolutionModelConfigs map[string]EvolutionModelConfig
-	memoryTasks           map[string]MemoryTaskRecord
+	mu                   sync.RWMutex
+	users                map[string]User
+	userByGitHubID       map[int64]string
+	sessions             map[string]Session
+	apiTokens            map[string]APIToken
+	registeredAgents     map[string]RegisteredAgent
+	profiles             map[string]AgentProfile
+	analysisJobs         map[string]AnalysisJob
+	analysisLeases       map[string]AnalysisLease
+	conversationMessages map[string]ConversationMessage
+	analysisModelConfigs map[string]AnalysisModelConfig
+	memoryTasks          map[string]MemoryTaskRecord
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		experiments:           make(map[string]Experiment),
-		runs:                  make(map[string]Run),
-		events:                make(map[string][]EngineEvent),
-		users:                 make(map[string]User),
-		userByGitHubID:        make(map[int64]string),
-		sessions:              make(map[string]Session),
-		apiTokens:             make(map[string]APIToken),
-		registeredAgents:      make(map[string]RegisteredAgent),
-		profiles:              make(map[string]AgentProfile),
-		issues:                make(map[string]Issue),
-		cases:                 make(map[string]Case),
-		harnessVersions:       make(map[string]HarnessVersion),
-		evaluations:           make(map[string]Evaluation),
-		releases:              make(map[string]Release),
-		evolutionJobs:         make(map[string]EvolutionJob),
-		evolutionLeases:       make(map[string]EvolutionLease),
-		runBundles:            make(map[string]RunBundle),
-		conversationMessages:  make(map[string]ConversationMessage),
-		evolutionModelConfigs: make(map[string]EvolutionModelConfig),
-		memoryTasks:           make(map[string]MemoryTaskRecord),
+		users:                make(map[string]User),
+		userByGitHubID:       make(map[int64]string),
+		sessions:             make(map[string]Session),
+		apiTokens:            make(map[string]APIToken),
+		registeredAgents:     make(map[string]RegisteredAgent),
+		profiles:             make(map[string]AgentProfile),
+		analysisJobs:         make(map[string]AnalysisJob),
+		analysisLeases:       make(map[string]AnalysisLease),
+		conversationMessages: make(map[string]ConversationMessage),
+		analysisModelConfigs: make(map[string]AnalysisModelConfig),
+		memoryTasks:          make(map[string]MemoryTaskRecord),
 	}
 }
 
-func (s *MemoryStore) UpsertEvolutionModelConfig(
+func (s *MemoryStore) UpsertAnalysisModelConfig(
 	_ context.Context,
-	config EvolutionModelConfig,
-) (EvolutionModelConfig, error) {
+	config AnalysisModelConfig,
+) (AnalysisModelConfig, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if strings.TrimSpace(config.OwnerUserID) == "" || config.EncryptedAPIKey == "" {
-		return EvolutionModelConfig{}, ErrConflict
+		return AnalysisModelConfig{}, ErrConflict
 	}
-	s.evolutionModelConfigs[config.OwnerUserID] = config
+	s.analysisModelConfigs[config.OwnerUserID] = config
 	return config, nil
 }
 
-func (s *MemoryStore) GetEvolutionModelConfigByOwner(
+func (s *MemoryStore) GetAnalysisModelConfigByOwner(
 	_ context.Context,
 	ownerUserID string,
-) (EvolutionModelConfig, error) {
+) (AnalysisModelConfig, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	config, ok := s.evolutionModelConfigs[ownerUserID]
+	config, ok := s.analysisModelConfigs[ownerUserID]
 	if !ok {
-		return EvolutionModelConfig{}, ErrNotFound
+		return AnalysisModelConfig{}, ErrNotFound
 	}
 	return config, nil
 }
 
-func (s *MemoryStore) DeleteEvolutionModelConfigByOwner(
+func (s *MemoryStore) DeleteAnalysisModelConfigByOwner(
 	_ context.Context,
 	ownerUserID string,
 ) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, ok := s.evolutionModelConfigs[ownerUserID]; !ok {
+	if _, ok := s.analysisModelConfigs[ownerUserID]; !ok {
 		return ErrNotFound
 	}
-	delete(s.evolutionModelConfigs, ownerUserID)
+	delete(s.analysisModelConfigs, ownerUserID)
 	return nil
 }
 
-func (s *MemoryStore) CreateRun(_ context.Context, run Run) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if _, exists := s.runs[run.ID]; exists {
-		return ErrConflict
-	}
-	if run.Origin == "" {
-		run.Origin = OriginLocal
-	}
-	s.runs[run.ID] = run
-	return nil
-}
-
-func (s *MemoryStore) AdoptScenarioRun(
+func (s *MemoryStore) CreateAnalysisJob(
 	_ context.Context,
-	run Run,
-	events []EngineEvent,
-) (Run, bool, error) {
+	job AnalysisJob,
+) (AnalysisJob, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if existing, exists := s.runs[run.ID]; exists {
-		if !sameAdoptedRun(existing, run) || !sameEventSlice(s.events[run.ID], events) {
-			return Run{}, false, ErrConflict
-		}
-		return existing, false, nil
+	if !validAnalysisJobSource(job) {
+		return AnalysisJob{}, false, ErrConflict
 	}
-	if run.Origin != OriginPlatform || !run.State.Terminal() || len(events) == 0 {
-		return Run{}, false, ErrConflict
-	}
-	for index, event := range events {
-		if event.Sequence != int64(index+1) || event.Validate(run) != nil {
-			return Run{}, false, ErrConflict
-		}
-	}
-	s.runs[run.ID] = run
-	s.events[run.ID] = append([]EngineEvent(nil), events...)
-	return run, true, nil
-}
 
-func (s *MemoryStore) CreateRunBundle(
-	_ context.Context,
-	bundle RunBundle,
-) (RunBundle, bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := validateStoredRunBundle(bundle); err != nil {
-		return RunBundle{}, false, err
-	}
-	for _, existing := range s.runBundles {
-		if existing.OwnerUserID == bundle.OwnerUserID &&
-			existing.IdempotencyKey == bundle.IdempotencyKey {
-			if existing.RequestFingerprint != bundle.RequestFingerprint {
-				return RunBundle{}, false, ErrConflict
-			}
-			return cloneRunBundle(existing), false, nil
-		}
-	}
-	if _, exists := s.runBundles[bundle.ID]; exists {
-		return RunBundle{}, false, ErrConflict
-	}
-	if _, exists := s.runs[bundle.Run.ID]; exists {
-		return RunBundle{}, false, ErrConflict
-	}
-	for _, existing := range s.runs {
-		if existing.RequestID == bundle.Run.RequestID {
-			return RunBundle{}, false, ErrConflict
-		}
-	}
-	for index, event := range bundle.Events {
-		if event.Sequence != int64(index+1) || event.Validate(bundle.Run) != nil {
-			return RunBundle{}, false, ErrConflict
-		}
-	}
-	s.runs[bundle.Run.ID] = bundle.Run
-	s.events[bundle.Run.ID] = append([]EngineEvent(nil), bundle.Events...)
-	s.runBundles[bundle.ID] = cloneRunBundle(bundle)
-	return cloneRunBundle(bundle), true, nil
-}
-
-func (s *MemoryStore) GetRunBundle(_ context.Context, id string) (RunBundle, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	bundle, exists := s.runBundles[id]
-	if !exists {
-		return RunBundle{}, ErrNotFound
-	}
-	return cloneRunBundle(bundle), nil
-}
-
-func (s *MemoryStore) GetRun(_ context.Context, id string) (Run, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	run, exists := s.runs[id]
-	if !exists {
-		return Run{}, ErrNotFound
-	}
-	return run, nil
-}
-
-func (s *MemoryStore) ListRuns(_ context.Context, limit int) ([]Run, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	runs := make([]Run, 0, len(s.runs))
-	for _, run := range s.runs {
-		runs = append(runs, run)
-	}
-	sort.Slice(runs, func(i, j int) bool {
-		return runs[i].CreatedAt.After(runs[j].CreatedAt)
-	})
-	if limit > 0 && len(runs) > limit {
-		runs = runs[:limit]
-	}
-	return runs, nil
-}
-
-func (s *MemoryStore) ListRunsByOwner(_ context.Context, ownerUserID string, limit int) ([]Run, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	runs := make([]Run, 0)
-	for _, run := range s.runs {
-		if run.OwnerUserID == ownerUserID {
-			runs = append(runs, run)
-		}
-	}
-	sort.Slice(runs, func(i, j int) bool {
-		return runs[i].CreatedAt.After(runs[j].CreatedAt)
-	})
-	if limit > 0 && len(runs) > limit {
-		runs = runs[:limit]
-	}
-	return runs, nil
-}
-
-func (s *MemoryStore) UpdateRun(_ context.Context, run Run) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if _, exists := s.runs[run.ID]; !exists {
-		return ErrNotFound
-	}
-	s.runs[run.ID] = run
-	return nil
-}
-
-func (s *MemoryStore) AppendEvent(_ context.Context, event EngineEvent) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	events := s.events[event.RunID]
-	for _, existing := range events {
-		if existing.EventID == event.EventID || existing.Sequence == event.Sequence {
-			if sameEvent(existing, event) {
-				return nil
-			}
-			return ErrConflict
-		}
-	}
-	if event.Sequence != int64(len(events)+1) {
-		return ErrConflict
-	}
-	s.events[event.RunID] = append(events, event)
-	return nil
-}
-
-func (s *MemoryStore) ListEventsAfter(_ context.Context, runID string, after int64, limit int) ([]EngineEvent, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if _, exists := s.runs[runID]; !exists {
-		return nil, ErrNotFound
-	}
-	result := make([]EngineEvent, 0)
-	for _, event := range s.events[runID] {
-		if event.Sequence > after {
-			result = append(result, event)
-			if limit > 0 && len(result) >= limit {
-				break
-			}
-		}
-	}
-	return result, nil
-}
-
-func (s *MemoryStore) RunHasTrace(_ context.Context, runID string, traceID string) (bool, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	run, exists := s.runs[runID]
-	if !exists {
-		return false, ErrNotFound
-	}
-	for _, event := range s.events[runID] {
-		if event.TraceID == traceID {
-			return true, nil
-		}
-	}
-	return runInputHasTrace(run.Input, traceID), nil
-}
-
-func (s *MemoryStore) CreateEvolutionJob(
-	_ context.Context,
-	job EvolutionJob,
-) (EvolutionJob, bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if !validEvolutionJobSource(job) {
-		return EvolutionJob{}, false, ErrConflict
-	}
-	if job.SourceRunID != "" {
-		run, exists := s.runs[job.SourceRunID]
-		if !exists {
-			return EvolutionJob{}, false, ErrNotFound
-		}
-		if run.OwnerUserID != job.OwnerUserID || !run.State.Terminal() {
-			return EvolutionJob{}, false, ErrConflict
-		}
-		traceFound := false
-		for _, event := range s.events[job.SourceRunID] {
-			if event.TraceID == job.SourceTraceID {
-				traceFound = true
-				break
-			}
-		}
-		traceFound = traceFound || runInputHasTrace(run.Input, job.SourceTraceID)
-		if !traceFound {
-			return EvolutionJob{}, false, ErrConflict
-		}
-	}
-	for _, existing := range s.evolutionJobs {
+	for _, existing := range s.analysisJobs {
 		if existing.OwnerUserID == job.OwnerUserID &&
-			evolutionJobSourceKey(existing) == evolutionJobSourceKey(job) &&
+			analysisJobSourceKey(existing) == analysisJobSourceKey(job) &&
 			existing.IdempotencyKey == job.IdempotencyKey {
 			if existing.RequestFingerprint != job.RequestFingerprint {
-				return EvolutionJob{}, false, ErrConflict
+				return AnalysisJob{}, false, ErrConflict
 			}
-			return cloneEvolutionJob(existing), false, nil
+			return cloneAnalysisJob(existing), false, nil
 		}
 	}
 	active, owned := 0, 0
-	for _, existing := range s.evolutionJobs {
+	for _, existing := range s.analysisJobs {
 		if !existing.State.Terminal() {
 			active++
 			if existing.OwnerUserID == job.OwnerUserID {
@@ -429,28 +162,27 @@ func (s *MemoryStore) CreateEvolutionJob(
 			}
 		}
 	}
-	if active >= evolutionQueueCapacity || owned >= evolutionOwnerQueueCapacity {
-		return EvolutionJob{}, false, ErrQueueFull
+	if active >= analysisQueueCapacity || owned >= analysisOwnerQueueCapacity {
+		return AnalysisJob{}, false, ErrQueueFull
 	}
-	if _, exists := s.evolutionJobs[job.ID]; exists {
-		return EvolutionJob{}, false, ErrConflict
+	if _, exists := s.analysisJobs[job.ID]; exists {
+		return AnalysisJob{}, false, ErrConflict
 	}
-	s.evolutionJobs[job.ID] = cloneEvolutionJob(job)
-	return cloneEvolutionJob(job), true, nil
+	s.analysisJobs[job.ID] = cloneAnalysisJob(job)
+	return cloneAnalysisJob(job), true, nil
 }
 
-func (s *MemoryStore) UpdateEvolutionJob(_ context.Context, job EvolutionJob) error {
+func (s *MemoryStore) UpdateAnalysisJob(_ context.Context, job AnalysisJob) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	existing, exists := s.evolutionJobs[job.ID]
+	existing, exists := s.analysisJobs[job.ID]
 	if !exists {
 		return ErrNotFound
 	}
-	if s.evolutionLeases[job.ID].Fence != 0 {
+	if s.analysisLeases[job.ID].Fence != 0 {
 		return ErrLeaseLost
 	}
 	if existing.OwnerUserID != job.OwnerUserID ||
-		existing.SourceRunID != job.SourceRunID ||
 		existing.SourceTraceID != job.SourceTraceID ||
 		existing.SourceAgentID != job.SourceAgentID ||
 		!equalStringSlices(existing.SourceTraceIDs, job.SourceTraceIDs) ||
@@ -458,29 +190,29 @@ func (s *MemoryStore) UpdateEvolutionJob(_ context.Context, job EvolutionJob) er
 		existing.RequestFingerprint != job.RequestFingerprint {
 		return ErrConflict
 	}
-	s.evolutionJobs[job.ID] = cloneEvolutionJob(job)
+	s.analysisJobs[job.ID] = cloneAnalysisJob(job)
 	return nil
 }
 
-func (s *MemoryStore) GetEvolutionJob(_ context.Context, id string) (EvolutionJob, error) {
+func (s *MemoryStore) GetAnalysisJob(_ context.Context, id string) (AnalysisJob, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	job, exists := s.evolutionJobs[id]
+	job, exists := s.analysisJobs[id]
 	if !exists {
-		return EvolutionJob{}, ErrNotFound
+		return AnalysisJob{}, ErrNotFound
 	}
-	return cloneEvolutionJob(job), nil
+	return cloneAnalysisJob(job), nil
 }
 
-func (s *MemoryStore) ListEvolutionJobs(
+func (s *MemoryStore) ListAnalysisJobs(
 	_ context.Context,
 	limit int,
-) ([]EvolutionJob, error) {
+) ([]AnalysisJob, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	result := make([]EvolutionJob, 0, len(s.evolutionJobs))
-	for _, job := range s.evolutionJobs {
-		result = append(result, cloneEvolutionJob(job))
+	result := make([]AnalysisJob, 0, len(s.analysisJobs))
+	for _, job := range s.analysisJobs {
+		result = append(result, cloneAnalysisJob(job))
 	}
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].CreatedAt.After(result[j].CreatedAt)
@@ -491,17 +223,17 @@ func (s *MemoryStore) ListEvolutionJobs(
 	return result, nil
 }
 
-func (s *MemoryStore) ListEvolutionJobsByOwner(
+func (s *MemoryStore) ListAnalysisJobsByOwner(
 	_ context.Context,
 	ownerUserID string,
 	limit int,
-) ([]EvolutionJob, error) {
+) ([]AnalysisJob, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	result := make([]EvolutionJob, 0)
-	for _, job := range s.evolutionJobs {
+	result := make([]AnalysisJob, 0)
+	for _, job := range s.analysisJobs {
 		if job.OwnerUserID == ownerUserID {
-			result = append(result, cloneEvolutionJob(job))
+			result = append(result, cloneAnalysisJob(job))
 		}
 	}
 	sort.Slice(result, func(i, j int) bool {
@@ -513,25 +245,25 @@ func (s *MemoryStore) ListEvolutionJobsByOwner(
 	return result, nil
 }
 
-func (s *MemoryStore) DeleteEvolutionJob(
+func (s *MemoryStore) DeleteAnalysisJob(
 	_ context.Context,
 	ownerUserID string,
 	id string,
 ) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	job, exists := s.evolutionJobs[id]
+	job, exists := s.analysisJobs[id]
 	if !exists || job.OwnerUserID != ownerUserID {
 		return ErrNotFound
 	}
 	if !job.State.Terminal() {
 		return ErrConflict
 	}
-	delete(s.evolutionJobs, id)
+	delete(s.analysisJobs, id)
 	return nil
 }
 
-func cloneEvolutionJob(input EvolutionJob) EvolutionJob {
+func cloneAnalysisJob(input AnalysisJob) AnalysisJob {
 	ownerUserID := input.OwnerUserID
 	idempotencyKey := input.IdempotencyKey
 	requestFingerprint := input.RequestFingerprint
@@ -539,7 +271,7 @@ func cloneEvolutionJob(input EvolutionJob) EvolutionJob {
 	if err != nil {
 		panic(err)
 	}
-	var output EvolutionJob
+	var output AnalysisJob
 	if err := json.Unmarshal(encoded, &output); err != nil {
 		panic(err)
 	}
@@ -547,414 +279,6 @@ func cloneEvolutionJob(input EvolutionJob) EvolutionJob {
 	output.IdempotencyKey = idempotencyKey
 	output.RequestFingerprint = requestFingerprint
 	return output
-}
-
-func (s *MemoryStore) CreateIssue(_ context.Context, issue Issue) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if _, exists := s.issues[issue.ID]; exists {
-		return ErrConflict
-	}
-	run, exists := s.runs[issue.SourceRunID]
-	if !exists {
-		return ErrNotFound
-	}
-	if run.OwnerUserID != issue.OwnerUserID {
-		return ErrConflict
-	}
-	s.issues[issue.ID] = issue
-	return nil
-}
-
-func (s *MemoryStore) GetIssue(_ context.Context, id string) (Issue, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	issue, exists := s.issues[id]
-	if !exists {
-		return Issue{}, ErrNotFound
-	}
-	return issue, nil
-}
-
-func (s *MemoryStore) ListIssues(_ context.Context, limit int) ([]Issue, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]Issue, 0, len(s.issues))
-	for _, issue := range s.issues {
-		result = append(result, issue)
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].CreatedAt.After(result[j].CreatedAt)
-	})
-	if limit > 0 && len(result) > limit {
-		result = result[:limit]
-	}
-	return result, nil
-}
-
-func (s *MemoryStore) ListIssuesByOwner(
-	_ context.Context,
-	ownerUserID string,
-	limit int,
-) ([]Issue, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]Issue, 0)
-	for _, issue := range s.issues {
-		if issue.OwnerUserID == ownerUserID {
-			result = append(result, issue)
-		}
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].CreatedAt.After(result[j].CreatedAt)
-	})
-	if limit > 0 && len(result) > limit {
-		result = result[:limit]
-	}
-	return result, nil
-}
-
-func (s *MemoryStore) PromoteIssue(
-	_ context.Context,
-	issueID string,
-	promoted Case,
-	updatedAt time.Time,
-) (Case, bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	issue, exists := s.issues[issueID]
-	if !exists {
-		return Case{}, false, ErrNotFound
-	}
-	if issue.Status == IssuePromoted {
-		existing, ok := s.cases[issue.PromotedCaseID]
-		if !ok {
-			return Case{}, false, ErrConflict
-		}
-		return existing, false, nil
-	}
-	if issue.Status != IssueOpen ||
-		promoted.SourceIssueID != issue.ID ||
-		promoted.SourceRunID != issue.SourceRunID ||
-		promoted.SourceTraceID != issue.SourceTraceID ||
-		promoted.OwnerUserID != issue.OwnerUserID {
-		return Case{}, false, ErrConflict
-	}
-	if _, exists := s.cases[promoted.ID]; exists {
-		return Case{}, false, ErrConflict
-	}
-	s.cases[promoted.ID] = promoted
-	issue.Status = IssuePromoted
-	issue.PromotedCaseID = promoted.ID
-	issue.UpdatedAt = updatedAt
-	s.issues[issue.ID] = issue
-	return promoted, true, nil
-}
-
-func (s *MemoryStore) GetCase(_ context.Context, id string) (Case, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	value, exists := s.cases[id]
-	if !exists {
-		return Case{}, ErrNotFound
-	}
-	return value, nil
-}
-
-func (s *MemoryStore) ListCases(_ context.Context, limit int) ([]Case, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]Case, 0, len(s.cases))
-	for _, value := range s.cases {
-		result = append(result, value)
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].CreatedAt.After(result[j].CreatedAt)
-	})
-	if limit > 0 && len(result) > limit {
-		result = result[:limit]
-	}
-	return result, nil
-}
-
-func (s *MemoryStore) ListCasesByOwner(
-	_ context.Context,
-	ownerUserID string,
-	limit int,
-) ([]Case, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]Case, 0)
-	for _, value := range s.cases {
-		if value.OwnerUserID == ownerUserID {
-			result = append(result, value)
-		}
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].CreatedAt.After(result[j].CreatedAt)
-	})
-	if limit > 0 && len(result) > limit {
-		result = result[:limit]
-	}
-	return result, nil
-}
-
-func (s *MemoryStore) CreateReplay(
-	_ context.Context,
-	run Run,
-	harness HarnessVersion,
-) (Run, HarnessVersion, bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	sourceCase, exists := s.cases[harness.CaseID]
-	if !exists {
-		return Run{}, HarnessVersion{}, false, ErrNotFound
-	}
-	if run.OwnerUserID != sourceCase.OwnerUserID ||
-		harness.OwnerUserID != sourceCase.OwnerUserID ||
-		harness.RunID != run.ID ||
-		harness.SourceRunID != sourceCase.SourceRunID ||
-		harness.SourceTraceID != sourceCase.SourceTraceID ||
-		!jsonEquivalent(run.Runtime, sourceCase.Runtime) ||
-		!jsonEquivalent(harness.Runtime, sourceCase.Runtime) ||
-		run.Operation != OperationReplay ||
-		run.Origin != OriginLocal ||
-		harness.IdempotencyKey == "" {
-		return Run{}, HarnessVersion{}, false, ErrConflict
-	}
-	for _, existing := range s.harnessVersions {
-		if existing.OwnerUserID == harness.OwnerUserID &&
-			existing.CaseID == harness.CaseID &&
-			existing.IdempotencyKey == harness.IdempotencyKey {
-			existingRun, ok := s.runs[existing.RunID]
-			if !ok {
-				return Run{}, HarnessVersion{}, false, ErrConflict
-			}
-			return existingRun, existing, false, nil
-		}
-	}
-	if _, exists := s.runs[run.ID]; exists {
-		return Run{}, HarnessVersion{}, false, ErrConflict
-	}
-	if _, exists := s.harnessVersions[harness.ID]; exists {
-		return Run{}, HarnessVersion{}, false, ErrConflict
-	}
-	s.runs[run.ID] = run
-	s.harnessVersions[harness.ID] = harness
-	return run, harness, true, nil
-}
-
-func (s *MemoryStore) GetHarnessVersionByRun(
-	_ context.Context,
-	runID string,
-) (HarnessVersion, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for _, value := range s.harnessVersions {
-		if value.RunID == runID {
-			return value, nil
-		}
-	}
-	return HarnessVersion{}, ErrNotFound
-}
-
-func (s *MemoryStore) FinalizeReplay(
-	_ context.Context,
-	runID string,
-	fact ReplayFact,
-	now time.Time,
-) (Evaluation, Release, bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, existing := range s.evaluations {
-		if existing.RunID == runID {
-			for _, release := range s.releases {
-				if release.EvaluationID == existing.ID {
-					if !replayRecordsMatchFact(existing, release, fact) {
-						return Evaluation{}, Release{}, false, ErrConflict
-					}
-					return existing, release, false, nil
-				}
-			}
-			return Evaluation{}, Release{}, false, ErrConflict
-		}
-	}
-	run, exists := s.runs[runID]
-	if !exists {
-		return Evaluation{}, Release{}, false, ErrNotFound
-	}
-	if run.Operation != OperationReplay ||
-		run.Origin != OriginLocal ||
-		(run.State != StateQueued && run.State != StateRunning) ||
-		!validReplayFact(fact) {
-		return Evaluation{}, Release{}, false, ErrConflict
-	}
-	var harness HarnessVersion
-	for _, value := range s.harnessVersions {
-		if value.RunID == runID {
-			harness = value
-			break
-		}
-	}
-	if harness.ID == "" {
-		return Evaluation{}, Release{}, false, ErrNotFound
-	}
-	sourceCase, exists := s.cases[harness.CaseID]
-	if !exists {
-		return Evaluation{}, Release{}, false, ErrConflict
-	}
-	events := s.events[runID]
-	if len(events) == 0 {
-		return Evaluation{}, Release{}, false, ErrConflict
-	}
-	terminal := events[len(events)-1]
-	if terminal.EventID != fact.TerminalEventID ||
-		terminal.Kind != "terminal" ||
-		terminal.Phase != "complete" ||
-		terminal.Actor != "engine" ||
-		!validOTelTraceID(terminal.TraceID) ||
-		terminal.TraceID != fact.ReplayTraceID ||
-		!replayEventMatchesFact(terminal, fact) ||
-		run.OwnerUserID != harness.OwnerUserID ||
-		sourceCase.OwnerUserID != harness.OwnerUserID ||
-		sourceCase.SourceRunID != harness.SourceRunID ||
-		sourceCase.SourceTraceID != harness.SourceTraceID {
-		return Evaluation{}, Release{}, false, ErrConflict
-	}
-	evaluation := Evaluation{
-		ID:               "evaluation-" + runID,
-		OwnerUserID:      harness.OwnerUserID,
-		HarnessVersionID: harness.ID,
-		CaseID:           harness.CaseID,
-		RunID:            runID,
-		SourceRunID:      harness.SourceRunID,
-		SourceTraceID:    harness.SourceTraceID,
-		ReplayTraceID:    fact.ReplayTraceID,
-		TerminalEventID:  fact.TerminalEventID,
-		PackageStatus:    fact.PackageStatus,
-		ResultStatus:     fact.ResultStatus,
-		Decision:         fact.Decision,
-		Summary:          fact.Summary,
-		ResultRef:        fact.ResultRef,
-		CreatedAt:        now,
-	}
-	release := Release{
-		ID:               "release-" + runID,
-		OwnerUserID:      harness.OwnerUserID,
-		HarnessVersionID: harness.ID,
-		EvaluationID:     evaluation.ID,
-		CaseID:           harness.CaseID,
-		RunID:            runID,
-		SourceRunID:      harness.SourceRunID,
-		SourceTraceID:    harness.SourceTraceID,
-		ReplayTraceID:    fact.ReplayTraceID,
-		TerminalEventID:  fact.TerminalEventID,
-		Decision:         fact.Decision,
-		Summary:          fact.Summary,
-		CreatedAt:        now,
-	}
-	s.evaluations[evaluation.ID] = evaluation
-	s.releases[release.ID] = release
-	run.State = StateCompleted
-	run.CurrentPhase = "complete"
-	run.CurrentActor = "engine"
-	run.UpdatedAt = now
-	s.runs[run.ID] = run
-	return evaluation, release, true, nil
-}
-
-func (s *MemoryStore) GetEvaluation(_ context.Context, id string) (Evaluation, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	value, exists := s.evaluations[id]
-	if !exists {
-		return Evaluation{}, ErrNotFound
-	}
-	return value, nil
-}
-
-func (s *MemoryStore) ListEvaluations(_ context.Context, limit int) ([]Evaluation, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]Evaluation, 0, len(s.evaluations))
-	for _, value := range s.evaluations {
-		result = append(result, value)
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].CreatedAt.After(result[j].CreatedAt)
-	})
-	if limit > 0 && len(result) > limit {
-		result = result[:limit]
-	}
-	return result, nil
-}
-
-func (s *MemoryStore) ListEvaluationsByOwner(
-	_ context.Context,
-	ownerUserID string,
-	limit int,
-) ([]Evaluation, error) {
-	values, err := s.ListEvaluations(context.Background(), 0)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]Evaluation, 0)
-	for _, value := range values {
-		if value.OwnerUserID == ownerUserID {
-			result = append(result, value)
-		}
-	}
-	if limit > 0 && len(result) > limit {
-		result = result[:limit]
-	}
-	return result, nil
-}
-
-func (s *MemoryStore) GetRelease(_ context.Context, id string) (Release, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	value, exists := s.releases[id]
-	if !exists {
-		return Release{}, ErrNotFound
-	}
-	return value, nil
-}
-
-func (s *MemoryStore) ListReleases(_ context.Context, limit int) ([]Release, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]Release, 0, len(s.releases))
-	for _, value := range s.releases {
-		result = append(result, value)
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].CreatedAt.After(result[j].CreatedAt)
-	})
-	if limit > 0 && len(result) > limit {
-		result = result[:limit]
-	}
-	return result, nil
-}
-
-func (s *MemoryStore) ListReleasesByOwner(
-	_ context.Context,
-	ownerUserID string,
-	limit int,
-) ([]Release, error) {
-	values, err := s.ListReleases(context.Background(), 0)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]Release, 0)
-	for _, value := range values {
-		if value.OwnerUserID == ownerUserID {
-			result = append(result, value)
-		}
-	}
-	if limit > 0 && len(result) > limit {
-		result = result[:limit]
-	}
-	return result, nil
 }
 
 func (s *MemoryStore) UpsertUser(_ context.Context, user User) (User, error) {
@@ -1262,126 +586,5 @@ func (s *MemoryStore) GetPublicAgentProfile(_ context.Context, slug string) (Pro
 	return ProfileRecord{}, ErrNotFound
 }
 
-func (s *MemoryStore) InterruptActiveRuns(_ context.Context) (int64, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var count int64
-	for id, run := range s.runs {
-		if run.State == StateQueued || run.State == StateRunning {
-			run.State = StateInterrupted
-			run.UpdatedAt = time.Now().UTC()
-			s.runs[id] = run
-			count++
-		}
-	}
-	return count, nil
-}
-
 func (s *MemoryStore) Ping(context.Context) error { return nil }
 func (s *MemoryStore) Close()                     {}
-
-func sameEvent(left, right EngineEvent) bool {
-	return left.Schema == right.Schema &&
-		left.EventID == right.EventID &&
-		left.RunID == right.RunID &&
-		left.Sequence == right.Sequence &&
-		left.Timestamp.Equal(right.Timestamp) &&
-		left.Operation == right.Operation &&
-		left.Kind == right.Kind &&
-		left.Phase == right.Phase &&
-		left.Actor == right.Actor &&
-		left.AttemptID == right.AttemptID &&
-		left.TraceID == right.TraceID &&
-		bytes.Equal(left.Payload, right.Payload)
-}
-
-func sameEventSlice(left, right []EngineEvent) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	for index := range left {
-		if !sameEvent(left[index], right[index]) {
-			return false
-		}
-	}
-	return true
-}
-
-func sameAdoptedRun(left, right Run) bool {
-	return left.ID == right.ID &&
-		left.RequestID == right.RequestID &&
-		left.OwnerUserID == right.OwnerUserID &&
-		left.Origin == right.Origin &&
-		left.Operation == right.Operation &&
-		left.State == right.State &&
-		left.CurrentPhase == right.CurrentPhase &&
-		left.CurrentActor == right.CurrentActor &&
-		jsonEquivalent(left.Input, right.Input) &&
-		jsonEquivalent(left.Runtime, right.Runtime) &&
-		left.CancelRequested == right.CancelRequested &&
-		left.Error == right.Error &&
-		left.CreatedAt.Equal(right.CreatedAt) &&
-		left.UpdatedAt.Equal(right.UpdatedAt)
-}
-
-func replayRecordsMatchFact(
-	evaluation Evaluation,
-	release Release,
-	fact ReplayFact,
-) bool {
-	return evaluation.TerminalEventID == fact.TerminalEventID &&
-		evaluation.ReplayTraceID == fact.ReplayTraceID &&
-		evaluation.PackageStatus == fact.PackageStatus &&
-		evaluation.ResultStatus == fact.ResultStatus &&
-		evaluation.Decision == fact.Decision &&
-		evaluation.Summary == fact.Summary &&
-		evaluation.ResultRef == fact.ResultRef &&
-		release.TerminalEventID == fact.TerminalEventID &&
-		release.ReplayTraceID == fact.ReplayTraceID &&
-		release.Decision == fact.Decision &&
-		release.Summary == fact.Summary
-}
-
-func replayEventMatchesFact(event EngineEvent, fact ReplayFact) bool {
-	var payload struct {
-		Status       string          `json:"status"`
-		ResultStatus string          `json:"result_status"`
-		Decision     ReleaseDecision `json:"decision"`
-		Summary      string          `json:"summary"`
-		ResultRef    string          `json:"result_ref"`
-	}
-	if json.Unmarshal(event.Payload, &payload) != nil {
-		return false
-	}
-	return payload.Status == fact.PackageStatus &&
-		payload.ResultStatus == fact.ResultStatus &&
-		payload.Decision == fact.Decision &&
-		payload.Summary == fact.Summary &&
-		payload.ResultRef == fact.ResultRef
-}
-
-func validReplayFact(fact ReplayFact) bool {
-	return fact.TerminalEventID != "" &&
-		validOTelTraceID(fact.ReplayTraceID) &&
-		fact.PackageStatus == "complete" &&
-		strings.TrimSpace(fact.ResultStatus) != "" &&
-		len(fact.ResultStatus) <= 128 &&
-		fact.Decision.Valid() &&
-		strings.TrimSpace(fact.Summary) != "" &&
-		len(fact.Summary) <= 12000 &&
-		fact.ResultRef != ""
-}
-
-func jsonEquivalent(left, right json.RawMessage) bool {
-	if len(left) == 0 {
-		left = json.RawMessage(`{}`)
-	}
-	if len(right) == 0 {
-		right = json.RawMessage(`{}`)
-	}
-	var leftValue any
-	var rightValue any
-	return json.Unmarshal(left, &leftValue) == nil &&
-		json.Unmarshal(right, &rightValue) == nil &&
-		reflect.DeepEqual(leftValue, rightValue)
-}
