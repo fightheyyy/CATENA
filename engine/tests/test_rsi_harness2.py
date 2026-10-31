@@ -113,11 +113,13 @@ def test_private_http_runs_registered_algorithm_and_persists_private_report(monk
     request["algorithms"] = [{"name": "harness2", "options": {"k": 1}}]
     request["validation_case_ids"] = ["heldout"]
     request["model"]["api_key"] = "APIKEY_DO_NOT_PERSIST"
-    server = create_server("127.0.0.1:0", token="private")
+    server = create_server("127.0.0.1:0", token="private", receipt_root=tmp_path / "receipts")
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
-        status, result = call(f"http://127.0.0.1:{server.server_port}/v1/rsi/optimize", request, "private")
-        assert status == 200 and result["status"] == "completed"
+        status, result = call(f"http://127.0.0.1:{server.server_port}/v2/rsi", request, "private")
+        assert status == 200 and result["state"] == "completed"
+        result = result["output"]
+        assert result["status"] == "completed"
         assert result["decision"] == "review_required"
         assert result["usage"]["model_calls"] == 4
         assert result["usage"]["attempted_trials"] == 6

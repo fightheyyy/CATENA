@@ -1,174 +1,136 @@
-"""Private HTTP surface for the control plane. Never expose it publicly."""
-
+"""Private pipeline transport. Identity is supplied only by authenticated Go."""
 from __future__ import annotations
 
-import asyncio
 import hmac
 import json
-import logging
 import os
-import shutil
 import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Callable
 
-from .protocol import InvalidRequest, error_response, manifest, parse_turn_request, turn_response
-from .runtime import ModelFactory, openai_compatible_model, run_turn
+from .executions import Executions
+from .rsi.contracts import OptimizationError
 
 MAX_BODY_BYTES = 2 * 1024 * 1024
-DEFAULT_ADDR = "127.0.0.1:8790"
-
-log = logging.getLogger("catena_engine")
 
 
-def create_server(
-    address: str, token: str = "", model_factory: ModelFactory | None = None,
-    rsi_handler: Callable[[dict], dict] | None = None,
-) -> ThreadingHTTPServer:
+def create_server(address, token="", rsi_handler=None, receipt_root=None):
     host, _, port = address.rpartition(":")
-    max_turns = int(os.environ.get("CATENA_ENGINE_MAX_CONCURRENT_TURNS", "1"))
-    if not 1 <= max_turns <= 8:
-        raise ValueError("CATENA_ENGINE_MAX_CONCURRENT_TURNS must be from 1 to 8")
-    turn_slots = threading.BoundedSemaphore(max_turns)
+    slots = threading.BoundedSemaphore(1)
+    executions = Executions(receipt_root or os.environ.get("CATENA_ENGINE_EXECUTIONS_ROOT", ".local/executions"))
 
     class Handler(BaseHTTPRequestHandler):
-        server_version = "catena-engine"
-        sys_version = ""
+        def _json(self, status, body):
+            data = json.dumps(body, ensure_ascii=False).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(data)
 
-        def do_GET(self) -> None:
-            if self.path == "/healthz":
-                self._json(HTTPStatus.OK, {"status": "ready", "service": "catena-engine"})
-            elif self.path == "/readyz":
-                state = self._manifest()
-                self._json(HTTPStatus.OK if state["status"] == "ready" else HTTPStatus.SERVICE_UNAVAILABLE,
-                           {"status": state["status"], "service": "catena-engine"})
-            elif self.path == "/v1/manifest":
-                if self._authorized():
-                    self._json(HTTPStatus.OK, self._manifest())
-            elif self.path == "/v1/rsi/adapters":
-                if self._authorized():
-                    from .rsi.registry import default_registry
+        def _authorized(self):
+            supplied = self.headers.get("Authorization", "")
+            if not token or not hmac.compare_digest(supplied.encode(), ("Bearer " + token).encode()):
+                self._json(401, {"error": "private service authentication required"})
+                return False
+            return True
 
-                    self._json(HTTPStatus.OK, {"schema": "catena.rsi_adapters.v1",
-                                               "adapters": default_registry().describe()})
-            else:
-                self._json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+        def _owner(self):
+            owner = self.headers.get("X-Catena-Owner", "")
+            if not owner or len(owner) > 128:
+                raise OptimizationError("authenticated owner context is required")
+            return owner
 
-        def do_POST(self) -> None:
-            if self.path not in ("/v1/turn", "/v1/experiment", "/v1/harbor/submit", "/v1/harbor/status", "/v1/harbor/lookup", "/v1/harbor/evidence", "/v1/rsi/optimize"):
-                self._json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+        def do_GET(self):
+            if self.path in ("/healthz", "/readyz"):
+                self._json(200, {"status": "ready", "service": "catena-engine"})
                 return
             if not self._authorized():
                 return
-            payload = self._read_json()
-            if payload is None:
-                return
-            if self.path == "/v1/rsi/optimize":
-                from .rsi.api import run_payload
-                from .rsi.contracts import OptimizationError
-
-                if not turn_slots.acquire(blocking=False):
-                    self._json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "analysis capacity is full"})
-                    return
-                try:
-                    self._json(HTTPStatus.OK, (rsi_handler or run_payload)(payload))
-                except OptimizationError as error:
-                    self._json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
-                except Exception:
-                    self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "RSI operation failed"})
-                finally:
-                    turn_slots.release()
-                return
-            if self.path.startswith("/v1/harbor/"):
-                from .harbor_bridge import harbor_request
-
-                status, result = asyncio.run(harbor_request(self.path, payload))
-                self._json(status, result)
-                return
-            request_id = payload.get("request_id") if isinstance(payload.get("request_id"), str) else ""
             try:
-                request = parse_turn_request(payload)
-            except InvalidRequest as error:
-                self._json(HTTPStatus.BAD_REQUEST, error_response(request_id[:128], "invalid_request", str(error)))
+                if self.path == "/v2/manifest":
+                    self._json(200, {"schema": "catena.engine_manifest.v2", "status": "ready",
+                                     "pipelines": ["rsi", "memory"]})
+                elif self.path == "/v2/rsi/adapters":
+                    from .rsi.registry import default_registry
+                    self._json(200, {"adapters": default_registry().describe()})
+                elif self.path == "/v2/cases":
+                    path = os.environ.get("CATENA_RSI_CASES_MANIFEST")
+                    cases = json.loads(open(path).read()) if path else {}
+                    self._json(200, {"cases": [{"id": key} for key in cases]})
+                elif self.path.startswith("/v2/executions/"):
+                    status, result = executions.lookup(self._owner(), self.path.rsplit("/", 1)[1])
+                    self._json(status, result)
+                else:
+                    self._json(404, {"error": "endpoint retired or unknown"})
+            except (OptimizationError, ValueError):
+                self._json(400, {"error": "invalid private request"})
+            except Exception:
+                self._json(503, {"error": "pipeline configuration unavailable"})
+
+        def do_DELETE(self):
+            if not self._authorized():
                 return
-            if self.path == "/v1/experiment":
-                from .experiment_runtime import run_experiment_turn
-
-                result = asyncio.run(run_experiment_turn(request, model_factory or openai_compatible_model, payload.get("environment"), payload.get("target_agent", "sdk")))
-            else:
-                if not turn_slots.acquire(blocking=False):
-                    self._json(HTTPStatus.TOO_MANY_REQUESTS,
-                               error_response(request.request_id, "runtime_busy", "analysis capacity is full; retry later"))
-                    return
-                try:
-                    result = asyncio.run(run_turn(request, model_factory))
-                finally:
-                    turn_slots.release()
-            log.info("turn role=%s run=%s status=%s", request.role, request.run_id, result["status"])
-            self._json(HTTPStatus.OK, turn_response(request.request_id, result))
-
-        def _manifest(self) -> dict[str, Any]:
-            backend = os.environ.get("CATENA_ENGINE_BACKEND", "codex")
-            if model_factory is None:
-                if backend not in ("codex", "sdk"):
-                    return manifest("blocked", "runtime_config", "CATENA_ENGINE_BACKEND must be codex or sdk")
-                if backend == "codex" and shutil.which(os.environ.get("CATENA_CODEX_BIN", "codex")) is None:
-                    return manifest("blocked", "runtime_unavailable", "Codex CLI is not installed")
-            return manifest()
-
-        def _authorized(self) -> bool:
-            if not token:
-                return True
-            supplied = self.headers.get("Authorization", "")
-            if hmac.compare_digest(supplied.encode(), f"Bearer {token}".encode()):
-                return True
-            self._json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"})
-            return False
-
-        def _read_json(self) -> dict[str, Any] | None:
             try:
+                if self.path.startswith("/v2/executions/"):
+                    status, result = executions.cancel(self._owner(), self.path.rsplit("/", 1)[1])
+                    self._json(status, result)
+                else:
+                    self._json(404, {"error": "unknown execution"})
+            except OptimizationError:
+                self._json(400, {"error": "invalid execution identity"})
+
+        def do_POST(self):
+            if not self._authorized():
+                return
+            try:
+                owner = self._owner()
                 length = int(self.headers.get("Content-Length", "0"))
-            except ValueError:
-                length = -1
-            if not 0 < length <= MAX_BODY_BYTES:
-                self._json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "body must be from 1 byte to 2 MiB"})
-                return None
-            try:
+                if not 0 < length <= MAX_BODY_BYTES:
+                    raise OptimizationError("invalid body size")
                 payload = json.loads(self.rfile.read(length))
-            except (json.JSONDecodeError, UnicodeDecodeError):
-                payload = None
-            if not isinstance(payload, dict):
-                self._json(HTTPStatus.BAD_REQUEST, {"error": "body must be a JSON object"})
-                return None
-            return payload
+                if not isinstance(payload, dict):
+                    raise OptimizationError("request must be an object")
+                if self.path == "/v2/rsi":
+                    from .rsi.api import run_payload
+                    cached = executions.replay(owner, payload)
+                    if cached is not None:
+                        self._json(*cached)
+                        return
+                    if not slots.acquire(blocking=False):
+                        self._json(429, {"error": "analysis capacity is full"})
+                        return
+                    try:
+                        status, result = executions.execute(owner, payload,
+                            lambda event: rsi_handler(payload, event) if rsi_handler else run_payload(payload, event))
+                        self._json(status, result)
+                    finally:
+                        slots.release()
+                elif self.path.startswith("/v2/memory/"):
+                    from .memory.api import memory_request
+                    result = memory_request(owner, self.path.rsplit("/", 1)[1], payload, executions)
+                    self._json(200, result)
+                else:
+                    self._json(404, {"error": "endpoint retired or unknown"})
+            except (OptimizationError, ValueError, TypeError):
+                self._json(400, {"error": "invalid pipeline request"})
+            except Exception:
+                self._json(503, {"error": "pipeline unavailable"})
 
-        def _json(self, status: HTTPStatus, body: dict[str, Any]) -> None:
-            encoded = json.dumps(body, ensure_ascii=False).encode()
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(encoded)))
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            self.wfile.write(encoded)
-
-        def log_message(self, format: str, *args: Any) -> None:
-            log.debug(format, *args)
+        def log_message(self, *_):
+            pass
 
     server = ThreadingHTTPServer((host or "127.0.0.1", int(port)), Handler)
-    server.daemon_threads = True
+    server.executions = executions
     return server
 
 
-def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    address = os.environ.get("CATENA_ENGINE_ADDR", DEFAULT_ADDR)
-    server = create_server(address, os.environ.get("CATENA_ENGINE_TOKEN", ""))
-    log.info("catena-engine listening on %s", address)
+def main():
+    server = create_server(os.environ.get("CATENA_ENGINE_ADDR", "0.0.0.0:8790"),
+                           os.environ.get("CATENA_ENGINE_TOKEN", ""))
     try:
         server.serve_forever()
-    except KeyboardInterrupt:
-        pass
     finally:
         server.server_close()
 

@@ -81,6 +81,10 @@ export function AgentEvolutionLauncher({
     agents.some((agent) => agent.agent_id === initialAgentID) ? initialAgentID ?? "" : firstAgentID,
   );
   const [preset, setPreset] = useState<EvolutionWindowPreset>("7d");
+  const [pipeline, setPipeline] = useState<"rsi" | "memory">("rsi");
+  const [caseID, setCaseID] = useState("");
+  const [cases, setCases] = useState<string[]>([]);
+  useEffect(() => { void fetch("/v1/evaluation-cases", { credentials: "include" }).then(r => r.ok ? r.json() : { cases: [] }).then(r => setCases((r.cases ?? []).map((c: {id: string}) => c.id))).catch(() => setCases([])); }, []);
   const [objective, setObjective] = useState(initialObjective);
   const [preview, setPreview] = useState<AgentTraceWindow | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -148,10 +152,11 @@ export function AgentEvolutionLauncher({
       {agents.length === 0 ? <p className="quiet-empty">{t.noAgents}</p> : (
         <form onSubmit={async (event) => {
           event.preventDefault();
-          if (!canStart || !preview) return;
+          if (!canStart || !preview || (pipeline === "rsi" && !caseID)) return;
           setSubmitting(true);
           setSubmitError("");
           const input = {
+            pipeline, options: pipeline === "rsi" ? { case_id: caseID } : {},
             window_start: preview.window_start,
             window_end: preview.window_end,
             output_language: locale === "zh" ? "zh-CN" as const : "en" as const,
@@ -170,6 +175,8 @@ export function AgentEvolutionLauncher({
           }
         }}>
           <div className="launcher-form-grid">
+            <label>Pipeline<select value={pipeline} onChange={e => setPipeline(e.target.value as "rsi" | "memory")}><option value="rsi">RSI / Harness²</option><option value="memory">Engineering Memory</option></select></label>
+            {pipeline === "rsi" && <label>Evaluation Case<select value={caseID} onChange={e => setCaseID(e.target.value)}><option value="">Select a registered Harbor case</option>{cases.map(id => <option key={id}>{id}</option>)}</select></label>}
             <label><span>{t.agent}</span><select value={agentID} onChange={(event) => setAgentID(event.target.value)} aria-label={t.chooseAgent}>
               {agents.map((agent) => <option value={agent.agent_id} key={agent.agent_id}>{agent.display_name}</option>)}
             </select></label>
@@ -197,7 +204,7 @@ export function AgentEvolutionLauncher({
               {submitError ? <p className="inline-note error" role="alert">{submitError}</p> : null}
             </div>
             {previewError ? <button className="text-button" type="button" onClick={() => setRefreshVersion((value) => value + 1)}>{t.retry}</button> : null}
-            <button className="primary-button compact" type="submit" disabled={!canStart}>{submitting ? t.starting : `${t.start}${selectedAgent ? ` ${selectedAgent.display_name}` : ""}`}</button>
+            <button className="primary-button compact" type="submit" disabled={!canStart || (pipeline === "rsi" && !caseID)}>{submitting ? t.starting : `${t.start}${selectedAgent ? ` ${selectedAgent.display_name}` : ""}`}</button>
           </div>
         </form>
       )}

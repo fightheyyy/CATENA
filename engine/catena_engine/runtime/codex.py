@@ -12,58 +12,17 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .protocol import TurnRequest
-from .roles import ROLES
-from .runtime import _elapsed_ms, _failed
+from ..protocol import JsonRequest
+
 
 # Bound CLI diagnostics as well as the assistant output below the Go HTTP limit.
 _MAX_STREAM_BYTES = 4 * 1024 * 1024
 _MAX_OUTPUT_BYTES = 128 * 1024
 
 
-def _output_schema(role: str) -> dict[str, Any]:
-    # Transport shapes only. Catena's Go prompts and validators continue to own
-    # semantic constraints (including portable and DSH asset contracts).
-    string = {"type": "string"}
-
-    def obj(properties):
-        return {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}
-
-    if role == "inspector":
-        return obj(
-            {
-                "finding": obj(
-                    {
-                        "title": string,
-                        "summary": string,
-                        "severity": string,
-                        "evidence": {"type": "array", "items": string},
-                    }
-                )
-            }
-        )
-    if role == "evolution":
-        return obj(
-            {
-                "candidate": obj(
-                    {
-                        "kind": string,
-                        "title": string,
-                        "summary": string,
-                        "content": obj(
-                            {
-                                "root": string,
-                                "files": {"type": "array", "items": obj({"path": string, "content": string})},
-                            }
-                        ),
-                    }
-                )
-            }
-        )
-    return obj({"review": obj({"verdict": string, "summary": string})})
 
 
-def _config(request: TurnRequest, instructions: str | None = None) -> str:
+def _config(request: JsonRequest, instructions: str) -> str:
     # JSON strings are TOML basic strings for these validated text values.
     def q(value):
         return json.dumps(value, ensure_ascii=False)
@@ -71,7 +30,7 @@ def _config(request: TurnRequest, instructions: str | None = None) -> str:
     return f"""model = {q(request.model.model)}
 model_provider = "catena"
 model_reasoning_effort = {q(os.environ.get("CATENA_CODEX_REASONING_EFFORT", "low"))}
-developer_instructions = {q(instructions if instructions is not None else ROLES[request.role].instructions)}
+developer_instructions = {q(instructions)}
 approval_policy = "never"
 sandbox_mode = "read-only"
 project_doc_max_bytes = 0
@@ -157,17 +116,13 @@ def _events(raw: bytes) -> tuple[dict[str, int], bool]:
     return usage, failed
 
 
-async def run_codex_turn(request: TurnRequest) -> dict[str, Any]:
-    return await _run_codex(request)
-
-
-async def run_codex_json(request: TurnRequest, instructions: str, output_schema: dict) -> dict[str, Any]:
+async def run_codex_json(request: JsonRequest, instructions: str, output_schema: dict) -> dict[str, Any]:
     """Reuse the isolated CLI transport for host-owned structured operations."""
     return await _run_codex(request, instructions=instructions, output_schema=output_schema)
 
 
 async def _run_codex(
-    request: TurnRequest, *, instructions: str | None = None, output_schema: dict | None = None
+    request: JsonRequest, *, instructions: str, output_schema: dict
 ) -> dict[str, Any]:
     started = time.monotonic()
     binary = shutil.which(os.environ.get("CATENA_CODEX_BIN", "codex"))
@@ -183,7 +138,7 @@ async def _run_codex(
                 path.mkdir(mode=0o700)
             (codex_home / "config.toml").write_text(_config(request, instructions), encoding="utf-8")
             schema, output = root / "schema.json", root / "answer.json"
-            schema.write_text(json.dumps(output_schema if output_schema is not None else _output_schema(request.role)), encoding="utf-8")
+            schema.write_text(json.dumps(output_schema), encoding="utf-8")
             # Do not inherit personal auth, config, proxies, plugins, or MCP.
             # The key is passed only to the selected provider, never argv/config.
             env = {
@@ -273,9 +228,6 @@ async def _run_codex(
                 parsed = json.loads(content)
                 if not isinstance(parsed, dict):
                     raise ValueError("invalid JSON output")
-                key = {"inspector": "finding", "evolution": "candidate", "reviewer": "review"}[request.role]
-                if output_schema is None and not isinstance(parsed.get(key), dict):
-                    raise ValueError("invalid role output envelope")
                 return {
                     "status": "completed",
                     "assistant": {"role": "assistant", "content": content},
@@ -294,3 +246,10 @@ async def _run_codex(
         return _failed("invalid_output", "Codex returned invalid JSON events, usage or role output", started)
     except OSError:
         return _failed("runtime_error", "Codex process could not be started or its output could not be read", started)
+
+
+def _elapsed_ms(started):
+    return int((time.monotonic() - started) * 1000)
+
+def _failed(reason, detail, started):
+    return {"status":"failed","reason_code":reason,"detail":detail,"duration_ms":_elapsed_ms(started)}

@@ -136,7 +136,12 @@ export type EvolutionBoundary = {
   review_scope: string;
 };
 
+export type Artifact = {
+ id: string; job_id: string; type: string; schema_version: string; evidence_refs: string[]; payload: unknown; provenance: unknown; validation_status: string; created_at: string;
+};
+
 export type EvolutionJob = {
+ pipeline?: string; adapter?: string; artifacts?: Artifact[];
   attempt?: number;
   next_attempt_at?: string;
   cancel_requested?: boolean;

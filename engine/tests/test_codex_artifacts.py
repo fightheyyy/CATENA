@@ -1,10 +1,8 @@
 import json
-from pathlib import Path
 
 import pytest
 
 from catena_engine.codex_artifacts import read_native
-from catena_engine.harbor_worker import build_tasks
 
 
 def test_native_rollout_keeps_failed_command_and_final_answer(tmp_path):
@@ -23,11 +21,3 @@ def test_native_rollout_keeps_failed_command_and_final_answer(tmp_path):
     with pytest.raises(ValueError):
         read_native(tmp_path)
 
-
-def test_native_task_has_independent_verifier_and_non_root_agent(tmp_path):
-    suite = Path(__file__).resolve().parents[2] / "evals/rg-missing-search"
-    task = build_tasks(suite, tmp_path / "tasks", "codex-image", native=True)[0]
-    assert 'user = "catena-eval"' in (task / "task.toml").read_text()
-    assert not (task / "environment/expected.json").exists()
-    assert "codex.txt" in (task / "tests/extract.py").read_text()
-    assert "pwsh -NoProfile" in (task / "instruction.md").read_text(encoding="utf-8")

@@ -13,7 +13,7 @@ import (
 func seedQueueJob(t *testing.T, s Store) EvolutionJob {
 	t.Helper()
 	now := time.Now().UTC()
-	j := EvolutionJob{Schema: evolutionJobSchema, ID: newID("queue-test"), SourceKind: EvolutionSourceTrace, SourceTraceID: "00112233445566778899aabbccddeeff", IdempotencyKey: newID("queue-key"), RequestFingerprint: "queue-contract", State: EvolutionJobQueued, Stages: cloneEvolutionStages(evolutionJobStages), CreatedAt: now, UpdatedAt: now}
+	j := EvolutionJob{Schema: evolutionJobSchema, ID: newID("queue-test"), SourceKind: EvolutionSourceTrace, SourceTraceID: "00112233445566778899aabbccddeeff", IdempotencyKey: newID("queue-key"), RequestFingerprint: "queue-contract", State: EvolutionJobQueued, Stages: []EvolutionStage{{Name:"generate",State:EvolutionStageQueued}}, CreatedAt: now, UpdatedAt: now}
 	got, created, err := s.CreateEvolutionJob(context.Background(), j)
 	if err != nil || !created {
 		t.Fatalf("seed job: created=%v err=%v", created, err)

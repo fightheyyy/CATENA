@@ -128,24 +128,24 @@ export const api = {
     return normalizeEvolutionJobs(result.evolution_jobs);
   },
   evolutionJob: async (jobID: string, signal?: AbortSignal) => normalizeEvolutionJob(
-    await request<unknown>(`/v1/evolution-jobs/${encodeURIComponent(jobID)}`, { signal }),
+    await request<unknown>(`/v1/analysis-jobs/${encodeURIComponent(jobID)}`, { signal }),
   ),
   deleteEvolutionJob: (jobID: string) => request<void>(
-    `/v1/evolution-jobs/${encodeURIComponent(jobID)}`,
+    `/v1/analysis-jobs/${encodeURIComponent(jobID)}`,
     { method: "DELETE" },
   ),
   cancelEvolutionJob: async (jobID: string) => normalizeEvolutionJob(
-    await request<unknown>(`/v1/evolution-jobs/${encodeURIComponent(jobID)}/cancel`, { method: "POST" }),
+    await request<unknown>(`/v1/analysis-jobs/${encodeURIComponent(jobID)}/cancel`, { method: "POST" }),
   ),
   startAgentEvolutionJob: async (
     agentID: string,
-    input: { window_start: string; window_end: string; objective?: string; output_language: "zh-CN" | "en" },
+    input: { window_start: string; window_end: string; objective?: string; pipeline?: "rsi" | "memory"; options?: Record<string, unknown>; output_language: "zh-CN" | "en" },
     idempotencyKey: string,
   ) => normalizeEvolutionJob(
-    await request<unknown>(`/v1/agents/${encodeURIComponent(agentID)}/evolution-jobs`, {
+    await request<unknown>("/v1/analysis-jobs", {
       method: "POST",
       headers: { "Idempotency-Key": idempotencyKey },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ pipeline: input.pipeline ?? "rsi", agent_id: agentID, window_start: input.window_start, window_end: input.window_end, objective: input.objective, options: input.options }),
     }),
   ),
   rememberConversation: (agentID: string, conversationID: string) => {

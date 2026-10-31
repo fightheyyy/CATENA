@@ -1,15 +1,11 @@
 package control
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -133,90 +129,6 @@ func TestEvolutionWorkerCancellationAndShutdownRecovery(t *testing.T) {
 type queueRoundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f queueRoundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
-
-func TestEvolutionTransientStageRetryReusesCommittedInspector(t *testing.T) {
-	for _, status := range []int{http.StatusTooManyRequests, http.StatusServiceUnavailable} {
-		for _, role := range []string{"evolution", "reviewer"} {
-			t.Run(fmt.Sprintf("%d/%s", status, role), func(t *testing.T) { testEvolutionStageRetry(t, role, status) })
-		}
-	}
-}
-
-func testEvolutionStageRetry(t *testing.T, failedRole string, status int) {
-	s := NewMemoryStore()
-	seedTestEvolutionModelConfig(t, s, "local")
-	run := seedEvolutionRun(t, s, "", StateCompleted, "00112233445566778899aabbccddeeff")
-	manager := newStructuredEvolutionRuntimeManager(t, "")
-	var mu sync.Mutex
-	calls := map[string]int{}
-	ids := map[string][]string{}
-	manager.config.Client = &http.Client{Transport: queueRoundTripFunc(func(r *http.Request) (*http.Response, error) {
-		if r.Method == http.MethodPost && r.URL.Path == "/v1/turn" {
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				return nil, err
-			}
-			r.Body = io.NopCloser(bytes.NewReader(body))
-			var req struct {
-				Role string `json:"role"`
-				ID   string `json:"request_id"`
-			}
-			if err = json.Unmarshal(body, &req); err != nil {
-				return nil, err
-			}
-			mu.Lock()
-			calls[req.Role]++
-			n := calls[req.Role]
-			ids[req.Role] = append(ids[req.Role], req.ID)
-			mu.Unlock()
-			if req.Role == failedRole && n == 1 {
-				return &http.Response{StatusCode: status, Body: io.NopCloser(bytes.NewBufferString(`{"error":"temporary"}`)), Header: make(http.Header)}, nil
-			}
-		}
-		return http.DefaultTransport.RoundTrip(r)
-	})}
-	handler, err := NewHTTPHandlerWithWorkerConfig(s, nil, testEvolutionAuthConfig(), manager, nil, nil, fastWorkerConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer handler.Close()
-	server := httptest.NewServer(handler)
-	defer server.Close()
-	r := postEvolutionJob(t, server.URL+"/v1/runs/"+run.ID+"/evolution-jobs", "checkpoint-retry", map[string]any{"trace_id": "00112233445566778899aabbccddeeff"})
-	defer r.Body.Close()
-	if r.StatusCode != http.StatusAccepted {
-		t.Fatal("create failed", r.StatusCode)
-	}
-	var j EvolutionJob
-	if err = json.NewDecoder(r.Body).Decode(&j); err != nil {
-		t.Fatal(err)
-	}
-	eventually(t, func() bool {
-		got, _ := s.GetEvolutionJob(context.Background(), j.ID)
-		return got.State == EvolutionJobCompleted
-	})
-	got, _ := s.GetEvolutionJob(context.Background(), j.ID)
-	if got.Attempt != 2 {
-		t.Fatalf("attempt=%d", got.Attempt)
-	}
-	mu.Lock()
-	defer mu.Unlock()
-	for _, role := range []string{"inspector", "evolution", "reviewer"} {
-		want := 1
-		if role == failedRole {
-			want = 2
-		}
-		if calls[role] != want {
-			t.Fatalf("stages repeated unexpectedly: %v", calls)
-		}
-	}
-	if got.Candidate == nil || got.Candidate.ID != got.ID+"-candidate" {
-		t.Fatal("candidate identity is not stable")
-	}
-	if ids[failedRole][0] != ids[failedRole][1] {
-		t.Fatal("stage correlation id changed across retries")
-	}
-}
 
 func TestEvolutionWorkerPermanentFailureDoesNotRetry(t *testing.T) {
 	s := NewMemoryStore()

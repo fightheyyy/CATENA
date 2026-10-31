@@ -7,8 +7,8 @@ import shutil
 import subprocess
 import uuid
 
-from ..codex_runtime import run_codex_json
-from ..protocol import ModelConfig, TurnRequest
+from ..runtime.codex import run_codex_json
+from ..protocol import ModelConfig, JsonRequest
 from .cancellation import cancellable
 from .contracts import Completion, OptimizationError
 
@@ -50,7 +50,7 @@ class CodexRuntime:
             raise OptimizationError("RSI requires the pinned Codex CLI 0.160.0")
 
     def complete(self, prompt: str, timeout: float, cancelled=None) -> Completion:
-        request = TurnRequest(uuid.uuid4().hex, uuid.uuid4().hex, "evolution", prompt,
+        request = JsonRequest(uuid.uuid4().hex, uuid.uuid4().hex, prompt,
                               max(1, min(900_000, int(timeout * 1000))), self.model)
         result = asyncio.run(cancellable(run_codex_json(request, INSTRUCTIONS, EDIT_SCHEMA), cancelled))
         if result.get("status") != "completed":

@@ -103,7 +103,7 @@ func NewHTTPHandlerWithBackendConfig(
 		ingestion:        &traceAdmission{config: ingestion, owners: make(map[string]int)},
 	}
 	if evolutionRuntime != nil {
-		pool, err := newEvolutionWorker(store, workers, server.executeEvolutionJob)
+		pool, err := newEvolutionWorker(store, workers, server.executeAnalysisJob)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +115,15 @@ func NewHTTPHandlerWithBackendConfig(
 		}
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/experiment-cases", server.experimentCases)
+	mux.HandleFunc("POST /v1/analysis-jobs", server.createAnalysisJob)
+ mux.HandleFunc("GET /v1/analysis-jobs", server.listEvolutionJobs)
+ mux.HandleFunc("GET /v1/analysis-jobs/queue", server.evolutionQueueStatus)
+ mux.HandleFunc("GET /v1/analysis-jobs/{job_id}", server.getEvolutionJob)
+ mux.HandleFunc("POST /v1/analysis-jobs/{job_id}/cancel", server.cancelEvolutionJob)
+ mux.HandleFunc("DELETE /v1/analysis-jobs/{job_id}", server.deleteEvolutionJob)
+ mux.HandleFunc("GET /v1/artifacts", server.listArtifacts)
+ mux.HandleFunc("GET /v1/evaluation-cases", server.evaluationCases)
+ mux.HandleFunc("GET /v1/experiment-cases", server.experimentCases)
 	mux.HandleFunc("POST /v1/experiments", server.createExperiment)
 	mux.HandleFunc("GET /v1/experiments", server.listExperiments)
 	mux.HandleFunc("GET /v1/experiments/{experiment_id}", server.getExperiment)
@@ -147,10 +155,8 @@ func NewHTTPHandlerWithBackendConfig(
 	mux.HandleFunc("GET /v1/agents/{agent_id}", server.getRegisteredAgent)
 	mux.HandleFunc("POST /v1/agents/{agent_id}/api-key", server.createAgentConnectionKey)
 	mux.HandleFunc("GET /v1/agents/{agent_id}/traces", server.listAgentTraces)
-	mux.HandleFunc("POST /v1/agents/{agent_id}/evolution-jobs", server.createAgentEvolutionJob)
 	mux.HandleFunc("GET /v1/traces", server.listTraces)
 	mux.HandleFunc("GET /v1/traces/{trace_id}", server.getTrace)
-	mux.HandleFunc("POST /v1/traces/{trace_id}/evolution-jobs", server.createTraceEvolutionJob)
 	mux.HandleFunc("POST /v1/traces/{trace_id}/memories", server.rememberTrace)
 	mux.HandleFunc("GET /v1/memories/status", server.memoryStatus)
 	mux.HandleFunc("GET /v1/memories/tasks", server.listMemoryTasks)
@@ -168,7 +174,6 @@ func NewHTTPHandlerWithBackendConfig(
 	mux.HandleFunc("GET /v1/runs/{run_id}", server.getRun)
 	mux.HandleFunc("POST /v1/runs/{run_id}/cancel", server.cancelRun)
 	mux.HandleFunc("GET /v1/runs/{run_id}/events", server.runEvents)
-	mux.HandleFunc("POST /v1/runs/{run_id}/evolution-jobs", server.createEvolutionJob)
 	mux.HandleFunc("GET /v1/evolution-jobs", server.listEvolutionJobs)
 	mux.HandleFunc("GET /v1/evolution-jobs/queue", server.evolutionQueueStatus)
 	mux.HandleFunc("GET /v1/evolution-jobs/{job_id}", server.getEvolutionJob)

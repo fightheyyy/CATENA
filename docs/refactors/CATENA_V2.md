@@ -32,3 +32,11 @@
 ## Phase 2：基础契约
 
 增加 Artifact Envelope 与 Job pipeline/adapter/options/checkpoint 字段，暂时允许旧编排共存。Artifact 存在原 Job JSON 文档中，通过原 SaveLeasedJob 原子落库，不新增第二套队列或产物数据库。写入验证 owner/job/evidence，读取按 owner 过滤；认证和历史表不变。Go 全套单元测试及新增 owner/fenced Artifact 回归通过。
+
+## Phase 3：RSI 迁移
+
+正式创建入口为 `POST /v1/analysis-jobs`，Worker 复用原 PostgreSQL lease/heartbeat/fencing，调用私有 `/v2/rsi`。候选、父版本、Case fingerprints、Harbor trial 证据和状态保存于 Job JSON/Artifact；无真实验证不标为 verified。界面读取新任务及 Artifact，选择管理员注册的 Harbor Case。
+
+固定三 Role Prompt、SDK、RPC 和专属测试退役。历史固定 rg Worker/Bridge/Coordinator 等移至 `research/legacy-engine`，不再打包；复现实验应 checkout 基线。通用 Codex JSON transport 保留独立 HOME、子进程组终止、输出上限。Engine 私有 token + Go owner，执行 receipt 持久化（不存凭据），重试不重复启动已完成/仍在运行的付费操作；进程崩溃留下不确定 running 时拒绝自动重放，要求人工核查。默认单分析槽，不阻塞 health/receipt/查询。
+
+验证：Go 全套单元测试通过；Python 55 tests 通过（含真实 pinned Harness² 的确定性适配测试、Harbor Adapter 和 Codex 子进程 timeout/cancel 测试）；React typecheck 通过。Go HTTP→原 Worker→私有 Engine stub→Artifact 持久化为协议集成测试；不冒充真实模型或 Docker Harbor 成功率。真实付费模型调用未授权、未执行。

@@ -217,6 +217,8 @@ export function normalizeEvolutionJob(value: unknown): EvolutionJob {
 
   return {
     schema: stringValue(source.schema) || undefined,
+    pipeline: stringValue(source.pipeline), adapter: stringValue(source.adapter),
+    artifacts: Array.isArray(source.artifacts) ? source.artifacts as EvolutionJob["artifacts"] : [],
     attempt: typeof source.attempt === "number" && Number.isInteger(source.attempt) && source.attempt >= 0 ? source.attempt : undefined,
     next_attempt_at: stringValue(source.next_attempt_at) || undefined,
     cancel_requested: source.cancel_requested === true,

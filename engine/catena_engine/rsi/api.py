@@ -59,7 +59,7 @@ def parse(payload: dict):
     return context, algorithms, composition, budget, model, cases
 
 
-def run_payload(payload: dict) -> dict:
+def run_payload(payload: dict, cancelled=None) -> dict:
     context, algorithms, composition, budget, model, validation = parse(payload)
     manifest_path = os.environ.get("CATENA_RSI_CASES_MANIFEST")
     runs_root = os.environ.get("CATENA_RSI_RUNS_ROOT")
@@ -86,6 +86,8 @@ def run_payload(payload: dict) -> dict:
     evaluator = HarborEvaluator(cases, output, model)
     evaluator.preflight()
     services = Services(context, runtime, evaluator, budget, reserved)
+    if cancelled is not None:
+        services.cancelled = cancelled
     try:
         result = run_and_validate(context, algorithms, composition, registry, services, validation)
     except Exception:
