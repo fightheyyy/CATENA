@@ -1,3 +1,5 @@
+> 历史文档：本文描述 V1 当时的实现/结果；旧执行入口已退役。当前部署与 API 以 [V2 报告](refactors/CATENA_V2.md) 为准。
+
 # XiaoBaOS 对话记忆兼容说明
 
 旧功能保留兼容，当前产品主线参见 [README](../README.md)。

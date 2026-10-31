@@ -56,3 +56,85 @@ Memory 独立 `pipeline=memory`：先保存 provider task ID checkpoint，再轮
 前端移除专用 Experiment 导航/页面；输出页读 Artifact/来源/Harbor 结果。历史 Conversation 的记忆操作也进入同一 Analysis Job，通过 owner-scoped 历史读取生成脱敏 Evidence，不再有独立提炼任务调度器。Harbor Adapter 移至 `engine/evaluation`，固定实验 Worker 已归档；删除同步 RSI CLI，Go Queue 为唯一正式启动路径。Compose 和 core image 不再构建 Runner/XiaoBaOS。
 
 本阶段 Go tests、React typecheck 通过。研究数据、冻结 Release、Verifier 结果及报告原位保留；过时代码在 research/legacy-engine 并标注仅历史用途。生产旧表数据不 DROP/DELETE。
+
+
+## Phase 6：最终架构与验收
+
+当前主链路为 Trace → Evidence → Analysis Job → Artifact → Evaluation / Review。
+
+```mermaid
+flowchart LR
+  Tap -->|OTLP| Go[Go Auth / Agent / Trace API]
+  Go --> CH[(ClickHouse)]
+  CH --> Evidence[bounded redacted Evidence]
+  Evidence --> Job[(PostgreSQL Analysis Job)]
+  Job --> Worker[Go Worker: lease / heartbeat / fencing]
+  Worker --> RSI[Python RSI: Harness²]
+  Worker --> Memory[Python Memory: OpenViking Adapter]
+  RSI --> Harbor[Harbor independent verifier]
+  RSI --> Artifact[Artifact in existing Job JSON]
+  Harbor --> Artifact
+  Memory --> Artifact
+  Artifact --> UI[React results / provenance / review]
+```
+
+目录收敛在现有 Go control 包内，避免循环依赖。主命令为 cmd/catena-server；类型为 AnalysisJob/AnalysisLease，EngineClient 只负责私有 RPC。Engine/runtime/codex.py 是通用 JSON transport，Engine/evaluation/harbor.py 可复用。没有引入新框架、第二套队列或新数据库。
+
+### 删除与保留
+
+| 范围 | 处理与原因 |
+|---|---|
+| 固定 Role | 固定 Inspector/Evolution/Reviewer 编排、Prompt、RPC、输出修复、阶段 UI 和专属测试退出正式代码；通用 Evidence/Queue/Codex 生命周期保留 |
+| Barena | Runner/进程管理、runner-client、Run bundle、adoption、Issue/Replay/Release 晋级、固定 Experiment Handler/Store 实现删除；迁移共享函数后再删除确认无调用方的剩余函数 |
+| GauzMem | Client、Dockerfile、专属 MySQL/Neo4j/Qdrant 服务和配置删除；MemoryBackend、脱敏、Evidence 转换和 Go MemoryStore 保留 |
+| 前端 | 专用 Experiment、固定 Role/候选旧解析与样式删除；Analysis Job / Artifact 来源、文件复制下载、验证详情接入；Trace/Memory/Agent/连接与历史会话保留 |
+| 部署 | 默认仅 core/engine/postgres/clickhouse；Memory 与 RSI 分开显式 overlay；不再构建 Barena/XiaoBaOS |
+| 研究 | 14 个专用 Engine Python 文件、共 1,482 行移至 research/legacy-engine，不打包、不作为当前运行入口；evals/冻结证据/有效报告未删除 |
+| 通用工程能力 | Trace 准入/限流/背压、ClickHouse、Auth/Agent/API token、加密模型配置、PostgreSQL Lease/Heartbeat/Fencing/Retry/Cancel/Timeout/恢复及 Harbor Adapter 保留 |
+
+[完整文件变更清单](evidence/v2/file_changes.tsv)。按 Git rename 检测，37 个源码文件标记为删除（包含已退役测试，不包括重命名/归档）；具体分类以清单为准。
+
+### 兼容性与安全迁移
+
+- 新任务只通过 POST /v1/analysis-jobs，旧 Role/Run/Replay/Experiment API 返回 404。默认 HTTP 构造只有 NewHTTPHandler(Store, HTTPConfig)。旧 /evolution 页面地址作为输出页深链接保留，读取的是新协议；历史记录不会被强行解析成新候选。
+- 保留 barena_users/sessions/api_tokens 等认证表、catena_evolution_model_configs、spiral_evolution_jobs 与既有密钥 envelope prefix，用户/凭据不改名重建。历史业务表留在旧数据库中；新安装不创建 Run/Replay/Experiment 表。
+- migrations/001_core.sql 幂等保留基础，002_v2.sql 记版本并仅将旧 schema 活跃 Job 标为 retired/failed。原始 document 使用 jsonb_set 更新状态，历史 Role 输出和终态记录保留；不 DROP 表、不清空生产数据。隔离 PostgreSQL 测试验证了重入、原始字段保留及新安装无旧表。
+- Artifact 复用 Job JSON，与 lease/fence 原子保存；写入校验 owner/job/evidence，读取按 owner/type 过滤。候选保留完整版本/父版本/内容哈希与 Harbor 来源，验证前仍为 unverified；存在 held-out Trial 时为 review_required，也不代表改善已成立。
+- Memory 可独立启动，无需 owner RSI 模型配置。提炼 checkpoint 先落库再查询；旧文件 owner 哈希/URI/48-bit ID 保持兼容。Memory Artifact 为 extracted，保留 provider task/result 和来源；没有文件级归属证据时不把整个记忆库归为本次产出。
+- Evidence 哈希排除单纯的打包时间，以免相同 HTTP 重试误报冲突；审计时间仍保存。只有 Go 认证上下文能确定 owner，Engine 使用私有 token，不接受浏览器直接传递的 owner 身份。
+
+### 实测结果
+
+| 验收项 | 状态 | 证据与边界 |
+|---|---|---|
+| Go 编译、单元、vet | PASS | [unit](evidence/v2/go-unit.log)、[vet](evidence/v2/go-vet.log) |
+| Go + PostgreSQL + ClickHouse + race | PASS | [数据库 race 日志](evidence/v2/go-race-databases.log)：真实隔离 Docker 数据库；含原租约/恢复/取消/重试/fencing 与 Trace 存取测试 |
+| Go Queue → 独立 Python HTTP Engine → Artifact → PG 重开 | PASS / fixture | pipeline_postgres_integration_test.go：RSI/Memory 两条路径、持久化与 foreign owner 不可见；模型和提供方响应为合成 fixture，未运行真实 verifier |
+| Engine 干净依赖与测试 | PASS | [57 passed](evidence/v2/engine-clean.log)、[ruff](evidence/v2/engine-ruff.log)、[pip check](evidence/v2/pip-check.log)；Harbor 0.23.0 / pinned upstream Harness² / OpenAI 2.54.0，未安装 openai-agents |
+| Codex timeout/cancel/清理 | PASS / fixture CLI | 保留真实子进程组超时、抗 TERM 子进程、输出大小、隔离 HOME 测试；Go request deadline 也向 Engine 发取消 |
+| React 类型/构建/内嵌包 | PASS | [build](evidence/v2/web-build.log)，生成包与 Go embed diff 一致 |
+| Web 单元/浏览器 | PASS | [48 unit](evidence/v2/web-unit.log)、[15 browser](evidence/v2/web-browser.log)，含来源深链接、取消/Artifact、窄屏与失败恢复 |
+| Tap / 已有 deterministic Verifier | PASS | [28 Tap tests](evidence/v2/tap.log)、[28 tasks / 116 verifier checks](evidence/v2/verifiers.log) |
+| Compose | PASS / config | base/public/rsi/openviking config + shell syntax；默认四服务。不是整栈镜像运行验收 |
+| 真实模型 Harness² → Harbor → Candidate | BLOCKED | 本轮没有配置/使用真实模型授权凭据；没有模型费用、Token/质量提升或 Harbor 通过率结论 |
+| 真实 OpenViking 提炼/检索 | BLOCKED | 未配置实际提供方服务与模型；已验证 HTTP/owner/checkpoint/结果映射协议，不能等同实际提炼 |
+| 目标生产部署 / 全栈镜像 / 性能 | 未验证 | 本轮为托管工作区与隔离 Docker DB；没有部署用户目标服务器，不声明 2 核8GB容量或 50 用户结论。CI 另有 Engine image smoke |
+
+全部[命令、环境与限制](evidence/v2/COMMANDS.md)。GitHub CI 以该 PR 的 Checks 为准，本报告的 PASS 指已执行的本工作区测试。
+
+### 代码变化与可复跑统计
+
+[统计 JSON](evidence/v2/source_inventory.json)，命令 python scripts/source_inventory.py。口径与 Phase 1 完全一致：control-plane、engine、catena-web/src、tap/catena_tap 的 .go/.py/.ts/.tsx，排除 tests、*_test.go、内嵌 Web、CSS 与 research/evals。
+
+- 基线 103 文件 / 30,658 行；当前 93 文件 / **19,868 行**。
+- 核心净减少 **10,790 行（35.2%）**；其中 1,482 行是保留的归档移出核心，余下净减少 9,308 行，不能把全部退出核心的行数称为物理删除。
+- 测试数量下降主要来自明确退役的 Role/SDK/Barena 业务；保留通用队列、Trace、Auth、Harbor、Codex 子进程清理，并新增两条 Pipeline/Artifact/迁移/owner/幂等回归。没有靠跳过全部 Harbor 覆盖通过。
+
+### 剩余技术债与部署风险
+
+1. Engine receipt 为单实例、持久卷内的外部操作去重；不是分布式 exactly-once。进程崩溃留下不确定 running 时人工核查，不能自动重放付费操作。
+2. OpenViking 已接受的远程任务可能在 Go 取消后继续；Catena 不发布产物，不宣称提供方任务可事务回滚。
+3. Harbor Docker socket 具有宿主控制权限，必须 operator opt-in、可信 Case、同路径挂载、正确 Docker GID 和网络/凭据策略。原生 Trial 可执行工具，不能套用只读分析 transport 的安全假设。
+4. Engine 1CPU/1GiB 与 Harbor Trial 1CPU/1GiB 分属不同 cgroup，需单独预算；本轮没有测量目标单机容量。Artifact 查询扫描既有 Job JSON，未声称海量产物索引性能。
+5. 保留旧 DB/module/envelope 名称与历史只读记忆 ledger 以避免破坏数据；不再维护旧执行器。旧终态 Role 产物未自动转为 V2 Artifact，原数据需通过历史导出或基线查看。
+6. 真实模型和 OpenViking 验证仍是交付阻塞项。**代码结构已收敛为一套队列、一条正式 RSI 路径和一条独立 Memory 路径；不能据此宣称真实 Agent 质量验收通过或生产可冻结。**

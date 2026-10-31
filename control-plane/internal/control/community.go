@@ -20,14 +20,8 @@ func (s *HTTPServer) myAgentProfile(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, statusFor(err), "Agent profile lookup failed")
 		return
 	}
-	capabilities, err := s.capabilitiesForOwner(r, user.ID)
-	if err != nil {
-		writeProblem(w, http.StatusInternalServerError, "capability aggregation failed")
-		return
-	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"profile":      profile,
-		"capabilities": capabilities,
+		"profile": profile,
 	})
 }
 
@@ -59,11 +53,6 @@ func (s *HTTPServer) updateMyAgentProfile(w http.ResponseWriter, r *http.Request
 		writeProblem(w, http.StatusBadRequest, "bio must be at most 280 characters")
 		return
 	}
-	capabilities, err := s.capabilitiesForOwner(r, user.ID)
-	if err != nil {
-		writeProblem(w, http.StatusInternalServerError, "capability aggregation failed")
-		return
-	}
 
 	existing, err := s.store.GetAgentProfileByOwner(r.Context(), user.ID)
 	if err != nil {
@@ -80,8 +69,7 @@ func (s *HTTPServer) updateMyAgentProfile(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"profile":      updated,
-		"capabilities": capabilities,
+		"profile": updated,
 	})
 }
 
@@ -93,12 +81,7 @@ func (s *HTTPServer) communityProfiles(w http.ResponseWriter, r *http.Request) {
 	}
 	profiles := make([]CommunityProfile, 0, len(records))
 	for _, record := range records {
-		capabilities, capabilityErr := s.capabilitiesForOwner(r, record.User.ID)
-		if capabilityErr != nil {
-			writeProblem(w, http.StatusInternalServerError, "capability aggregation failed")
-			return
-		}
-		profiles = append(profiles, publicCommunityProfile(record, capabilities))
+		profiles = append(profiles, publicCommunityProfile(record))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"profiles": profiles})
 }
@@ -112,29 +95,18 @@ func (s *HTTPServer) communityProfile(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, statusFor(err), "community profile not found")
 		return
 	}
-	capabilities, err := s.capabilitiesForOwner(r, record.User.ID)
-	if err != nil {
-		writeProblem(w, http.StatusInternalServerError, "capability aggregation failed")
-		return
-	}
-	writeJSON(w, http.StatusOK, publicCommunityProfile(record, capabilities))
+	writeJSON(w, http.StatusOK, publicCommunityProfile(record))
 }
 
 func publicCommunityProfile(
 	record ProfileRecord,
-	capabilities []CapabilitySummary,
 ) CommunityProfile {
 	return CommunityProfile{
-		Slug:         record.Profile.Slug,
-		DisplayName:  record.Profile.DisplayName,
-		Bio:          record.Profile.Bio,
-		GitHubLogin:  record.User.Login,
-		AvatarURL:    record.User.AvatarURL,
-		Capabilities: capabilities,
-		UpdatedAt:    record.Profile.UpdatedAt,
+		Slug:        record.Profile.Slug,
+		DisplayName: record.Profile.DisplayName,
+		Bio:         record.Profile.Bio,
+		GitHubLogin: record.User.Login,
+		AvatarURL:   record.User.AvatarURL,
+		UpdatedAt:   record.Profile.UpdatedAt,
 	}
-}
-
-func (s *HTTPServer) capabilitiesForOwner(r *http.Request, owner string) ([]CapabilitySummary, error) {
-	return []CapabilitySummary{}, nil
 }

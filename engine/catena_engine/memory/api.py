@@ -1,17 +1,23 @@
 """Private transport boundary. Owner never comes from request JSON."""
+
 import os
+
+import httpx
 
 from ..rsi.contracts import OptimizationError
 from .adapters.openviking import OpenViking
+from .contracts import MemoryAdapter
 
 
 def memory_request(owner, operation, payload, executions):
-    with __import__("httpx").Client(timeout=180) as client:
-        adapter = OpenViking(os.environ.get("CATENA_OPENVIKING_URL", ""), os.environ.get("CATENA_OPENVIKING_API_KEY", ""), client)
+    with httpx.Client(timeout=180) as client:
+        adapter = OpenViking(
+            os.environ.get("CATENA_OPENVIKING_URL", ""), os.environ.get("CATENA_OPENVIKING_API_KEY", ""), client
+        )
         return dispatch(adapter, owner, operation, payload, executions)
 
 
-def dispatch(adapter, owner, operation, payload, executions):
+def dispatch(adapter: MemoryAdapter, owner, operation, payload, executions):
     if operation == "extract":
         status, receipt = executions.execute(owner, payload, lambda _: adapter.extract(owner, payload))
         if status != 200 or receipt.get("state") != "completed":

@@ -12,9 +12,9 @@ import (
 	"time"
 )
 
-func TestEvolutionModelConfigLifecycleNeverReturnsSecret(t *testing.T) {
+func TestAnalysisModelConfigLifecycleNeverReturnsSecret(t *testing.T) {
 	store := NewMemoryStore()
-	handler, err := NewHTTPHandler(store, HTTPConfig{Auth: testEvolutionAuthConfig()})
+	handler, err := NewHTTPHandler(store, HTTPConfig{Auth: testAnalysisAuthConfig()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestEvolutionModelConfigLifecycleNeverReturnsSecret(t *testing.T) {
 		"api_key":  "",
 	})
 	assertSafeLLMSettings(t, response, true)
-	credentials, err := (&HTTPServer{store: store, auth: testEvolutionAuthConfig()}).evolutionModelCredentials(context.Background(), "local")
+	credentials, err := (&HTTPServer{store: store, auth: testAnalysisAuthConfig()}).analysisModelCredentials(context.Background(), "local")
 	if err != nil || credentials.APIKey != "sk-private-owner-value" || credentials.Model != "qwen-test-2" {
 		t.Fatalf("blank update did not preserve encrypted credential: %#v err=%v", credentials, err)
 	}
@@ -63,8 +63,8 @@ func TestEvolutionModelConfigLifecycleNeverReturnsSecret(t *testing.T) {
 	assertSafeLLMSettings(t, response, false)
 }
 
-func TestEvolutionModelConfigRejectsCredentialBearingBaseURL(t *testing.T) {
-	handler, err := NewHTTPHandler(NewMemoryStore(), HTTPConfig{Auth: testEvolutionAuthConfig()})
+func TestAnalysisModelConfigRejectsCredentialBearingBaseURL(t *testing.T) {
+	handler, err := NewHTTPHandler(NewMemoryStore(), HTTPConfig{Auth: testAnalysisAuthConfig()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestEvolutionModelConfigRejectsCredentialBearingBaseURL(t *testing.T) {
 	}
 }
 
-func TestEvolutionModelConfigIsIsolatedByOwner(t *testing.T) {
+func TestAnalysisModelConfigIsIsolatedByOwner(t *testing.T) {
 	store := NewMemoryStore()
 	now := time.Now().UTC()
 	users := []User{
@@ -113,7 +113,7 @@ func TestEvolutionModelConfigIsIsolatedByOwner(t *testing.T) {
 		request.Header.Set("Content-Type", "application/json")
 		request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessions[index]})
 		recorder := httptest.NewRecorder()
-		server.putEvolutionModelConfig(recorder, request)
+		server.putAnalysisModelConfig(recorder, request)
 		if recorder.Code != http.StatusOK || strings.Contains(recorder.Body.String(), value["api_key"]) {
 			t.Fatalf("owner %d save returned %d: %s", index, recorder.Code, recorder.Body.String())
 		}
@@ -122,13 +122,13 @@ func TestEvolutionModelConfigIsIsolatedByOwner(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "/v1/me/llm-config", nil)
 		request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessions[index]})
 		recorder := httptest.NewRecorder()
-		server.getEvolutionModelConfig(recorder, request)
+		server.getAnalysisModelConfig(recorder, request)
 		if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), values[index]["model"]) ||
 			strings.Contains(recorder.Body.String(), values[1-index]["model"]) ||
 			strings.Contains(recorder.Body.String(), values[index]["api_key"]) {
 			t.Fatalf("owner %d read crossed tenant boundary: %d %s", index, recorder.Code, recorder.Body.String())
 		}
-		credentials, err := server.evolutionModelCredentials(context.Background(), user.ID)
+		credentials, err := server.analysisModelCredentials(context.Background(), user.ID)
 		if err != nil || credentials.Model != values[index]["model"] || credentials.APIKey != values[index]["api_key"] {
 			t.Fatalf("owner %d execution credentials crossed tenant boundary: %#v err=%v", index, credentials, err)
 		}

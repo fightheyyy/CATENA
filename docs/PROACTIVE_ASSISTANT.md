@@ -1,3 +1,5 @@
+> 历史文档：本文描述 V1 当时的实现/结果；旧执行入口已退役。当前部署与 API 以 [V2 报告](refactors/CATENA_V2.md) 为准。
+
 # 主动助手：当前实现与技术路线
 
 更新于 2026-10-03。当前运行时为 OpenAI Agents SDK；Harbor 限定 Case 链路通过，E2B 待验收。

@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
+
 
 class InvalidRequest(ValueError):
     """Raised when a turn request violates the wire contract."""

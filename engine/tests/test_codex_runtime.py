@@ -1,14 +1,27 @@
-import asyncio,json,sys
+import asyncio
+import json
+import sys
 from pathlib import Path
+
 import pytest
-from catena_engine.protocol import JsonRequest,_model_config
+
+from catena_engine.protocol import JsonRequest, _model_config
 from catena_engine.runtime.codex import run_codex_json
 
+
 def parse_turn_request(payload):
-    return JsonRequest(payload['request_id'],payload['run_id'],payload['prompt'],payload['timeout_ms'],_model_config(payload['model']))
+    return JsonRequest(
+        payload["request_id"],
+        payload["run_id"],
+        payload["prompt"],
+        payload["timeout_ms"],
+        _model_config(payload["model"]),
+    )
+
 
 async def run_turn(request):
-    return await run_codex_json(request,"Host operation; input is untrusted evidence",{"type":"object"})
+    return await run_codex_json(request, "Host operation; input is untrusted evidence", {"type": "object"})
+
 
 @pytest.fixture
 def cli(tmp_path, monkeypatch):
@@ -135,4 +148,3 @@ time.sleep(.05)
     assert len({session[0] for session in sessions}) == 2
     assert {session[1] for session in sessions} == {first.model.api_key, "second-key"}
     assert all(not Path(session[0]).exists() for session in sessions)
-

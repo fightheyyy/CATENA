@@ -133,6 +133,10 @@ func (s *HTTPServer) memoryTaskStatus(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	ownerID := traceOwnerID(user)
 	record, recordErr := s.store.GetMemoryTaskByOwner(ctx, ownerID, taskID)
+	if recordErr == nil && (record.Status == "completed" || record.Status == "failed") {
+		writeJSON(w, http.StatusOK, record)
+		return
+	}
 	result, err := s.memory.Task(ctx, ownerID, taskID)
 	if errors.Is(err, ErrNotFound) {
 		if recordErr == nil && (record.Status == "completed" || record.Status == "failed") {

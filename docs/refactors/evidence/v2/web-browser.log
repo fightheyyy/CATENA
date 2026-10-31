@@ -1,0 +1,27 @@
+
+> @catena/web@0.1.0 test:browser /workspace/CATENA/catena-web
+> node --test tests/browser/core-journeys.test.mjs
+
+✔ Settings and Agent routes avoid unrelated endpoints; failed reads remain recoverable (1773.424994ms)
+✔ An empty workspace offers an Agent connection and labels its sample counts (1921.75892ms)
+✔ Leaving a slow route cancels its request and permits Settings immediately (504.444651ms)
+✔ Recent Trace opens the exact record, including reload, history and an out-of-window deep link (4414.735289ms)
+✔ Trace mobile detail supports direct links, failures, retry and return to the index (1233.639025ms)
+✔ Analysis polling publishes sourced unverified artifacts and cancellation retains acknowledgement (2981.410417ms)
+✔ Agent setup copies a shell-safe secret only to clipboard and recovers first-data checks (5462.726884ms)
+✔ Connection setup fits 390px in English and dark appearance (1173.277576ms)
+✔ Workspace retains exact recent evidence and analysis links (2754.393382ms)
+✔ Workspace retains analyses when history fails and can retry the failed read (1109.747191ms)
+✔ Mobile navigation stays reachable and legacy conversation links retain History selection (2758.212612ms)
+✔ Memory starts as readable cards, retains mixed search results and supports returning to the collection (1415.367207ms)
+✔ Memory and workspace fit narrow screens in English and dark appearance (721.198602ms)
+✔ Memory read failures are recoverable and never described as an empty collection (627.610627ms)
+✔ A search without fact results cannot keep showing a previous memory graph (1312.432788ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 30550.835382

@@ -1,0 +1,60 @@
+
+> @catena/web@0.1.0 test /workspace/CATENA/catena-web
+> node --test --experimental-strip-types tests/*.test.mjs
+
+✔ the Agent registry hides telemetry-only aliases (1.189054ms)
+✔ connection previews contain a placeholder and copied shell values remain literal (0.488906ms)
+✔ Trace Farm requires a connected multi-Trace Agent (0.145316ms)
+✔ Agent selection uses its server window instead of inferring from global Top 100 (1.182485ms)
+✔ one registered Agent presents accepted runtime and generic OTel sources (0.256681ms)
+✔ source presentation tolerates summaries without source details (0.146047ms)
+✔ shared analysis contract retains artifacts and ignores malformed/foreign job envelopes (1.157818ms)
+✔ copyText prefers the async Clipboard API (1.148855ms)
+✔ copyText falls back when the user agent denies Clipboard API access (0.224864ms)
+✔ copyText reports failure so the UI can keep plaintext selectable (0.157644ms)
+✔ Conversation identity keeps Agent deployments separate (0.765226ms)
+✔ Conversation visible content excludes implementation fields by construction (0.185996ms)
+✔ Conversation messages follow source sequence (6.613644ms)
+✔ buildMemoryGraph creates only evidence-backed nodes and links a known related fact (1.791268ms)
+✔ buildMemoryGraph bounds dense graph output (0.366794ms)
+✔ buildMemoryGraph keeps source provenance visible and separate from semantic edges (0.364291ms)
+✔ memory receipt becomes a pollable pending task (0.697134ms)
+✔ memory progress is safe for display (0.137744ms)
+✔ memory progress follows the visible pipeline step when upstream progress is coarse (0.409588ms)
+✔ memory task storage is scoped to Agent and conversation (0.197983ms)
+✔ primary navigation follows the focused cloud workspace (1.178058ms)
+✔ evidence links retain exact IDs through URL encoding and reload (0.654702ms)
+✔ Agent evolution presets produce exact UTC windows (1.513516ms)
+✔ Agent evolution requires at least two matching Traces (0.144344ms)
+✔ Agent evolution makes the twelve-Trace freeze cap explicit (0.15509ms)
+✔ Agent evolution request identity changes with Agent, window, or objective (0.194499ms)
+✔ Trace list search stays focused on root Trace identity (1.896794ms)
+✔ Trace rows use the real user request instead of a Runtime fallback label (0.75443ms)
+✔ Trace filters expose errors and multi-step runs without a query builder (0.149081ms)
+✔ Trace filtering preserves raw service names from a canonical Agent query (0.218414ms)
+✔ Trace summaries preserve Agent, Session, Trace, Span hierarchy (6.060583ms)
+✔ Session titles use the earliest retained user request without an LLM (0.313435ms)
+✔ missing Session identity stays explicitly ungrouped per Agent (0.156722ms)
+✔ Span depth follows parent links and fails closed on cycles (0.152076ms)
+✔ Tool names and evidence are rendered semantically (0.220106ms)
+✔ Token usage accepts both Codex and Claude Runtime attribute names (0.34362ms)
+✔ Codex model requests render the visible conversation instead of raw request JSON (0.225164ms)
+✔ Codex turn inputs unwrap chat_messages instead of exposing protocol fields (0.234007ms)
+✔ Codex exec wrappers render arguments and terminal output without JSON chrome (0.343109ms)
+✔ truncated Codex requests fail closed instead of rendering giant JSON as a user message (0.387976ms)
+✔ Long Trace IDs are shortened without losing both ends (0.112297ms)
+✔ Agent semantic lens separates useful steps from Runtime internals (1.273179ms)
+✔ Catena canonical states keep failed tools visible in both tool and error lenses (0.213026ms)
+✔ Canonical narrative preserves parallel tools, Subagents, and distinct state events (0.427995ms)
+✔ Codex and Claude OTLP goldens render as Agent, Tool, Subagent and Error evidence (2.733867ms)
+✔ Runtime turn-context helpers stay folded instead of masquerading as Agent turns (0.124244ms)
+✔ Barena and XiaoBaOS spans render as one readable cross-process Agent chain (0.177163ms)
+✔ Raw Span disclosure is bounded even for a 30k Span Trace (39.781854ms)
+ℹ tests 48
+ℹ suites 0
+ℹ pass 48
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 416.946583

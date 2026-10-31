@@ -58,8 +58,15 @@ class Candidate:
         object.__setattr__(self, "id", digest)
 
     def to_dict(self) -> dict:
-        return {"id": self.id, "content_sha256": self.content_sha256, "parents": list(self.parents), "algorithm": self.algorithm,
-                "notes": self.notes, "files": dict(self.files), "status": "unverified"}
+        return {
+            "id": self.id,
+            "content_sha256": self.content_sha256,
+            "parents": list(self.parents),
+            "algorithm": self.algorithm,
+            "notes": self.notes,
+            "files": dict(self.files),
+            "status": "unverified",
+        }
 
 
 @dataclass(frozen=True)
@@ -145,4 +152,6 @@ class RSIAdapter(Protocol):
 
     def requirements(self, options: dict[str, Any]) -> Requirements: ...
 
-    def optimize(self, context: Context, services: OptimizationServices, options: dict[str, Any]) -> OptimizationResult: ...
+    def optimize(
+        self, context: Context, services: OptimizationServices, options: dict[str, Any]
+    ) -> OptimizationResult: ...

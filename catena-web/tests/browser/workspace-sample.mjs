@@ -24,11 +24,9 @@ export function populateWorkspace(state) {
     session_id: `sample-session-${i + 1}`, input_preview: title, span_count: 4 + i,
     error_count: i === 2 ? 1 : 0, start_time: iso(i * 76 + 10), end_time: iso(i * 76 + 9) }));
   state.jobComplete = true;
-  state.completedJob.candidates[0] = { ...state.completedJob.candidates[0], title: "先确认结果，再开始下一步",
-    summary: "一份从重复遗漏中整理出的核对方法，给下一次执行多一点确定性。",
-    source_trace_ids: state.traces.slice(0, 2).map((trace) => trace.trace_id),
-    content: { path: "agent.md", markdown: "# 先确认结果，再开始下一步\n\n每次执行完一个动作，先检查实际结果，再决定接下来的工作。\n\n## 一个简单的习惯\n\n- 查看命令的退出状态和关键输出。\n- 结果不完整时，明确记录仍然未知的部分。\n- 确认变更符合预期后，再向用户报告。\n\n这是一份待实际验证的候选方法。" } };
-  state.completedJob.source_trace_ids = state.completedJob.candidates[0].source_trace_ids;
+  state.completedJob.objective = "先确认结果，再开始下一步";
+  state.completedJob.artifacts[0].payload.files["AGENTS.md"] = "# 先确认结果，再开始下一步\n每次执行完一个动作，先检查实际结果。";
+  state.completedJob.source_trace_ids = state.traces.slice(0, 2).map(t=>t.trace_id);
   state.memories = [
     "Catena 的界面应该精简、优美，让人愿意每天打开。复杂的运行详情可以按需展开，内容本身应该优先。",
     "产品需要连接多个 Agent，把经历、记忆与可复用产出放在同一个空间。",

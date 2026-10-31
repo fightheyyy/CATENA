@@ -1,12 +1,13 @@
 """Private pipeline transport. Identity is supplied only by authenticated Go."""
+
 from __future__ import annotations
 
 import hmac
 import json
 import os
 import threading
-from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 from .executions import Executions
 from .rsi.contracts import OptimizationError
@@ -50,14 +51,16 @@ def create_server(address, token="", rsi_handler=None, receipt_root=None):
                 return
             try:
                 if self.path == "/v2/manifest":
-                    self._json(200, {"schema": "catena.engine_manifest.v2", "status": "ready",
-                                     "pipelines": ["rsi", "memory"]})
+                    self._json(
+                        200, {"schema": "catena.engine_manifest.v2", "status": "ready", "pipelines": ["rsi", "memory"]}
+                    )
                 elif self.path == "/v2/rsi/adapters":
                     from .rsi.registry import default_registry
+
                     self._json(200, {"adapters": default_registry().describe()})
                 elif self.path == "/v2/cases":
                     path = os.environ.get("CATENA_RSI_CASES_MANIFEST")
-                    cases = json.loads(open(path).read()) if path else {}
+                    cases = json.loads(Path(path).read_text(encoding="utf-8")) if path else {}
                     self._json(200, {"cases": [{"id": key} for key in cases]})
                 elif self.path.startswith("/v2/executions/"):
                     status, result = executions.lookup(self._owner(), self.path.rsplit("/", 1)[1])
@@ -94,6 +97,7 @@ def create_server(address, token="", rsi_handler=None, receipt_root=None):
                     raise OptimizationError("request must be an object")
                 if self.path == "/v2/rsi":
                     from .rsi.api import run_payload
+
                     cached = executions.replay(owner, payload)
                     if cached is not None:
                         self._json(*cached)
@@ -102,15 +106,35 @@ def create_server(address, token="", rsi_handler=None, receipt_root=None):
                         self._json(429, {"error": "analysis capacity is full"})
                         return
                     try:
-                        status, result = executions.execute(owner, payload,
-                            lambda event: rsi_handler(payload, event) if rsi_handler else run_payload(payload, event))
+                        status, result = executions.execute(
+                            owner,
+                            payload,
+                            lambda event: rsi_handler(payload, event) if rsi_handler else run_payload(payload, event),
+                        )
                         self._json(status, result)
                     finally:
                         slots.release()
                 elif self.path.startswith("/v2/memory/"):
                     from .memory.api import memory_request
-                    result = memory_request(owner, self.path.rsplit("/", 1)[1], payload, executions)
-                    self._json(200, result)
+
+                    operation = self.path.rsplit("/", 1)[1]
+                    admitted = operation == "extract"
+                    cached = executions.replay(owner, payload) if admitted else None
+                    if cached is not None:
+                        self._json(*cached)
+                        return
+                    if admitted and not slots.acquire(blocking=False):
+                        self._json(429, {"error": "analysis capacity is full"})
+                        return
+                    try:
+                        result = memory_request(owner, operation, payload, executions)
+                        if admitted:
+                            self._json(*executions.lookup(owner, payload["request_id"]))
+                        else:
+                            self._json(200, result)
+                    finally:
+                        if admitted:
+                            slots.release()
                 else:
                     self._json(404, {"error": "endpoint retired or unknown"})
             except (OptimizationError, ValueError, TypeError):
@@ -127,8 +151,9 @@ def create_server(address, token="", rsi_handler=None, receipt_root=None):
 
 
 def main():
-    server = create_server(os.environ.get("CATENA_ENGINE_ADDR", "0.0.0.0:8790"),
-                           os.environ.get("CATENA_ENGINE_TOKEN", ""))
+    server = create_server(
+        os.environ.get("CATENA_ENGINE_ADDR", "0.0.0.0:8790"), os.environ.get("CATENA_ENGINE_TOKEN", "")
+    )
     try:
         server.serve_forever()
     finally:

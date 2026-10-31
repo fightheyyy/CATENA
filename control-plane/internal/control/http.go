@@ -14,13 +14,13 @@ import (
 )
 
 type HTTPServer struct {
-	store            Store
-	traces           TraceStore
-	evolutionRuntime *EvolutionRuntimeManager
-	memory           MemoryBackend
-	auth             AuthConfig
-	jobs             *evolutionWorker
-	ingestion        *traceAdmission
+	store           Store
+	traces          TraceStore
+	analysisRuntime *EngineClient
+	memory          MemoryBackend
+	auth            AuthConfig
+	jobs            *analysisWorker
+	ingestion       *traceAdmission
 }
 
 //go:embed web/*
@@ -28,17 +28,17 @@ var webAssets embed.FS
 
 type HTTPConfig struct {
 	Auth      AuthConfig
-	Engine    *EvolutionRuntimeManager
+	Engine    *EngineClient
 	Traces    TraceStore
 	Memory    MemoryBackend
-	Workers   EvolutionWorkerConfig
+	Workers   AnalysisWorkerConfig
 	Ingestion TraceIngestConfig
 }
 
 func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error) {
-	auth, evolutionRuntime, traces, memory, workers, ingestion := config.Auth, config.Engine, config.Traces, config.Memory, config.Workers, config.Ingestion
+	auth, analysisRuntime, traces, memory, workers, ingestion := config.Auth, config.Engine, config.Traces, config.Memory, config.Workers, config.Ingestion
 	if workers.Workers == 0 {
-		workers = DefaultEvolutionWorkerConfig()
+		workers = DefaultAnalysisWorkerConfig()
 	}
 	if ingestion.Concurrency == 0 {
 		ingestion = DefaultTraceIngestConfig()
@@ -51,15 +51,15 @@ func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error)
 		return nil, err
 	}
 	server := &HTTPServer{
-		store:            store,
-		traces:           traces,
-		evolutionRuntime: evolutionRuntime,
-		memory:           memory,
-		auth:             auth.normalized(),
-		ingestion:        &traceAdmission{config: ingestion, owners: make(map[string]int)},
+		store:           store,
+		traces:          traces,
+		analysisRuntime: analysisRuntime,
+		memory:          memory,
+		auth:            auth.normalized(),
+		ingestion:       &traceAdmission{config: ingestion, owners: make(map[string]int)},
 	}
-	if evolutionRuntime != nil {
-		pool, err := newEvolutionWorker(store, workers, server.executeAnalysisJob)
+	if analysisRuntime != nil {
+		pool, err := newAnalysisWorker(store, workers, server.executeAnalysisJob)
 		if err != nil {
 			return nil, err
 		}
@@ -67,19 +67,19 @@ func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error)
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/analysis-jobs", server.createAnalysisJob)
-	mux.HandleFunc("GET /v1/analysis-jobs", server.listEvolutionJobs)
-	mux.HandleFunc("GET /v1/analysis-jobs/queue", server.evolutionQueueStatus)
-	mux.HandleFunc("GET /v1/analysis-jobs/{job_id}", server.getEvolutionJob)
-	mux.HandleFunc("POST /v1/analysis-jobs/{job_id}/cancel", server.cancelEvolutionJob)
-	mux.HandleFunc("DELETE /v1/analysis-jobs/{job_id}", server.deleteEvolutionJob)
+	mux.HandleFunc("GET /v1/analysis-jobs", server.listAnalysisJobs)
+	mux.HandleFunc("GET /v1/analysis-jobs/queue", server.analysisQueueStatus)
+	mux.HandleFunc("GET /v1/analysis-jobs/{job_id}", server.getAnalysisJob)
+	mux.HandleFunc("POST /v1/analysis-jobs/{job_id}/cancel", server.cancelAnalysisJob)
+	mux.HandleFunc("DELETE /v1/analysis-jobs/{job_id}", server.deleteAnalysisJob)
 	mux.HandleFunc("GET /v1/artifacts", server.listArtifacts)
 	mux.HandleFunc("GET /v1/evaluation-cases", server.evaluationCases)
 	mux.HandleFunc("GET /healthz", server.health)
 	mux.HandleFunc("GET /readyz", server.ready)
 	mux.HandleFunc("GET /v1/system/status", server.systemStatus)
-	mux.HandleFunc("GET /v1/me/llm-config", server.getEvolutionModelConfig)
-	mux.HandleFunc("PUT /v1/me/llm-config", server.putEvolutionModelConfig)
-	mux.HandleFunc("DELETE /v1/me/llm-config", server.deleteEvolutionModelConfig)
+	mux.HandleFunc("GET /v1/me/llm-config", server.getAnalysisModelConfig)
+	mux.HandleFunc("PUT /v1/me/llm-config", server.putAnalysisModelConfig)
+	mux.HandleFunc("DELETE /v1/me/llm-config", server.deleteAnalysisModelConfig)
 	mux.HandleFunc("GET /v1/auth/session", server.authSession)
 	mux.HandleFunc("GET /v1/auth/github", server.githubLogin)
 	mux.HandleFunc("GET /v1/auth/github/callback", server.githubCallback)
@@ -177,7 +177,7 @@ func (s *HTTPServer) systemStatus(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, http.StatusServiceUnavailable, "store unavailable")
 		return
 	}
-	evolutionRuntime := s.evolutionRuntime.Probe(r.Context())
+	analysisRuntime := s.analysisRuntime.Probe(r.Context())
 	traceStore := "unavailable"
 	if s.traces != nil {
 		if err := s.traces.Ping(r.Context()); err == nil {
@@ -193,20 +193,20 @@ func (s *HTTPServer) systemStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":             "ready",
-		"auth_mode":          map[bool]string{true: "github", false: "local"}[s.auth.Enabled()],
-		"edge_ingest":        "available",
-		"evolution_protocol": engineTurnRequestSchema,
-		"evolution_runtime":  evolutionRuntime.Status,
-		"trace_store":        traceStore,
-		"memory_store":       memoryStore,
+		"status":            "ready",
+		"auth_mode":         map[bool]string{true: "github", false: "local"}[s.auth.Enabled()],
+		"edge_ingest":       "available",
+		"analysis_protocol": engineTurnRequestSchema,
+		"analysis_engine":   analysisRuntime.Status,
+		"trace_store":       traceStore,
+		"memory_store":      memoryStore,
 	})
 }
 
 func (s *HTTPServer) runtimes(w http.ResponseWriter, r *http.Request) {
-	runtime := s.evolutionRuntime.Probe(r.Context())
+	runtime := s.analysisRuntime.Probe(r.Context())
 	writeJSON(w, http.StatusOK, map[string]any{
-		"runtimes":              []EvolutionRuntimeManifest{runtime},
+		"runtimes":              []EngineManifest{runtime},
 		"target_runtime_hosted": false,
 	})
 }

@@ -45,7 +45,7 @@ func TestTraceAdmissionRejectsBeforeReadingAndNeverAcknowledgesFailedWrite(t *te
 	c := DefaultTraceIngestConfig()
 	c.Concurrency = 1
 	c.PerOwner = 1
-	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testAgentAuthConfig(), Engine: nil, Traces: traces, Memory: nil, Workers: DefaultEvolutionWorkerConfig(), Ingestion: c})
+	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testAgentAuthConfig(), Engine: nil, Traces: traces, Memory: nil, Workers: DefaultAnalysisWorkerConfig(), Ingestion: c})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestTraceAdmissionSpanLimitAndCancellation(t *testing.T) {
 	traces := gatedTraceStore{TraceStore: &recordingTraceStore{}, insert: func(ctx context.Context, _ string, _ []TraceSpan) error { calls.Add(1); <-ctx.Done(); return ctx.Err() }}
 	c := DefaultTraceIngestConfig()
 	c.MaxSpans = 1
-	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testAgentAuthConfig(), Engine: nil, Traces: traces, Memory: nil, Workers: DefaultEvolutionWorkerConfig(), Ingestion: c})
+	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testAgentAuthConfig(), Engine: nil, Traces: traces, Memory: nil, Workers: DefaultAnalysisWorkerConfig(), Ingestion: c})
 	if err != nil {
 		t.Fatal(err)
 	}

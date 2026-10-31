@@ -7,10 +7,10 @@ import pytest
 
 pytest.importorskip("harbor")
 
-from catena_engine.protocol import ModelConfig
-from catena_engine.rsi.contracts import Candidate, OptimizationError
 from catena_engine.evaluation.harbor import HarborCase, HarborEvaluator, task_digest
 from catena_engine.evaluation.harbor_agent import CREDENTIALS, RSICodex
+from catena_engine.protocol import ModelConfig
+from catena_engine.rsi.contracts import Candidate, OptimizationError
 
 
 @pytest.fixture
@@ -25,8 +25,11 @@ def task(tmp_path):
 
 
 def evaluator(tmp_path, task):
-    return HarborEvaluator({"case": task}, tmp_path / "jobs",
-                           ModelConfig("openai", "https://example.test/v1", "fixture-model", "FAKE_PRIVATE_KEY"))
+    return HarborEvaluator(
+        {"case": task},
+        tmp_path / "jobs",
+        ModelConfig("openai", "https://example.test/v1", "fixture-model", "FAKE_PRIVATE_KEY"),
+    )
 
 
 def test_real_harbor_config_keeps_credentials_out_and_reads_native_evidence(monkeypatch, tmp_path, task):
@@ -49,13 +52,29 @@ def test_real_harbor_config_keeps_credentials_out_and_reads_native_evidence(monk
             async def run(self):
                 directory = config.jobs_dir / config.job_name / "trial"
                 (directory / "agent/sessions").mkdir(parents=True)
-                (directory / "agent/sessions/native.jsonl").write_text(json.dumps({
-                    "type": "response_item", "payload": {"type": "message", "role": "assistant",
-                    "content": [{"type": "output_text", "text": "answer"}]}}) + "\n")
-                (directory / "result.json").write_text(json.dumps({
-                    "agent_result": {"n_input_tokens": 15, "n_output_tokens": 2},
-                    "verifier_result": {"rewards": {"reward": 0}}, "exception_info": None,
-                }))
+                (directory / "agent/sessions/native.jsonl").write_text(
+                    json.dumps(
+                        {
+                            "type": "response_item",
+                            "payload": {
+                                "type": "message",
+                                "role": "assistant",
+                                "content": [{"type": "output_text", "text": "answer"}],
+                            },
+                        }
+                    )
+                    + "\n"
+                )
+                (directory / "result.json").write_text(
+                    json.dumps(
+                        {
+                            "agent_result": {"n_input_tokens": 15, "n_output_tokens": 2},
+                            "verifier_result": {"rewards": {"reward": 0}},
+                            "exception_info": None,
+                        }
+                    )
+                )
+
         return Execution()
 
     monkeypatch.setattr(Job, "create", create)
@@ -81,6 +100,7 @@ def test_harbor_timeout_cancels_job_and_removes_credential_reference(monkeypatch
                     await asyncio.sleep(60)
                 finally:
                     cleaned.set()
+
         return Slow()
 
     monkeypatch.setattr(Job, "create", create)
@@ -114,10 +134,17 @@ def test_harness_is_installed_without_changing_verifier(monkeypatch, tmp_path):
 
     monkeypatch.setattr(Codex, "run", run)
     try:
-        agent = RSICodex(logs_dir=tmp_path, model_name="fixture", credential_ref="test",
-                         harness_files={"AGENTS.md": "Inspect.", ".agents/skills/search/SKILL.md": "Search."})
+        agent = RSICodex(
+            logs_dir=tmp_path,
+            model_name="fixture",
+            credential_ref="test",
+            harness_files={"AGENTS.md": "Inspect.", ".agents/skills/search/SKILL.md": "Search."},
+        )
         asyncio.run(agent.run("Task", Environment(), None))
-        assert captured == {"/workspace/repo/AGENTS.md": "Inspect.",
-                            "/workspace/repo/.agents/skills/search/SKILL.md": "Search.", "ran": True}
+        assert captured == {
+            "/workspace/repo/AGENTS.md": "Inspect.",
+            "/workspace/repo/.agents/skills/search/SKILL.md": "Search.",
+            "ran": True,
+        }
     finally:
         CREDENTIALS.pop("test", None)

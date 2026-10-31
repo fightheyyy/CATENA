@@ -1,11 +1,12 @@
 """External-operation receipts, not a task queue. Go owns leases and scheduling."""
+
 import hashlib
 import json
 import os
 import threading
 from pathlib import Path
 
-from .rsi.contracts import OptimizationError, safe_id
+from .rsi.contracts import safe_id
 
 
 class Executions:
@@ -60,8 +61,11 @@ class Executions:
             if receipt.get("fingerprint") != fingerprint:
                 return 409, {"error": "execution request changed"}
             if receipt["state"] == "running":
-                return ((202, receipt) if (owner, identity) in self.active else
-                        (409, {"error": "interrupted execution requires review"}))
+                return (
+                    (202, receipt)
+                    if (owner, identity) in self.active
+                    else (409, {"error": "interrupted execution requires review"})
+                )
             return 200, receipt
 
     def execute(self, owner, payload, operation):
@@ -78,8 +82,11 @@ class Executions:
                 if receipt.get("fingerprint") != fingerprint:
                     return 409, {"error": "execution identity conflicts with the original request"}
                 if receipt["state"] == "running":
-                    return ((202, receipt) if (owner, identity) in self.active else
-                            (409, {"error": "interrupted execution requires review"}))
+                    return (
+                        (202, receipt)
+                        if (owner, identity) in self.active
+                        else (409, {"error": "interrupted execution requires review"})
+                    )
                 return 200, receipt
             cancelled = threading.Event()
             self.active[owner, identity] = cancelled

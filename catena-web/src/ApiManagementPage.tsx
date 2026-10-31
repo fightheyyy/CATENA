@@ -3,7 +3,7 @@ import { api } from "./api";
 import { registeredAgentSummaries } from "./agentConnection";
 import { copyText } from "./clipboard";
 import { AgentConnectionGuide } from "./AgentConnectionGuide";
-import type { AgentSummary, ApiToken, EvolutionModelSettings, WorkspaceData } from "./types";
+import type { AgentSummary, ApiToken, AnalysisModelSettings, WorkspaceData } from "./types";
 
 type Locale = "zh" | "en";
 
@@ -122,7 +122,7 @@ export function ApiManagementPage({ locale, workspace, onRefresh, onOpenAgent }:
   const [copiedEndpoint, setCopiedEndpoint] = useState(false);
   const [confirmID, setConfirmID] = useState("");
   const [revokedAgentIDs, setRevokedAgentIDs] = useState<Set<string>>(() => new Set());
-  const [llm, setLLM] = useState<EvolutionModelSettings>({ provider: "", base_url: "", model: "", api_key_configured: false, configured: false });
+  const [llm, setLLM] = useState<AnalysisModelSettings>({ provider: "", base_url: "", model: "", api_key_configured: false, configured: false });
   const [llmProvider, setLLMProvider] = useState("openai");
   const [llmBaseURL, setLLMBaseURL] = useState("");
   const [llmModel, setLLMModel] = useState("");

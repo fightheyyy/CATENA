@@ -1,227 +1,48 @@
-<p align="center">
-  <img src="catena-web/public/catena-mark.svg" alt="Catena" width="88" />
-</p>
+# Catena
 
-<h1 align="center">Catena</h1>
+Go + Agent 工程平台：**Trace → Evidence → Analysis Job → Artifact → Evaluation / Review**。
 
-<p align="center"><strong>基于 Go 的 Agent Trace 接入与异步分析平台。</strong></p>
-
-<p align="center">
-  Go control plane · PostgreSQL job queue · ClickHouse trace storage · OTLP ingestion.
-</p>
-
-Catena 接收 Codex、Claude Code 及其他 Agent 的 OTLP Trace，用 ClickHouse 保存运行证据，用 PostgreSQL 保存业务状态和分析任务。Go Worker 通过租约、心跳和 fencing token 执行异步分析，支持阶段检查点、重试、取消和过期接管。接入端在读取请求体前限制并发，只有 ClickHouse 写入成功才确认接收。
-
-分析引擎帮助用户核对重复问题并生成 Skill 候选；Harbor 负责目标 Agent 的评测。Trace 错误信号与模型审查不能代替交付质量评价，候选是否有效仍由独立实验决定。
-
-- [后端改造范围与发布门槛](docs/GO_BACKEND_RELEASE_PLAN_20261027.md)
-- [任务队列、故障验收与部署说明](docs/BACKEND_ENGINEERING_20261027.md)
-
-当前支持 Codex、Claude Code 的本地采集插件，以及通用 OTLP Trace 接收；可读取的信息取决于来源实际导出的内容。Agent 不原生输出 OTLP 时，需要采集插件或适配器。离线失败线索扫描、人工标注表和独立的 Skill 配对实验入口已可复跑，尚未接入问题卡 UI。首个 3 题合成试跑为基线 3/3、候选 3/3，尚无真实失败修复率结果。
-
-2026-10-03 已从 5 个真实会话确认缺失 `rg` 的重复工具错误，并冻结
-[PowerShell 搜索 Case](evals/rg-missing-search/CASE.md)。确定性环境重放已通过；
-Codex CLI 对照未通过环境验收，旧 3/3 试跑不能作为效果证据。随后通过
-本地 CLIProxyAPI 的 GPT-5.5 完成 12 次有效 SDK 对照：两组均 6/6 答对，
-Skill 将缺失 rg 错误调用从 4 次降到 0 次，但输入令牌增加 29.4%，未证明
-成功率或效率提升。[实验结论](docs/CASE_RG_MISSING_20261003.md)。
-当时的平台运行时采用 OpenAI Agents SDK；随后完成
-[平台 Agent 调用 Harbor 的 Docker 实验](docs/HARBOR_EXPERIMENT_20261003.md)，
-6 次有效 Trial，两组均 3/3，缺失 rg 错误调用 2→0。
-现已提供 [Case 实验页面](docs/HARBOR_WEB_EXPERIMENTS.md)，支持发起、查看与恢复实验。
-E2B 接入仍未完成云端验收；本地评测使用 Docker。
-
-当前分析角色默认通过隔离的 Codex CLI 执行，可显式切回 SDK；接口和三阶段业务校验保持兼容。配置与验收范围见 [Codex Engine 说明](docs/CODEX_ENGINE_RUNTIME.md)。
-
-## 冻结实验：7 Skills / 28 Tasks / 168 Rollouts
-
-从 3,021 条真实 Trace 的操作故障线索归纳 7 项手工编写的 Skill，构造
-28 个匿名重构及变体任务，通过 Harbor 0.23.0 驱动真实 Codex CLI 完成
-168 次有效对照实验。without / with 通过率为 **77/84（91.7%）与
-80/84（95.2%）**，增加 3.57 个百分点；工具调用从 **660 增至 796**，
-总 token 增加 9.1%。结果不支持总体成本下降或广泛有效的结论。
-
-- [完整结果、指标与限制](evals/trace-skill-benchmark/results/ab-v2.md)
-- [任务集、Skill 与复跑方法](evals/trace-skill-benchmark/README.md)
-- [冻结报告](evals/trace-skill-benchmark/releases/catena-harbor-trace-skills-v1.0.0/RESULTS.zh-CN.md)
-- [冻结数据集与结果 ZIP](evals/trace-skill-benchmark/releases/catena-harbor-trace-skills-v1.0.0.zip)
-
-这些任务不是严格的历史 held-out 集。原始私人会话、模型密钥和运行日志保留在
-Git 忽略的 `.local/` 中，公开包包含任务、汇总指标、验证证据和复现说明。
-
-```text
-Codex / Claude Code 会话 → Tap → Trace → 可审查的问题线索
-                                  └→ Catena Engine → Skill 候选
-Skill 候选 + 冻结案例 → 本地配对实验入口 → 独立 verifier 与指标
-```
-
-## 核心能力
-
-- **总览**：打开即见最近经历与产出；支持搜索、Agent 筛选及准确回到来源，局部加载失败可以单独重试。
-- **主动助手**：输入关注目标、查看近期线索并发起分析；当前仅在页面打开时检查新 Trace，[能力边界与后续技术路线](docs/PROACTIVE_ASSISTANT.md)。
-- **经历**：按 Turn 阅读请求、调用与最终回答，详细 Span 与原始字段按需展开。
-- **失败线索研究**：离线扫描真实会话，输出保留分母的信号分组与固定抽样标注表；[方法和当前覆盖](docs/FAILURE_STUDY.md)。
-- **产出**：阅读、复制或下载 `agent.md`、Skill、Role 和 DSH Plugin 候选包；保留来源 Trace、分析过程与审查信息。
-- **连接**：为每个 Agent 创建独立凭证，复制 POSIX/PowerShell 配置，检测第一条数据；在这里配置自己的分析模型。
-
-平台内置的 Catena Engine 消费 Evidence 并生成候选方法；目标 Agent 的执行与验证留在端侧。每位用户在 **连接** 中配置自己的 Provider、Base URL、Model 与 API Key。密钥加密保存，只在该用户的分析任务执行时临时解密。
-
-旧 XiaoBaOS 对话数据仍可从原有深链接读取；`POST /v1/ingest/conversations` 已停止接入新数据。新的 Agent 证据统一通过 OTLP Trace 上传。
-
-## 产品边界
+Tap 采集 Codex / Claude Code 的 Turn/工具事件并上传 OTLP，Go 负责认证、Agent 身份、ClickHouse Trace、PostgreSQL 任务和 Artifact。Python Engine 提供两条平级、可替换的产物 Pipeline：RSI（Harness²）与 Memory（OpenViking）。Harbor 是独立验证执行器，候选默认 unverified，不自动采用、合并或发布。
 
 ```mermaid
 flowchart LR
-    Agent["Codex / Claude Code"] --> Tap["Tap: Turn 与工具事件解析"]
-    Tap -->|"OTLP"| Core["Go 控制层"]
-    Core --> CH["ClickHouse Trace"]
-    CH --> UI["React 证据查看"]
-    Tap --> Scan["离线问题线索扫描"] --> Labels["人工标注"]
-    CH --> Pack["冻结 Evidence Pack"] --> Engine["Catena Engine"] --> Draft["Skill 候选"]
-    Barena["Barena Run Bundle"] --> Core
+  Agent[Codex / Claude Code] --> Tap -->|OTLP| Go[Go Control Plane]
+  Go --> CH[(ClickHouse)]
+  CH --> Evidence[bounded redacted Evidence]
+  Evidence --> Jobs[PostgreSQL Analysis Job]
+  Jobs --> Worker[Go Worker: lease / heartbeat / fencing]
+  Worker --> RSI[Engine RSI: Harness²]
+  Worker --> Memory[Engine Memory: OpenViking Adapter]
+  RSI --> Harbor[Harbor verifier]
+  RSI --> Artifact[Artifact in Job document]
+  Harbor --> Artifact
+  Memory --> Artifact
+  Artifact --> Review[React: results / provenance / review]
 ```
 
-[Barena](https://github.com/fightheyyy/barena) 是端侧 Agent E2E 与发布 CI 引擎，负责 Explore、Replay、Compare 和确定性验证；Catena 负责长期证据、跨 Run 分析与进化候选。
+- 一套 Go 持久队列：重试、超时、取消、租约恢复、fencing，默认单 Worker。
+- RSI 基于 Trace/Agent 时间窗和管理员注册的 Harbor Case，保存 Candidate 文件、父版本、内容哈希、Trial/预算与验证来源。支持已有 Adapter 组合；HarnessPro 尚未实现。
+- Memory 可独立从 Trace、Agent Trace 集或历史 Session 提炼；Go 确定 owner，Engine 对接 OpenViking。保存 provider task checkpoint，重试恢复查询；Artifact 为 extracted，不能当成已确认事实。
+- Trace 写入保留背压、身份隔离、脱敏 Evidence；模型密钥按 owner 加密，提供方 Memory 密钥仅在 Engine。
+- 已移除固定三 Role、SDK 回退、Barena Runner/Replay/Release 自动晋级及 GauzMem 部署。认证表的历史 barena_* 名称与原队列表名为数据兼容保留。
 
-## 架构
+## 使用与验证
 
-| 服务 | 职责 |
-| --- | --- |
-| `catena-core` | Go 控制面、React Web、GitHub OAuth、API Key、OTLP Trace 与产品 API |
-| `catena-engine` | 使用用户配置的模型运行 Inspector、Evolution、Reviewer；不运行目标 Agent |
-| `catena-runner` | 保留现有 Barena Run 接入能力 |
-| `postgres` | 用户、Agent、Run、Job、Candidate 与审计事实 |
-| `clickhouse` | Trace 与 Span 时序存储 |
-| `caddy` | 公开部署的 HTTPS 与安全响应头 |
+- [部署指南](deploy/catena-mvp1/README.md)：默认四服务，RSI / OpenViking 分别显式启用。
+- [当前规格](SPEC.md)、[RSI 约定](docs/RSI_ADAPTERS.md)、[OpenViking 迁移](docs/OPENVIKING_INTEGRATION.md)。
+- [V2 重构报告与验收证据](docs/refactors/CATENA_V2.md)。测试通过不等于真实模型或生产部署验收通过。
 
-可选 `memory` profile 会增加 GauzMem、MySQL、Neo4j 与私有 Qdrant Server。
-
-## 本地运行
-
-要求 Docker Desktop、Docker Compose 与 BuildKit：
-
-```bash
-git clone https://github.com/fightheyyy/CATENA.git
-cd CATENA
-./deploy/catena-mvp1/demo.sh up
+```sh
+cd control-plane && go test ./... && go vet ./...
+# 独立 Python 3.12 环境
+cd ../engine && pip install -e '.[dev,rsi]' && pytest
+cd ../catena-web && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm build
 ```
 
-打开 <http://127.0.0.1:5570>。
+数据库集成测试使用 `BARENA_TEST_DATABASE_URL` 和 `CATENA_CLICKHOUSE_TEST_DSN`；跨进程 fixture 测试另设 `CATENA_ENGINE_TEST_PYTHON` 为已安装 Engine 的 Python 路径。集成测试只使用隔离 schema 和合成内容。
 
-```bash
-./deploy/catena-mvp1/demo.sh smoke
-./deploy/catena-mvp1/demo.sh logs
-./deploy/catena-mvp1/demo.sh down
-```
+## 保留的研究证据
 
-## 接入任意 OTel Agent
+历史实验不作为 V2 实测结果：[rg-missing-search Case](evals/rg-missing-search/CASE.md)、[案例结论](docs/CASE_RG_MISSING_20261003.md)、[冻结 168 Rollouts 报告](evals/trace-skill-benchmark/results/ab-v2.md)。冻结实验 without/with 为 77/84 与 80/84，总 token 增加 9.1%，不支持总体成本下降或广泛有效的结论。任务不是严格历史 held-out 集。
 
-在 **API 管理 → 创建 Agent 密钥** 输入显示名称。Catena 会原子创建固定
-`agent_id` 和绑定该 Agent 的接入密钥；用户不需要选择 Runtime：
-
-```text
-Agent connection key → agent_id → display name
-```
-
-创建后，接入面板会直接生成下面这段可复制配置，并自动等待第一条数据：
-
-面板支持 macOS/Linux shell 和 Windows PowerShell。预览中的密钥是占位符，
-点击“复制完整配置”时才会填入真实密钥。执行配置后，需要重启支持 OTLP 的
-Agent 并实际运行一次任务；复制本身不会上传数据。检测失败或两分钟未收到
-数据时，可以修正配置后重新检测，收到数据后可直接进入该 Agent。
-
-```bash
-export CATENA_URL='http://127.0.0.1:5570'
-export CATENA_API_KEY='catena_agent_...'
-export OTEL_SERVICE_NAME='my-agent'
-export OTEL_TRACES_EXPORTER='otlp'
-export OTEL_EXPORTER_OTLP_PROTOCOL='http/protobuf'
-export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="${CATENA_URL}/v1/otlp/v1/traces"
-export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer ${CATENA_API_KEY}"
-```
-
-Catena 会从证据自动识别 XiaoBaOS、Codex、Claude Code；无法识别时显示为
-通用 OTel Agent。客户端提交的 Agent 身份不能覆盖密钥绑定。普通 OTLP Trace
-足以进行观测与跨 Run 分析；Barena Run Bundle 可补充 Artifact、Verifier 与发布结论。
-
-### 捕获完整的 Agent Turn
-
-部分 Runtime 的原生 OTLP 只导出一条顶层 Span，无法还原中间的模型请求、
-Tool Call 和 Tool Result。Catena 复用固定版本的 Langfuse 开源 Codex/Claude
-Parser 与 Turn assembly，在本地将 rollout/transcript 转换为统一 Event Graph，
-再由 Catena 自己的 OTLP exporter 上传：
-
-```bash
-cd tap
-python3.12 -m pip install -e .
-cd codex && pnpm install --frozen-lockfile && pnpm build
-
-export CATENA_URL="https://your-catena.example"
-export CATENA_API_KEY="catena_agent_..."
-
-catena trace import codex /path/to/rollout.jsonl
-catena trace import claude /path/to/transcript.jsonl
-```
-
-Live 采集由随仓库提交的 Codex `Stop` 与 Claude Code `Stop/SessionEnd` Hook
-完成；live 和 historical import 调用同一套 Parser。Hook 增量、可恢复且
-fail-open，重复触发复用确定性 Span ID。两者都以 Runtime 原生 Session/Turn
-相关键生成 OTLP Trace ID，不建立 Capture Session，也不比较 Prompt 文本；
-Codex Stop 后的有界 settle pass 会用相同 Parser 合并稍后落盘的
-`task_complete`。当前只对 Codex CLI `0.147.0` 与
-Claude Code `2.1.112` 完成真实验收；Codex App、Hermes、OpenClaw 没有独立
-Parser，因此不声明支持。详细说明见 [Runtime Capture](./tap/README.md)。
-
-这里的实时是“每个 Turn 停止后立即增量同步”，不是逐 Token 流式同步。
-Codex 的模型与 Tool 事件会在该 Turn 的 `Stop` Hook 触发后进入 Catena；若
-进程在 Hook 前异常退出，则由下一次 Hook 或 historical import 按相同稳定 ID
-恢复。
-
-## 公开单机 Beta
-
-```bash
-cp deploy/catena-mvp1/.env.public.example deploy/catena-mvp1/.env
-# 配置域名、GitHub OAuth 与随机密钥
-./deploy/catena-mvp1/public.sh config
-./deploy/catena-mvp1/public.sh up
-```
-
-公开模式只暴露 Caddy 的 80/443；控制面、数据库和 Runtime 留在私有 Docker 网络。详见 [部署文档](./deploy/catena-mvp1/README.md)。
-
-## 状态与开发
-
-本地优化优先于再次上线。登录后的默认入口是 Agent；各页面按需读取数据，
-Trace 链接保留精确记录，Trace Farm 的任务完成状态会同步到资产库。
-这些界面行为有独立的浏览器回归测试；模拟数据测试不代替真实接入、模型执行
-或生成产物的效果验收。
-
-MVP1 已覆盖 GitHub 登录、Agent 注册与专属接入密钥、用户自带 LLM、OTLP 导入、Runtime 自动识别、Agent 聚合、Span 瀑布、进化候选与中英文 UI。DeepSeek Harness 已打通 DSH → Barena Explore → Catena Trace Farm → DSH Plugin 产出与本地安装验收。当前定位是 single-node Beta；已实现多 Worker 租约与任务恢复，备份恢复验收、配额与完整 RBAC 尚未完成。
-
-```bash
-cd catena-web && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm typecheck && pnpm build
-pnpm exec playwright install chromium && pnpm test:browser
-cd ../control-plane && go test ./... && go vet ./... && go test -race ./internal/control
-cd ../tap && python3.12 -m pip install -e '.[dev]' && pytest
-cd codex && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test && pnpm build
-docker compose -f deploy/catena-mvp1/compose.yml config >/dev/null
-```
-
-架构契约见 [SPEC.md](./SPEC.md)，剩余工作见 [PLAN.md](./PLAN.md)。求职展示材料：[失败线索研究](./docs/FAILURE_STUDY.md)、[竞品对照](./docs/COMPETITOR_COMPARISON.md)、[技术博客草稿](./docs/showcase/CODING_AGENT_TRACE_BLOG.md)、[3 分钟演示脚本](./docs/showcase/THREE_MINUTE_DEMO.md)。旧功能见 [XiaoBaOS 对话记忆兼容说明](./docs/XIAOBA_MEMORY_LEGACY.md)。
-
-## License
-
-Apache License 2.0。第三方归属见 [NOTICE](./NOTICE)。
-## OpenViking 记忆接入
-
-平台可通过 OpenViking 保存和检索个人记忆。记忆页支持手动添加、中文检索、文件关系查看；Trace 详情可发起异步提炼。平台分析会召回相关记忆，保留参考上下文快照。
-
-本地 embedding 使用 CPU 上的 BGE-small-zh，无需 embedding API Key。记忆提炼复用配置的模型服务。部署、隔离边界和实测结果见 [接入说明](docs/OPENVIKING_INTEGRATION.md)。团队共享空间尚未实现。
-
-2026-10-04 完成 [历史记忆 / Skill 的 Harbor 三组对照](docs/MEMORY_SKILL_EXPERIMENT_20261004.md)：18 次有效 Trial，三组答案均 6/6，缺失 rg 错误为 4 / 3 / 0。Skill 总 token 增加约 15.2%，没有成功率或耗时改善。实验页可查看来源 Trace、冻结记忆及逐次工具日志。
-
-## 可插拔 RSI 后端（实验入口）
-
-RSI 算法通过统一协议消费 Trace 证据与冻结 Case，生成有版本和来源关系的候选。
-首个适配器为固定版本的 Harness²，支持串行/并行组合；模型调用复用隔离 Codex CLI，
-试跑与独立验证使用 Harbor。入口为私有 Engine API / CLI，尚未接入 Go 持久任务队列或前端，
-默认三 Role 流程保持原样。安装、协议、预算和真实验收边界见 [RSI Adapter](docs/RSI_ADAPTERS.md)。
+私人 Transcript、模型密钥与敏感 Trace 不纳入公开仓库。历史规格见 [V1 archive](docs/archive/v1/SPEC.md)，历史专用 Engine 源码见 [research](research/legacy-engine/README.md)；它们不是现行运行路径。

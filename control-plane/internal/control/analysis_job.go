@@ -29,7 +29,7 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if s.evolutionRuntime == nil || s.traces == nil {
+	if s.analysisRuntime == nil || s.traces == nil {
 		writeProblem(w, 503, "Engine and Trace storage are required")
 		return
 	}
@@ -53,6 +53,29 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, 400, "analysis input is too large")
 		return
 	}
+	if req.Pipeline == "memory" && req.Adapter != "openviking" {
+		writeProblem(w, 400, "unknown Memory adapter")
+		return
+	}
+	if len(req.Options) > 0 {
+		var options map[string]json.RawMessage
+		if json.Unmarshal(req.Options, &options) != nil || options == nil {
+			writeProblem(w, 400, "options must be an object")
+			return
+		}
+		for key := range options {
+			if req.Pipeline == "memory" {
+				writeProblem(w, 400, "Memory options are not supported")
+				return
+			}
+			switch key {
+			case "case_id", "baseline", "algorithms", "composition", "budget", "validation_case_ids":
+			default:
+				writeProblem(w, 400, "unsupported RSI option")
+				return
+			}
+		}
+	}
 	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if e := validateReplayIdempotencyKey(key); e != nil {
 		writeProblem(w, 400, e.Error())
@@ -63,7 +86,7 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 		owner = user.ID
 	}
 	now := time.Now().UTC()
-	var pack EvolutionEvidencePack
+	var pack AnalysisEvidencePack
 	var err error
 	if req.ConversationID != "" {
 		if req.Pipeline != "memory" || req.AgentID == "" || req.TraceID != "" || !req.WindowStart.IsZero() || !req.WindowEnd.IsZero() {
@@ -81,9 +104,9 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var summaries []TraceSummary
-		summaries, err = s.traces.ListAgentTraces(r.Context(), traceOwnerID(user), req.AgentID, req.WindowStart, req.WindowEnd, maxAgentEvolutionTraceScan)
+		summaries, err = s.traces.ListAgentTraces(r.Context(), traceOwnerID(user), req.AgentID, req.WindowStart, req.WindowEnd, maxAgentAnalysisTraceScan)
 		if err == nil {
-			selected := selectAgentEvolutionTraces(summaries, maxAgentEvolutionTraces)
+			selected := selectAgentAnalysisTraces(summaries, maxAgentAnalysisTraces)
 			traces := []TraceDetail{}
 			for _, v := range selected {
 				var t TraceDetail
@@ -99,12 +122,12 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		var id string
-		id, err = normalizedEvolutionTraceID(req.TraceID)
+		id, err = normalizedAnalysisTraceID(req.TraceID)
 		if err == nil {
 			var trace TraceDetail
 			trace, err = s.traces.GetTrace(r.Context(), traceOwnerID(user), id)
 			if err == nil {
-				pack, err = buildEvolutionEvidencePack(EvolutionSourceTrace, id, &trace, now)
+				pack, err = buildAnalysisEvidencePack(AnalysisSourceTrace, id, &trace, now)
 			}
 		}
 	}
@@ -114,8 +137,8 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 	}
 	raw, _ := json.Marshal(req)
 	hash := sha256.Sum256(append(raw, []byte(pack.SHA256)...))
-	job := EvolutionJob{Schema: "catena.analysis_job.v2", ID: newID("analysis-job"), OwnerUserID: owner, Pipeline: req.Pipeline, Adapter: req.Adapter, Options: req.Options, SourceKind: pack.SourceKind, SourceConversationID: pack.SourceConversationID, SourceTraceID: pack.SourceTraceID, SourceTraceIDs: pack.SourceTraceIDs, SourceAgentID: pack.SourceAgentID, SourceRuntimeKind: pack.SourceRuntimeKind, WindowStart: pack.WindowStart, WindowEnd: pack.WindowEnd, Objective: sanitizeEvolutionText(req.Objective, 4000), IdempotencyKey: key, RequestFingerprint: hex.EncodeToString(hash[:]), State: EvolutionJobQueued, Stages: []EvolutionStage{{Name: "generate", State: EvolutionStageQueued}}, Artifacts: []Artifact{}, EvidencePack: &pack, CreatedAt: now, UpdatedAt: now}
-	stored, created, err := s.store.CreateEvolutionJob(r.Context(), job)
+	job := AnalysisJob{Schema: "catena.analysis_job.v2", ID: newID("analysis-job"), OwnerUserID: owner, Pipeline: req.Pipeline, Adapter: req.Adapter, Options: req.Options, SourceKind: pack.SourceKind, SourceConversationID: pack.SourceConversationID, SourceTraceID: pack.SourceTraceID, SourceTraceIDs: pack.SourceTraceIDs, SourceAgentID: pack.SourceAgentID, SourceRuntimeKind: pack.SourceRuntimeKind, WindowStart: pack.WindowStart, WindowEnd: pack.WindowEnd, Objective: sanitizeAnalysisText(req.Objective, 4000), IdempotencyKey: key, RequestFingerprint: hex.EncodeToString(hash[:]), State: AnalysisJobQueued, Stages: []AnalysisStage{{Name: "generate", State: AnalysisStageQueued}}, Artifacts: []Artifact{}, EvidencePack: &pack, CreatedAt: now, UpdatedAt: now}
+	stored, created, err := s.store.CreateAnalysisJob(r.Context(), job)
 	if err != nil {
 		writeProblem(w, statusFor(err), err.Error())
 		return
@@ -127,11 +150,11 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, stored)
 	}
 }
-func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease EvolutionLease, job EvolutionJob) error {
+func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease, job AnalysisJob) error {
 	if job.Schema != "catena.analysis_job.v2" || (job.Pipeline != "rsi" && job.Pipeline != "memory") {
 		return errors.New("legacy execution retired; create a V2 Analysis Job")
 	}
-	if job.EvidencePack == nil || !validEvolutionEvidencePack(*job.EvidencePack, job) {
+	if job.EvidencePack == nil || !validAnalysisEvidencePack(*job.EvidencePack, job) {
 		return errors.New("invalid retained Evidence Pack")
 	}
 	if job.Pipeline == "memory" {
@@ -162,30 +185,31 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease EvolutionLeas
 	if payload["algorithms"] == nil {
 		payload["algorithms"] = []any{map[string]any{"name": job.Adapter}}
 	}
-	credentials, err := s.evolutionModelCredentials(ctx, job.OwnerUserID)
+	credentials, err := s.analysisModelCredentials(ctx, job.OwnerUserID)
 	if err != nil {
 		return err
 	}
 	evidence, _ := json.Marshal(map[string]any{"pack": job.EvidencePack, "objective": job.Objective})
 	payload["evidence"] = string(evidence)
-	payload["evidence_refs"] = evolutionJobTraceIDs(job)
+	payload["evidence_refs"] = analysisJobTraceIDs(job)
 	payload["schema"] = "catena.rsi_request.v1"
 	payload["request_id"] = job.ID
 	payload["model"] = map[string]string{"provider": credentials.Provider, "base_url": credentials.BaseURL, "model": credentials.Model, "api_key": credentials.APIKey}
-	job.State = EvolutionJobRunning
+	job.State = AnalysisJobRunning
 	job.CurrentStage = "generate"
-	job.Stages[0].State = EvolutionStageRunning
-	if err = s.saveEvolutionProgress(ctx, lease, job); err != nil {
+	job.Stages[0].State = AnalysisStageRunning
+	if err = s.saveAnalysisProgress(ctx, lease, job); err != nil {
 		return err
 	}
 	owner := job.OwnerUserID
 	if owner == "" {
 		owner = "local"
 	}
-	result, err := s.evolutionRuntime.execute(ctx, owner, job.ID, payload)
+	result, err := s.analysisRuntime.execute(ctx, owner, job.ID, payload, "/v2/rsi")
 	if err != nil {
 		return err
 	}
+	result = sanitizeAnalysisJSON(result, engineMaxResponseBytes)
 	var out struct {
 		Status     string            `json:"status"`
 		Candidates []json.RawMessage `json:"candidates"`
@@ -204,22 +228,24 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease EvolutionLeas
 		}
 		provenance, _ := json.Marshal(map[string]any{"pipeline": "rsi", "adapter": job.Adapter, "evidence_sha256": job.EvidencePack.SHA256, "evaluation": out.Trials, "execution_id": job.ID})
 		digest := sha256.Sum256([]byte(fmt.Sprintf("%s:%d", job.ID, i)))
-		job.Artifacts = append(job.Artifacts, Artifact{ID: "artifact-" + hex.EncodeToString(digest[:16]), OwnerID: job.OwnerUserID, JobID: job.ID, Type: "rsi_candidate", SchemaVersion: "catena.artifact.v1", EvidenceRefs: evolutionJobTraceIDs(job), Payload: payload, Provenance: provenance, ValidationStatus: status, CreatedAt: time.Now().UTC()})
+		job.Artifacts = append(job.Artifacts, Artifact{ID: "artifact-" + hex.EncodeToString(digest[:16]), OwnerID: job.OwnerUserID, JobID: job.ID, Type: "rsi_candidate", SchemaVersion: "catena.artifact.v1", EvidenceRefs: analysisJobTraceIDs(job), Payload: payload, Provenance: provenance, ValidationStatus: status, CreatedAt: time.Now().UTC()})
 	}
-	job.State = EvolutionJobCompleted
+	job.State = AnalysisJobCompleted
 	job.CurrentStage = "complete"
-	job.Stages[0].State = EvolutionStageCompleted
-	return s.saveEvolutionProgress(ctx, lease, job)
+	job.Stages[0].State = AnalysisStageCompleted
+	return s.saveAnalysisProgress(ctx, lease, job)
 }
 
-func (m *EvolutionRuntimeManager) execute(ctx context.Context, owner, id string, payload any) (json.RawMessage, error) {
+func (m *EngineClient) execute(ctx context.Context, owner, id string, payload any, path string) (json.RawMessage, error) {
+	ctx, cancel := context.WithTimeout(ctx, m.config.RequestTimeout)
+	defer cancel()
 	type receipt struct {
 		RequestID string          `json:"request_id"`
 		State     string          `json:"state"`
 		Output    json.RawMessage `json:"output"`
 	}
 	var out receipt
-	status, err := m.call(ctx, owner, http.MethodPost, "/v2/rsi", payload, &out)
+	status, err := m.call(ctx, owner, http.MethodPost, path, payload, &out)
 	for err == nil && status == 202 {
 		select {
 		case <-ctx.Done():
@@ -262,7 +288,7 @@ func (s *HTTPServer) evaluationCases(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var out any
-	_, e := s.evolutionRuntime.call(r.Context(), traceOwnerID(u), http.MethodGet, "/v2/cases", nil, &out)
+	_, e := s.analysisRuntime.call(r.Context(), traceOwnerID(u), http.MethodGet, "/v2/cases", nil, &out)
 	if e != nil {
 		writeProblem(w, 503, "Evaluation Cases unavailable")
 		return

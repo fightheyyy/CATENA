@@ -16,14 +16,13 @@ export type SystemStatus = {
   status: string;
   auth_mode: string;
   edge_ingest: string;
-  run_bundle: "barena.run_bundle.v1";
-  evolution_protocol: "barena.xiaoba_evolution_request.v1";
-  evolution_runtime: string;
+  analysis_protocol: string;
+  analysis_engine: string;
   trace_store: string;
   memory_store: string;
 };
 
-export type EvolutionModelSettings = {
+export type AnalysisModelSettings = {
   provider: string;
   base_url: string;
   model: string;
@@ -32,174 +31,17 @@ export type EvolutionModelSettings = {
   updated_at?: string;
 };
 
-export type RuntimeRole = {
-  id: string;
-  display_name: string;
-  responsibility: string;
-  output: string;
-};
-
-export type Runtime = {
-  runtime_id: string;
-  display_name: string;
-  kind: string;
-  source: string;
-  status: string;
-  version?: string;
-  detail: string;
-  roles: RuntimeRole[];
-  capabilities: {
-    probe: boolean;
-    role_turn: boolean;
-    cancellation: boolean;
-    telemetry: string;
-    target_runtime_hosted: boolean;
-  };
-};
-
-export type Run = {
-  run_id: string;
-  request_id: string;
-  origin: string;
-  operation: "explore" | "replay" | "compare";
-  state: string;
-  current_phase?: string;
-  current_actor?: string;
-  cancel_requested: boolean;
-  error?: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type EvolutionStage = {
-  name: string;
-  role: string;
-  state: string;
-  raw_output?: unknown;
-  error?: string;
-  started_at?: string;
-  finished_at?: string;
-};
-
-export type EvolutionFinding = {
-  title: string;
-  summary: string;
-  severity: string;
-  evidence: string[];
-};
-
-export type EvolutionCaseProposal = {
-  candidate_id?: string;
-  kind?: "case";
-  title: string;
-  replay_prompt: string;
-  success_criteria: string;
-  verifier?: unknown;
-  requires_human_review?: boolean;
-  status: string;
-  source_trace_id?: string;
-  source_trace_ids?: string[];
-  source_agent_id?: string;
-  source_run_id?: string;
-  evidence_pack_sha256?: string;
-};
-
-export type EvolutionCandidateKind = "agent_md" | "memory" | "skill" | "role" | "dsh_plugin" | "harness" | "case" | "unknown";
-
-export type EvolutionCandidate = {
-  candidate_id: string;
-  kind: EvolutionCandidateKind;
-  title: string;
-  summary: string;
-  content?: unknown;
-  status: string;
-  source_trace_id?: string;
-  source_trace_ids?: string[];
-  source_agent_id?: string;
-  source_runtime_kind?: string;
-  source_run_id?: string;
-  evidence_pack_sha256?: string;
-};
-
-export type EvolutionReview = {
-  verdict: string;
-  summary: string;
-  scope: string;
-  candidate_status: string;
-};
-
-export type EvolutionBoundary = {
-  target_agent_executed_by_catena: boolean;
-  creates_release: boolean;
-  release_authority: string;
-  candidate_status: string;
-  review_scope: string;
-};
-
 export type Artifact = {
  id: string; job_id: string; type: string; schema_version: string; evidence_refs: string[]; payload: unknown; provenance: unknown; validation_status: string; created_at: string;
 };
 
-export type EvolutionJob = {
- pipeline?: string; adapter?: string; artifacts?: Artifact[];
-  attempt?: number;
-  next_attempt_at?: string;
-  cancel_requested?: boolean;
-  schema?: string;
-  job_id: string;
-  source_kind?: "trace" | "run_trace" | "agent_trace_set";
-  source_run_id?: string;
-  source_trace_id?: string;
-  source_trace_ids: string[];
-  source_agent_id?: string;
-  source_runtime_kind?: string;
-  window_start?: string;
-  window_end?: string;
-  objective?: string;
-  output_language?: "zh-CN" | "en";
-  state: string;
-  current_stage?: string;
-  stages: EvolutionStage[];
-  finding?: EvolutionFinding;
-  case_proposal?: EvolutionCaseProposal;
-  candidates: EvolutionCandidate[];
-  review?: EvolutionReview;
-  error?: string;
-  evidence_pack?: Record<string, unknown>;
-  boundary?: EvolutionBoundary;
-  created_at: string;
-  updated_at: string;
-};
-
-export type Issue = {
-  issue_id: string;
-  source_run_id: string;
-  source_trace_id?: string;
-  title: string;
-  summary: string;
-  severity: string;
-  status: string;
-  promoted_case_id?: string;
-  created_at: string;
-};
-
-export type RegressionCase = {
-  case_id: string;
-  revision: number;
-  source_issue_id: string;
-  title: string;
-  operation: string;
-  success_criteria: string;
-  created_at: string;
-};
-
-export type Release = {
-  release_id: string;
-  case_id: string;
-  run_id: string;
-  decision: "cleared" | "held" | "rejected";
-  summary?: string;
-  created_at: string;
+export type AnalysisJob = {
+ schema?: string; job_id: string; pipeline?: string; adapter?: string; artifacts: Artifact[];
+ state: string; attempt?: number; next_attempt_at?: string; cancel_requested?: boolean; error?: string;
+ source_kind?: string; source_trace_id?: string; source_trace_ids: string[]; source_agent_id?: string; source_conversation_id?: string;
+ source_runtime_kind?: string; window_start?: string; window_end?: string; objective?: string;
+ current_stage?: string; stages: { name: string; state: string }[]; evidence_pack?: Record<string, unknown>;
+ created_at: string; updated_at: string;
 };
 
 export type ApiToken = {
@@ -436,14 +278,9 @@ export type ConversationDocument = {
 };
 
 export type WorkspaceData = {
-  overviewErrors?: Partial<Record<"agents" | "traces" | "evolutionJobs", string>>;
+  overviewErrors?: Partial<Record<"agents" | "traces" | "analysisJobs", string>>;
   system: SystemStatus;
-  runtimes: Runtime[];
-  runs: Run[];
-  evolutionJobs: EvolutionJob[];
-  issues: Issue[];
-  cases: RegressionCase[];
-  releases: Release[];
+  analysisJobs: AnalysisJob[];
   traceAvailable: boolean;
   agentAvailable: boolean;
   traces: TraceSummary[];

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import { emptyWorkspace } from "./workspace";
 import type { Route } from "./navigation";
-import type { EvolutionJob } from "./types";
+import type { AnalysisJob } from "./types";
 
 export function useWorkspace(route: Route, owner: string) {
   const [data, setData] = useState(emptyWorkspace);
@@ -40,18 +40,18 @@ export function useWorkspace(route: Route, owner: string) {
     return () => pending.current?.abort();
   }, [refresh]);
 
-  const updateJobs = useCallback((jobs: EvolutionJob[]) => {
+  const updateJobs = useCallback((jobs: AnalysisJob[]) => {
     setData((current) => {
       const replacements = new Map(jobs.map((job) => [job.job_id, job]));
-      return { ...current, evolutionJobs: [
-        ...jobs.filter((job) => !current.evolutionJobs.some((item) => item.job_id === job.job_id)),
-        ...current.evolutionJobs.map((job) => replacements.get(job.job_id) ?? job),
+      return { ...current, analysisJobs: [
+        ...jobs.filter((job) => !current.analysisJobs.some((item) => item.job_id === job.job_id)),
+        ...current.analysisJobs.map((job) => replacements.get(job.job_id) ?? job),
       ] };
     });
   }, []);
 
   const removeJob = useCallback((jobID: string) => {
-    setData((current) => ({ ...current, evolutionJobs: current.evolutionJobs.filter((job) => job.job_id !== jobID) }));
+    setData((current) => ({ ...current, analysisJobs: current.analysisJobs.filter((job) => job.job_id !== jobID) }));
   }, []);
 
   return { data, refresh, updateJobs, removeJob, ready: loaded.has(route),

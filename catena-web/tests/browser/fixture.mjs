@@ -14,15 +14,10 @@ export const traces = ["first", "second"].map((name, index) => ({ trace_id: `tra
   session_id: "session-fixture", root_name: "agent.turn", input_preview: `请求 ${index + 1}：核对工具结果`,
   service_name: agent.display_name, span_count: 1, error_count: 0, duration_ms: 120,
   start_time: now, end_time: now }));
-const baseJob = { schema: "catena.evolution_job.v1", job_id: "job-fixture", source_kind: "agent_trace_set",
-  source_agent_id: agent.agent_id, source_trace_ids: traces.map((trace) => trace.trace_id),
-  state: "running", current_stage: "inspector", stages: [], candidates: [], created_at: now, updated_at: now };
-const completed = { ...baseJob, state: "completed", current_stage: "complete", updated_at: new Date(Date.now() + 1000).toISOString(),
-  candidates: [{ candidate_id: "asset-fixture", kind: "agent_md", title: "先核对再回答", summary: "本地浏览器验收专用候选",
-    status: "draft/unverified", content: { path: "agent.md", markdown: "# 浏览器测试候选\n\n核对执行结果后再回答。" },
-    source_trace_ids: traces.map((trace) => trace.trace_id) }],
-  finding: { title: "核对执行结果", summary: "本地测试", severity: "low", evidence: [] },
-  review: { verdict: "pass", summary: "仅验证候选可读性", scope: "proposal_only", candidate_status: "draft/unverified" } };
+const baseJob = { schema: "catena.analysis_job.v2", job_id: "job-fixture", pipeline: "rsi", adapter: "harness2", source_kind: "agent_trace_set",
+ source_agent_id: agent.agent_id, source_trace_ids: traces.map(t=>t.trace_id), state: "running", stages: [], artifacts: [], created_at: now, updated_at: now };
+const completed = { ...baseJob, state: "completed", artifacts: [{id:"artifact-fixture",job_id:"job-fixture",type:"rsi_candidate",schema_version:"catena.artifact.v1",
+ evidence_refs:baseJob.source_trace_ids,payload:{files:{"AGENTS.md":"Inspect evidence before acting."}},provenance:{evaluation:[{fixture:true,valid:false,error:"No real verifier executed"}]},validation_status:"unverified",created_at:now}] };
 
 export async function fixtureServer(overrides = {}) {
   const state = { requests: [], agents: [structuredClone(agent)], jobComplete: false, jobs: true,
@@ -75,9 +70,10 @@ export async function fixtureServer(overrides = {}) {
           input: summary.input_preview, output: `完成 ${id}`,
           attributes: { "catena.node.kind": "turn", "catena.state": "ok" } }] });
       }
-      if (pathname === "/v1/evolution-jobs") return state.failJobs ? json(res, { detail: "Output query temporarily failed" }, 503) : json(res, { evolution_jobs: state.jobs ? [currentJob()] : [] });
-      if (pathname === "/v1/evolution-jobs/job-fixture") return json(res, currentJob());
-      if (pathname === "/v1/evolution-jobs/job-fixture/cancel" && req.method === "POST") {
+      if (pathname === "/v1/evaluation-cases") return json(res, {cases:[{id:"fixture-case"}]});
+      if (pathname === "/v1/analysis-jobs") return state.failJobs ? json(res, { detail: "Output query temporarily failed" }, 503) : json(res, { analysis_jobs: state.jobs ? [currentJob()] : [] });
+      if (pathname === "/v1/analysis-jobs/job-fixture") return json(res, currentJob());
+      if (pathname === "/v1/analysis-jobs/job-fixture/cancel" && req.method === "POST") {
         if (state.failCancel) return json(res, { detail: "Cancellation temporarily unavailable" }, 503);
         state.jobCancelRequested = true;
         return json(res, currentJob());

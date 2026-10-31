@@ -3,6 +3,7 @@ package control
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"encoding/json"
 	"errors"
 	"time"
@@ -37,351 +38,83 @@ func OpenPostgres(ctx context.Context, databaseURL string) (*PostgresStore, erro
 	return store, nil
 }
 
+//go:embed migrations/*.sql
+var migrationFiles embed.FS
+
 func (s *PostgresStore) migrate(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, `
-CREATE TABLE IF NOT EXISTS catena_experiments (
-  experiment_id TEXT PRIMARY KEY,
-  owner_user_id TEXT NOT NULL,
-  request_id TEXT NOT NULL,
-  state TEXT NOT NULL,
-  document JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL,
-  UNIQUE(owner_user_id, request_id)
-);
-CREATE INDEX IF NOT EXISTS catena_experiments_owner_created_idx ON catena_experiments(owner_user_id, created_at DESC);
-CREATE UNIQUE INDEX IF NOT EXISTS catena_experiments_one_active ON catena_experiments((1)) WHERE state IN ('queued','running');
-CREATE TABLE IF NOT EXISTS barena_users (
-  user_id TEXT PRIMARY KEY,
-  github_id BIGINT NOT NULL UNIQUE,
-  github_login TEXT NOT NULL,
-  display_name TEXT NOT NULL,
-  avatar_url TEXT NOT NULL DEFAULT '',
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-CREATE TABLE IF NOT EXISTS barena_sessions (
-  token_hash TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES barena_users(user_id) ON DELETE CASCADE,
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX IF NOT EXISTS barena_sessions_expires_at_idx
-  ON barena_sessions (expires_at);
-CREATE TABLE IF NOT EXISTS catena_agents (
-  agent_id TEXT PRIMARY KEY,
-  owner_user_id TEXT NOT NULL REFERENCES barena_users(user_id) ON DELETE CASCADE,
-  display_name TEXT NOT NULL,
-  runtime_kind TEXT NOT NULL DEFAULT '',
-  last_seen_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX IF NOT EXISTS catena_agents_owner_created_at_idx
-  ON catena_agents (owner_user_id, created_at DESC);
-CREATE TABLE IF NOT EXISTS barena_api_tokens (
-  token_id TEXT PRIMARY KEY,
-  token_hash TEXT NOT NULL UNIQUE,
-  user_id TEXT NOT NULL REFERENCES barena_users(user_id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL
-);
-ALTER TABLE barena_api_tokens
-  ADD COLUMN IF NOT EXISTS encrypted_token TEXT NOT NULL DEFAULT '';
-ALTER TABLE barena_api_tokens
-  ADD COLUMN IF NOT EXISTS agent_id TEXT REFERENCES catena_agents(agent_id) ON DELETE CASCADE;
-CREATE UNIQUE INDEX IF NOT EXISTS barena_api_tokens_agent_id_idx
-  ON barena_api_tokens (agent_id) WHERE agent_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS barena_api_tokens_user_created_at_idx
-  ON barena_api_tokens (user_id, created_at DESC);
-CREATE TABLE IF NOT EXISTS catena_evolution_model_configs (
-  owner_user_id TEXT PRIMARY KEY REFERENCES barena_users(user_id) ON DELETE CASCADE,
-  provider TEXT NOT NULL,
-  base_url TEXT NOT NULL,
-  model TEXT NOT NULL,
-  encrypted_api_key TEXT NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-CREATE TABLE IF NOT EXISTS catena_memory_tasks (
-  task_id TEXT PRIMARY KEY,
-  owner_user_id TEXT NOT NULL,
-  source_conversation_id TEXT NOT NULL,
-  agent_id TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('pending','processing','completed','failed')),
-  document JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX IF NOT EXISTS catena_memory_tasks_owner_updated_idx
-  ON catena_memory_tasks (owner_user_id, updated_at DESC);
-CREATE TABLE IF NOT EXISTS barena_agent_profiles (
-  owner_user_id TEXT PRIMARY KEY REFERENCES barena_users(user_id) ON DELETE CASCADE,
-  slug TEXT NOT NULL UNIQUE,
-  display_name TEXT NOT NULL,
-  bio TEXT NOT NULL DEFAULT '',
-  is_public BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-CREATE TABLE IF NOT EXISTS barena_runs (
-  run_id TEXT PRIMARY KEY,
-  request_id TEXT NOT NULL UNIQUE,
-  operation TEXT NOT NULL,
-  state TEXT NOT NULL,
-  current_phase TEXT NOT NULL DEFAULT '',
-  current_actor TEXT NOT NULL DEFAULT '',
-  input JSONB NOT NULL,
-  runtime JSONB,
-  cancel_requested BOOLEAN NOT NULL DEFAULT FALSE,
-  error TEXT NOT NULL DEFAULT '',
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-ALTER TABLE barena_runs
-  ADD COLUMN IF NOT EXISTS owner_user_id TEXT
-  REFERENCES barena_users(user_id) ON DELETE SET NULL;
-ALTER TABLE barena_runs
-  ADD COLUMN IF NOT EXISTS execution_origin TEXT NOT NULL DEFAULT 'local';
-CREATE INDEX IF NOT EXISTS barena_runs_created_at_idx
-  ON barena_runs (created_at DESC);
-CREATE INDEX IF NOT EXISTS barena_runs_owner_created_at_idx
-  ON barena_runs (owner_user_id, created_at DESC);
-CREATE TABLE IF NOT EXISTS barena_engine_events (
-  run_id TEXT NOT NULL REFERENCES barena_runs(run_id) ON DELETE CASCADE,
-  sequence BIGINT NOT NULL,
-  event_id TEXT NOT NULL UNIQUE,
-  timestamp TIMESTAMPTZ NOT NULL,
-  operation TEXT NOT NULL,
-  kind TEXT NOT NULL,
-  phase TEXT NOT NULL,
-  actor TEXT NOT NULL,
-  attempt_id TEXT NOT NULL DEFAULT '',
-  trace_id TEXT NOT NULL DEFAULT '',
-  payload JSONB NOT NULL,
-  PRIMARY KEY (run_id, sequence)
-);
-CREATE TABLE IF NOT EXISTS barena_run_bundles (
-  run_bundle_id TEXT PRIMARY KEY,
-  owner_user_id TEXT REFERENCES barena_users(user_id) ON DELETE SET NULL,
-  run_id TEXT NOT NULL UNIQUE REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
-  idempotency_key TEXT NOT NULL,
-  request_fingerprint TEXT NOT NULL,
-  terminal_fact_sha256 TEXT NOT NULL,
-  terminal_fact BYTEA NOT NULL,
-  document JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL
-);
-CREATE UNIQUE INDEX IF NOT EXISTS barena_run_bundles_owner_key_idx
-  ON barena_run_bundles (COALESCE(owner_user_id,''), idempotency_key);
-CREATE TABLE IF NOT EXISTS catena_conversation_messages (
-  owner_user_id TEXT NOT NULL,
-  message_id TEXT NOT NULL,
-  conversation_id TEXT NOT NULL,
-  sequence BIGINT NOT NULL CHECK (sequence > 0),
-  occurred_at TIMESTAMPTZ NOT NULL,
-  received_at TIMESTAMPTZ NOT NULL,
-  runtime TEXT NOT NULL,
-  agent_id TEXT NOT NULL,
-  agent_name TEXT NOT NULL DEFAULT '',
-  surface TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('user','assistant')),
-  role_name TEXT NOT NULL DEFAULT '',
-  content JSONB NOT NULL,
-  delivery JSONB NOT NULL,
-  trace_id TEXT NOT NULL DEFAULT '',
-  fingerprint TEXT NOT NULL,
-  PRIMARY KEY (owner_user_id, message_id),
-  UNIQUE (owner_user_id, agent_id, conversation_id, sequence)
-);
-CREATE INDEX IF NOT EXISTS catena_conversation_messages_owner_updated_idx
-  ON catena_conversation_messages
-  (owner_user_id, occurred_at DESC, conversation_id);
-CREATE INDEX IF NOT EXISTS catena_conversation_messages_owner_agent_idx
-  ON catena_conversation_messages
-  (owner_user_id, agent_id, occurred_at DESC);
-CREATE TABLE IF NOT EXISTS spiral_evolution_jobs (
-  job_id TEXT PRIMARY KEY,
-  owner_user_id TEXT REFERENCES barena_users(user_id) ON DELETE SET NULL,
-  source_run_id TEXT REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
-  source_trace_id TEXT NOT NULL,
-  source_agent_id TEXT NOT NULL DEFAULT '',
-  idempotency_key TEXT NOT NULL,
-  request_fingerprint TEXT NOT NULL,
-  state TEXT NOT NULL CHECK (state IN ('queued','running','completed','failed','cancelled')),
-  current_stage TEXT NOT NULL DEFAULT '',
-  document JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-ALTER TABLE spiral_evolution_jobs
-  ALTER COLUMN source_run_id DROP NOT NULL;
-ALTER TABLE spiral_evolution_jobs
-  ADD COLUMN IF NOT EXISTS source_agent_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE spiral_evolution_jobs
-  ADD COLUMN IF NOT EXISTS worker_id TEXT NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS fencing_token BIGINT NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS attempt INTEGER NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  ADD COLUMN IF NOT EXISTS cancel_requested BOOLEAN NOT NULL DEFAULT false;
-DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='spiral_evolution_jobs'::regclass
-    AND conname='spiral_evolution_jobs_state_check' AND pg_get_constraintdef(oid) NOT LIKE '%cancelled%') THEN
-    ALTER TABLE spiral_evolution_jobs DROP CONSTRAINT spiral_evolution_jobs_state_check;
-    ALTER TABLE spiral_evolution_jobs ADD CONSTRAINT spiral_evolution_jobs_state_check
-      CHECK (state IN ('queued','running','completed','failed','cancelled'));
-  END IF;
-END $$;
-CREATE INDEX IF NOT EXISTS spiral_evolution_jobs_runnable_idx
-  ON spiral_evolution_jobs (next_attempt_at,created_at,job_id) WHERE state IN ('queued','running');
-DROP INDEX IF EXISTS spiral_evolution_jobs_request_key_idx;
-CREATE UNIQUE INDEX IF NOT EXISTS spiral_evolution_jobs_request_key_idx
-  ON spiral_evolution_jobs
-  (COALESCE(owner_user_id,''), source_trace_id, source_agent_id, idempotency_key);
-CREATE INDEX IF NOT EXISTS spiral_evolution_jobs_owner_created_at_idx
-  ON spiral_evolution_jobs (owner_user_id, created_at DESC);
-CREATE TABLE IF NOT EXISTS barena_issues (
-  issue_id TEXT PRIMARY KEY,
-  owner_user_id TEXT REFERENCES barena_users(user_id) ON DELETE SET NULL,
-  source_run_id TEXT NOT NULL REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
-  source_trace_id TEXT NOT NULL DEFAULT '',
-  title TEXT NOT NULL,
-  summary TEXT NOT NULL,
-  severity TEXT NOT NULL,
-  status TEXT NOT NULL,
-  promoted_case_id TEXT NOT NULL DEFAULT '',
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX IF NOT EXISTS barena_issues_owner_created_at_idx
-  ON barena_issues (owner_user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS barena_issues_source_run_idx
-  ON barena_issues (source_run_id);
-CREATE TABLE IF NOT EXISTS barena_cases (
-  case_id TEXT PRIMARY KEY,
-  revision INTEGER NOT NULL,
-  owner_user_id TEXT REFERENCES barena_users(user_id) ON DELETE SET NULL,
-  source_issue_id TEXT NOT NULL UNIQUE
-    REFERENCES barena_issues(issue_id) ON DELETE RESTRICT,
-  source_run_id TEXT NOT NULL REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
-  source_trace_id TEXT NOT NULL DEFAULT '',
-  title TEXT NOT NULL,
-  operation TEXT NOT NULL,
-  input JSONB NOT NULL,
-  runtime JSONB,
-  success_criteria TEXT NOT NULL,
-  verifier JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX IF NOT EXISTS barena_cases_owner_created_at_idx
-  ON barena_cases (owner_user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS barena_cases_source_run_idx
-  ON barena_cases (source_run_id);
-ALTER TABLE barena_cases
-  ADD COLUMN IF NOT EXISTS replay_prompt TEXT NOT NULL DEFAULT '';
-CREATE TABLE IF NOT EXISTS barena_harness_versions (
-  harness_version_id TEXT PRIMARY KEY,
-  owner_user_id TEXT REFERENCES barena_users(user_id) ON DELETE RESTRICT,
-  case_id TEXT NOT NULL REFERENCES barena_cases(case_id) ON DELETE RESTRICT,
-  run_id TEXT NOT NULL UNIQUE REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
-  source_run_id TEXT NOT NULL REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
-  source_trace_id TEXT NOT NULL DEFAULT '',
-  idempotency_key TEXT NOT NULL,
-  runtime JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL
-);
-CREATE UNIQUE INDEX IF NOT EXISTS barena_harness_versions_replay_key_idx
-  ON barena_harness_versions
-  (COALESCE(owner_user_id,''), case_id, idempotency_key);
-CREATE INDEX IF NOT EXISTS barena_harness_versions_owner_created_at_idx
-  ON barena_harness_versions (owner_user_id, created_at DESC);
-CREATE TABLE IF NOT EXISTS barena_evaluations (
-  evaluation_id TEXT PRIMARY KEY,
-  owner_user_id TEXT REFERENCES barena_users(user_id) ON DELETE RESTRICT,
-  harness_version_id TEXT NOT NULL
-    REFERENCES barena_harness_versions(harness_version_id) ON DELETE RESTRICT,
-  case_id TEXT NOT NULL REFERENCES barena_cases(case_id) ON DELETE RESTRICT,
-  run_id TEXT NOT NULL UNIQUE REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
-  source_run_id TEXT NOT NULL REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
-  source_trace_id TEXT NOT NULL DEFAULT '',
-  replay_trace_id TEXT NOT NULL DEFAULT '',
-  terminal_event_id TEXT NOT NULL UNIQUE
-    REFERENCES barena_engine_events(event_id) ON DELETE RESTRICT,
-  package_status TEXT NOT NULL,
-  result_status TEXT NOT NULL DEFAULT '',
-  decision TEXT NOT NULL CHECK (decision IN ('cleared','held','rejected')),
-  summary TEXT NOT NULL DEFAULT '',
-  result_ref TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX IF NOT EXISTS barena_evaluations_owner_created_at_idx
-  ON barena_evaluations (owner_user_id, created_at DESC);
-CREATE TABLE IF NOT EXISTS barena_releases (
-  release_id TEXT PRIMARY KEY,
-  owner_user_id TEXT REFERENCES barena_users(user_id) ON DELETE RESTRICT,
-  harness_version_id TEXT NOT NULL
-    REFERENCES barena_harness_versions(harness_version_id) ON DELETE RESTRICT,
-  evaluation_id TEXT NOT NULL UNIQUE
-    REFERENCES barena_evaluations(evaluation_id) ON DELETE RESTRICT,
-  case_id TEXT NOT NULL REFERENCES barena_cases(case_id) ON DELETE RESTRICT,
-  run_id TEXT NOT NULL UNIQUE REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
-  source_run_id TEXT NOT NULL REFERENCES barena_runs(run_id) ON DELETE RESTRICT,
-  source_trace_id TEXT NOT NULL DEFAULT '',
-  replay_trace_id TEXT NOT NULL DEFAULT '',
-  terminal_event_id TEXT NOT NULL
-    REFERENCES barena_engine_events(event_id) ON DELETE RESTRICT,
-  decision TEXT NOT NULL CHECK (decision IN ('cleared','held','rejected')),
-  summary TEXT NOT NULL DEFAULT '',
-  created_at TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX IF NOT EXISTS barena_releases_owner_created_at_idx
-  ON barena_releases (owner_user_id, created_at DESC);
-`)
-	return err
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1943287103)`); err != nil {
+		return err
+	}
+	core, _ := migrationFiles.ReadFile("migrations/001_core.sql")
+	if _, err = tx.ExecContext(ctx, string(core)); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS catena_schema_migrations(version INTEGER PRIMARY KEY,applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`); err != nil {
+		return err
+	}
+	var applied bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM catena_schema_migrations WHERE version=2)`).Scan(&applied); err != nil {
+		return err
+	}
+	if !applied {
+		sql, _ := migrationFiles.ReadFile("migrations/002_v2.sql")
+		if _, err = tx.ExecContext(ctx, string(sql)); err != nil {
+			return err
+		}
+		if _, err = tx.ExecContext(ctx, `INSERT INTO catena_schema_migrations(version) VALUES(2)`); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
-func (s *PostgresStore) CreateEvolutionJob(
+func (s *PostgresStore) CreateAnalysisJob(
 	ctx context.Context,
-	job EvolutionJob,
-) (EvolutionJob, bool, error) {
-	if !validEvolutionJobSource(job) {
-		return EvolutionJob{}, false, ErrConflict
+	job AnalysisJob,
+) (AnalysisJob, bool, error) {
+	if !validAnalysisJobSource(job) {
+		return AnalysisJob{}, false, ErrConflict
 	}
 
 	document, err := json.Marshal(job)
 	if err != nil {
-		return EvolutionJob{}, false, err
+		return AnalysisJob{}, false, err
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return EvolutionJob{}, false, err
+		return AnalysisJob{}, false, err
 	}
 	defer tx.Rollback()
 	// Serialize only admission, not execution. Idempotent retries remain valid
 	// even when the queue is full. The fixed lock key is shared by all replicas.
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1943287102)`); err != nil {
-		return EvolutionJob{}, false, err
+		return AnalysisJob{}, false, err
 	}
-	existing, lookupErr := scanEvolutionJob(tx.QueryRowContext(ctx, `SELECT COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,document
+	existing, lookupErr := scanAnalysisJob(tx.QueryRowContext(ctx, `SELECT COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,document
 FROM spiral_evolution_jobs WHERE COALESCE(owner_user_id,'')=$1 AND source_trace_id=$2 AND source_agent_id=$3 AND idempotency_key=$4`,
 		job.OwnerUserID, job.SourceTraceID, job.SourceAgentID, job.IdempotencyKey))
 	if lookupErr == nil {
 		if existing.RequestFingerprint != job.RequestFingerprint {
-			return EvolutionJob{}, false, ErrConflict
+			return AnalysisJob{}, false, ErrConflict
 		}
 		return existing, false, tx.Commit()
 	}
 	if !errors.Is(lookupErr, ErrNotFound) {
-		return EvolutionJob{}, false, lookupErr
+		return AnalysisJob{}, false, lookupErr
 	}
 	var active, owned int
 	if err = tx.QueryRowContext(ctx, `SELECT count(*),count(*) FILTER(WHERE COALESCE(owner_user_id,'')=$1) FROM spiral_evolution_jobs WHERE state IN ('queued','running')`, job.OwnerUserID).Scan(&active, &owned); err != nil {
-		return EvolutionJob{}, false, err
+		return AnalysisJob{}, false, err
 	}
-	if active >= evolutionQueueCapacity || owned >= evolutionOwnerQueueCapacity {
-		return EvolutionJob{}, false, ErrQueueFull
+	if active >= analysisQueueCapacity || owned >= analysisOwnerQueueCapacity {
+		return AnalysisJob{}, false, ErrQueueFull
 	}
-	created, err := scanEvolutionJob(tx.QueryRowContext(ctx, `
+	created, err := scanAnalysisJob(tx.QueryRowContext(ctx, `
 INSERT INTO spiral_evolution_jobs
   (job_id,owner_user_id,source_run_id,source_trace_id,source_agent_id,idempotency_key,
    request_fingerprint,state,current_stage,document,created_at,updated_at)
@@ -396,26 +129,26 @@ RETURNING COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,documen
 		return created, true, tx.Commit()
 	}
 	if !errors.Is(err, ErrNotFound) {
-		return EvolutionJob{}, false, err
+		return AnalysisJob{}, false, err
 	}
-	existing, lookupErr = scanEvolutionJob(tx.QueryRowContext(ctx, `
+	existing, lookupErr = scanAnalysisJob(tx.QueryRowContext(ctx, `
 SELECT COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,document
 FROM spiral_evolution_jobs
 WHERE COALESCE(owner_user_id,'')=$1 AND source_trace_id=$2 AND source_agent_id=$3 AND idempotency_key=$4`,
 		job.OwnerUserID, job.SourceTraceID, job.SourceAgentID, job.IdempotencyKey))
 	if lookupErr == nil {
 		if existing.RequestFingerprint != job.RequestFingerprint {
-			return EvolutionJob{}, false, ErrConflict
+			return AnalysisJob{}, false, ErrConflict
 		}
 		return existing, false, tx.Commit()
 	}
 	if !errors.Is(lookupErr, ErrNotFound) {
-		return EvolutionJob{}, false, lookupErr
+		return AnalysisJob{}, false, lookupErr
 	}
-	return EvolutionJob{}, false, ErrConflict
+	return AnalysisJob{}, false, ErrConflict
 }
 
-func (s *PostgresStore) UpdateEvolutionJob(ctx context.Context, job EvolutionJob) error {
+func (s *PostgresStore) UpdateAnalysisJob(ctx context.Context, job AnalysisJob) error {
 	document, err := json.Marshal(job)
 	if err != nil {
 		return err
@@ -444,19 +177,19 @@ WHERE job_id=$1
 	return nil
 }
 
-func (s *PostgresStore) GetEvolutionJob(
+func (s *PostgresStore) GetAnalysisJob(
 	ctx context.Context,
 	id string,
-) (EvolutionJob, error) {
-	return scanEvolutionJob(s.db.QueryRowContext(ctx, `
+) (AnalysisJob, error) {
+	return scanAnalysisJob(s.db.QueryRowContext(ctx, `
 SELECT COALESCE(owner_user_id,''),idempotency_key,request_fingerprint,document
 FROM spiral_evolution_jobs WHERE job_id=$1`, id))
 }
 
-func (s *PostgresStore) ListEvolutionJobs(
+func (s *PostgresStore) ListAnalysisJobs(
 	ctx context.Context,
 	limit int,
-) ([]EvolutionJob, error) {
+) ([]AnalysisJob, error) {
 	if limit < 1 || limit > 1000 {
 		limit = 100
 	}
@@ -467,14 +200,14 @@ FROM spiral_evolution_jobs ORDER BY created_at DESC LIMIT $1`, limit)
 		return nil, err
 	}
 	defer rows.Close()
-	return scanEvolutionJobs(rows)
+	return scanAnalysisJobs(rows)
 }
 
-func (s *PostgresStore) ListEvolutionJobsByOwner(
+func (s *PostgresStore) ListAnalysisJobsByOwner(
 	ctx context.Context,
 	ownerUserID string,
 	limit int,
-) ([]EvolutionJob, error) {
+) ([]AnalysisJob, error) {
 	if limit < 1 || limit > 1000 {
 		limit = 100
 	}
@@ -487,10 +220,10 @@ ORDER BY created_at DESC LIMIT $2`, ownerUserID, limit)
 		return nil, err
 	}
 	defer rows.Close()
-	return scanEvolutionJobs(rows)
+	return scanAnalysisJobs(rows)
 }
 
-func (s *PostgresStore) DeleteEvolutionJob(
+func (s *PostgresStore) DeleteAnalysisJob(
 	ctx context.Context,
 	ownerUserID string,
 	id string,
@@ -507,7 +240,7 @@ WHERE job_id=$1
 	if affected > 0 {
 		return nil
 	}
-	job, lookupErr := s.GetEvolutionJob(ctx, id)
+	job, lookupErr := s.GetAnalysisJob(ctx, id)
 	if lookupErr != nil || job.OwnerUserID != ownerUserID {
 		return ErrNotFound
 	}
@@ -597,10 +330,10 @@ VALUES ($1,$2,$3,$4,NULLIF($5,''),$6,$7)`,
 	return mapStoreError(err)
 }
 
-func (s *PostgresStore) UpsertEvolutionModelConfig(
+func (s *PostgresStore) UpsertAnalysisModelConfig(
 	ctx context.Context,
-	config EvolutionModelConfig,
-) (EvolutionModelConfig, error) {
+	config AnalysisModelConfig,
+) (AnalysisModelConfig, error) {
 	row := s.db.QueryRowContext(ctx, `
 INSERT INTO catena_evolution_model_configs
   (owner_user_id,provider,base_url,model,encrypted_api_key,updated_at)
@@ -614,19 +347,19 @@ ON CONFLICT (owner_user_id) DO UPDATE SET
 RETURNING owner_user_id,provider,base_url,model,encrypted_api_key,updated_at`,
 		config.OwnerUserID, config.Provider, config.BaseURL, config.Model,
 		config.EncryptedAPIKey, config.UpdatedAt)
-	return scanEvolutionModelConfig(row)
+	return scanAnalysisModelConfig(row)
 }
 
-func (s *PostgresStore) GetEvolutionModelConfigByOwner(
+func (s *PostgresStore) GetAnalysisModelConfigByOwner(
 	ctx context.Context,
 	ownerUserID string,
-) (EvolutionModelConfig, error) {
-	return scanEvolutionModelConfig(s.db.QueryRowContext(ctx, `
+) (AnalysisModelConfig, error) {
+	return scanAnalysisModelConfig(s.db.QueryRowContext(ctx, `
 SELECT owner_user_id,provider,base_url,model,encrypted_api_key,updated_at
 FROM catena_evolution_model_configs WHERE owner_user_id=$1`, ownerUserID))
 }
 
-func (s *PostgresStore) DeleteEvolutionModelConfigByOwner(
+func (s *PostgresStore) DeleteAnalysisModelConfigByOwner(
 	ctx context.Context,
 	ownerUserID string,
 ) error {
@@ -642,8 +375,8 @@ DELETE FROM catena_evolution_model_configs WHERE owner_user_id=$1`, ownerUserID)
 	return nil
 }
 
-func scanEvolutionModelConfig(row rowScanner) (EvolutionModelConfig, error) {
-	var config EvolutionModelConfig
+func scanAnalysisModelConfig(row rowScanner) (AnalysisModelConfig, error) {
+	var config AnalysisModelConfig
 	err := row.Scan(
 		&config.OwnerUserID,
 		&config.Provider,
@@ -653,7 +386,7 @@ func scanEvolutionModelConfig(row rowScanner) (EvolutionModelConfig, error) {
 		&config.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
-		return EvolutionModelConfig{}, ErrNotFound
+		return AnalysisModelConfig{}, ErrNotFound
 	}
 	return config, err
 }
@@ -956,7 +689,7 @@ type rowScanner interface {
 	Scan(...any) error
 }
 
-func scanEvolutionJob(row rowScanner) (EvolutionJob, error) {
+func scanAnalysisJob(row rowScanner) (AnalysisJob, error) {
 	var ownerUserID string
 	var idempotencyKey string
 	var requestFingerprint string
@@ -968,13 +701,13 @@ func scanEvolutionJob(row rowScanner) (EvolutionJob, error) {
 		&document,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return EvolutionJob{}, ErrNotFound
+			return AnalysisJob{}, ErrNotFound
 		}
-		return EvolutionJob{}, err
+		return AnalysisJob{}, err
 	}
-	var job EvolutionJob
+	var job AnalysisJob
 	if err := json.Unmarshal(document, &job); err != nil {
-		return EvolutionJob{}, err
+		return AnalysisJob{}, err
 	}
 	job.OwnerUserID = ownerUserID
 	job.IdempotencyKey = idempotencyKey
@@ -982,10 +715,10 @@ func scanEvolutionJob(row rowScanner) (EvolutionJob, error) {
 	return job, nil
 }
 
-func scanEvolutionJobs(rows *sql.Rows) ([]EvolutionJob, error) {
-	result := make([]EvolutionJob, 0)
+func scanAnalysisJobs(rows *sql.Rows) ([]AnalysisJob, error) {
+	result := make([]AnalysisJob, 0)
 	for rows.Next() {
-		job, err := scanEvolutionJob(rows)
+		job, err := scanAnalysisJob(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -1052,20 +785,6 @@ func scanProfileRecord(row rowScanner) (ProfileRecord, error) {
 		return ProfileRecord{}, err
 	}
 	return record, nil
-}
-
-func nullableJSON(value json.RawMessage) any {
-	if len(value) == 0 {
-		return nil
-	}
-	return value
-}
-
-func jsonOrEmpty(value json.RawMessage) json.RawMessage {
-	if len(value) == 0 {
-		return json.RawMessage(`{}`)
-	}
-	return value
 }
 
 func mapStoreError(err error) error {

@@ -1,29 +1,12 @@
 package control
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
 )
-
-func memoryProjectID(ownerID string) string {
-	digest := sha256.Sum256([]byte("catena-memory:" + ownerID))
-	return "catena_" + hex.EncodeToString(digest[:12])
-}
-
-func memoryTraceSourceHash(traceID string) string {
-	digest := sha256.Sum256([]byte("catena-trace:" + traceID))
-	return hex.EncodeToString(digest[:])
-}
-
-func memoryConversationSourceHash(agentID string, conversationID string) string {
-	digest := sha256.Sum256([]byte("catena-conversation:" + agentID + ":" + conversationID))
-	return hex.EncodeToString(digest[:])
-}
 
 var memorySecretPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bBearer\s+[A-Za-z0-9._~+/=-]{8,}`),

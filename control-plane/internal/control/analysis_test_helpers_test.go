@@ -7,26 +7,26 @@ import (
 	"time"
 )
 
-const testEvolutionEncryptionKey = "catena-test-evolution-encryption-key-0001"
+const testAnalysisEncryptionKey = "catena-test-evolution-encryption-key-0001"
 
-func testEvolutionAuthConfig() AuthConfig {
-	return AuthConfig{APITokenEncryptionKey: testEvolutionEncryptionKey}
+func testAnalysisAuthConfig() AuthConfig {
+	return AuthConfig{APITokenEncryptionKey: testAnalysisEncryptionKey}
 }
 
-func seedTestEvolutionModelConfig(t *testing.T, store *MemoryStore, ownerUserID string) {
+func seedTestAnalysisModelConfig(t *testing.T, store Store, ownerUserID string) {
 	t.Helper()
 	if strings.TrimSpace(ownerUserID) == "" {
 		ownerUserID = "local"
 	}
 	encrypted, err := encryptAPIToken(
 		"test-model-api-key",
-		evolutionModelEnvelopePrefix+ownerUserID,
-		testEvolutionEncryptionKey,
+		analysisModelEnvelopePrefix+ownerUserID,
+		testAnalysisEncryptionKey,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = store.UpsertEvolutionModelConfig(context.Background(), EvolutionModelConfig{
+	_, err = store.UpsertAnalysisModelConfig(context.Background(), AnalysisModelConfig{
 		OwnerUserID:     ownerUserID,
 		Provider:        "openai",
 		BaseURL:         "https://llm.example.test/v1",

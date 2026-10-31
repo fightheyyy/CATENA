@@ -1,0 +1,214 @@
+M	.github/workflows/catena-mvp1-ci.yml
+M	README.md
+M	SPEC.md
+R079	catena-web/src/AgentEvolutionLauncher.tsx	catena-web/src/AgentAnalysisLauncher.tsx
+A	catena-web/src/AnalysisWorkspace.tsx
+M	catena-web/src/ApiManagementPage.tsx
+M	catena-web/src/App.tsx
+M	catena-web/src/ConversationWorkspace.tsx
+D	catena-web/src/EvolutionWorkspace.tsx
+D	catena-web/src/ExperimentWorkspace.tsx
+M	catena-web/src/TraceExplorer.tsx
+M	catena-web/src/WorkbenchWorkspace.tsx
+A	catena-web/src/analysis.ts
+M	catena-web/src/api.ts
+M	catena-web/src/design.css
+D	catena-web/src/evolution.ts
+D	catena-web/src/experiments.ts
+M	catena-web/src/navigation.ts
+M	catena-web/src/styles.css
+M	catena-web/src/traceFarm.ts
+M	catena-web/src/types.ts
+M	catena-web/src/useAgentTraceWindow.ts
+M	catena-web/src/useWorkspace.ts
+M	catena-web/src/workspace.ts
+A	catena-web/tests/analysis.test.mjs
+M	catena-web/tests/browser/core-journeys.test.mjs
+M	catena-web/tests/browser/fixture.mjs
+M	catena-web/tests/browser/workspace-sample.mjs
+D	catena-web/tests/evolution.test.mjs
+D	catena-web/tests/experiments.test.mjs
+M	catena-web/tests/navigation.test.mjs
+M	catena-web/tests/trace-farm.test.mjs
+M	control-plane/PLAN.md
+M	control-plane/README.md
+M	control-plane/SPEC.md
+R067	control-plane/cmd/barena-server/main.go	control-plane/cmd/catena-server/main.go
+R100	control-plane/cmd/barena-server/main_test.go	control-plane/cmd/catena-server/main_test.go
+D	control-plane/cmd/spiral-runner-client/main.go
+D	control-plane/cmd/spiral-runner-client/main_test.go
+A	control-plane/internal/control/analysis_handlers.go
+A	control-plane/internal/control/analysis_job.go
+A	control-plane/internal/control/analysis_job_test.go
+A	control-plane/internal/control/analysis_queue.go
+R050	control-plane/internal/control/evolution_queue_test.go	control-plane/internal/control/analysis_queue_test.go
+A	control-plane/internal/control/analysis_runtime.go
+A	control-plane/internal/control/analysis_test_helpers_test.go
+R066	control-plane/internal/control/evolution_worker.go	control-plane/internal/control/analysis_worker.go
+A	control-plane/internal/control/analysis_worker_test.go
+A	control-plane/internal/control/artifact.go
+A	control-plane/internal/control/artifact_test.go
+M	control-plane/internal/control/community.go
+M	control-plane/internal/control/control_test.go
+M	control-plane/internal/control/conversation_test.go
+A	control-plane/internal/control/evidence.go
+D	control-plane/internal/control/evolution.go
+D	control-plane/internal/control/evolution_codex_acceptance_test.go
+D	control-plane/internal/control/evolution_job.go
+D	control-plane/internal/control/evolution_job_postgres_integration_test.go
+D	control-plane/internal/control/evolution_job_test.go
+D	control-plane/internal/control/evolution_queue.go
+D	control-plane/internal/control/evolution_runtime.go
+D	control-plane/internal/control/evolution_runtime_test.go
+D	control-plane/internal/control/evolution_test.go
+D	control-plane/internal/control/evolution_worker_test.go
+D	control-plane/internal/control/experiment.go
+D	control-plane/internal/control/experiment_test.go
+M	control-plane/internal/control/gateway_auth_test.go
+A	control-plane/internal/control/helpers.go
+M	control-plane/internal/control/http.go
+D	control-plane/internal/control/ingest.go
+M	control-plane/internal/control/llm_config.go
+M	control-plane/internal/control/llm_config_test.go
+M	control-plane/internal/control/memory.go
+A	control-plane/internal/control/memory_engine.go
+A	control-plane/internal/control/memory_evidence.go
+A	control-plane/internal/control/memory_handlers.go
+M	control-plane/internal/control/memory_task_record.go
+M	control-plane/internal/control/memory_test.go
+A	control-plane/internal/control/memory_types.go
+A	control-plane/internal/control/migrations/001_core.sql
+A	control-plane/internal/control/migrations/002_v2.sql
+M	control-plane/internal/control/model.go
+D	control-plane/internal/control/openviking_memory.go
+D	control-plane/internal/control/openviking_memory_test.go
+A	control-plane/internal/control/pipeline_postgres_integration_test.go
+M	control-plane/internal/control/postgres.go
+R080	control-plane/internal/control/postgres_evolution_queue.go	control-plane/internal/control/postgres_analysis_queue.go
+R081	control-plane/internal/control/postgres_evolution_queue_test.go	control-plane/internal/control/postgres_analysis_queue_test.go
+M	control-plane/internal/control/postgres_integration_test.go
+D	control-plane/internal/control/process_unix.go
+D	control-plane/internal/control/process_windows.go
+D	control-plane/internal/control/replay_test.go
+D	control-plane/internal/control/run_bundle.go
+D	control-plane/internal/control/run_bundle_postgres_integration_test.go
+D	control-plane/internal/control/run_bundle_test.go
+D	control-plane/internal/control/runner.go
+D	control-plane/internal/control/scenario_adoption.go
+D	control-plane/internal/control/scenario_adoption_test.go
+M	control-plane/internal/control/store.go
+M	control-plane/internal/control/trace.go
+M	control-plane/internal/control/trace_admission_test.go
+M	control-plane/internal/control/trace_load_study_test.go
+R098	control-plane/internal/control/web/assets/AgentWorkspace-DODpXWjo.js	control-plane/internal/control/web/assets/AgentWorkspace-FnZk0_d6.js
+A	control-plane/internal/control/web/assets/AnalysisWorkspace-DbCCgA4j.js
+R082	control-plane/internal/control/web/assets/ApiManagementPage-DGJpocr2.js	control-plane/internal/control/web/assets/ApiManagementPage-QwXp6c5E.js
+A	control-plane/internal/control/web/assets/ConversationWorkspace-Dm6s15hj.js
+D	control-plane/internal/control/web/assets/ConversationWorkspace-W3ky0UDv.js
+D	control-plane/internal/control/web/assets/EvolutionWorkspace-CFCFcGje.js
+D	control-plane/internal/control/web/assets/ExperimentWorkspace-Dl7MXbBs.js
+R099	control-plane/internal/control/web/assets/MemoryGraphCanvas-d9eyV_FN.js	control-plane/internal/control/web/assets/MemoryGraphCanvas-BS6HKikA.js
+R066	control-plane/internal/control/web/assets/TraceExplorer-DxRVoZZh.js	control-plane/internal/control/web/assets/TraceExplorer-F8Dj4OtM.js
+A	control-plane/internal/control/web/assets/WorkbenchWorkspace-BTFild-1.js
+D	control-plane/internal/control/web/assets/WorkbenchWorkspace-DLGwFxMu.js
+D	control-plane/internal/control/web/assets/index-1V1l0yyo.css
+A	control-plane/internal/control/web/assets/index-C6eiNoS8.js
+D	control-plane/internal/control/web/assets/index-CW_006Ik.js
+A	control-plane/internal/control/web/assets/index-DrGEivYq.css
+R092	control-plane/internal/control/web/assets/useAgentTraceWindow--Jk9geF5.js	control-plane/internal/control/web/assets/useAgentTraceWindow-D6RkK4n3.js
+M	control-plane/internal/control/web/index.html
+M	deploy/catena-mvp1/.env.example
+M	deploy/catena-mvp1/Dockerfile.core
+M	deploy/catena-mvp1/Dockerfile.core.prebuilt
+M	deploy/catena-mvp1/Dockerfile.engine
+D	deploy/catena-mvp1/Dockerfile.gauzmem
+D	deploy/catena-mvp1/Dockerfile.runner
+M	deploy/catena-mvp1/README.md
+M	deploy/catena-mvp1/compose.openviking.yml
+M	deploy/catena-mvp1/compose.public.yml
+A	deploy/catena-mvp1/compose.rsi.yml
+M	deploy/catena-mvp1/compose.yml
+M	deploy/catena-mvp1/demo.sh
+M	deploy/catena-mvp1/public.sh
+M	deploy/catena-mvp1/smoke-public.sh
+M	deploy/catena-mvp1/smoke.sh
+D	deploy/catena-mvp1/worker-markers/engine-worker.js
+D	deploy/catena-mvp1/worker-markers/evolution-runtime-worker.js
+M	docs/BACKEND_ENGINEERING_20261027.md
+M	docs/CODEX_ENGINE_RUNTIME.md
+M	docs/HARBOR_WEB_EXPERIMENTS.md
+M	docs/OPENVIKING_INTEGRATION.md
+M	docs/PROACTIVE_ASSISTANT.md
+M	docs/RSI_ADAPTERS.md
+M	docs/XIAOBA_MEMORY_LEGACY.md
+A	docs/archive/v1/CONTROL_PLANE_PLAN.md
+A	docs/archive/v1/CONTROL_PLANE_README.md
+A	docs/archive/v1/CONTROL_PLANE_SPEC.md
+A	docs/archive/v1/README.md
+A	docs/archive/v1/SPEC.md
+A	docs/refactors/CATENA_V2.md
+A	docs/refactors/evidence/v2/COMMANDS.md
+A	docs/refactors/evidence/v2/engine-clean.log
+A	docs/refactors/evidence/v2/engine-ruff.log
+A	docs/refactors/evidence/v2/file_changes.tsv
+A	docs/refactors/evidence/v2/go-race-databases.log
+A	docs/refactors/evidence/v2/go-unit.log
+A	docs/refactors/evidence/v2/go-vet.log
+A	docs/refactors/evidence/v2/pip-check.log
+A	docs/refactors/evidence/v2/source_inventory.json
+A	docs/refactors/evidence/v2/tap.log
+A	docs/refactors/evidence/v2/verifiers.log
+A	docs/refactors/evidence/v2/web-browser.log
+A	docs/refactors/evidence/v2/web-build.log
+A	docs/refactors/evidence/v2/web-unit.log
+A	engine/catena_engine/evaluation/__init__.py
+R075	engine/catena_engine/rsi/harbor.py	engine/catena_engine/evaluation/harbor.py
+R084	engine/catena_engine/rsi/harbor_agent.py	engine/catena_engine/evaluation/harbor_agent.py
+A	engine/catena_engine/executions.py
+A	engine/catena_engine/memory/__init__.py
+A	engine/catena_engine/memory/adapters/__init__.py
+A	engine/catena_engine/memory/adapters/openviking.py
+A	engine/catena_engine/memory/api.py
+A	engine/catena_engine/memory/contracts.py
+M	engine/catena_engine/protocol.py
+M	engine/catena_engine/rsi/api.py
+D	engine/catena_engine/rsi/cli.py
+M	engine/catena_engine/rsi/contracts.py
+M	engine/catena_engine/rsi/harness2.py
+M	engine/catena_engine/rsi/host.py
+M	engine/catena_engine/rsi/runtime.py
+A	engine/catena_engine/runtime/__init__.py
+R078	engine/catena_engine/codex_runtime.py	engine/catena_engine/runtime/codex.py
+M	engine/catena_engine/server.py
+M	engine/pyproject.toml
+M	engine/tests/conftest.py
+A	engine/tests/private_pipeline_fixture.py
+D	engine/tests/test_capacity.py
+M	engine/tests/test_codex_artifacts.py
+M	engine/tests/test_codex_runtime.py
+D	engine/tests/test_experiment_runtime.py
+D	engine/tests/test_harbor_bridge.py
+D	engine/tests/test_harbor_e2b.py
+A	engine/tests/test_memory_adapter.py
+M	engine/tests/test_rsi.py
+M	engine/tests/test_rsi_harbor.py
+M	engine/tests/test_rsi_harness2.py
+M	engine/tests/test_rsi_server.py
+D	engine/tests/test_runtime.py
+M	engine/tests/test_server.py
+D	engine/tests/test_skill_eval.py
+A	research/legacy-engine/README.md
+R100	engine/catena_engine/experiment_runtime.py	research/legacy-engine/experiment_runtime.py
+R100	engine/catena_engine/harbor_agent.py	research/legacy-engine/harbor_agent.py
+R100	engine/catena_engine/harbor_bridge.py	research/legacy-engine/harbor_bridge.py
+R100	engine/catena_engine/harbor_e2b.py	research/legacy-engine/harbor_e2b.py
+R100	engine/catena_engine/harbor_local_setup.py	research/legacy-engine/harbor_local_setup.py
+R100	engine/catena_engine/harbor_publish_result.py	research/legacy-engine/harbor_publish_result.py
+R100	engine/catena_engine/harbor_smoke.py	research/legacy-engine/harbor_smoke.py
+R100	engine/catena_engine/harbor_worker.py	research/legacy-engine/harbor_worker.py
+R100	engine/catena_engine/publish_codex_study.py	research/legacy-engine/publish_codex_study.py
+R100	engine/catena_engine/publish_memory_study.py	research/legacy-engine/publish_memory_study.py
+R100	engine/catena_engine/roles.py	research/legacy-engine/roles.py
+R100	engine/catena_engine/runtime.py	research/legacy-engine/runtime.py
+R100	engine/catena_engine/skill_eval.py	research/legacy-engine/skill_eval.py
+A	scripts/source_inventory.py

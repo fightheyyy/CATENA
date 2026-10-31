@@ -1,3 +1,5 @@
+> 历史文档：本文描述 V1 当时的实现/结果；旧执行入口已退役。当前部署与 API 以 [V2 报告](refactors/CATENA_V2.md) 为准。
+
 # Go 后端改造与验收
 
 日期：2026-10-27。范围是 Evolution 分析任务和 OTLP 接入。Harbor Experiment、旧 Barena Run、记忆服务的调度没有迁移到本队列。

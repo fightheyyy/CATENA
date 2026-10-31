@@ -19,7 +19,7 @@ services:
       CATENA_CLICKHOUSE_DSN: ${CATENA_CLICKHOUSE_DSN:-http://default:catena@clickhouse:8123/catena?dial_timeout=5s}
       # Private analysis engine; never published outside the Compose network.
       CATENA_ENGINE_URL: http://catena-engine:8790
-      CATENA_ENGINE_TURN_TIMEOUT: ${CATENA_ENGINE_TURN_TIMEOUT:-5m}
+      CATENA_ENGINE_REQUEST_TIMEOUT: ${CATENA_ENGINE_REQUEST_TIMEOUT:-20m}
       CATENA_ENGINE_TOKEN: ${CATENA_ENGINE_TOKEN:-catena-local-engine-token-change-me}
       CATENA_JOB_WORKERS: ${CATENA_JOB_WORKERS:-1}
       CATENA_JOB_MAX_ATTEMPTS: ${CATENA_JOB_MAX_ATTEMPTS:-3}
@@ -61,11 +61,14 @@ services:
     mem_limit: 1g
     pids_limit: 128
     environment:
-      CATENA_ENGINE_MAX_CONCURRENT_TURNS: ${CATENA_ENGINE_MAX_CONCURRENT_TURNS:-1}
-      CATENA_ENGINE_BACKEND: ${CATENA_ENGINE_BACKEND:-codex}
       CATENA_CODEX_REASONING_EFFORT: ${CATENA_CODEX_REASONING_EFFORT:-low}
+      CATENA_ENGINE_EXECUTIONS_ROOT: /var/lib/catena-engine/executions
+      CATENA_RSI_RUNS_ROOT: /var/lib/catena-engine/runs
+      CATENA_RSI_CASES_MANIFEST: ${CATENA_RSI_CASES_MANIFEST:-}
       CATENA_ENGINE_ADDR: 0.0.0.0:8790
       CATENA_ENGINE_TOKEN: ${CATENA_ENGINE_TOKEN:-catena-local-engine-token-change-me}
+    volumes:
+      - catena-engine-data:/var/lib/catena-engine
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8790/readyz', timeout=3)"]
       interval: 5s
@@ -114,6 +117,7 @@ services:
 
 
 volumes:
+  catena-engine-data:
   catena-data:
   postgres-data:
   clickhouse-data:

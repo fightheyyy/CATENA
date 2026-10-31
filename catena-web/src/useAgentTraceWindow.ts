@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
-import { agentEvolutionWindow } from "./traceFarm";
+import { agentAnalysisWindow } from "./traceFarm";
 import type { TraceSummary } from "./types";
 
 type AgentTraceState = {
@@ -29,7 +29,7 @@ export function useAgentTraceWindow(agentID: string, limit: number, evidenceVers
     }
     let active = true;
     const controller = new AbortController();
-    const evidenceWindow = agentEvolutionWindow(new Date(), "30d");
+    const evidenceWindow = agentAnalysisWindow(new Date(), "30d");
     setState({ agentID, traces: [], loading: true, error: "" });
     void api.agentTraces(
       agentID,

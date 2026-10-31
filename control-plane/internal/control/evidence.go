@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -13,33 +12,21 @@ import (
 )
 
 const (
-	evolutionJobSchema             = "spiral.evolution_job.v1"
-	evolutionCandidateStatus       = "draft/unverified"
-	evolutionReviewScope           = "proposal_only"
-	evolutionEvidenceSchema        = "catena.evolution_evidence_pack.v1"
-	evolutionAgentEvidenceSchema   = "catena.agent_trace_set_evidence_pack.v1"
-	evolutionReleaseAuthority      = "human"
-	maxEvolutionEvidenceSpans      = 64
-	maxEvolutionEvidenceEvents     = 32
-	maxEvolutionEvidenceFieldBytes = 2 * 1024
-	maxEvolutionEvidencePackBytes  = 256 * 1024
-	maxAgentEvolutionTraceScan     = 100
-	maxAgentEvolutionTraces        = 12
-	maxAgentEvolutionEvidenceSpans = 64
+	analysisJobSchema             = "catena.analysis_job.v2"
+	analysisCandidateStatus       = "draft/unverified"
+	analysisReviewScope           = "proposal_only"
+	analysisEvidenceSchema        = "catena.evolution_evidence_pack.v1"
+	analysisAgentEvidenceSchema   = "catena.agent_trace_set_evidence_pack.v1"
+	analysisReleaseAuthority      = "human"
+	maxAnalysisEvidenceSpans      = 64
+	maxAnalysisEvidenceFieldBytes = 2 * 1024
+	maxAnalysisEvidencePackBytes  = 256 * 1024
+	maxAgentAnalysisTraceScan     = 100
+	maxAgentAnalysisTraces        = 12
+	maxAgentAnalysisEvidenceSpans = 64
 )
 
-func normalizedEvolutionOutputLanguage(value string) (string, error) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", "zh", "zh-cn", "zh-hans":
-		return "zh-CN", nil
-	case "en", "en-us", "en-gb":
-		return "en", nil
-	default:
-		return "", errors.New("output_language must be zh-CN or en")
-	}
-}
-
-func selectAgentEvolutionTraces(values []TraceSummary, limit int) []TraceSummary {
+func selectAgentAnalysisTraces(values []TraceSummary, limit int) []TraceSummary {
 	selected := append([]TraceSummary(nil), values...)
 	sort.SliceStable(selected, func(i, j int) bool {
 		leftHasError := selected[i].ErrorCount > 0
@@ -58,7 +45,7 @@ func selectAgentEvolutionTraces(values []TraceSummary, limit int) []TraceSummary
 	return selected
 }
 
-func normalizedEvolutionTraceID(value string) (string, error) {
+func normalizedAnalysisTraceID(value string) (string, error) {
 	traceID := strings.ToLower(strings.TrimSpace(value))
 	if len(traceID) != 32 {
 		return "", fmt.Errorf("trace_id must be 32 hexadecimal characters")
@@ -69,39 +56,39 @@ func normalizedEvolutionTraceID(value string) (string, error) {
 	return traceID, nil
 }
 
-func buildEvolutionEvidencePack(
-	sourceKind EvolutionSourceKind,
+func buildAnalysisEvidencePack(
+	sourceKind AnalysisSourceKind,
 	traceID string,
 	trace *TraceDetail,
 	createdAt time.Time,
-) (EvolutionEvidencePack, error) {
+) (AnalysisEvidencePack, error) {
 	if !sourceKind.Valid() || strings.TrimSpace(traceID) == "" {
-		return EvolutionEvidencePack{}, fmt.Errorf("Evolution evidence source is invalid")
+		return AnalysisEvidencePack{}, fmt.Errorf("Analysis evidence source is invalid")
 	}
-	if trace == nil && sourceKind == EvolutionSourceTrace {
-		return EvolutionEvidencePack{}, fmt.Errorf("stored Trace evidence is required")
+	if trace == nil && sourceKind == AnalysisSourceTrace {
+		return AnalysisEvidencePack{}, fmt.Errorf("stored Trace evidence is required")
 	}
-	pack := EvolutionEvidencePack{
-		Schema:        evolutionEvidenceSchema,
+	pack := AnalysisEvidencePack{
+		Schema:        analysisEvidenceSchema,
 		SourceKind:    sourceKind,
 		SourceTraceID: traceID,
-		Spans:         []EvolutionEvidenceSpan{},
+		Spans:         []AnalysisEvidenceSpan{},
 		Redacted:      true,
-		Boundary: EvolutionEvidenceBoundary{
+		Boundary: AnalysisEvidenceBoundary{
 			TargetAgentExecutedByCatena: false,
 			CreatesRelease:              false,
-			ReleaseAuthority:            evolutionReleaseAuthority,
-			CandidateStatus:             evolutionCandidateStatus,
-			ReviewScope:                 evolutionReviewScope,
+			ReleaseAuthority:            analysisReleaseAuthority,
+			CandidateStatus:             analysisCandidateStatus,
+			ReviewScope:                 analysisReviewScope,
 		},
 		CreatedAt: createdAt.UTC(),
 	}
 	if trace != nil {
 		if trace.Summary.TraceID != traceID {
-			return EvolutionEvidencePack{}, fmt.Errorf("stored Trace identity does not match the Evolution source")
+			return AnalysisEvidencePack{}, fmt.Errorf("stored Trace identity does not match the Analysis source")
 		}
 		if len(trace.Spans) == 0 {
-			return EvolutionEvidencePack{}, fmt.Errorf("stored Trace contains no spans")
+			return AnalysisEvidencePack{}, fmt.Errorf("stored Trace contains no spans")
 		}
 		pack.SourceRuntimeKind = detectOTLPRuntime(trace.Spans)
 		pack.TraceSummary = trace.Summary
@@ -119,13 +106,13 @@ func buildEvolutionEvidencePack(
 			}
 			return spans[i].StartTime.Before(spans[j].StartTime)
 		})
-		if len(spans) > maxEvolutionEvidenceSpans {
-			spans = spans[:maxEvolutionEvidenceSpans]
+		if len(spans) > maxAnalysisEvidenceSpans {
+			spans = spans[:maxAnalysisEvidenceSpans]
 			pack.Truncated = true
 		}
 		for _, span := range spans {
 			if span.TraceID != traceID {
-				return EvolutionEvidencePack{}, fmt.Errorf("stored Trace contains a mismatched span")
+				return AnalysisEvidencePack{}, fmt.Errorf("stored Trace contains a mismatched span")
 			}
 			eventNames := make([]string, 0, len(span.Events))
 			for _, event := range span.Events {
@@ -137,12 +124,12 @@ func buildEvolutionEvidencePack(
 					break
 				}
 			}
-			input := sanitizeEvolutionText(span.Input, maxEvolutionEvidenceFieldBytes)
-			output := sanitizeEvolutionText(span.Output, maxEvolutionEvidenceFieldBytes)
+			input := sanitizeAnalysisText(span.Input, maxAnalysisEvidenceFieldBytes)
+			output := sanitizeAnalysisText(span.Output, maxAnalysisEvidenceFieldBytes)
 			if len(span.Input) > len(input) || len(span.Output) > len(output) {
 				pack.Truncated = true
 			}
-			pack.Spans = append(pack.Spans, EvolutionEvidenceSpan{
+			pack.Spans = append(pack.Spans, AnalysisEvidenceSpan{
 				SpanID:        span.SpanID,
 				ParentSpanID:  span.ParentSpanID,
 				Name:          bounded(redactMemoryText(span.Name), 1000),
@@ -167,11 +154,11 @@ func buildEvolutionEvidencePack(
 	}
 	pack.IncludedSpanCount = len(pack.Spans)
 	for {
-		encoded, err := evolutionEvidenceDigestInput(pack)
+		encoded, err := analysisEvidenceDigestInput(pack)
 		if err != nil {
-			return EvolutionEvidencePack{}, err
+			return AnalysisEvidencePack{}, err
 		}
-		if len(encoded) <= maxEvolutionEvidencePackBytes {
+		if len(encoded) <= maxAnalysisEvidencePackBytes {
 			digest := sha256.Sum256(encoded)
 			pack.SHA256 = hex.EncodeToString(digest[:])
 			return pack, nil
@@ -182,7 +169,7 @@ func buildEvolutionEvidencePack(
 			pack.IncludedSpanCount = len(pack.Spans)
 			continue
 		}
-		return EvolutionEvidencePack{}, fmt.Errorf("Evolution Evidence Pack exceeds the safe prompt limit")
+		return AnalysisEvidencePack{}, fmt.Errorf("Analysis Evidence Pack exceeds the safe prompt limit")
 	}
 }
 
@@ -193,30 +180,30 @@ func buildAgentTraceSetEvidencePack(
 	traces []TraceDetail,
 	totalTraceCount int,
 	createdAt time.Time,
-) (EvolutionEvidencePack, error) {
+) (AnalysisEvidencePack, error) {
 	if strings.TrimSpace(agentID) == "" || len(traces) < 2 || !windowEnd.After(windowStart) {
-		return EvolutionEvidencePack{}, fmt.Errorf("Agent Trace Set evidence source is invalid")
+		return AnalysisEvidencePack{}, fmt.Errorf("Agent Trace Set evidence source is invalid")
 	}
 	windowStart = windowStart.UTC()
 	windowEnd = windowEnd.UTC()
-	pack := EvolutionEvidencePack{
-		Schema:            evolutionAgentEvidenceSchema,
-		SourceKind:        EvolutionSourceAgentTraceSet,
+	pack := AnalysisEvidencePack{
+		Schema:            analysisAgentEvidenceSchema,
+		SourceKind:        AnalysisSourceAgentTraceSet,
 		SourceAgentID:     agentID,
-		SourceRuntimeKind: detectEvolutionRuntime(traces),
+		SourceRuntimeKind: detectAnalysisRuntime(traces),
 		WindowStart:       &windowStart,
 		WindowEnd:         &windowEnd,
 		SourceTraceIDs:    []string{},
-		Spans:             []EvolutionEvidenceSpan{},
-		Traces:            []EvolutionEvidenceTrace{},
+		Spans:             []AnalysisEvidenceSpan{},
+		Traces:            []AnalysisEvidenceTrace{},
 		TotalTraceCount:   totalTraceCount,
 		Redacted:          true,
-		Boundary: EvolutionEvidenceBoundary{
+		Boundary: AnalysisEvidenceBoundary{
 			TargetAgentExecutedByCatena: false,
 			CreatesRelease:              false,
-			ReleaseAuthority:            evolutionReleaseAuthority,
-			CandidateStatus:             evolutionCandidateStatus,
-			ReviewScope:                 evolutionReviewScope,
+			ReleaseAuthority:            analysisReleaseAuthority,
+			CandidateStatus:             analysisCandidateStatus,
+			ReviewScope:                 analysisReviewScope,
 		},
 		CreatedAt: createdAt.UTC(),
 	}
@@ -224,7 +211,7 @@ func buildAgentTraceSetEvidencePack(
 		pack.TotalTraceCount = len(traces)
 	}
 	pack.Truncated = pack.TotalTraceCount > len(traces)
-	perTraceBudget := maxAgentEvolutionEvidenceSpans / len(traces)
+	perTraceBudget := maxAgentAnalysisEvidenceSpans / len(traces)
 	if perTraceBudget < 1 {
 		perTraceBudget = 1
 	}
@@ -233,19 +220,19 @@ func buildAgentTraceSetEvidencePack(
 	}
 	for _, trace := range traces {
 		if trace.Summary.TraceID == "" || !traceSummaryBelongsToAgent(trace.Summary, agentID) || len(trace.Spans) == 0 {
-			return EvolutionEvidencePack{}, fmt.Errorf("stored Trace does not belong to the selected Agent")
+			return AnalysisEvidencePack{}, fmt.Errorf("stored Trace does not belong to the selected Agent")
 		}
 		if trace.Summary.EndTime.Before(windowStart) || trace.Summary.StartTime.After(windowEnd) {
-			return EvolutionEvidencePack{}, fmt.Errorf("stored Trace is outside the selected Agent window")
+			return AnalysisEvidencePack{}, fmt.Errorf("stored Trace is outside the selected Agent window")
 		}
-		legacy, err := buildEvolutionEvidencePack(
-			EvolutionSourceTrace, trace.Summary.TraceID, &trace, createdAt,
+		legacy, err := buildAnalysisEvidencePack(
+			AnalysisSourceTrace, trace.Summary.TraceID, &trace, createdAt,
 		)
 		if err != nil {
-			return EvolutionEvidencePack{}, err
+			return AnalysisEvidencePack{}, err
 		}
 		spans := selectAgentEvidenceSpans(legacy.Spans, perTraceBudget)
-		traceEvidence := EvolutionEvidenceTrace{
+		traceEvidence := AnalysisEvidenceTrace{
 			Summary:           legacy.TraceSummary,
 			Spans:             spans,
 			IncludedSpanCount: len(spans),
@@ -260,11 +247,11 @@ func buildAgentTraceSetEvidencePack(
 	}
 	pack.IncludedTraceCount = len(pack.Traces)
 	for {
-		encoded, err := evolutionEvidenceDigestInput(pack)
+		encoded, err := analysisEvidenceDigestInput(pack)
 		if err != nil {
-			return EvolutionEvidencePack{}, err
+			return AnalysisEvidencePack{}, err
 		}
-		if len(encoded) <= maxEvolutionEvidencePackBytes {
+		if len(encoded) <= maxAnalysisEvidencePackBytes {
 			digest := sha256.Sum256(encoded)
 			pack.SHA256 = hex.EncodeToString(digest[:])
 			return pack, nil
@@ -292,11 +279,11 @@ func buildAgentTraceSetEvidencePack(
 			pack.IncludedTraceCount = len(pack.Traces)
 			continue
 		}
-		return EvolutionEvidencePack{}, fmt.Errorf("Agent Trace Set Evidence Pack exceeds the safe prompt limit")
+		return AnalysisEvidencePack{}, fmt.Errorf("Agent Trace Set Evidence Pack exceeds the safe prompt limit")
 	}
 }
 
-func detectEvolutionRuntime(traces []TraceDetail) string {
+func detectAnalysisRuntime(traces []TraceDetail) string {
 	detected := ""
 	for _, trace := range traces {
 		runtimeKind := detectOTLPRuntime(trace.Spans)
@@ -314,8 +301,8 @@ func detectEvolutionRuntime(traces []TraceDetail) string {
 	return detected
 }
 
-func selectAgentEvidenceSpans(values []EvolutionEvidenceSpan, limit int) []EvolutionEvidenceSpan {
-	selected := append([]EvolutionEvidenceSpan(nil), values...)
+func selectAgentEvidenceSpans(values []AnalysisEvidenceSpan, limit int) []AnalysisEvidenceSpan {
+	selected := append([]AnalysisEvidenceSpan(nil), values...)
 	sort.SliceStable(selected, func(i, j int) bool {
 		leftPriority := agentEvidenceSpanPriority(selected[i])
 		rightPriority := agentEvidenceSpanPriority(selected[j])
@@ -339,7 +326,7 @@ func selectAgentEvidenceSpans(values []EvolutionEvidenceSpan, limit int) []Evolu
 	return selected
 }
 
-func agentEvidenceSpanPriority(span EvolutionEvidenceSpan) int {
+func agentEvidenceSpanPriority(span AnalysisEvidenceSpan) int {
 	if span.StatusCode == 2 {
 		return 0
 	}
@@ -355,8 +342,9 @@ func agentEvidenceSpanPriority(span EvolutionEvidenceSpan) int {
 	return 4
 }
 
-func evolutionEvidenceDigestInput(pack EvolutionEvidencePack) ([]byte, error) {
+func analysisEvidenceDigestInput(pack AnalysisEvidencePack) ([]byte, error) {
 	pack.SHA256 = ""
+	pack.CreatedAt = time.Time{}
 	encoded, err := json.Marshal(pack)
 	if err != nil {
 		return nil, err
@@ -373,17 +361,17 @@ func evolutionEvidenceDigestInput(pack EvolutionEvidencePack) ([]byte, error) {
 	return json.Marshal(canonical)
 }
 
-func validEvolutionEvidencePack(pack EvolutionEvidencePack, job EvolutionJob) bool {
+func validAnalysisEvidencePack(pack AnalysisEvidencePack, job AnalysisJob) bool {
 	if pack.SourceKind != job.SourceKind ||
 		pack.SourceRuntimeKind != job.SourceRuntimeKind ||
 		pack.Boundary.TargetAgentExecutedByCatena || pack.Boundary.CreatesRelease ||
-		pack.Boundary.ReleaseAuthority != evolutionReleaseAuthority ||
-		pack.Boundary.CandidateStatus != evolutionCandidateStatus ||
-		pack.Boundary.ReviewScope != evolutionReviewScope {
+		pack.Boundary.ReleaseAuthority != analysisReleaseAuthority ||
+		pack.Boundary.CandidateStatus != analysisCandidateStatus ||
+		pack.Boundary.ReviewScope != analysisReviewScope {
 		return false
 	}
-	if job.SourceKind == EvolutionSourceAgentTraceSet {
-		if pack.Schema != evolutionAgentEvidenceSchema ||
+	if job.SourceKind == AnalysisSourceAgentTraceSet {
+		if pack.Schema != analysisAgentEvidenceSchema ||
 			pack.SourceAgentID == "" || pack.SourceAgentID != job.SourceAgentID ||
 			pack.WindowStart == nil || pack.WindowEnd == nil ||
 			job.WindowStart == nil || job.WindowEnd == nil ||
@@ -393,15 +381,15 @@ func validEvolutionEvidencePack(pack EvolutionEvidencePack, job EvolutionJob) bo
 			pack.IncludedTraceCount != len(pack.Traces) || len(pack.Traces) < 2 {
 			return false
 		}
-	} else if job.SourceKind == EvolutionSourceConversation {
+	} else if job.SourceKind == AnalysisSourceConversation {
 		if pack.Schema != "catena.conversation_evidence.v2" || pack.SourceConversationID != job.SourceConversationID || pack.SourceAgentID != job.SourceAgentID || pack.Document == "" {
 			return false
 		}
-	} else if pack.Schema != evolutionEvidenceSchema ||
+	} else if pack.Schema != analysisEvidenceSchema ||
 		pack.SourceTraceID != job.SourceTraceID {
 		return false
 	}
-	encoded, err := evolutionEvidenceDigestInput(pack)
+	encoded, err := analysisEvidenceDigestInput(pack)
 	if err != nil {
 		return false
 	}
@@ -421,35 +409,35 @@ func equalStringSlices(left []string, right []string) bool {
 	return true
 }
 
-func sanitizeEvolutionJSON(value json.RawMessage, max int) json.RawMessage {
+func sanitizeAnalysisJSON(value json.RawMessage, max int) json.RawMessage {
 	if len(value) == 0 {
 		return nil
 	}
 	var decoded any
 	if json.Unmarshal(value, &decoded) != nil {
-		return boundedEvolutionJSON(value, max, "invalid evidence JSON omitted")
+		return boundedAnalysisJSON(value, max, "invalid evidence JSON omitted")
 	}
-	encoded, err := json.Marshal(sanitizeEvolutionValue("", decoded))
+	encoded, err := json.Marshal(sanitizeAnalysisValue("", decoded))
 	if err != nil {
 		return json.RawMessage(`{"omitted":true,"reason":"evidence sanitization failed"}`)
 	}
-	return boundedEvolutionJSON(encoded, max, "evidence exceeded prompt limit")
+	return boundedAnalysisJSON(encoded, max, "evidence exceeded prompt limit")
 }
 
-func sanitizeEvolutionText(value string, max int) string {
+func sanitizeAnalysisText(value string, max int) string {
 	if strings.TrimSpace(value) == "" {
 		return ""
 	}
 	var decoded any
 	if json.Unmarshal([]byte(value), &decoded) == nil {
-		if encoded, err := json.Marshal(sanitizeEvolutionValue("", decoded)); err == nil {
+		if encoded, err := json.Marshal(sanitizeAnalysisValue("", decoded)); err == nil {
 			return bounded(string(encoded), max)
 		}
 	}
 	return bounded(redactMemoryText(value), max)
 }
 
-func sanitizeEvolutionValue(key string, value any) any {
+func sanitizeAnalysisValue(key string, value any) any {
 	normalized := strings.NewReplacer("-", "_", ".", "_").Replace(strings.ToLower(key))
 	for _, marker := range []string{
 		"authorization", "api_key", "access_token", "password", "secret",
@@ -463,13 +451,13 @@ func sanitizeEvolutionValue(key string, value any) any {
 	case map[string]any:
 		result := make(map[string]any, len(typed))
 		for childKey, childValue := range typed {
-			result[childKey] = sanitizeEvolutionValue(childKey, childValue)
+			result[childKey] = sanitizeAnalysisValue(childKey, childValue)
 		}
 		return result
 	case []any:
 		result := make([]any, 0, len(typed))
 		for _, child := range typed {
-			result = append(result, sanitizeEvolutionValue(key, child))
+			result = append(result, sanitizeAnalysisValue(key, child))
 		}
 		return result
 	case string:
@@ -479,8 +467,8 @@ func sanitizeEvolutionValue(key string, value any) any {
 	}
 }
 
-func evolutionJobTraceIDs(job EvolutionJob) []string {
-	if job.SourceKind == EvolutionSourceConversation {
+func analysisJobTraceIDs(job AnalysisJob) []string {
+	if job.SourceKind == AnalysisSourceConversation {
 		return []string{"conversation:" + job.SourceAgentID + ":" + job.SourceConversationID}
 	}
 	if len(job.SourceTraceIDs) > 0 {
@@ -492,14 +480,14 @@ func evolutionJobTraceIDs(job EvolutionJob) []string {
 	return []string{}
 }
 
-func validEvolutionJobSource(job EvolutionJob) bool {
+func validAnalysisJobSource(job AnalysisJob) bool {
 	switch job.SourceKind {
-	case EvolutionSourceConversation:
+	case AnalysisSourceConversation:
 		return job.SourceConversationID != "" && job.SourceAgentID != "" && job.SourceTraceID == "" && job.Pipeline == "memory"
-	case EvolutionSourceTrace:
+	case AnalysisSourceTrace:
 		return job.SourceTraceID != "" &&
 			job.SourceAgentID == "" && len(job.SourceTraceIDs) == 0
-	case EvolutionSourceAgentTraceSet:
+	case AnalysisSourceAgentTraceSet:
 		return job.SourceTraceID == "" &&
 			job.SourceAgentID != "" && len(job.SourceTraceIDs) >= 2 &&
 			job.WindowStart != nil && job.WindowEnd != nil && job.WindowEnd.After(*job.WindowStart)
@@ -508,62 +496,17 @@ func validEvolutionJobSource(job EvolutionJob) bool {
 	}
 }
 
-func evolutionJobSourceKey(job EvolutionJob) string {
-	if job.SourceKind == EvolutionSourceConversation {
+func analysisJobSourceKey(job AnalysisJob) string {
+	if job.SourceKind == AnalysisSourceConversation {
 		return "conversation:" + job.SourceAgentID + ":" + job.SourceConversationID
 	}
-	if job.SourceKind == EvolutionSourceAgentTraceSet {
+	if job.SourceKind == AnalysisSourceAgentTraceSet {
 		return "agent:" + job.SourceAgentID
 	}
 	return "trace:" + job.SourceTraceID
 }
 
-func validRelativeAssetPath(value string) bool {
-	if value == "" || strings.HasPrefix(value, "/") || strings.Contains(value, "\\") {
-		return false
-	}
-	for _, part := range strings.Split(value, "/") {
-		if part == "" || part == "." || part == ".." {
-			return false
-		}
-	}
-	return true
-}
-
-func validAssetName(value string) bool {
-	if value == "" || len(value) > 64 || value[0] < 'a' || value[0] > 'z' {
-		return false
-	}
-	for _, char := range value {
-		if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
-			return false
-		}
-	}
-	return true
-}
-
-func frontmatterValue(markdown string, key string) string {
-	lines := strings.Split(strings.ReplaceAll(markdown, "\r\n", "\n"), "\n")
-	if len(lines) < 3 || strings.TrimSpace(lines[0]) != "---" {
-		return ""
-	}
-	for _, line := range lines[1:] {
-		if strings.TrimSpace(line) == "---" {
-			break
-		}
-		parts := strings.SplitN(line, ":", 2)
-		if len(parts) == 2 && strings.TrimSpace(parts[0]) == key {
-			return strings.Trim(strings.TrimSpace(parts[1]), "\"'")
-		}
-	}
-	return ""
-}
-
-func cloneEvolutionStages(input []EvolutionStage) []EvolutionStage {
-	return append([]EvolutionStage(nil), input...)
-}
-
-func boundedEvolutionJSON(value json.RawMessage, max int, reason string) json.RawMessage {
+func boundedAnalysisJSON(value json.RawMessage, max int, reason string) json.RawMessage {
 	if len(value) <= max {
 		return cloneJSON(value)
 	}
@@ -576,13 +519,13 @@ func boundedEvolutionJSON(value json.RawMessage, max int, reason string) json.Ra
 	return encoded
 }
 
-func conversationEvidencePack(agent, id string, messages []ConversationMessage, now time.Time) (EvolutionEvidencePack, error) {
+func conversationEvidencePack(agent, id string, messages []ConversationMessage, now time.Time) (AnalysisEvidencePack, error) {
 	if len(messages) == 0 {
-		return EvolutionEvidencePack{}, ErrNotFound
+		return AnalysisEvidencePack{}, ErrNotFound
 	}
 	doc := ConversationDocument{Summary: summarizeConversation(messages), Messages: messages}
-	pack := EvolutionEvidencePack{Schema: "catena.conversation_evidence.v2", SourceKind: EvolutionSourceConversation, SourceConversationID: id, SourceAgentID: agent, Document: conversationMemoryDocument(doc), Redacted: true, CreatedAt: now, Boundary: EvolutionEvidenceBoundary{ReleaseAuthority: evolutionReleaseAuthority, CandidateStatus: evolutionCandidateStatus, ReviewScope: evolutionReviewScope}}
-	encoded, err := evolutionEvidenceDigestInput(pack)
+	pack := AnalysisEvidencePack{Schema: "catena.conversation_evidence.v2", SourceKind: AnalysisSourceConversation, SourceConversationID: id, SourceAgentID: agent, Document: conversationMemoryDocument(doc), Redacted: true, CreatedAt: now, Boundary: AnalysisEvidenceBoundary{ReleaseAuthority: analysisReleaseAuthority, CandidateStatus: analysisCandidateStatus, ReviewScope: analysisReviewScope}}
+	encoded, err := analysisEvidenceDigestInput(pack)
 	if err != nil {
 		return pack, err
 	}

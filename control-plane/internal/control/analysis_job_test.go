@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,11 +14,11 @@ import (
 type analysisTraceFixture struct{ recordingTraceStore }
 
 func (s *analysisTraceFixture) GetTrace(ctx context.Context, owner, id string) (TraceDetail, error) {
-	return TraceDetail{Summary: TraceSummary{TraceID: id, SpanCount: 1, StartTime: time.Now(), EndTime: time.Now()}, Spans: []TraceSpan{{TraceID: id, SpanID: "1122334455667788", Name: "synthetic trace", StartTime: time.Now(), EndTime: time.Now()}}}, nil
+	return TraceDetail{Summary: TraceSummary{TraceID: id, SpanCount: 1, StartTime: time.Unix(1700000000, 0).UTC(), EndTime: time.Unix(1700000000, 0).UTC()}, Spans: []TraceSpan{{TraceID: id, SpanID: "1122334455667788", Name: "synthetic trace", StartTime: time.Unix(1700000000, 0).UTC(), EndTime: time.Unix(1700000000, 0).UTC()}}}, nil
 }
 func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	store := NewMemoryStore()
-	seedTestEvolutionModelConfig(t, store, "local")
+	seedTestAnalysisModelConfig(t, store, "local")
 	calls := 0
 	engine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v2/rsi" {
@@ -33,8 +34,8 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 		writeJSON(w, 200, map[string]any{"request_id": payload["request_id"], "state": "completed", "output": map[string]any{"status": "completed", "candidates": []any{map[string]any{"id": "candidate-version", "files": map[string]string{"AGENTS.md": "Check tools"}}}, "trials": []any{map[string]any{"phase": "validation", "valid": true, "rewards": map[string]int{"reward": 1}}}, "validation_case_ids": []string{"heldout"}}})
 	}))
 	defer engine.Close()
-	manager, _ := NewEvolutionRuntimeManager(EvolutionRuntimeConfig{URL: engine.URL, Token: "private"})
-	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testEvolutionAuthConfig(), Engine: manager, Traces: &analysisTraceFixture{}, Memory: nil, Workers: fastWorkerConfig(), Ingestion: DefaultTraceIngestConfig()})
+	manager, _ := NewEngineClient(EngineConfig{URL: engine.URL, Token: "private"})
+	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testAnalysisAuthConfig(), Engine: manager, Traces: &analysisTraceFixture{}, Memory: nil, Workers: fastWorkerConfig(), Ingestion: DefaultTraceIngestConfig()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,11 +53,18 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	if response.StatusCode != 202 {
 		t.Fatal(response.Status)
 	}
-	var job EvolutionJob
+	var job AnalysisJob
 	json.NewDecoder(response.Body).Decode(&job)
-	eventually(t, func() bool { j, _ := store.GetEvolutionJob(context.Background(), job.ID); return j.State.Terminal() })
-	saved, _ := store.GetEvolutionJob(context.Background(), job.ID)
-	if saved.State != EvolutionJobCompleted || len(saved.Artifacts) != 1 {
+	retry := httptest.NewRequest("POST", "/v1/analysis-jobs", bytes.NewReader(raw))
+	retry.Header.Set("Idempotency-Key", "stable-job")
+	again := httptest.NewRecorder()
+	h.ServeHTTP(again, retry)
+	if again.Code != 200 {
+		t.Fatalf("idempotent HTTP retry: %d %s", again.Code, again.Body.String())
+	}
+	eventually(t, func() bool { j, _ := store.GetAnalysisJob(context.Background(), job.ID); return j.State.Terminal() })
+	saved, _ := store.GetAnalysisJob(context.Background(), job.ID)
+	if saved.State != AnalysisJobCompleted || len(saved.Artifacts) != 1 {
 		t.Fatalf("job failed: %s", saved.Error)
 	}
 	if saved.Artifacts[0].ValidationStatus != "review_required" || len(saved.Artifacts[0].EvidenceRefs) != 1 {
@@ -80,7 +88,9 @@ func TestMemoryJobResumesNativeTaskWithoutRepeatingExtraction(t *testing.T) {
 		switch r.URL.Path {
 		case "/v2/memory/extract":
 			extracts++
-			writeJSON(w, 200, MemoryIngestReceipt{TaskID: "native-extraction", Status: "pending"})
+			var payload map[string]any
+			json.NewDecoder(r.Body).Decode(&payload)
+			writeJSON(w, 200, map[string]any{"request_id": payload["request_id"], "state": "completed", "output": MemoryIngestReceipt{TaskID: "native-extraction", Status: "pending"}})
 		case "/v2/memory/task":
 			polls++
 			if polls == 1 {
@@ -93,8 +103,8 @@ func TestMemoryJobResumesNativeTaskWithoutRepeatingExtraction(t *testing.T) {
 		}
 	}))
 	defer engine.Close()
-	manager, _ := NewEvolutionRuntimeManager(EvolutionRuntimeConfig{URL: engine.URL, Token: "private"})
-	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testEvolutionAuthConfig(), Engine: manager, Traces: &analysisTraceFixture{}, Memory: nil, Workers: fastWorkerConfig(), Ingestion: DefaultTraceIngestConfig()})
+	manager, _ := NewEngineClient(EngineConfig{URL: engine.URL, Token: "private"})
+	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testAnalysisAuthConfig(), Engine: manager, Traces: &analysisTraceFixture{}, Memory: nil, Workers: fastWorkerConfig(), Ingestion: DefaultTraceIngestConfig()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,15 +116,59 @@ func TestMemoryJobResumesNativeTaskWithoutRepeatingExtraction(t *testing.T) {
 	if out.Code != 202 {
 		t.Fatal(out.Body.String())
 	}
-	var job EvolutionJob
+	var job AnalysisJob
 	json.Unmarshal(out.Body.Bytes(), &job)
-	eventually(t, func() bool { j, _ := store.GetEvolutionJob(context.Background(), job.ID); return j.State.Terminal() })
-	saved, _ := store.GetEvolutionJob(context.Background(), job.ID)
-	if saved.State != EvolutionJobCompleted || extracts != 1 || polls != 2 || saved.Attempt != 2 || len(saved.Artifacts) != 1 {
+	eventually(t, func() bool { j, _ := store.GetAnalysisJob(context.Background(), job.ID); return j.State.Terminal() })
+	saved, _ := store.GetAnalysisJob(context.Background(), job.ID)
+	if saved.State != AnalysisJobCompleted || extracts != 1 || polls != 2 || saved.Attempt != 2 || len(saved.Artifacts) != 1 {
 		t.Fatalf("state=%s attempts=%d extracts=%d polls=%d error=%s", saved.State, saved.Attempt, extracts, polls, saved.Error)
 	}
 	a := saved.Artifacts[0]
 	if a.Type != "engineering_memory" || a.ValidationStatus != "extracted" || !bytes.Contains(a.Payload, []byte("memory_count")) {
 		t.Fatal("missing provider evidence")
+	}
+}
+
+func TestEngineClientTimeoutCancelsExternalExecution(t *testing.T) {
+	cancelled := make(chan struct{}, 1)
+	engine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "DELETE" {
+			cancelled <- struct{}{}
+			writeJSON(w, 202, map[string]string{"state": "cancelling"})
+			return
+		}
+		io.Copy(io.Discard, r.Body)
+		select {
+		case <-r.Context().Done():
+		case <-time.After(time.Second):
+		}
+	}))
+	defer engine.Close()
+	manager, _ := NewEngineClient(EngineConfig{URL: engine.URL, Token: "private", RequestTimeout: 50 * time.Millisecond})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if _, err := manager.execute(ctx, "owner", "bounded-job", map[string]string{"request_id": "bounded-job"}, "/v2/rsi"); err == nil {
+		t.Fatal("timeout not propagated")
+	}
+	select {
+	case <-cancelled:
+	case <-time.After(time.Second):
+		t.Fatal("cancel was not forwarded")
+	}
+}
+
+func TestConversationEvidenceKeepsSourceAndRedactsSecrets(t *testing.T) {
+	now := time.Now().UTC()
+	pack, err := conversationEvidencePack("registered-agent", "session", []ConversationMessage{{Sequence: 1, Role: "user", OccurredAt: now, Content: []ConversationContentPart{{Type: "text", Text: "api_key=sk_abcdefghijklmnop"}}}}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := AnalysisJob{Pipeline: "memory", SourceKind: AnalysisSourceConversation, SourceAgentID: pack.SourceAgentID, SourceConversationID: pack.SourceConversationID, EvidencePack: &pack}
+	if !validAnalysisJobSource(job) || !validAnalysisEvidencePack(pack, job) || bytes.Contains([]byte(pack.Document), []byte("abcdefghijklmnop")) {
+		t.Fatal("invalid or unredacted conversation evidence")
+	}
+	job.SourceConversationID = "foreign"
+	if validAnalysisEvidencePack(pack, job) {
+		t.Fatal("foreign session evidence accepted")
 	}
 }

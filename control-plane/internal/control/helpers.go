@@ -12,22 +12,6 @@ import (
 	"time"
 )
 
-func validOTelTraceID(value string) bool {
-	if len(value) != 32 || value != strings.ToLower(value) {
-		return false
-	}
-	decoded, err := hex.DecodeString(value)
-	if err != nil {
-		return false
-	}
-	for _, current := range decoded {
-		if current != 0 {
-			return true
-		}
-	}
-	return false
-}
-
 func newID(prefix string) string {
 	var entropy [8]byte
 	if _, err := rand.Read(entropy[:]); err != nil {
@@ -53,7 +37,7 @@ func resourceOwnedBy(ownerUserID string, user *User) bool {
 	return user == nil || ownerUserID == user.ID
 }
 
-func evolutionListLimit(r *http.Request) (int, error) {
+func analysisListLimit(r *http.Request) (int, error) {
 	raw := r.URL.Query().Get("limit")
 	if raw == "" {
 		return 100, nil

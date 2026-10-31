@@ -34,10 +34,10 @@ type APIToken struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
-// EvolutionModelConfig is owner-scoped configuration for Catena's embedded
-// Evolution Runtime. EncryptedAPIKey is storage-only and must never be
+// AnalysisModelConfig is owner-scoped configuration for Catena's embedded
+// Analysis Runtime. EncryptedAPIKey is storage-only and must never be
 // serialized into a response, Job, Candidate, log or Evidence Pack.
-type EvolutionModelConfig struct {
+type AnalysisModelConfig struct {
 	OwnerUserID     string    `json:"-"`
 	Provider        string    `json:"provider"`
 	BaseURL         string    `json:"base_url"`
@@ -68,25 +68,13 @@ type AgentProfile struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-type CapabilitySummary struct {
-	Key          string  `json:"key"`
-	Kind         string  `json:"kind"`
-	Label        string  `json:"label"`
-	Level        string  `json:"level"`
-	SampleCount  int     `json:"sample_count"`
-	SuccessCount int     `json:"success_count"`
-	SuccessRate  float64 `json:"success_rate"`
-	OTLPSpans    int     `json:"otlp_spans"`
-}
-
 type CommunityProfile struct {
-	Slug         string              `json:"slug"`
-	DisplayName  string              `json:"display_name"`
-	Bio          string              `json:"bio"`
-	GitHubLogin  string              `json:"github_login"`
-	AvatarURL    string              `json:"avatar_url,omitempty"`
-	Capabilities []CapabilitySummary `json:"capabilities"`
-	UpdatedAt    time.Time           `json:"updated_at"`
+	Slug        string    `json:"slug"`
+	DisplayName string    `json:"display_name"`
+	Bio         string    `json:"bio"`
+	GitHubLogin string    `json:"github_login"`
+	AvatarURL   string    `json:"avatar_url,omitempty"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type ProfileRecord struct {
@@ -94,56 +82,51 @@ type ProfileRecord struct {
 	User    User
 }
 
-func jsonObject(value json.RawMessage) bool {
-	var object map[string]json.RawMessage
-	return json.Unmarshal(value, &object) == nil && object != nil
-}
-
-type EvolutionJobState string
+type AnalysisJobState string
 
 const (
-	EvolutionJobQueued    EvolutionJobState = "queued"
-	EvolutionJobRunning   EvolutionJobState = "running"
-	EvolutionJobCompleted EvolutionJobState = "completed"
-	EvolutionJobFailed    EvolutionJobState = "failed"
-	EvolutionJobCancelled EvolutionJobState = "cancelled"
+	AnalysisJobQueued    AnalysisJobState = "queued"
+	AnalysisJobRunning   AnalysisJobState = "running"
+	AnalysisJobCompleted AnalysisJobState = "completed"
+	AnalysisJobFailed    AnalysisJobState = "failed"
+	AnalysisJobCancelled AnalysisJobState = "cancelled"
 )
 
-func (s EvolutionJobState) Terminal() bool {
-	return s == EvolutionJobCompleted || s == EvolutionJobFailed || s == EvolutionJobCancelled
+func (s AnalysisJobState) Terminal() bool {
+	return s == AnalysisJobCompleted || s == AnalysisJobFailed || s == AnalysisJobCancelled
 }
 
-type EvolutionSourceKind string
+type AnalysisSourceKind string
 
 const (
-	EvolutionSourceConversation  EvolutionSourceKind = "conversation"
-	EvolutionSourceTrace         EvolutionSourceKind = "trace"
-	EvolutionSourceAgentTraceSet EvolutionSourceKind = "agent_trace_set"
+	AnalysisSourceConversation  AnalysisSourceKind = "conversation"
+	AnalysisSourceTrace         AnalysisSourceKind = "trace"
+	AnalysisSourceAgentTraceSet AnalysisSourceKind = "agent_trace_set"
 )
 
-func (k EvolutionSourceKind) Valid() bool {
-	return k == EvolutionSourceTrace || k == EvolutionSourceAgentTraceSet || k == EvolutionSourceConversation
+func (k AnalysisSourceKind) Valid() bool {
+	return k == AnalysisSourceTrace || k == AnalysisSourceAgentTraceSet || k == AnalysisSourceConversation
 }
 
-type EvolutionStageState string
+type AnalysisStageState string
 
 const (
-	EvolutionStageQueued    EvolutionStageState = "queued"
-	EvolutionStageRunning   EvolutionStageState = "running"
-	EvolutionStageCompleted EvolutionStageState = "completed"
-	EvolutionStageFailed    EvolutionStageState = "failed"
+	AnalysisStageQueued    AnalysisStageState = "queued"
+	AnalysisStageRunning   AnalysisStageState = "running"
+	AnalysisStageCompleted AnalysisStageState = "completed"
+	AnalysisStageFailed    AnalysisStageState = "failed"
 )
 
-type EvolutionStage struct {
-	Name       string              `json:"name"`
-	State      EvolutionStageState `json:"state"`
-	RawOutput  json.RawMessage     `json:"raw_output,omitempty"`
-	Error      string              `json:"error,omitempty"`
-	StartedAt  *time.Time          `json:"started_at,omitempty"`
-	FinishedAt *time.Time          `json:"finished_at,omitempty"`
+type AnalysisStage struct {
+	Name       string             `json:"name"`
+	State      AnalysisStageState `json:"state"`
+	RawOutput  json.RawMessage    `json:"raw_output,omitempty"`
+	Error      string             `json:"error,omitempty"`
+	StartedAt  *time.Time         `json:"started_at,omitempty"`
+	FinishedAt *time.Time         `json:"finished_at,omitempty"`
 }
 
-type EvolutionEvidenceBoundary struct {
+type AnalysisEvidenceBoundary struct {
 	TargetAgentExecutedByCatena bool   `json:"target_agent_executed_by_catena"`
 	CreatesRelease              bool   `json:"creates_release"`
 	ReleaseAuthority            string `json:"release_authority"`
@@ -151,7 +134,7 @@ type EvolutionEvidenceBoundary struct {
 	ReviewScope                 string `json:"review_scope"`
 }
 
-type EvolutionEvidenceSpan struct {
+type AnalysisEvidenceSpan struct {
 	SpanID        string    `json:"span_id"`
 	ParentSpanID  string    `json:"parent_span_id,omitempty"`
 	Name          string    `json:"name"`
@@ -167,40 +150,40 @@ type EvolutionEvidenceSpan struct {
 	EventNames    []string  `json:"event_names,omitempty"`
 }
 
-type EvolutionEvidenceTrace struct {
-	Summary           TraceSummary            `json:"summary"`
-	Spans             []EvolutionEvidenceSpan `json:"spans"`
-	IncludedSpanCount int                     `json:"included_span_count"`
-	TotalSpanCount    uint64                  `json:"total_span_count"`
-	Truncated         bool                    `json:"truncated"`
+type AnalysisEvidenceTrace struct {
+	Summary           TraceSummary           `json:"summary"`
+	Spans             []AnalysisEvidenceSpan `json:"spans"`
+	IncludedSpanCount int                    `json:"included_span_count"`
+	TotalSpanCount    uint64                 `json:"total_span_count"`
+	Truncated         bool                   `json:"truncated"`
 }
 
-type EvolutionEvidencePack struct {
-	SourceConversationID string                    `json:"source_conversation_id,omitempty"`
-	Document             string                    `json:"document,omitempty"`
-	Schema               string                    `json:"schema"`
-	SourceKind           EvolutionSourceKind       `json:"source_kind"`
-	SourceTraceID        string                    `json:"source_trace_id,omitempty"`
-	SourceTraceIDs       []string                  `json:"source_trace_ids,omitempty"`
-	SourceAgentID        string                    `json:"source_agent_id,omitempty"`
-	SourceRuntimeKind    string                    `json:"source_runtime_kind,omitempty"`
-	WindowStart          *time.Time                `json:"window_start,omitempty"`
-	WindowEnd            *time.Time                `json:"window_end,omitempty"`
-	TraceSummary         TraceSummary              `json:"trace_summary"`
-	Spans                []EvolutionEvidenceSpan   `json:"spans"`
-	Traces               []EvolutionEvidenceTrace  `json:"traces,omitempty"`
-	IncludedTraceCount   int                       `json:"included_trace_count,omitempty"`
-	TotalTraceCount      int                       `json:"total_trace_count,omitempty"`
-	IncludedSpanCount    int                       `json:"included_span_count"`
-	TotalSpanCount       uint64                    `json:"total_span_count"`
-	Truncated            bool                      `json:"truncated"`
-	Redacted             bool                      `json:"redacted"`
-	Boundary             EvolutionEvidenceBoundary `json:"boundary"`
-	SHA256               string                    `json:"sha256"`
-	CreatedAt            time.Time                 `json:"created_at"`
+type AnalysisEvidencePack struct {
+	SourceConversationID string                   `json:"source_conversation_id,omitempty"`
+	Document             string                   `json:"document,omitempty"`
+	Schema               string                   `json:"schema"`
+	SourceKind           AnalysisSourceKind       `json:"source_kind"`
+	SourceTraceID        string                   `json:"source_trace_id,omitempty"`
+	SourceTraceIDs       []string                 `json:"source_trace_ids,omitempty"`
+	SourceAgentID        string                   `json:"source_agent_id,omitempty"`
+	SourceRuntimeKind    string                   `json:"source_runtime_kind,omitempty"`
+	WindowStart          *time.Time               `json:"window_start,omitempty"`
+	WindowEnd            *time.Time               `json:"window_end,omitempty"`
+	TraceSummary         TraceSummary             `json:"trace_summary"`
+	Spans                []AnalysisEvidenceSpan   `json:"spans"`
+	Traces               []AnalysisEvidenceTrace  `json:"traces,omitempty"`
+	IncludedTraceCount   int                      `json:"included_trace_count,omitempty"`
+	TotalTraceCount      int                      `json:"total_trace_count,omitempty"`
+	IncludedSpanCount    int                      `json:"included_span_count"`
+	TotalSpanCount       uint64                   `json:"total_span_count"`
+	Truncated            bool                     `json:"truncated"`
+	Redacted             bool                     `json:"redacted"`
+	Boundary             AnalysisEvidenceBoundary `json:"boundary"`
+	SHA256               string                   `json:"sha256"`
+	CreatedAt            time.Time                `json:"created_at"`
 }
 
-type EvolutionJob struct {
+type AnalysisJob struct {
 	SourceConversationID string          `json:"source_conversation_id,omitempty"`
 	Pipeline             string          `json:"pipeline,omitempty"`
 	Adapter              string          `json:"adapter,omitempty"`
@@ -208,28 +191,28 @@ type EvolutionJob struct {
 	Artifacts            []Artifact      `json:"artifacts"`
 	Checkpoint           json.RawMessage `json:"checkpoint,omitempty"`
 
-	Attempt            int                       `json:"attempt,omitempty"`
-	NextAttemptAt      *time.Time                `json:"next_attempt_at,omitempty"`
-	CancelRequested    bool                      `json:"cancel_requested,omitempty"`
-	Schema             string                    `json:"schema"`
-	ID                 string                    `json:"job_id"`
-	OwnerUserID        string                    `json:"-"`
-	SourceKind         EvolutionSourceKind       `json:"source_kind"`
-	SourceTraceID      string                    `json:"source_trace_id,omitempty"`
-	SourceTraceIDs     []string                  `json:"source_trace_ids,omitempty"`
-	SourceAgentID      string                    `json:"source_agent_id,omitempty"`
-	SourceRuntimeKind  string                    `json:"source_runtime_kind,omitempty"`
-	WindowStart        *time.Time                `json:"window_start,omitempty"`
-	WindowEnd          *time.Time                `json:"window_end,omitempty"`
-	Objective          string                    `json:"objective,omitempty"`
-	IdempotencyKey     string                    `json:"-"`
-	RequestFingerprint string                    `json:"-"`
-	State              EvolutionJobState         `json:"state"`
-	CurrentStage       string                    `json:"current_stage,omitempty"`
-	Stages             []EvolutionStage          `json:"stages"`
-	EvidencePack       *EvolutionEvidencePack    `json:"evidence_pack,omitempty"`
-	Boundary           EvolutionEvidenceBoundary `json:"boundary"`
-	Error              string                    `json:"error,omitempty"`
-	CreatedAt          time.Time                 `json:"created_at"`
-	UpdatedAt          time.Time                 `json:"updated_at"`
+	Attempt            int                      `json:"attempt,omitempty"`
+	NextAttemptAt      *time.Time               `json:"next_attempt_at,omitempty"`
+	CancelRequested    bool                     `json:"cancel_requested,omitempty"`
+	Schema             string                   `json:"schema"`
+	ID                 string                   `json:"job_id"`
+	OwnerUserID        string                   `json:"-"`
+	SourceKind         AnalysisSourceKind       `json:"source_kind"`
+	SourceTraceID      string                   `json:"source_trace_id,omitempty"`
+	SourceTraceIDs     []string                 `json:"source_trace_ids,omitempty"`
+	SourceAgentID      string                   `json:"source_agent_id,omitempty"`
+	SourceRuntimeKind  string                   `json:"source_runtime_kind,omitempty"`
+	WindowStart        *time.Time               `json:"window_start,omitempty"`
+	WindowEnd          *time.Time               `json:"window_end,omitempty"`
+	Objective          string                   `json:"objective,omitempty"`
+	IdempotencyKey     string                   `json:"-"`
+	RequestFingerprint string                   `json:"-"`
+	State              AnalysisJobState         `json:"state"`
+	CurrentStage       string                   `json:"current_stage,omitempty"`
+	Stages             []AnalysisStage          `json:"stages"`
+	EvidencePack       *AnalysisEvidencePack    `json:"evidence_pack,omitempty"`
+	Boundary           AnalysisEvidenceBoundary `json:"boundary"`
+	Error              string                   `json:"error,omitempty"`
+	CreatedAt          time.Time                `json:"created_at"`
+	UpdatedAt          time.Time                `json:"updated_at"`
 }

@@ -24,9 +24,13 @@ class RSICodex(Codex):
 
     def __init__(self, *args, credential_ref: str, harness_files: dict, **kwargs):
         credentials = CREDENTIALS[credential_ref]
-        super().__init__(*args, credential_ref=credential_ref, harness_files=harness_files,
-                         extra_env={"OPENAI_API_KEY": credentials["api_key"],
-                                    "OPENAI_BASE_URL": credentials["base_url"]}, **kwargs)
+        super().__init__(
+            *args,
+            credential_ref=credential_ref,
+            harness_files=harness_files,
+            extra_env={"OPENAI_API_KEY": credentials["api_key"], "OPENAI_BASE_URL": credentials["base_url"]},
+            **kwargs,
+        )
         self.harness_files = validate_files(harness_files)
 
     async def run(self, instruction, environment, context):

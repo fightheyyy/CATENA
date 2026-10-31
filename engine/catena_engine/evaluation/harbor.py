@@ -55,8 +55,9 @@ class HarborEvaluator:
         if shutil.which("docker") is None:
             raise OptimizationError("RSI Harbor requires a Linux Docker host")
         try:
-            subprocess.run(["docker", "info"], check=True, stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL, timeout=10)
+            subprocess.run(
+                ["docker", "info"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10
+            )
         except (OSError, subprocess.SubprocessError):
             raise OptimizationError("RSI Harbor Docker preflight failed") from None
 
@@ -84,11 +85,25 @@ class HarborEvaluator:
         # No default/shared provider: use the owner model, pinned runtime and low effort.
         CREDENTIALS[trial_id] = {"api_key": self.model.api_key, "base_url": self.model.base_url}
         config = JobConfig(
-            job_name=trial_id, jobs_dir=self.output, n_concurrent_trials=1, n_attempts=1, quiet=True,
+            job_name=trial_id,
+            jobs_dir=self.output,
+            n_concurrent_trials=1,
+            n_attempts=1,
+            quiet=True,
             environment=EnvironmentConfig(type="docker", delete=True, override_cpus=1, override_memory_mb=1024),
-            agents=[AgentConfig(import_path="catena_engine.evaluation.harbor_agent:RSICodex", model_name=self.model.model,
-                                kwargs={"credential_ref": trial_id, "harness_files": dict(candidate.files),
-                                        "version": "0.160.0", "reasoning_effort": "low", "web_search": "disabled"})],
+            agents=[
+                AgentConfig(
+                    import_path="catena_engine.evaluation.harbor_agent:RSICodex",
+                    model_name=self.model.model,
+                    kwargs={
+                        "credential_ref": trial_id,
+                        "harness_files": dict(candidate.files),
+                        "version": "0.160.0",
+                        "reasoning_effort": "low",
+                        "web_search": "disabled",
+                    },
+                )
+            ],
             tasks=[TaskConfig(path=case.path)],
         )
         try:
@@ -106,9 +121,17 @@ class HarborEvaluator:
             calls, answer = read_native(results[0].parent / "agent")
             agent = data.get("agent_result") or {}
             rewards = (data.get("verifier_result") or {}).get("rewards") or {}
-            return Trial(safe_id(trial_id), case_id, candidate.id,
-                         json.dumps(calls, ensure_ascii=False), answer, bool(rewards) and bool(answer.strip()),
-                         rewards, agent.get("n_input_tokens"), agent.get("n_output_tokens"),
-                         time.monotonic() - started)
+            return Trial(
+                safe_id(trial_id),
+                case_id,
+                candidate.id,
+                json.dumps(calls, ensure_ascii=False),
+                answer,
+                bool(rewards) and bool(answer.strip()),
+                rewards,
+                agent.get("n_input_tokens"),
+                agent.get("n_output_tokens"),
+                time.monotonic() - started,
+            )
         finally:
             CREDENTIALS.pop(trial_id, None)

@@ -11,9 +11,9 @@ import (
 )
 
 // EngineMemoryClient sends only Go-authenticated owner context. Provider credentials live in Engine.
-type EngineMemoryClient struct{ runtime *EvolutionRuntimeManager }
+type EngineMemoryClient struct{ runtime *EngineClient }
 
-func NewEngineMemoryClient(runtime *EvolutionRuntimeManager) *EngineMemoryClient {
+func NewEngineMemoryClient(runtime *EngineClient) *EngineMemoryClient {
 	return &EngineMemoryClient{runtime}
 }
 func (c *EngineMemoryClient) call(ctx context.Context, owner, operation string, payload, result any) error {
@@ -50,7 +50,7 @@ func (c *EngineMemoryClient) CreateNote(ctx context.Context, owner string, req M
 	return
 }
 
-func (s *HTTPServer) executeMemoryJob(ctx context.Context, lease EvolutionLease, job EvolutionJob) error {
+func (s *HTTPServer) executeMemoryJob(ctx context.Context, lease AnalysisLease, job AnalysisJob) error {
 	if job.Adapter != "openviking" {
 		return errors.New("unknown Memory adapter")
 	}
@@ -66,35 +66,41 @@ func (s *HTTPServer) executeMemoryJob(ctx context.Context, lease EvolutionLease,
 	}
 	if receipt.TaskID == "" {
 		evidence, _ := json.Marshal(map[string]any{"pack": job.EvidencePack, "objective": job.Objective})
-		if _, err := s.evolutionRuntime.call(ctx, owner, http.MethodPost, "/v2/memory/extract", map[string]any{"request_id": job.ID, "evidence": string(evidence)}, &receipt); err != nil {
+		raw, err := s.analysisRuntime.execute(ctx, owner, job.ID, map[string]any{"request_id": job.ID, "evidence": string(evidence)}, "/v2/memory/extract")
+		if err != nil {
 			return err
 		}
+		if err = json.Unmarshal(raw, &receipt); err != nil {
+			return err
+		}
+
 		if receipt.TaskID == "" {
 			return errors.New("provider returned no extraction task")
 		}
 		job.Checkpoint, _ = json.Marshal(receipt)
 		// Save native task identity with the original fencing token before any status polling.
-		if err := s.saveEvolutionProgress(ctx, lease, job); err != nil {
+		if err := s.saveAnalysisProgress(ctx, lease, job); err != nil {
 			return err
 		}
 	}
 	for {
 		var state MemoryTaskStatus
-		if _, err := s.evolutionRuntime.call(ctx, owner, http.MethodPost, "/v2/memory/task", map[string]any{"task_id": receipt.TaskID}, &state); err != nil {
+		if _, err := s.analysisRuntime.call(ctx, owner, http.MethodPost, "/v2/memory/task", map[string]any{"task_id": receipt.TaskID}, &state); err != nil {
 			return err
 		}
 		switch state.Status {
 		case "completed":
 			// The artifact is the provider's extraction receipt/result, not the owner's entire memory collection.
 			// Retrieval remains provider-scoped; no unrelated existing files are attributed to this job.
+			state.Result = sanitizeAnalysisJSON(state.Result, 512*1024)
 			payload, _ := json.Marshal(map[string]any{"extraction": receipt, "result": state, "provider": "openviking"})
 			provenance, _ := json.Marshal(map[string]any{"pipeline": "memory", "adapter": job.Adapter, "evidence_sha256": job.EvidencePack.SHA256, "provider_task_id": receipt.TaskID, "execution_id": job.ID, "scope": "provider extraction task; unconfirmed engineering memory"})
 			hash := sha256.Sum256([]byte(job.ID + ":memory"))
-			job.Artifacts = []Artifact{{ID: "artifact-" + hex.EncodeToString(hash[:16]), OwnerID: job.OwnerUserID, JobID: job.ID, Type: "engineering_memory", SchemaVersion: "catena.artifact.v1", EvidenceRefs: evolutionJobTraceIDs(job), Payload: payload, Provenance: provenance, ValidationStatus: "extracted", CreatedAt: time.Now().UTC()}}
-			job.State = EvolutionJobCompleted
+			job.Artifacts = []Artifact{{ID: "artifact-" + hex.EncodeToString(hash[:16]), OwnerID: job.OwnerUserID, JobID: job.ID, Type: "engineering_memory", SchemaVersion: "catena.artifact.v1", EvidenceRefs: analysisJobTraceIDs(job), Payload: payload, Provenance: provenance, ValidationStatus: "extracted", CreatedAt: time.Now().UTC()}}
+			job.State = AnalysisJobCompleted
 			job.CurrentStage = "complete"
-			job.Stages[0].State = EvolutionStageCompleted
-			return s.saveEvolutionProgress(ctx, lease, job)
+			job.Stages[0].State = AnalysisStageCompleted
+			return s.saveAnalysisProgress(ctx, lease, job)
 		case "failed":
 			return errors.New("provider extraction failed")
 		case "pending", "processing":

@@ -1,4 +1,5 @@
 """Memory uses provider results with evidence; extraction is not fact confirmation."""
+
 from typing import Protocol
 
 

@@ -1,4 +1,4 @@
-"""Execute Catena's existing role turns in disposable Codex CLI sessions."""
+"""Execute bounded JSON analysis in disposable Codex CLI sessions."""
 
 from __future__ import annotations
 
@@ -14,12 +14,9 @@ from typing import Any
 
 from ..protocol import JsonRequest
 
-
 # Bound CLI diagnostics as well as the assistant output below the Go HTTP limit.
 _MAX_STREAM_BYTES = 4 * 1024 * 1024
 _MAX_OUTPUT_BYTES = 128 * 1024
-
-
 
 
 def _config(request: JsonRequest, instructions: str) -> str:
@@ -121,9 +118,7 @@ async def run_codex_json(request: JsonRequest, instructions: str, output_schema:
     return await _run_codex(request, instructions=instructions, output_schema=output_schema)
 
 
-async def _run_codex(
-    request: JsonRequest, *, instructions: str, output_schema: dict
-) -> dict[str, Any]:
+async def _run_codex(request: JsonRequest, *, instructions: str, output_schema: dict) -> dict[str, Any]:
     started = time.monotonic()
     binary = shutil.which(os.environ.get("CATENA_CODEX_BIN", "codex"))
     if binary is None:
@@ -251,5 +246,6 @@ async def _run_codex(
 def _elapsed_ms(started):
     return int((time.monotonic() - started) * 1000)
 
+
 def _failed(reason, detail, started):
-    return {"status":"failed","reason_code":reason,"detail":detail,"duration_ms":_elapsed_ms(started)}
+    return {"status": "failed", "reason_code": reason, "detail": detail, "duration_ms": _elapsed_ms(started)}

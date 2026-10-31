@@ -20,11 +20,16 @@ class Editor:
         data = json.loads(prompt)
         assert "HIDDEN_VERIFIER_SENTINEL" not in prompt
         if data["operation"] == "edit":
-            value = {"text": "<notes>Use portable search after the observed missing tool.</notes>",
-                     "files": [{"path": "AGENTS.md", "content": "Check available tools; use portable search."}]}
+            value = {
+                "text": "<notes>Use portable search after the observed missing tool.</notes>",
+                "files": [{"path": "AGENTS.md", "content": "Check available tools; use portable search."}],
+            }
         else:
-            value = {"text": "```choice\nA\n```\n<experience>\ncue: missing tool\nlesson: inspect availability\n"
-                             "evidence: probe tool observations\nconfidence: low\n</experience>", "files": []}
+            value = {
+                "text": "```choice\nA\n```\n<experience>\ncue: missing tool\nlesson: inspect availability\n"
+                "evidence: probe tool observations\nconfidence: low\n</experience>",
+                "files": [],
+            }
         return Completion(value, 100, 20)
 
 
@@ -32,8 +37,7 @@ class Editor:
 def test_upstream_loop_uses_host_and_keeps_grades_out(mode, k):
     ctx, editor, evaluator = context(), Editor(), Evaluator()
     services = Services(ctx, editor, evaluator, Budget(20, 16, 10))
-    result = optimize(ctx, [Algorithm("harness2", {"mode": mode, "k": k})], "sequential",
-                      default_registry(), services)
+    result = optimize(ctx, [Algorithm("harness2", {"mode": mode, "k": k})], "sequential", default_registry(), services)
     candidate = result["candidates"][0]
     assert candidate["files"]["AGENTS.md"] == "Check available tools; use portable search."
     ledger = result["algorithms"][0]["diagnostics"]["ledger"]
@@ -66,6 +70,7 @@ def test_upstream_cannot_emit_scripts_or_hooks():
     class Unsafe(Editor):
         def complete(self, prompt, timeout, cancelled=None):
             return Completion({"text": "edit", "files": [{"path": ".codex/hooks.json", "content": "{}"}]}, 1, 1)
+
     services = Services(context(), Unsafe(), Evaluator(), Budget())
     with pytest.raises(OptimizationError):
         optimize(context(), [Algorithm("harness2")], "sequential", default_registry(), services)
@@ -78,8 +83,8 @@ def test_private_http_runs_registered_algorithm_and_persists_private_report(monk
     from test_rsi import payload
     from test_server import call
 
-    from catena_engine.rsi import api
     from catena_engine.evaluation.harbor import task_digest
+    from catena_engine.rsi import api
     from catena_engine.server import create_server
 
     class LocalEditor(Editor):

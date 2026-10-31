@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -23,18 +22,18 @@ type Store interface {
 	IngestConversationMessages(context.Context, string, []ConversationMessage, time.Time) (int, int, error)
 	ListConversationSummariesByOwner(context.Context, string, string, int) ([]ConversationSummary, error)
 	ListConversationMessagesByOwner(context.Context, string, string, string, int) ([]ConversationMessage, error)
-	CreateEvolutionJob(context.Context, EvolutionJob) (EvolutionJob, bool, error)
-	UpdateEvolutionJob(context.Context, EvolutionJob) error
-	GetEvolutionJob(context.Context, string) (EvolutionJob, error)
-	ListEvolutionJobs(context.Context, int) ([]EvolutionJob, error)
-	ListEvolutionJobsByOwner(context.Context, string, int) ([]EvolutionJob, error)
-	DeleteEvolutionJob(context.Context, string, string) error
-	ClaimEvolutionJob(context.Context, string, time.Duration, int) (EvolutionJob, EvolutionLease, error)
-	HeartbeatEvolutionJob(context.Context, EvolutionLease, time.Duration) (bool, error)
-	SaveLeasedEvolutionJob(context.Context, EvolutionLease, EvolutionJob) error
-	ReleaseEvolutionJob(context.Context, EvolutionLease, string, bool, time.Duration, int) error
-	CancelEvolutionJob(context.Context, string, string) (EvolutionJob, error)
-	EvolutionQueueStats(context.Context, *string) (EvolutionQueueStats, error)
+	CreateAnalysisJob(context.Context, AnalysisJob) (AnalysisJob, bool, error)
+	UpdateAnalysisJob(context.Context, AnalysisJob) error
+	GetAnalysisJob(context.Context, string) (AnalysisJob, error)
+	ListAnalysisJobs(context.Context, int) ([]AnalysisJob, error)
+	ListAnalysisJobsByOwner(context.Context, string, int) ([]AnalysisJob, error)
+	DeleteAnalysisJob(context.Context, string, string) error
+	ClaimAnalysisJob(context.Context, string, time.Duration, int) (AnalysisJob, AnalysisLease, error)
+	HeartbeatAnalysisJob(context.Context, AnalysisLease, time.Duration) (bool, error)
+	SaveLeasedAnalysisJob(context.Context, AnalysisLease, AnalysisJob) error
+	ReleaseAnalysisJob(context.Context, AnalysisLease, string, bool, time.Duration, int) error
+	CancelAnalysisJob(context.Context, string, string) (AnalysisJob, error)
+	AnalysisQueueStats(context.Context, *string) (AnalysisQueueStats, error)
 	UpsertUser(context.Context, User) (User, error)
 	GetUserBySessionHash(context.Context, string, time.Time) (User, error)
 	CreateSession(context.Context, Session) error
@@ -49,9 +48,9 @@ type Store interface {
 	GetAPITokenByHash(context.Context, string) (APIToken, error)
 	GetUserByAPITokenHash(context.Context, string) (User, error)
 	DeleteAPIToken(context.Context, string, string) error
-	UpsertEvolutionModelConfig(context.Context, EvolutionModelConfig) (EvolutionModelConfig, error)
-	GetEvolutionModelConfigByOwner(context.Context, string) (EvolutionModelConfig, error)
-	DeleteEvolutionModelConfigByOwner(context.Context, string) error
+	UpsertAnalysisModelConfig(context.Context, AnalysisModelConfig) (AnalysisModelConfig, error)
+	GetAnalysisModelConfigByOwner(context.Context, string) (AnalysisModelConfig, error)
+	DeleteAnalysisModelConfigByOwner(context.Context, string) error
 	UpsertMemoryTask(context.Context, MemoryTaskRecord) error
 	GetMemoryTaskByOwner(context.Context, string, string) (MemoryTaskRecord, error)
 	ListMemoryTasksByOwner(context.Context, string, int) ([]MemoryTaskRecord, error)
@@ -65,97 +64,97 @@ type Store interface {
 }
 
 type MemoryStore struct {
-	mu                    sync.RWMutex
-	users                 map[string]User
-	userByGitHubID        map[int64]string
-	sessions              map[string]Session
-	apiTokens             map[string]APIToken
-	registeredAgents      map[string]RegisteredAgent
-	profiles              map[string]AgentProfile
-	evolutionJobs         map[string]EvolutionJob
-	evolutionLeases       map[string]EvolutionLease
-	conversationMessages  map[string]ConversationMessage
-	evolutionModelConfigs map[string]EvolutionModelConfig
-	memoryTasks           map[string]MemoryTaskRecord
+	mu                   sync.RWMutex
+	users                map[string]User
+	userByGitHubID       map[int64]string
+	sessions             map[string]Session
+	apiTokens            map[string]APIToken
+	registeredAgents     map[string]RegisteredAgent
+	profiles             map[string]AgentProfile
+	analysisJobs         map[string]AnalysisJob
+	analysisLeases       map[string]AnalysisLease
+	conversationMessages map[string]ConversationMessage
+	analysisModelConfigs map[string]AnalysisModelConfig
+	memoryTasks          map[string]MemoryTaskRecord
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		users:                 make(map[string]User),
-		userByGitHubID:        make(map[int64]string),
-		sessions:              make(map[string]Session),
-		apiTokens:             make(map[string]APIToken),
-		registeredAgents:      make(map[string]RegisteredAgent),
-		profiles:              make(map[string]AgentProfile),
-		evolutionJobs:         make(map[string]EvolutionJob),
-		evolutionLeases:       make(map[string]EvolutionLease),
-		conversationMessages:  make(map[string]ConversationMessage),
-		evolutionModelConfigs: make(map[string]EvolutionModelConfig),
-		memoryTasks:           make(map[string]MemoryTaskRecord),
+		users:                make(map[string]User),
+		userByGitHubID:       make(map[int64]string),
+		sessions:             make(map[string]Session),
+		apiTokens:            make(map[string]APIToken),
+		registeredAgents:     make(map[string]RegisteredAgent),
+		profiles:             make(map[string]AgentProfile),
+		analysisJobs:         make(map[string]AnalysisJob),
+		analysisLeases:       make(map[string]AnalysisLease),
+		conversationMessages: make(map[string]ConversationMessage),
+		analysisModelConfigs: make(map[string]AnalysisModelConfig),
+		memoryTasks:          make(map[string]MemoryTaskRecord),
 	}
 }
 
-func (s *MemoryStore) UpsertEvolutionModelConfig(
+func (s *MemoryStore) UpsertAnalysisModelConfig(
 	_ context.Context,
-	config EvolutionModelConfig,
-) (EvolutionModelConfig, error) {
+	config AnalysisModelConfig,
+) (AnalysisModelConfig, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if strings.TrimSpace(config.OwnerUserID) == "" || config.EncryptedAPIKey == "" {
-		return EvolutionModelConfig{}, ErrConflict
+		return AnalysisModelConfig{}, ErrConflict
 	}
-	s.evolutionModelConfigs[config.OwnerUserID] = config
+	s.analysisModelConfigs[config.OwnerUserID] = config
 	return config, nil
 }
 
-func (s *MemoryStore) GetEvolutionModelConfigByOwner(
+func (s *MemoryStore) GetAnalysisModelConfigByOwner(
 	_ context.Context,
 	ownerUserID string,
-) (EvolutionModelConfig, error) {
+) (AnalysisModelConfig, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	config, ok := s.evolutionModelConfigs[ownerUserID]
+	config, ok := s.analysisModelConfigs[ownerUserID]
 	if !ok {
-		return EvolutionModelConfig{}, ErrNotFound
+		return AnalysisModelConfig{}, ErrNotFound
 	}
 	return config, nil
 }
 
-func (s *MemoryStore) DeleteEvolutionModelConfigByOwner(
+func (s *MemoryStore) DeleteAnalysisModelConfigByOwner(
 	_ context.Context,
 	ownerUserID string,
 ) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, ok := s.evolutionModelConfigs[ownerUserID]; !ok {
+	if _, ok := s.analysisModelConfigs[ownerUserID]; !ok {
 		return ErrNotFound
 	}
-	delete(s.evolutionModelConfigs, ownerUserID)
+	delete(s.analysisModelConfigs, ownerUserID)
 	return nil
 }
 
-func (s *MemoryStore) CreateEvolutionJob(
+func (s *MemoryStore) CreateAnalysisJob(
 	_ context.Context,
-	job EvolutionJob,
-) (EvolutionJob, bool, error) {
+	job AnalysisJob,
+) (AnalysisJob, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !validEvolutionJobSource(job) {
-		return EvolutionJob{}, false, ErrConflict
+	if !validAnalysisJobSource(job) {
+		return AnalysisJob{}, false, ErrConflict
 	}
 
-	for _, existing := range s.evolutionJobs {
+	for _, existing := range s.analysisJobs {
 		if existing.OwnerUserID == job.OwnerUserID &&
-			evolutionJobSourceKey(existing) == evolutionJobSourceKey(job) &&
+			analysisJobSourceKey(existing) == analysisJobSourceKey(job) &&
 			existing.IdempotencyKey == job.IdempotencyKey {
 			if existing.RequestFingerprint != job.RequestFingerprint {
-				return EvolutionJob{}, false, ErrConflict
+				return AnalysisJob{}, false, ErrConflict
 			}
-			return cloneEvolutionJob(existing), false, nil
+			return cloneAnalysisJob(existing), false, nil
 		}
 	}
 	active, owned := 0, 0
-	for _, existing := range s.evolutionJobs {
+	for _, existing := range s.analysisJobs {
 		if !existing.State.Terminal() {
 			active++
 			if existing.OwnerUserID == job.OwnerUserID {
@@ -163,24 +162,24 @@ func (s *MemoryStore) CreateEvolutionJob(
 			}
 		}
 	}
-	if active >= evolutionQueueCapacity || owned >= evolutionOwnerQueueCapacity {
-		return EvolutionJob{}, false, ErrQueueFull
+	if active >= analysisQueueCapacity || owned >= analysisOwnerQueueCapacity {
+		return AnalysisJob{}, false, ErrQueueFull
 	}
-	if _, exists := s.evolutionJobs[job.ID]; exists {
-		return EvolutionJob{}, false, ErrConflict
+	if _, exists := s.analysisJobs[job.ID]; exists {
+		return AnalysisJob{}, false, ErrConflict
 	}
-	s.evolutionJobs[job.ID] = cloneEvolutionJob(job)
-	return cloneEvolutionJob(job), true, nil
+	s.analysisJobs[job.ID] = cloneAnalysisJob(job)
+	return cloneAnalysisJob(job), true, nil
 }
 
-func (s *MemoryStore) UpdateEvolutionJob(_ context.Context, job EvolutionJob) error {
+func (s *MemoryStore) UpdateAnalysisJob(_ context.Context, job AnalysisJob) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	existing, exists := s.evolutionJobs[job.ID]
+	existing, exists := s.analysisJobs[job.ID]
 	if !exists {
 		return ErrNotFound
 	}
-	if s.evolutionLeases[job.ID].Fence != 0 {
+	if s.analysisLeases[job.ID].Fence != 0 {
 		return ErrLeaseLost
 	}
 	if existing.OwnerUserID != job.OwnerUserID ||
@@ -191,29 +190,29 @@ func (s *MemoryStore) UpdateEvolutionJob(_ context.Context, job EvolutionJob) er
 		existing.RequestFingerprint != job.RequestFingerprint {
 		return ErrConflict
 	}
-	s.evolutionJobs[job.ID] = cloneEvolutionJob(job)
+	s.analysisJobs[job.ID] = cloneAnalysisJob(job)
 	return nil
 }
 
-func (s *MemoryStore) GetEvolutionJob(_ context.Context, id string) (EvolutionJob, error) {
+func (s *MemoryStore) GetAnalysisJob(_ context.Context, id string) (AnalysisJob, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	job, exists := s.evolutionJobs[id]
+	job, exists := s.analysisJobs[id]
 	if !exists {
-		return EvolutionJob{}, ErrNotFound
+		return AnalysisJob{}, ErrNotFound
 	}
-	return cloneEvolutionJob(job), nil
+	return cloneAnalysisJob(job), nil
 }
 
-func (s *MemoryStore) ListEvolutionJobs(
+func (s *MemoryStore) ListAnalysisJobs(
 	_ context.Context,
 	limit int,
-) ([]EvolutionJob, error) {
+) ([]AnalysisJob, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	result := make([]EvolutionJob, 0, len(s.evolutionJobs))
-	for _, job := range s.evolutionJobs {
-		result = append(result, cloneEvolutionJob(job))
+	result := make([]AnalysisJob, 0, len(s.analysisJobs))
+	for _, job := range s.analysisJobs {
+		result = append(result, cloneAnalysisJob(job))
 	}
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].CreatedAt.After(result[j].CreatedAt)
@@ -224,17 +223,17 @@ func (s *MemoryStore) ListEvolutionJobs(
 	return result, nil
 }
 
-func (s *MemoryStore) ListEvolutionJobsByOwner(
+func (s *MemoryStore) ListAnalysisJobsByOwner(
 	_ context.Context,
 	ownerUserID string,
 	limit int,
-) ([]EvolutionJob, error) {
+) ([]AnalysisJob, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	result := make([]EvolutionJob, 0)
-	for _, job := range s.evolutionJobs {
+	result := make([]AnalysisJob, 0)
+	for _, job := range s.analysisJobs {
 		if job.OwnerUserID == ownerUserID {
-			result = append(result, cloneEvolutionJob(job))
+			result = append(result, cloneAnalysisJob(job))
 		}
 	}
 	sort.Slice(result, func(i, j int) bool {
@@ -246,25 +245,25 @@ func (s *MemoryStore) ListEvolutionJobsByOwner(
 	return result, nil
 }
 
-func (s *MemoryStore) DeleteEvolutionJob(
+func (s *MemoryStore) DeleteAnalysisJob(
 	_ context.Context,
 	ownerUserID string,
 	id string,
 ) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	job, exists := s.evolutionJobs[id]
+	job, exists := s.analysisJobs[id]
 	if !exists || job.OwnerUserID != ownerUserID {
 		return ErrNotFound
 	}
 	if !job.State.Terminal() {
 		return ErrConflict
 	}
-	delete(s.evolutionJobs, id)
+	delete(s.analysisJobs, id)
 	return nil
 }
 
-func cloneEvolutionJob(input EvolutionJob) EvolutionJob {
+func cloneAnalysisJob(input AnalysisJob) AnalysisJob {
 	ownerUserID := input.OwnerUserID
 	idempotencyKey := input.IdempotencyKey
 	requestFingerprint := input.RequestFingerprint
@@ -272,7 +271,7 @@ func cloneEvolutionJob(input EvolutionJob) EvolutionJob {
 	if err != nil {
 		panic(err)
 	}
-	var output EvolutionJob
+	var output AnalysisJob
 	if err := json.Unmarshal(encoded, &output); err != nil {
 		panic(err)
 	}
@@ -589,17 +588,3 @@ func (s *MemoryStore) GetPublicAgentProfile(_ context.Context, slug string) (Pro
 
 func (s *MemoryStore) Ping(context.Context) error { return nil }
 func (s *MemoryStore) Close()                     {}
-
-func jsonEquivalent(left, right json.RawMessage) bool {
-	if len(left) == 0 {
-		left = json.RawMessage(`{}`)
-	}
-	if len(right) == 0 {
-		right = json.RawMessage(`{}`)
-	}
-	var leftValue any
-	var rightValue any
-	return json.Unmarshal(left, &leftValue) == nil &&
-		json.Unmarshal(right, &rightValue) == nil &&
-		reflect.DeepEqual(leftValue, rightValue)
-}
