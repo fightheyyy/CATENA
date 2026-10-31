@@ -36,7 +36,7 @@ func TestTraceMemoryDocumentIsBoundedOrderedAndRedacted(t *testing.T) {
 				Name:        "tool.first",
 				ServiceName: "codex",
 				StartTime:   now,
-				Output:      "api_key=sk_abcdefghijklmnop",
+				Output:      "api_key=sk_abcdefghijklmnop plain sk-demo-token-abcdefghijklmnop",
 			},
 		},
 	}
@@ -48,7 +48,7 @@ func TestTraceMemoryDocumentIsBoundedOrderedAndRedacted(t *testing.T) {
 	if strings.Index(document, "tool.first") > strings.Index(document, "tool.second") {
 		t.Fatalf("spans were not ordered by start time: %s", document)
 	}
-	for _, secret := range []string{"abcdefghijklmnop", "sk_abcdefghijklmnop"} {
+	for _, secret := range []string{"abcdefghijklmnop", "sk_abcdefghijklmnop", "sk-demo-token-abcdefghijklmnop"} {
 		if strings.Contains(document, secret) {
 			t.Fatalf("memory document leaked %q: %s", secret, document)
 		}

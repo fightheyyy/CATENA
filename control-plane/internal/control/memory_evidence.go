@@ -10,7 +10,7 @@ import (
 
 var memorySecretPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bBearer\s+[A-Za-z0-9._~+/=-]{8,}`),
-	regexp.MustCompile(`(?i)\b(?:sk|ghp|github_pat|barena_pat)_[A-Za-z0-9_-]{8,}`),
+	regexp.MustCompile(`(?i)\b(?:sk|ghp|github_pat|barena_pat)[_-][A-Za-z0-9_-]{8,}`),
 	regexp.MustCompile(`(?i)(authorization|api[_-]?key|access[_-]?token|secret|password)(\s*[=:]\s*)[^\s,;"'}]+`),
 }
 

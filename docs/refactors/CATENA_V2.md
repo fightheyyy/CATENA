@@ -138,3 +138,9 @@ flowchart LR
 4. Engine 1CPU/1GiB 与 Harbor Trial 1CPU/1GiB 分属不同 cgroup，需单独预算；本轮没有测量目标单机容量。Artifact 查询扫描既有 Job JSON，未声称海量产物索引性能。
 5. 保留旧 DB/module/envelope 名称与历史只读记忆 ledger 以避免破坏数据；不再维护旧执行器。旧终态 Role 产物未自动转为 V2 Artifact，原数据需通过历史导出或基线查看。
 6. 真实模型和 OpenViking 验证仍是交付阻塞项。**代码结构已收敛为一套队列、一条正式 RSI 路径和一条独立 Memory 路径；不能据此宣称真实 Agent 质量验收通过或生产可冻结。**
+
+### 最后安全复核与远端 CI
+
+补齐旧脱敏正则遗漏的明文 `sk-…` token，保留 underscore token 兼容，并在原 bounded/redacted Trace 测试中加入合成回归。修改后的完整 PostgreSQL/ClickHouse race 套件再次通过，日志已更新。
+
+[GitHub Actions 41176649375](https://github.com/fightheyyy/CATENA/actions/runs/41176649375) 在 `616c7c9` 的五项检查全部通过，包括真实 Engine 镜像构建、Codex / Docker Compose 版本与私有鉴权 smoke；这属于 GitHub hosted runner 验证，不是本地 Docker 或目标生产服务器。后续脱敏修复的最终状态仍以 PR 最新 commit 的 Checks 为准。[原始 CI 状态](evidence/v2/ci-616c7c9.json)。
