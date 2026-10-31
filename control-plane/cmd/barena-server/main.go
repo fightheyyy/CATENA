@@ -71,21 +71,12 @@ func run() error {
 		traceStore = clickHouse
 	}
 	var memoryStore control.MemoryBackend
-	if memoryURL := os.Getenv("CATENA_MEMORY_URL"); memoryURL != "" {
-		var memoryClient control.MemoryBackend
-		var err error
-		switch env("CATENA_MEMORY_PROVIDER", "gauzmem") {
-		case "openviking":
-			memoryClient, err = control.NewOpenVikingMemoryClient(memoryURL, os.Getenv("CATENA_MEMORY_API_KEY"))
-		case "gauzmem":
-			memoryClient, err = control.NewGauzMemoryClient(memoryURL, os.Getenv("CATENA_MEMORY_API_KEY"))
-		default:
-			return fmt.Errorf("unsupported CATENA_MEMORY_PROVIDER")
-		}
+	if os.Getenv("CATENA_ENGINE_URL") != "" {
+		manager, err := control.NewEvolutionRuntimeManager(control.EvolutionRuntimeConfig{URL: os.Getenv("CATENA_ENGINE_URL"), Token: os.Getenv("CATENA_ENGINE_TOKEN")})
 		if err != nil {
 			return err
 		}
-		memoryStore = memoryClient
+		memoryStore = control.NewEngineMemoryClient(manager)
 	}
 	if interrupted, err := store.InterruptActiveRuns(ctx); err != nil {
 		return err

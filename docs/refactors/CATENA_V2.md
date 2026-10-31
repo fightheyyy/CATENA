@@ -40,3 +40,11 @@
 固定三 Role Prompt、SDK、RPC 和专属测试退役。历史固定 rg Worker/Bridge/Coordinator 等移至 `research/legacy-engine`，不再打包；复现实验应 checkout 基线。通用 Codex JSON transport 保留独立 HOME、子进程组终止、输出上限。Engine 私有 token + Go owner，执行 receipt 持久化（不存凭据），重试不重复启动已完成/仍在运行的付费操作；进程崩溃留下不确定 running 时拒绝自动重放，要求人工核查。默认单分析槽，不阻塞 health/receipt/查询。
 
 验证：Go 全套单元测试通过；Python 55 tests 通过（含真实 pinned Harness² 的确定性适配测试、Harbor Adapter 和 Codex 子进程 timeout/cancel 测试）；React typecheck 通过。Go HTTP→原 Worker→私有 Engine stub→Artifact 持久化为协议集成测试；不冒充真实模型或 Docker Harbor 成功率。真实付费模型调用未授权、未执行。
+
+## Phase 4：Memory 迁移
+
+OpenViking HTTP、trusted identity、owner URI 检查、文件/关系/搜索与异步提炼迁至 Engine Memory Adapter。Go 仅通过私有 Engine token/owner 访问；不持有提供方密钥。`catena_<sha256(catena-memory:owner)[:24]>` 映射、48-bit 文件 ID 与原数据兼容。GauzMem Client、Dockerfile、MySQL/Neo4j/Qdrant 专属服务配置删除；现有数据卷不删除。
+
+Memory 独立 `pipeline=memory`：先保存 provider task ID checkpoint，再轮询；临时失败的重试只恢复 status，不重复 commit。Artifact 保存原 Evidence 引用/哈希、提供方任务和原生结果，不把整个 owner 的现有文件冒认成本次提炼结果，状态为 extracted 而非 confirmed。旧直接提炼 API 退役，Trace 提炼按钮进入同一队列。provider 已接受的远程提炼在 Go 取消后可能继续，Catena 停止轮询、不发布其产物；未宣称具备提供方事务回滚。
+
+验证：Go 全套通过，含持久化 checkpoint 后临时失败/重试/只提炼一次；Engine 57 tests 通过，新增原 owner 哈希、越界 URI、跨 owner task/搜索/文件、跨 Engine receipt 重启不重复 commit。均为协议 fixtures；此环境未配置 OpenViking/模型凭证，真实提炼 BLOCKED。

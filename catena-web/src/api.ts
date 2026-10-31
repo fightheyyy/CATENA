@@ -101,7 +101,7 @@ export const api = {
     return Object.assign({}, ...parts) as Partial<WorkspaceData>;
   },
   trace: (traceID: string, signal?: AbortSignal) => request<TraceDetail>(`/v1/traces/${encodeURIComponent(traceID)}`, { signal }),
-  rememberTrace: (traceID: string) => request<MemoryIngestReceipt>(`/v1/traces/${encodeURIComponent(traceID)}/memories`, {method:"POST"}),
+  rememberTrace: (traceID: string) => request<EvolutionJob>("/v1/analysis-jobs", {method:"POST", headers: {"Idempotency-Key": `memory-${traceID}-${crypto.randomUUID()}`}, body: JSON.stringify({pipeline:"memory", trace_id:traceID})}),
   traces: (limit = 100, signal?: AbortSignal) => request<{ available: boolean; traces: TraceSummary[] }>(`/v1/traces?limit=${limit}`, { signal }),
   agentTraces: (agentID: string, windowStart: string, windowEnd: string, limit = 100, signal?: AbortSignal) => {
     const query = new URLSearchParams({

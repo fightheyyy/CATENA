@@ -200,9 +200,7 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease EvolutionLeas
 	job.Stages[0].State = EvolutionStageCompleted
 	return s.saveEvolutionProgress(ctx, lease, job)
 }
-func (s *HTTPServer) executeMemoryJob(ctx context.Context, lease EvolutionLease, job EvolutionJob) error {
-	return errors.New("Memory Pipeline migration pending")
-}
+
 func (m *EvolutionRuntimeManager) execute(ctx context.Context, owner, id string, payload any) (json.RawMessage, error) {
 	type receipt struct {
 		RequestID string          `json:"request_id"`
