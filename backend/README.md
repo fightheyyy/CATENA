@@ -6,4 +6,4 @@
 - [V2 重构与验证](../docs/refactors/CATENA_V2.md)
 - [部署](../deploy/catena-mvp1/README.md)
 
-旧计划已归档，不再维护固定 Role 或 Barena Runner。
+固定 Role、Barena Runner 与旧计划已删除，历史实现可从 Git 提交 `66daf5d` 读取。

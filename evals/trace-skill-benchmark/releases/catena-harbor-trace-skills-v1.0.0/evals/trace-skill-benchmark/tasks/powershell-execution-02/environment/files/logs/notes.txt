@@ -1,5 +1,0 @@
-noise
-$rate[0] = 'quoted' + "double"
-prefix $rate[0] = 'quoted' + "double"
-$rate[0] = 'quoted' + "double"
-$rate0 = quoted

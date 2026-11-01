@@ -1,5 +1,15 @@
 # Catena Harbor dataset and result freeze: catena-harbor-trace-skills-v1.0.0
 
+> The current directory retains result evidence only. Duplicate source trees and
+> the ZIP were removed. The manifest and instructions below describe the original
+> complete snapshot, available unchanged in Git history. Restore it before following
+> these instructions:
+
+```sh
+git worktree add --detach ../catena-frozen-v1 66daf5d
+cd ../catena-frozen-v1/evals/trace-skill-benchmark/releases/catena-harbor-trace-skills-v1.0.0
+```
+
 This snapshot contains 28 Harbor tasks, 7 corresponding Skills, and all 168 valid
 Codex with/without results (84 per arm, 3 repeats per task). Original failed
 provider/setup attempts are retained locally and excluded from effect metrics.

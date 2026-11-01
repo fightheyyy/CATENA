@@ -66,12 +66,13 @@ original concurrent batch are marked in the result and limit timing comparisons.
 
 - [Complete result](results/ab-v2.md)
 - [Frozen Chinese report](releases/catena-harbor-trace-skills-v1.0.0/RESULTS.zh-CN.md)
-- [Dataset, Skills, results and exact Harbor source ZIP](releases/catena-harbor-trace-skills-v1.0.0.zip)
-- [ZIP SHA-256](releases/catena-harbor-trace-skills-v1.0.0.zip.sha256)
+- [Current tasks](tasks/) and [Skills](skills/)
 - [Reproduction instructions](releases/catena-harbor-trace-skills-v1.0.0/REPRODUCE.md)
 
-The release has its own file hash manifest, 168 verifier assessments, native
-artifact hashes, and individual rollout CSV. The evaluated Docker image is
-saved privately under `.local/trace-skill-benchmark/images/`; its hash is recorded
-in the release manifest. Frozen releases must be kept unchanged. Revised tasks
-or experiments require a new version.
+The result archive retains the original manifest, 168 verifier assessments,
+native artifact hashes, dependency versions and individual rollout CSV. Duplicate
+task/Skill trees, vendored Harbor source and ZIP files were removed from the
+current tree; the complete original snapshot remains at Git commit `66daf5d`.
+The manifest describes that original snapshot, not the reduced directory.
+The evaluated Docker image remains private under `.local/trace-skill-benchmark/images/`.
+Revised tasks or experiments require a new version.

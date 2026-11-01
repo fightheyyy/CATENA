@@ -274,7 +274,7 @@ large historical import must not force every list request to parse all history.
 
 ## Modules
 
-- [Go control plane](./backend/SPEC.md)
+- [Go control plane](../../backend/README.md)
 - [React Web](./frontend/SPEC.md)
 - [Catena Tap](./tap/SPEC.md)
 - [Deployment](./deploy/catena-mvp1/README.md)

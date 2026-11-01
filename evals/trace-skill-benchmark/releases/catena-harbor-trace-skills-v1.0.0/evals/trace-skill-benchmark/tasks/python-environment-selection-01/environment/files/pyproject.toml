@@ -1,4 +1,0 @@
-[project]
-name="fixture-1"
-version="1.0.0"
-dependencies=["atlascalc==2.0.0"]
