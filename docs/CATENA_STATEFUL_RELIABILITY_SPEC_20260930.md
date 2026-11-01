@@ -503,7 +503,7 @@ Catena 拟新增 `contracts/reliability/` 存放 schema 与兼容性夹具，控
 
 ### 16.2 现有 Run Bundle 约束
 
-已核验 `control-plane/internal/control/run_bundle.go`：schema 为 `barena.run_bundle.v1`，必须有 1–1000 个顺序事件，最后一个为 terminal；terminal payload 不超过 12 KiB，校验其 SHA-256，并要求至少一个 Trace identity。完整世界账本不能直接塞进 terminal。
+已核验 `backend/internal/control/run_bundle.go`：schema 为 `barena.run_bundle.v1`，必须有 1–1000 个顺序事件，最后一个为 terminal；terminal payload 不超过 12 KiB，校验其 SHA-256，并要求至少一个 Trace identity。完整世界账本不能直接塞进 terminal。
 
 新增独立版本化 `catena.reliability_result.v1`，通过 Run Bundle ID 关联，不改变旧 v1 含义。至少包含：
 
@@ -544,12 +544,12 @@ Tap 主要在 Turn Stop 后导入原生日志，适合诊断，不能保证在�
 | `README.md`、`SPEC.md` | 现有工作空间定位与目标执行边界 |
 | `docs/catena/architecture/README.md` | Catena/Barena/Runtime/GauzMem 分工 |
 | `docs/catena/architecture/adr/0003-evolution-candidates-are-proposals.md` | 候选与发布分离 |
-| `control-plane/internal/control/run_bundle.go` | v1 包、终态摘要与大小限制 |
-| `control-plane/internal/control/scenario_adoption.go` | Scenario adoption 与 replay 信息 |
-| `control-plane/internal/control/model.go` | MVP artifact verifier 的范围 |
-| `control-plane/internal/control/runner.go` | 需进一步核实的本地 runner/replay 路径 |
+| `backend/internal/control/run_bundle.go` | v1 包、终态摘要与大小限制 |
+| `backend/internal/control/scenario_adoption.go` | Scenario adoption 与 replay 信息 |
+| `backend/internal/control/model.go` | MVP artifact verifier 的范围 |
+| `backend/internal/control/runner.go` | 需进一步核实的本地 runner/replay 路径 |
 | `tap/contracts/canonical-event-graph.schema.json`、`tap/pyproject.toml` | 严格 schema 与现有 catena CLI |
-| `control-plane/go.mod`、`catena-web/package.json`、`deploy/catena-mvp1/compose.yml` | 既有 Go/React 与数据库栈 |
+| `backend/go.mod`、`frontend/package.json`、`deploy/catena-mvp1/compose.yml` | 既有 Go/React 与数据库栈 |
 | `docs/CATENA_BARENA_HARBOR_LAMINAR_ADOPTION_20260925.md` | 最近的底座采用与迁移记录 |
 
 本次只新增本提案，不修改现有根 SPEC、PLAN、源码或部署，不执行其他项目冻结操作。

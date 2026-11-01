@@ -124,7 +124,7 @@ flowchart LR
 
 ### 代码变化与可复跑统计
 
-[统计 JSON](evidence/v2/source_inventory.json)，命令 python scripts/source_inventory.py。口径与 Phase 1 完全一致：control-plane、engine、catena-web/src、tap/catena_tap 的 .go/.py/.ts/.tsx，排除 tests、*_test.go、内嵌 Web、CSS 与 research/evals。
+[统计 JSON](evidence/v2/source_inventory.json)，命令 python scripts/source_inventory.py。口径与 Phase 1 完全一致：backend、engine、frontend/src、tap/catena_tap 的 .go/.py/.ts/.tsx，排除 tests、*_test.go、内嵌 Web、CSS 与 research/evals。目录更名后，脚本仍按旧路径读取 Git 基线。
 
 - 基线 103 文件 / 30,658 行；当前 93 文件 / **19,868 行**。
 - 核心净减少 **10,790 行（35.2%）**；其中 1,482 行是保留的归档移出核心，余下净减少 9,308 行，不能把全部退出核心的行数称为物理删除。

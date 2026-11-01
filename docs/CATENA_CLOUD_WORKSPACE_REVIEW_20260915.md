@@ -1,6 +1,6 @@
 # Catena 云端工作空间改造
 
-本轮把主要体验收敛为「总览 → 经历 → 记忆 → 产出」，采用暖白底色、低饱和强调色、统一线条图标与阅读卡片。代码位于 `catena-web`，构建同步到 Go 的内嵌 Web 目录。本轮没有部署。
+本轮把主要体验收敛为「总览 → 经历 → 记忆 → 产出」，采用暖白底色、低饱和强调色、统一线条图标与阅读卡片。代码位于 `frontend`，构建同步到 Go 的内嵌 Web 目录。本轮没有部署。
 
 ## 已实现
 
@@ -22,7 +22,7 @@
 
 ## 预览与复现
 
-在 `catena-web` 执行 `pnpm build`，再执行 `node tests/browser/preview.mjs`。终端会打印本机地址。预览使用 `tests/browser/workspace-sample.mjs` 的明确示例数据，不包含用户真实历史，也不会请求线上服务。退出终端即可关闭。
+在 `frontend` 执行 `pnpm build`，再执行 `node tests/browser/preview.mjs`。终端会打印本机地址。预览使用 `tests/browser/workspace-sample.mjs` 的明确示例数据，不包含用户真实历史，也不会请求线上服务。退出终端即可关闭。
 
 浏览器验收：`pnpm test:browser`。首次运行需安装 Playwright Chromium，或用 `CATENA_BROWSER_EXECUTABLE` 指向已有 Chrome。设置 `CATENA_BROWSER_ARTIFACTS` 可保存截图。首轮视觉材料保存在忽略目录 `.local/cloud-workspace-review/`，精简后的最终截图位于 `.local/minimal-refinement/`。
 

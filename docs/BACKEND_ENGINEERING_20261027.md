@@ -86,7 +86,7 @@ Span 数上限在解码后检查。解码内存首先由字节上限与并发上
 
 ## 3. 本地验收与 CI
 
-在 `control-plane` 目录执行，两个连接必须指向**独立测试数据库**：测试会创建表、写合成行、创建/删除临时 schema 或 database。
+在 `backend` 目录执行，两个连接必须指向**独立测试数据库**：测试会创建表、写合成行、创建/删除临时 schema 或 database。
 
 ```powershell
 $env:BARENA_TEST_DATABASE_URL = 'postgres://test_user:test_password@127.0.0.1:5432/catena_test?sslmode=disable'

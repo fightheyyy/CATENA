@@ -3,8 +3,8 @@ name: Catena MVP1 CI
 on:
   pull_request:
     paths:
-      - "catena-web/**"
-      - "control-plane/**"
+      - "frontend/**"
+      - "backend/**"
       - "tap/**"
       - "engine/**"
       - "evals/**"
@@ -13,8 +13,8 @@ on:
   push:
     branches: [main]
     paths:
-      - "catena-web/**"
-      - "control-plane/**"
+      - "frontend/**"
+      - "backend/**"
       - "tap/**"
       - "engine/**"
       - "evals/**"
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: catena-web
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -60,7 +60,7 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: catena-web/pnpm-lock.yaml
+          cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile --ignore-workspace
       - run: pnpm test
       - run: pnpm typecheck
@@ -68,7 +68,7 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:browser
       - name: Verify Go embedded Web bundle is current
-        run: diff -qr dist ../control-plane/internal/control/web
+        run: diff -qr dist ../backend/internal/control/web
 
   control-plane:
     runs-on: ubuntu-latest
@@ -100,13 +100,13 @@ jobs:
       CATENA_CLICKHOUSE_TEST_DSN: http://default:catena-ci-test-only@127.0.0.1:8123/default?dial_timeout=5s
     defaults:
       run:
-        working-directory: control-plane
+        working-directory: backend
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
           go-version: "1.25.x"
-          cache-dependency-path: control-plane/go.sum
+          cache-dependency-path: backend/go.sum
       - run: go test ./...
       - run: go vet ./...
       - run: go test -race ./internal/control

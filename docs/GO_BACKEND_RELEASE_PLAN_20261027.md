@@ -25,7 +25,7 @@ Catena：基于 Go 的 Agent Trace 数据接入与异步分析平台。
 | 查询 | 已有窄字段选 Trace ID、再取宽字段的优化和回归检查 | 需要固定版本、数据、缓存条件和并发下的重复测量 |
 | CI | 已有 Go test/vet/race、Web、Python、Compose 检查定义 | 此次只读取配置，尚未确认远端当前构建结果；需加真实数据库故障门禁 |
 
-依据：control-plane/internal/control/evolution_job.go、postgres.go、trace.go、
+依据：backend/internal/control/evolution_job.go、postgres.go、trace.go、
 clickhouse_trace.go，以及 .github/workflows/catena-mvp1-ci.yml。
 
 历史查询报告记载初次 HTTP 23.12 秒、后续检查 1.01 秒，但报告明确说不是同条件冷缓存压测。

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="catena-web/public/catena-mark.svg" width="80" alt="Catena" />
+  <img src="frontend/public/catena-mark.svg" width="80" alt="Catena" />
 </p>
 
 <h1 align="center">Catena</h1>
@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="https://github.com/fightheyyy/CATENA/actions/workflows/catena-mvp1-ci.yml"><img src="https://github.com/fightheyyy/CATENA/actions/workflows/catena-mvp1-ci.yml/badge.svg?branch=main" alt="CI" /></a>
-  <a href="control-plane/go.mod"><img src="https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white" alt="Go 1.25" /></a>
+  <a href="backend/go.mod"><img src="https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white" alt="Go 1.25" /></a>
   <a href="engine/pyproject.toml"><img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" /></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/License-Apache_2.0-blue" alt="Apache 2.0" /></a>
 </p>
@@ -153,7 +153,7 @@ V2 已完成架构收敛。当前按 owner 隔离数据；组织成员管理与�
 
 ```bash
 # Go 控制面
-(cd control-plane && go test ./... && go vet ./...)
+(cd backend && go test ./... && go vet ./...)
 
 # Python Engine：建议使用独立虚拟环境
 python3.12 -m venv .venv
@@ -161,19 +161,26 @@ python3.12 -m venv .venv
 (cd engine && ../.venv/bin/python -m pytest)
 
 # React 前端
-(cd catena-web && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm build)
+(cd frontend && pnpm install --frozen-lockfile --ignore-workspace && pnpm test && pnpm build)
 ```
 
 PostgreSQL / ClickHouse 集成测试、浏览器测试及跨进程 Fixture 的配置见 [验收命令](docs/refactors/evidence/v2/COMMANDS.md)。
 
 ```text
-control-plane/   Go API、认证、Trace 接入、任务队列与 Artifact 持久化
-engine/          RSI / Memory Pipeline、Codex 传输与 Harbor 验证适配
-catena-web/      Trace、任务、记忆与产物界面
-tap/             Codex / Claude Code 采集插件与历史导入
-evals/           可复跑 Case、Verifier 与冻结实验材料
-deploy/          Docker Compose 与部署脚本
-docs/            规格、研究、部署与验收记录
+frontend/   React + TypeScript：页面、组件、API Client 与状态管理
+backend/    Go：认证、Trace、任务队列、数据库、Artifact 与 Engine Client
+engine/     Python：私有服务与分析适配
+  catena_engine/
+    rsi/         Harness² 等策略 Adapter
+    memory/      OpenViking Adapter
+    evaluation/  Harbor Adapter
+    runtime/     Codex 执行适配
+    server.py    私有服务入口
+tap/        独立采集插件与历史导入
+evals/      Benchmark、Cases 与验证脚本
+deploy/     Compose、Dockerfile 与配置
+docs/       文档
+scripts/    开发工具
 ```
 
 ## 文档导航

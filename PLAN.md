@@ -313,8 +313,8 @@ local.
   identity remains explicitly ungrouped.
 
 - 2026-08-11: Rebuilt the React production bundle into Go's embedded Web
-  assets and added a CI parity check between `catena-web/dist` and
-  `control-plane/internal/control/web`. This prevents a direct Go build from
+  assets and added a CI parity check between `frontend/dist` and
+  `backend/internal/control/web`. This prevents a direct Go build from
   serving a stale pre-Catena frontend when the normal multi-stage Docker build
   is bypassed.
 

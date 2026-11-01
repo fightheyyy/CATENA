@@ -274,8 +274,8 @@ large historical import must not force every list request to parse all history.
 
 ## Modules
 
-- [Go control plane](./control-plane/SPEC.md)
-- [React Web](./catena-web/SPEC.md)
+- [Go control plane](./backend/SPEC.md)
+- [React Web](./frontend/SPEC.md)
 - [Catena Tap](./tap/SPEC.md)
 - [Deployment](./deploy/catena-mvp1/README.md)
 - [Barena engine](https://github.com/fightheyyy/barena)

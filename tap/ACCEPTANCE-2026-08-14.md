@@ -83,8 +83,8 @@ tap/.venv/bin/ruff check tap/catena_tap tap/tests tap/scripts/real_codex_smoke.p
 tap/.venv/bin/pytest -q
 tap/.venv/bin/python -m compileall -q tap/catena_tap tap/tests tap/scripts
 cd tap/codex && pnpm typecheck && pnpm test && pnpm build
-cd control-plane && go test ./... && go vet ./... && go test -race ./...
-cd catena-web && pnpm test && pnpm typecheck && pnpm build
+cd backend && go test ./... && go vet ./... && go test -race ./...
+cd frontend && pnpm test && pnpm typecheck && pnpm build
 claude plugin validate tap/claude-plugin
 ./deploy/catena-mvp1/demo.sh smoke
 ```

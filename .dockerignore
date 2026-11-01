@@ -7,8 +7,8 @@
 
 **/node_modules
 **/dist
-!catena-web/dist
-!catena-web/dist/**
+!frontend/dist
+!frontend/dist/**
 **/coverage
 **/.venv
 **/__pycache__

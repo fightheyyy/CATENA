@@ -13,15 +13,15 @@ python3.12 -m venv /tmp/catena-v2-clean
 cd engine
 /tmp/catena-v2-clean/bin/ruff check catena_engine tests
 /tmp/catena-v2-clean/bin/python -m pytest -o addopts='' -q
-cd ../control-plane
+cd ../backend
 BARENA_TEST_DATABASE_URL='postgres://catena_test:catena-v2-test-only@127.0.0.1:55432/catena_test?sslmode=disable' CATENA_CLICKHOUSE_TEST_DSN='http://default:catena-v2-test-only@127.0.0.1:58123/default?dial_timeout=5s' CATENA_ENGINE_TEST_PYTHON=/tmp/catena-v2-clean/bin/python go test -race -count=1 -timeout 3m ./...
 go vet ./...
-cd ../catena-web
+cd ../frontend
 pnpm test
 pnpm build
 CATENA_BROWSER_EXECUTABLE=/usr/bin/chromium pnpm test:browser
 # 在 Go 编译前串行更新已生成的 embedded Web；禁止边替换 embed 目录边 Go 编译。
-diff -qr dist ../control-plane/internal/control/web
+diff -qr dist ../backend/internal/control/web
 cd ..
 /tmp/catena-v2-clean/bin/pip install -e 'tap[dev]'
 cd tap && /tmp/catena-v2-clean/bin/python -m pytest -o addopts='' -q
