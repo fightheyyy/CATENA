@@ -241,3 +241,13 @@ def test_compare_without_heldout_is_explicit_about_limits(single_harness):
     assert pair["candidate"]["candidate_id"] == result["candidates"][0]["id"]
     assert pair["baseline"]["cost_usd"] is None
     assert "HIDDEN_VERIFIER_SENTINEL" not in "".join(services.runtime.prompts)
+
+
+def test_optimizer_failure_is_not_reported_as_user_cancellation(single_harness, monkeypatch):
+    def broken(*args):
+        raise OptimizationError("invalid edit")
+    monkeypatch.setattr(Strategy, "optimize", broken)
+    services = Services(context(), Runtime(), Evaluator(), Budget())
+    with pytest.raises(OptimizationError, match="invalid edit"):
+        optimize(context(), {}, services)
+    assert not services.cancelled.is_set()

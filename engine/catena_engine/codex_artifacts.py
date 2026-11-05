@@ -14,21 +14,24 @@ def read_native(logs: Path) -> tuple[list, str]:
         p = item.get("payload", {})
         if item.get("type") != "response_item":
             continue
-        if p.get("type") == "function_call":
-            args = json.loads(p.get("arguments", "{}"))
-            command = args.get("cmd", args.get("command", ""))
-            if command:
-                pending[p["call_id"]] = command
-        elif p.get("type") == "function_call_output" and p.get("call_id") in pending:
+        if p.get("type") in ("function_call", "custom_tool_call"):
+            raw = p.get("arguments", p.get("input", ""))
+            try:
+                args = json.loads(raw)
+            except (ValueError, TypeError):
+                args = {}
+            command = args.get("cmd", args.get("command")) if isinstance(args, dict) else None
+            pending[p["call_id"]] = {"tool": p.get("name", ""), "input": raw, "command": command or raw}
+        elif p.get("type") in ("function_call_output", "custom_tool_call_output") and p.get("call_id") in pending:
             output = p.get("output", "")
             if not isinstance(output, str):
                 output = json.dumps(output)
             import re
 
-            exit_match = re.search(r"(?:Process exited with code|Exit code:)\s*(\d+)", output)
+            exit_match = re.search(r"(?:Process exited with code|Exit code:)\s*(-?\d+)", output)
             calls.append(
                 {
-                    "command": pending.pop(p["call_id"]),
+                    **pending.pop(p["call_id"]),
                     "exit_code": int(exit_match[1]) if exit_match else None,
                     "stdout": output,
                     "stderr": "",

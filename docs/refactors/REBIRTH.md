@@ -91,3 +91,73 @@ Real E2E remains pending: Docker is now available and Engine image building.
 Local API-key environment is absent, prior proxy has no auth files/service, and
 Codex's local auth file is subscription auth rather than an owner API Key.
 No model credentials have been printed or copied into tracked files.
+
+## Phase 4 — Real E2E
+
+**Completed with a real human decision, not a fixture benchmark.**
+
+- Snapshotted an actual repository-scoped native Codex session; the existing Tap
+  importer produced 145 spans. They were ingested into isolated CATENA/ClickHouse,
+  read back, and frozen in a persisted Go Evidence Pack. Raw source, private
+  provenance, OTLP and Job snapshots remain in `.local/rebirth/`; only hashes are
+  published. No raw customer Trace or model credential is committed.
+- The user authorized selection of frozen `path-discovery-01`; its full Case
+  fingerprint was registered. This is an anonymous reconstruction of the observed
+  path/context problem, not a complete replay of the original user task.
+- Native Harbor oracle verified the Case with reward 1. This checks environment/
+  verifier acceptance only; it is not a model quality sample. Apple Silicon needed
+  `DOCKER_DEFAULT_PLATFORM=linux/amd64` for the existing frozen image.
+- Used the user's existing sibling CLIProxyAPI configuration and `gpt-5.6-luna`,
+  low effort, with no credential in a committed request or JobConfig.
+- Final real run: pinned native Harness², k=1, four optimizer operations, four
+  Harbor probes, then a frozen-candidate baseline/candidate pair. All six trials
+  were valid; native trajectories, result hashes, tokens and wall times retained.
+  Go persisted the full Compare and Candidate artifact under its fenced Job.
+
+| Final independent pair | Baseline | Candidate |
+|---|---:|---:|
+| Verifier passes / trials | 1 / 1 | 1 / 1 |
+| Input tokens (including cache) | 46,547 | 40,500 |
+| Output tokens | 594 | 602 |
+| Trial wall seconds (including setup) | 31.4979 | 34.1256 |
+| Harbor-reported USD | 0.00198124 | 0.00234816 |
+| Native tool calls | 5 | 4 |
+| Inner command exit counts | unknown | unknown |
+
+No held-out Case was used. These are Harbor-reported costs, not invoice evidence;
+optimizer dollar cost is unknown. Total optimizer input/output tokens were
+853,670 / 3,654 across four operations; this cost is not hidden inside the two
+comparison costs. Tool wrappers omitted inner exit status, so counts stay null.
+
+The candidate hardcodes the training workspace's configuration path and values.
+It reduced total pair tokens by 12.8%, but was 8.3% slower and 18.5% more expensive
+on Harbor's reported cost. There is no established general improvement or error
+reduction. No trial or fixture outcome is called self-evolution.
+
+The user explicitly chose **accept for this Case only** after seeing the metrics
+and overfitting warning. Go recorded adopt + the full Case fingerprint and narrow
+scope in the immutable Review reason. No candidate file was installed. Restarting
+PostgreSQL retained the real Compare, Artifact and human decision.
+
+Real execution exposed and fixed three issues that synthetic contracts missed:
+Harbor AgentFactory's injected `extra_env` collided with the subclass, Engine's
+service user lacked writable HOME for buildx, and native `custom_tool_call` events
+were absent from the trajectory reader. The concrete native factory is now covered,
+HOME is checked in image CI, and raw custom code is retained as evidence without
+being executed or interpreted by CATENA. Ordinary optimizer failure no longer
+sets the user's cancellation event. Failed Harbor diagnostics are private and
+credential-redacted; Go retains failure checkpoints.
+
+All attempts remain recorded in [attempts.json](evidence/rebirth/attempts.json).
+The earlier completed run with a broken trajectory reader is explicitly excluded
+from the final comparison for that measurement defect, not for its outcome.
+
+Evidence: [status](evidence/rebirth/real-e2e-status.json),
+[full measured summary and human review](evidence/rebirth/experiment-summary.json),
+[candidate](evidence/rebirth/candidate.json),
+[database restart](evidence/rebirth/persistence.json),
+[commands / API-only reproduction client](evidence/rebirth/COMMANDS.md).
+
+Remaining unverified: held-out/general improvement, repeatability statistics,
+provider invoices and production capacity. Next: stabilize fresh-install and
+upgrade compatibility, finish all language suites and refresh embedded Web/docs.

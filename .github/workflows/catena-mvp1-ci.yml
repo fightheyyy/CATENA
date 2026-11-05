@@ -123,6 +123,7 @@ jobs:
           docker build -f ../deploy/catena-mvp1/Dockerfile.engine -t catena-engine-v2 ..
           docker run --rm catena-engine-v2 codex --version
           docker run --rm catena-engine-v2 docker compose version
+          docker run --rm catena-engine-v2 sh -c 'test -d "$HOME" && test -w "$HOME"'
           docker run -d --name catena-engine-v2-smoke -e CATENA_ENGINE_TOKEN=fixture-private -p 18790:8790 catena-engine-v2
           for attempt in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:18790/readyz; then break; fi

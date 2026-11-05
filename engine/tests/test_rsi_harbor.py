@@ -38,9 +38,11 @@ def test_real_harbor_config_keeps_credentials_out_and_reads_native_evidence(monk
     observed = []
 
     async def create(config):
+        from harbor.agents.factory import AgentFactory
+
         spec = config.agents[0]
         RSICodex.preflight(spec.kwargs)
-        agent = RSICodex(logs_dir=tmp_path / "agent", model_name=spec.model_name, **spec.kwargs)
+        agent = AgentFactory.create_agent_from_config(spec, logs_dir=tmp_path / "agent")
         assert agent.extra_env["OPENAI_API_KEY"] == "FAKE_PRIVATE_KEY"
         assert "reasoning_effort=low" in agent.build_cli_flags()
         serialized = config.model_dump_json()
@@ -107,6 +109,10 @@ def test_harbor_timeout_cancels_job_and_removes_credential_reference(monkeypatch
     with pytest.raises(TimeoutError):
         evaluator(tmp_path, task).probe("case", Candidate({"AGENTS.md": "Inspect."}), 0.05)
     assert cleaned.is_set() and not CREDENTIALS
+    diagnostic, = (tmp_path / "jobs").glob("*/private-error.txt")
+    assert "TimeoutError" in diagnostic.read_text()
+    assert "FAKE_PRIVATE_KEY" not in diagnostic.read_text()
+    assert diagnostic.stat().st_mode & 0o777 == 0o600
 
 
 def test_changed_task_is_rejected_before_harbor_runs(tmp_path, task):

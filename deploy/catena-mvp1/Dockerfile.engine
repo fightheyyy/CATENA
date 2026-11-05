@@ -19,7 +19,7 @@ COPY engine/pyproject.toml ./
 COPY engine/catena_engine ./catena_engine
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-compile ".[rsi]" \
-  && useradd --system --uid 1001 --no-create-home catena-engine
+  && useradd --system --uid 1001 --create-home catena-engine
 RUN mkdir -p /var/lib/catena-engine/executions /var/lib/catena-engine/runs && chown -R catena-engine:catena-engine /var/lib/catena-engine
 USER catena-engine
 ENV CATENA_ENGINE_ADDR=0.0.0.0:8790 CATENA_ENGINE_EXECUTIONS_ROOT=/var/lib/catena-engine/executions CATENA_RSI_RUNS_ROOT=/var/lib/catena-engine/runs

@@ -1,0 +1,60 @@
+{
+  "status": "AVAILABLE",
+  "provider": "existing CLIProxyAPI at sibling cliproxyapi project",
+  "model": "gpt-5.6-luna",
+  "responses_http_status": 200,
+  "response_status": "completed",
+  "usage": {
+    "attribution": {
+      "items": {
+        "msg_08ad0e2a1fc7986d016aeccb52465c87d094cbc62625f0f867": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 0,
+          "content": [
+            {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "input_tokens": 8,
+              "output_tokens": 0
+            }
+          ],
+          "input_tokens": 8,
+          "output_tokens": 0
+        },
+        "msg_08ad0e2a1fc7986d016aeccb52e89887d0b6a4ad89b3e6381b": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 0,
+          "content": [
+            {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "input_tokens": 2,
+              "output_tokens": 5
+            }
+          ],
+          "input_tokens": 2,
+          "output_tokens": 5
+        }
+      },
+      "request_fields": {
+        "tools": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 0,
+          "input_tokens": 296,
+          "output_tokens": 0
+        }
+      }
+    },
+    "input_tokens": 306,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 5,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 311
+  },
+  "credentials": "existing client.env; only encrypted in isolated CATENA database"
+}

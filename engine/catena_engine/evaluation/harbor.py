@@ -5,9 +5,11 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import time
+import traceback
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -138,5 +140,14 @@ class HarborEvaluator:
                 nonzero_command_exits=sum(c["exit_code"] != 0 for c in calls) if all(c["exit_code"] is not None for c in calls) else None,
                 result_sha256=hashlib.sha256(results[0].read_bytes()).hexdigest(),
             )
+        except Exception:
+            directory = self.output / trial_id
+            try:
+                directory.mkdir(parents=True, exist_ok=True)
+                with os.fdopen(os.open(directory / "private-error.txt", os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "w") as log:
+                    log.write(traceback.format_exc().replace(self.model.api_key, "[REDACTED]"))
+            except OSError:
+                pass  # Diagnostic failure must not replace the original execution error.
+            raise
         finally:
             CREDENTIALS.pop(trial_id, None)

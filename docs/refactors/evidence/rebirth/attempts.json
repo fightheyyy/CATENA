@@ -1,0 +1,57 @@
+{
+  "oracle": [
+    {
+      "attempt": "default-platform",
+      "status": "invalid",
+      "reason": "amd64 frozen image on arm64 daemon without platform selection"
+    },
+    {
+      "attempt": "amd64-platform",
+      "status": "valid reference solution",
+      "verifier_reward": 1,
+      "quality_trial": false
+    }
+  ],
+  "real_attempts": [
+    {
+      "attempt": "v1",
+      "status": "failed before target execution",
+      "reason": "native AgentFactory extra_env keyword collision",
+      "optimizer_calls": 0
+    },
+    {
+      "attempt": "v2",
+      "status": "failed debug attempt",
+      "reason": "service/image switch; retained failed receipt; not a quality trial"
+    },
+    {
+      "attempt": "v3",
+      "status": "failed before target execution",
+      "reason": "Docker buildx could not create service-user HOME",
+      "optimizer_calls": 0
+    },
+    {
+      "attempt": "v4",
+      "status": "completed but trajectory parser incomplete",
+      "reason": "native custom_tool_call events omitted by old reader; zero tool counts invalid",
+      "independent_pair_verifier": [
+        1,
+        1
+      ],
+      "included_in_final_comparison": false
+    },
+    {
+      "attempt": "v5",
+      "status": "completed",
+      "reason": "native custom tool events retained; all six real result hashes checked",
+      "optimizer_calls": 4,
+      "harbor_trials": 6,
+      "independent_pair_verifier": [
+        1,
+        1
+      ],
+      "included_in_final_comparison": true
+    }
+  ],
+  "selection_policy": "All attempts retained; v4 was superseded for the documented measurement/parser defect, not for its pass/fail outcome."
+}

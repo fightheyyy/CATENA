@@ -1,0 +1,9 @@
+{
+  "postgres_restart": "passed",
+  "compare_retained": true,
+  "artifact_retained": true,
+  "human_review_retained": true,
+  "decision": "adopt",
+  "scope": "path-discovery-01 only",
+  "automatic_installation": false
+}

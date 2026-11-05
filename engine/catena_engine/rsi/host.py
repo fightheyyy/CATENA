@@ -136,15 +136,11 @@ def preflight(options: dict, budget: Budget, reserved_trials: int = 0):
 def optimize(context: Context, options: dict, services: Services) -> dict:
     preflight(options, services.budget, services.reserved_trials)
     harness = Harness2Adapter()
-    try:
-        services.remaining()
-        result = harness.optimize(context, services, options)
-        services.remaining()
-        if len(result.candidates) != 1 or context.baseline.id not in result.candidates[0].parents:
-            raise OptimizationError("Harness2 must return one candidate citing its baseline")
-    except BaseException:
-        services.cancelled.set()
-        raise
+    services.remaining()
+    result = harness.optimize(context, services, options)
+    services.remaining()
+    if len(result.candidates) != 1 or context.baseline.id not in result.candidates[0].parents:
+        raise OptimizationError("Harness2 must return one candidate citing its baseline")
     return {
         "schema": RESULT_SCHEMA,
         "request_id": context.request_id,

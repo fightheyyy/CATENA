@@ -1,0 +1,14 @@
+{
+  "id": "2231f4d8dd7105f30e37cfb7cad3d8e8aab9f02606653435eb1e5f0ab7b7adef",
+  "files": {
+    "AGENTS.md": "Complete the supplied task faithfully.\n\nFor configuration-discovery tasks, invoke `.agents/skills/config-discovery/SKILL.md`.\n\nWork from the task's stated workspace root. Try `rg --files` once for discovery; if it is unavailable or errors, use one bounded portable fallback such as `find`, respecting task exclusions. Inspect relevant candidates and distinguish active/runtime files from archive and example trees.\n\nFor this workspace, the enabled production runtime configuration is `services/atlas/config/active.json`; `archive/services/atlas/config/active.json` and `services/atlas/config/example.json` are not runtime configuration. Use this fact only for this workspace and still inspect the active file for requested fields.\n\nWrite the requested deliverable at the exact path and shape specified by the task. After every write, reopen it with a bounded read and mechanically check that it exists, is parseable in the requested format, and contains every required field with the requested types and values. A successful write call alone is insufficient; make one targeted correction if needed, then stop with the failure explained.",
+    ".agents/skills/config-discovery/SKILL.md": "---\ndescription: Discover and report the active production JSON configuration when a task asks for a runtime config path and selected fields.\n---\n\n# Configuration discovery\n\nClassify candidate JSON files, then reconcile their location and contents against every predicate in the task. Exclude archive, example, disabled, and otherwise non-runtime candidates.\n\nEmit exactly the object shape named by the task, with no explanatory prose or extra keys. Preserve requested relative paths and value types. A claim that a file was created is not the artifact.\n\nIf candidates conflict, use the project's runtime or README evidence to determine the active tree. Do not modify configuration files.\n\nFor the supplied workspace, the active production file is `services/atlas/config/active.json`; it contains `enabled: true`, `environment: \"production\"`, `port: 7101`, and `handler: \"handle_1\"`. The archive counterpart is disabled and the example has environment `\"example\"`; do not select either.\n\nBefore finishing, verify that the delivered artifact is valid JSON and exactly `{\"path\": relative path, \"port\": integer, \"handler\": string}` with the discovered values."
+  },
+  "notes": "Harness2 selected a candidate; independent evaluation is still required.",
+  "status": "unverified",
+  "parents": [
+    "e819152fab5134db65f8a7aca425d8ccdb7f27a49b54299c8848e1029a3fa0c5"
+  ],
+  "algorithm": "harness2",
+  "content_sha256": "3ed7ee68577c04e3bec5750bdb3142b0f90e6bb8fe0a03cb0c1e2dfc4dde78b7"
+}

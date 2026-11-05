@@ -1,0 +1,21 @@
+{
+  "schema": "catena.rebirth_e2e_status.v1",
+  "status": "ENGINEERING_LOOP_COMPLETED_WITH_HUMAN_REVIEW",
+  "retained_spans": 145,
+  "source_snapshot_sha256": "fcb90188738c7235f93adb26dd7a39f1fff4fc4bf9e807fbee84345bd519e24e",
+  "evidence_sha256": "196d2d0e06c33095db9b577bc4c8790a8dd446ee172cb5056af33abeab45f46c",
+  "model": "CLIProxyAPI/gpt-5.6-luna",
+  "harness2_revision": "1cfe254e8d25b15f37048c3730134686abe60335",
+  "valid_harbor_trials": 6,
+  "optimizer_calls": 4,
+  "compare_cases": 1,
+  "held_out": false,
+  "candidate_id": "2231f4d8dd7105f30e37cfb7cad3d8e8aab9f02606653435eb1e5f0ab7b7adef",
+  "effectiveness": "not established",
+  "private_raw_artifacts": ".local/rebirth/",
+  "human_review": {
+    "decision": "adopt",
+    "scope": "path-discovery-01 only",
+    "automatic_installation": false
+  }
+}

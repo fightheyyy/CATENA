@@ -22,13 +22,13 @@ class RSICodexOptions(CodexOptions):
 class RSICodex(Codex):
     options_model = RSICodexOptions
 
-    def __init__(self, *args, credential_ref: str, harness_files: dict, **kwargs):
+    def __init__(self, *args, credential_ref: str, harness_files: dict, extra_env=None, **kwargs):
         credentials = CREDENTIALS[credential_ref]
         super().__init__(
             *args,
             credential_ref=credential_ref,
             harness_files=harness_files,
-            extra_env={"OPENAI_API_KEY": credentials["api_key"], "OPENAI_BASE_URL": credentials["base_url"]},
+            extra_env={**(extra_env or {}), "OPENAI_API_KEY": credentials["api_key"], "OPENAI_BASE_URL": credentials["base_url"]},
             **kwargs,
         )
         self.harness_files = validate_files(harness_files)
