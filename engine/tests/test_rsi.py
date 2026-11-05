@@ -1,4 +1,6 @@
+import json
 from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 
@@ -14,10 +16,20 @@ from catena_engine.rsi.contracts import (
     Requirements,
     Trial,
 )
-from catena_engine.rsi.host import Services, optimize
+from catena_engine.rsi.host import Services, optimize, trial_summary
+
+ATIF = json.dumps(
+    {
+        "schema_version": "ATIF-v1.6",
+        "agent": {"name": "fixture", "version": "1"},
+        "steps": [{"step_id": 1, "source": "agent", "message": "inspected amounts"}],
+    }
+)
 
 
 class Runtime:
+    model = SimpleNamespace(model="fixture-model")
+
     def __init__(self):
         self.prompts = []
 
@@ -29,6 +41,7 @@ class Runtime:
 class Evaluator:
     def __init__(self):
         self.seen = []
+        self.cases = {"training": SimpleNamespace(artifacts=("/workspace/result.json",))}
 
     def task_prompt(self, case_id):
         return "Return the sum of the signed amounts."
@@ -39,12 +52,13 @@ class Evaluator:
             str(len(self.seen)),
             case_id,
             candidate.id,
-            "[ACTION] inspect\n[OBSERVATION] sum=2",
+            ATIF,
             "2",
             True,
             {"HIDDEN_VERIFIER_SENTINEL": 1},
             20,
             3,
+            deliverables={"/workspace/result.json": "2"},
         )
 
 
@@ -74,12 +88,13 @@ def context():
 @pytest.fixture
 def single_harness(monkeypatch):
     from catena_engine.rsi import host
+
     monkeypatch.setattr(host, "Harness2Adapter", Strategy)
 
 
-def test_single_candidate_keeps_lineage_and_limits(single_harness):
+def test_single_candidate_keeps_lineage_and_limits(single_harness, tmp_path):
     ctx = context()
-    services = Services(ctx, Runtime(), Evaluator(), Budget(1, 1, 5))
+    services = Services(ctx, Runtime(), Evaluator(), Budget(1, 1, 5), output=tmp_path)
     result = optimize(ctx, {}, services)
     assert len(result["candidates"]) == 1
     assert result["candidates"][0]["parents"] == [ctx.baseline.id]
@@ -88,16 +103,16 @@ def test_single_candidate_keeps_lineage_and_limits(single_harness):
     assert result["usage"]["model_calls"] == result["usage"]["attempted_trials"] == 1
 
 
-def test_preflight_rejects_before_paid_work(single_harness):
-    services = Services(context(), Runtime(), Evaluator(), Budget())
+def test_preflight_rejects_before_paid_work(single_harness, tmp_path):
+    services = Services(context(), Runtime(), Evaluator(), Budget(), output=tmp_path)
     with pytest.raises(OptimizationError, match="unknown option"):
         optimize(context(), {"unknown": True}, services)
     assert services.calls == services.attempted_trials == 0
 
 
 @pytest.mark.parametrize("kind", ["calls", "trials", "deadline", "cancel"])
-def test_limits_stop_further_work(kind):
-    services = Services(context(), Runtime(), Evaluator(), Budget(1, 1, 5))
+def test_limits_stop_further_work(kind, tmp_path):
+    services = Services(context(), Runtime(), Evaluator(), Budget(1, 1, 5), output=tmp_path)
     if kind == "calls":
         services.complete("one")
     elif kind == "trials":
@@ -111,21 +126,21 @@ def test_limits_stop_further_work(kind):
     assert len(services.runtime.prompts) <= 1 and len(services.evaluator.seen) <= 1
 
 
-def test_failed_calls_count_and_do_not_leak_provider_errors():
+def test_failed_calls_count_and_do_not_leak_provider_errors(tmp_path):
     class Broken(Runtime):
         def complete(self, prompt, timeout, cancelled=None):
             raise RuntimeError("SECRET_PROVIDER_KEY")
 
-    services = Services(context(), Broken(), Evaluator(), Budget())
+    services = Services(context(), Broken(), Evaluator(), Budget(), output=tmp_path)
     with pytest.raises(OptimizationError) as error:
         services.complete("test")
     assert "SECRET_PROVIDER_KEY" not in str(error.value)
     assert services.calls == 1
 
 
-def test_validation_is_reserved_and_happens_after_candidate_freeze(single_harness):
+def test_validation_is_reserved_and_happens_after_candidate_freeze(single_harness, tmp_path):
     ctx = context()
-    services = Services(ctx, Runtime(), Evaluator(), Budget(1, 5, 5), reserved_trials=4)
+    services = Services(ctx, Runtime(), Evaluator(), Budget(1, 5, 5), reserved_trials=4, output=tmp_path)
     result = run_and_validate(ctx, {}, services, ["heldout"])
     assert [t["case_id"] for t in result["trials"]] == ["training", "training", "training", "heldout", "heldout"]
     assert [t["phase"] for t in result["trials"]] == ["probe"] + ["validation"] * 4
@@ -133,8 +148,8 @@ def test_validation_is_reserved_and_happens_after_candidate_freeze(single_harnes
     assert "heldout" not in "".join(services.runtime.prompts)
 
 
-def test_probes_cannot_spend_validation_reserve():
-    services = Services(context(), Runtime(), Evaluator(), Budget(1, 2, 5), reserved_trials=2)
+def test_probes_cannot_spend_validation_reserve(tmp_path):
+    services = Services(context(), Runtime(), Evaluator(), Budget(1, 2, 5), reserved_trials=2, output=tmp_path)
     with pytest.raises(OptimizationError, match="reserved"):
         services.probe(context().baseline)
     assert services.attempted_trials == 0
@@ -151,12 +166,12 @@ def test_probes_cannot_spend_validation_reserve():
         "AGENTS.md\x00",
     ],
 )
-def test_candidate_cannot_expand_edit_surface(path):
+def test_candidate_cannot_expand_edit_surface(path, tmp_path):
     with pytest.raises(OptimizationError):
         Candidate({"AGENTS.md": "Task", path: "malicious"})
 
 
-def test_candidate_is_immutable_and_versions_keep_content_hash():
+def test_candidate_is_immutable_and_versions_keep_content_hash(tmp_path):
     base = Candidate({"AGENTS.md": "Task"})
     with pytest.raises(TypeError):
         base.files["AGENTS.md"] = "changed"
@@ -194,22 +209,31 @@ def payload():
         {"composition": "parallel"},
     ],
 )
-def test_invalid_requests_fail_before_execution(patch):
+def test_invalid_requests_fail_before_execution(patch, tmp_path):
     with pytest.raises(OptimizationError):
         parse({**payload(), **patch})
 
 
-def test_invalid_trials_fail_closed():
+def test_invalid_trials_fail_closed(tmp_path):
     class Bad(Evaluator):
         def probe(self, *args):
             return replace(super().probe(*args), valid=False)
 
-    services = Services(context(), Runtime(), Bad(), Budget())
+    services = Services(context(), Runtime(), Bad(), Budget(), output=tmp_path)
     with pytest.raises(OptimizationError, match="invalid"):
         services.probe(context().baseline)
 
 
-def test_inflight_cancellation_awaits_operation_cleanup():
+def test_summary_retains_output_hashes_without_exposing_file_contents():
+    import hashlib
+
+    trial = Evaluator().probe("training", context().baseline, 1)
+    summary = trial_summary(trial)
+    assert summary["deliverable_sha256"] == {"/workspace/result.json": hashlib.sha256(b"2").hexdigest()}
+    assert "deliverables" not in summary and "trajectory" not in summary and "answer" not in summary
+
+
+def test_inflight_cancellation_awaits_operation_cleanup(tmp_path):
     import asyncio
     import threading
 
@@ -230,12 +254,12 @@ def test_inflight_cancellation_awaits_operation_cleanup():
     assert stopped.is_set()
 
 
-def test_compare_without_heldout_is_explicit_about_limits(single_harness):
+def test_compare_without_heldout_is_explicit_about_limits(single_harness, tmp_path):
     ctx = context()
-    services = Services(ctx, Runtime(), Evaluator(), Budget(1, 3, 5), reserved_trials=2)
+    services = Services(ctx, Runtime(), Evaluator(), Budget(1, 3, 5), reserved_trials=2, output=tmp_path)
     result = run_and_validate(ctx, {}, services, [])
     assert result["decision"] == "review_required"
-    pair, = result["compare"]
+    (pair,) = result["compare"]
     assert pair["held_out"] is False
     assert pair["baseline"]["candidate_id"] == ctx.baseline.id
     assert pair["candidate"]["candidate_id"] == result["candidates"][0]["id"]
@@ -243,11 +267,12 @@ def test_compare_without_heldout_is_explicit_about_limits(single_harness):
     assert "HIDDEN_VERIFIER_SENTINEL" not in "".join(services.runtime.prompts)
 
 
-def test_optimizer_failure_is_not_reported_as_user_cancellation(single_harness, monkeypatch):
+def test_optimizer_failure_is_not_reported_as_user_cancellation(single_harness, monkeypatch, tmp_path):
     def broken(*args):
         raise OptimizationError("invalid edit")
+
     monkeypatch.setattr(Strategy, "optimize", broken)
-    services = Services(context(), Runtime(), Evaluator(), Budget())
+    services = Services(context(), Runtime(), Evaluator(), Budget(), output=tmp_path)
     with pytest.raises(OptimizationError, match="invalid edit"):
         optimize(context(), {}, services)
     assert not services.cancelled.is_set()

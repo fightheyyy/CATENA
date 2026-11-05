@@ -12,6 +12,9 @@ flowchart LR
     Case[Operator-reviewed Harbor Case + fingerprint] --> Queue
     Queue --> Engine[Private Engine + execution receipts]
     Engine --> H2[Pinned native Harness² scheduler]
+    H2 --> Proposer[Custom read-only Codex JSON Proposer]
+    H2 --> Probe[Harbor probes: ATIF + real deliverables]
+    H2 --> Audit[(Private upstream tree / selection / Library / audits)]
     H2 --> Candidate[Frozen Candidate]
     Candidate --> Harbor[Harbor Job / Trial / Environment / Verifier]
     Harbor --> Compare[Baseline / Candidate Compare]
@@ -26,6 +29,13 @@ The small Codex subclass only installs validated harness files and supplies priv
 owner credentials. The optimizer model transport cannot execute shell commands or
 read host Skills. Candidate files and registered Cases remain separate from verifier
 outputs; rewards never enter proposer context.
+
+The pinned upstream Proposer only supports Claude CLI/OpenCode; our Codex JSON
+transport is an explicit custom channel, not native Proposer equivalence. Harbor
+supplies native TrialResult metrics, ATIF and pre-verifier collected output files.
+Harness² sees real task artifacts rather than assistant summaries. Native upstream
+runs and the experiment-scoped Library persist alongside Harbor evidence. Exact
+contracts and current limits are in [the integration guide](../../RSI_ADAPTERS.md).
 
 A single durable PostgreSQL queue handles admission, leases, heartbeat, fencing,
 retry, timeout and cancellation. Engine receipts identify external paid operations,

@@ -1,0 +1,29 @@
+{
+  "source_sha256": {
+    "__init__.py": "fcb35be5dfd544132cb230382b4f38126c07ac21918013bb72b7541dc6cf873c",
+    "evaluation/__init__.py": "91f5700d33a24d177e131ce26a169bb3c59c494de330e1e2f94871af57534095",
+    "evaluation/evidence.py": "a207ef34f970b5ee1d7f71827db0bed7ba52151ace0f1dc97c75b0727d3b220b",
+    "evaluation/harbor.py": "1ad9183b7ab21f97e78b7cccdc9a26e887504aff890977e23b3ac49b1a1fdee6",
+    "evaluation/harbor_agent.py": "f2e66a0bf28f951754616cecabe5a9be8fb22f16c83d9003ab23caaf21c9c06a",
+    "executions.py": "155e8dfa53d92c4927bfa7214d9e632e4eacb5083f95c5824db94fa4fed239af",
+    "protocol.py": "ff7472faf167011deb8b6a78f60cb884c3e56a64f1035ef4482df244bcb52977",
+    "rsi/__init__.py": "43d9c9eceee647e16f8f25750b79bf0a7efa79bc2b9f83e487e9ebcbd76ceb0b",
+    "rsi/api.py": "51801e38dc6228868628c665cf36ca45ca5d6ac11f6a22ce0a9e23880fcd8171",
+    "rsi/cancellation.py": "8007531a633265771f0b618a133b2ab63947d2b99f1eba84076ef546eaba285b",
+    "rsi/contracts.py": "f9f7083d647ecf9e78f2930fb58e0a6dba658a861f0b5f48ec66b623b9a5616d",
+    "rsi/harness2.py": "c39de85552d1fc35236ff78553d1da46d3bc7eac32941300d1a6b2fe2eba2fe6",
+    "rsi/host.py": "cb2ad7df4586396734d9ef2c124006b407793eda18ba707d70eac4bff6dff322",
+    "rsi/runtime.py": "b935b936ee19a614fdc48dddf84d5d12bd0310e5ebd0dfcf401a428b046ccf6a",
+    "runtime/__init__.py": "b71796130b2520191e578a67da52b7184086c50e86c2cb3202a6a76848e3aa4b",
+    "runtime/codex.py": "c784f8adb6599bca8da24b56c547076e93b25bf25f7041d55d8f6cc00b5b0157",
+    "server.py": "1143e49a11a233f986e43002d160a2c25adcdc857cddb1b515965695045909d2"
+  },
+  "upstream_revision": "1cfe254e8d25b15f37048c3730134686abe60335",
+  "harbor": "0.23.0",
+  "codex": "codex-cli 0.160.0",
+  "home_writable": true,
+  "native_trial_result_validated": true,
+  "real_artifact_read": true,
+  "atif_tool_calls": 4,
+  "image_id": "sha256:0b2565174fbee5630462d24db0a41a1ea8566abb2f9198d7d35e4cfb6c7abfd9"
+}

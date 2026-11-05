@@ -125,6 +125,7 @@ class Trial:
     tool_calls: int | None = None
     nonzero_command_exits: int | None = None
     result_sha256: str | None = None
+    deliverables: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

@@ -46,7 +46,8 @@ preserves volumes; [retirement/export](../../../OPENVIKING_INTEGRATION.md) appli
    Operator confirmation was requested in chat; the user delegated this choice.
    It reconstructs a path-discovery failure mechanism, not the original full task.
    Manifest `confirmed_by` records that authorization, not fabricated review.
-4. Register the full `task_digest` as `sha256` in the operator manifest, with
+4. Register the full `task_digest` as `sha256` and
+   `"artifacts": ["/workspace/case/result.json"]` in the operator manifest, with
    identical absolute task/run paths visible to Engine and Docker host. Set
    `CATENA_RSI_CASES_MANIFEST`, `CATENA_RSI_RUNS_ROOT`, persistent
    `CATENA_ENGINE_EXECUTIONS_ROOT`, and the Docker socket group. See deployment docs.

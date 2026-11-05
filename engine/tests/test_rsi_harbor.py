@@ -1,7 +1,9 @@
 import asyncio
 import json
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -18,7 +20,7 @@ def task(tmp_path):
     root = tmp_path / "task"
     root.mkdir()
     (root / "instruction.md").write_text("Inspect signed amounts.")
-    (root / "task.toml").write_text('schema_version = "1.4"\n')
+    (root / "task.toml").write_text('schema_version = "1.4"\nartifacts = ["/workspace/result.json"]\n')
     (root / "tests").mkdir()
     (root / "tests/answer.txt").write_text("PRIVATE_GRADER_SENTINEL")
     return HarborCase.load(str(root), task_digest(root))
@@ -30,6 +32,21 @@ def evaluator(tmp_path, task):
         tmp_path / "jobs",
         ModelConfig("openai", "https://example.test/v1", "fixture-model", "FAKE_PRIVATE_KEY"),
     )
+
+
+def test_case_requires_declared_delivery_before_paid_work(tmp_path):
+    root = tmp_path / "task"
+    root.mkdir()
+    (root / "instruction.md").write_text("Write result.json.")
+    (root / "task.toml").write_text('schema_version = "1.4"\n')
+    digest = task_digest(root)
+    with pytest.raises(OptimizationError, match="deliverable"):
+        HarborCase.load(str(root), digest)
+    case = HarborCase.load(str(root), digest, ["/workspace/result.json"])
+    assert case.sha256 == digest and case.artifacts == ("/workspace/result.json",)
+    for path in ("/tests/answer.txt", "../secret", "/workspace/../secret", "/logs/verifier/reward.txt"):
+        with pytest.raises(OptimizationError):
+            HarborCase.load(str(root), digest, [path])
 
 
 def test_real_harbor_config_keeps_credentials_out_and_reads_native_evidence(monkeypatch, tmp_path, task):
@@ -52,30 +69,37 @@ def test_real_harbor_config_keeps_credentials_out_and_reads_native_evidence(monk
 
         class Execution:
             async def run(self):
+                from harbor.models.agent.context import AgentContext
+                from harbor.models.trial.result import TrialResult
+                from harbor.models.verifier.result import VerifierResult
+                from test_rsi import ATIF
+
                 directory = config.jobs_dir / config.job_name / "trial"
-                (directory / "agent/sessions").mkdir(parents=True)
-                (directory / "agent/sessions/native.jsonl").write_text(
+                (directory / "agent").mkdir(parents=True)
+                (directory / "agent/trajectory.json").write_text(ATIF)
+                (directory / "artifacts/workspace").mkdir(parents=True)
+                (directory / "artifacts/workspace/result.json").write_text('{"actual":true}')
+                (directory / "artifacts/manifest.json").write_text(
                     json.dumps(
-                        {
-                            "type": "response_item",
-                            "payload": {
-                                "type": "message",
-                                "role": "assistant",
-                                "content": [{"type": "output_text", "text": "answer"}],
-                            },
-                        }
-                    )
-                    + "\n"
-                )
-                (directory / "result.json").write_text(
-                    json.dumps(
-                        {
-                            "agent_result": {"n_input_tokens": 15, "n_output_tokens": 2},
-                            "verifier_result": {"rewards": {"reward": 0}},
-                            "exception_info": None,
-                        }
+                        [
+                            {
+                                "source": "/workspace/result.json",
+                                "destination": "artifacts/workspace/result.json",
+                                "type": "file",
+                                "status": "ok",
+                            }
+                        ]
                     )
                 )
+                native = TrialResult.model_construct(
+                    trial_uri=directory.resolve().as_uri(),
+                    agent_result=AgentContext(n_input_tokens=15, n_output_tokens=2),
+                    verifier_result=VerifierResult(rewards={"reward": 0}),
+                    started_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+                    finished_at=datetime(2026, 1, 1, 0, 0, 3, tzinfo=timezone.utc),
+                )
+                (directory / "result.json").write_text(native.model_dump_json())
+                return SimpleNamespace(trial_results=[native])
 
         return Execution()
 
@@ -83,7 +107,9 @@ def test_real_harbor_config_keeps_credentials_out_and_reads_native_evidence(monk
     host = evaluator(tmp_path, task)
     assert "PRIVATE_GRADER_SENTINEL" not in host.task_prompt("case")
     trial = host.probe("case", Candidate({"AGENTS.md": "Inspect first."}), 2)
-    assert trial.valid and trial.answer == "answer" and trial.rewards == {"reward": 0}
+    assert trial.valid and trial.answer == "inspected amounts" and trial.rewards == {"reward": 0}
+    assert trial.deliverables == {"/workspace/result.json": '{"actual":true}'}
+    assert trial.seconds == 3 and trial.nonzero_command_exits is None
     assert (trial.input_tokens, trial.output_tokens) == (15, 2)
     assert not CREDENTIALS
     assert observed[0].environment.delete is True
@@ -109,7 +135,7 @@ def test_harbor_timeout_cancels_job_and_removes_credential_reference(monkeypatch
     with pytest.raises(TimeoutError):
         evaluator(tmp_path, task).probe("case", Candidate({"AGENTS.md": "Inspect."}), 0.05)
     assert cleaned.is_set() and not CREDENTIALS
-    diagnostic, = (tmp_path / "jobs").glob("*/private-error.txt")
+    (diagnostic,) = (tmp_path / "jobs").glob("*/private-error.txt")
     assert "TimeoutError" in diagnostic.read_text()
     assert "FAKE_PRIVATE_KEY" not in diagnostic.read_text()
     assert diagnostic.stat().st_mode & 0o777 == 0o600

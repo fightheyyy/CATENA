@@ -1,0 +1,17 @@
+{
+  "checks": {
+    "engine_pytest": "61 passed",
+    "tap_pytest": "20 passed",
+    "frozen_verifiers": "28 tasks / 116 checks passed",
+    "go_test": "passed; CATENA_ENGINE_TEST_PYTHON set, database env unset",
+    "go_vet": "passed",
+    "ruff": "passed",
+    "pip_check": "No broken requirements found",
+    "git_diff_check": "passed"
+  },
+  "not_rerun": [
+    "React: no UI or public request contract changes",
+    "Go database integration/race: no Go or database changes"
+  ],
+  "real_e2e": "BLOCKED by provider usage_limit_reached after one valid Harbor rollout; no new Compare or candidate published"
+}

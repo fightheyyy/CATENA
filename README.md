@@ -20,7 +20,9 @@ Agent Trace → Evidence → Case → Harness² → Candidate → Harbor → Com
 
 CATENA 不执行自己的 Agent Runner、Verifier 或 Sandbox，不维护多算法 Registry 或 Composition。Memory、OpenViking、Embedding 服务、Memory Graph 和社区入口已退役；未来 Context 只保留显式授权 Markdown / AGENTS.md 的文本输入边界。
 
-候选冻结后，Harbor 分别执行新的 Baseline 和 Candidate。Verifier、Token、耗时、命令退出与原始轨迹支持审查；LLM 自评不算效果证据。复用优化 Case 时明确标记，缺失费用不记为零。人工采用只记录决定，不自动安装候选。
+候选冻结后，Harbor 分别执行新的 Baseline 和 Candidate。Verifier、Token、耗时、ATIF 轨迹与实际交付文件支持审查；LLM 自评不算效果证据。复用优化 Case 时明确标记，缺失费用或命令退出统计不记为零。人工采用只记录决定，不自动安装候选。
+
+Harness² 的递归、提示、选择和 Library 复用上游；Proposer 仍是显式的只读 Codex JSON 扩展，不等同于上游 Claude/OpenCode 原生会话。原生运行树和审计持久保留；交付物通过 Harbor 原生 Artifact 收集，不能用最终回复替代。当前产物、通道和任务范围限制见 [集成契约](docs/RSI_ADAPTERS.md)。
 
 ## 启动
 

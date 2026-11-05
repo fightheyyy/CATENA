@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import os
 import shutil
 import subprocess
-import time
 import traceback
 import uuid
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from urllib.parse import unquote, urlparse
 
 from ..protocol import ModelConfig
 from ..rsi.cancellation import cancellable
@@ -34,15 +33,39 @@ def task_digest(root: Path) -> str:
 class HarborCase:
     path: Path
     sha256: str
+    artifacts: tuple[str, ...]
 
     @classmethod
-    def load(cls, path: str, sha256: str):
+    def load(cls, path: str, sha256: str, artifacts=None):
+        from harbor.models.task.artifacts import normalize_artifact_entries
+        from harbor.models.task.config import TaskConfig as HarborTaskConfig
+
         root = Path(path).resolve(strict=True)
         if not root.is_dir() or any(not (root / name).is_file() for name in ("instruction.md", "task.toml")):
             raise OptimizationError("registered Harbor task is incomplete")
         if task_digest(root) != sha256:
             raise OptimizationError("registered Harbor task fingerprint differs from its manifest")
-        return cls(root, sha256)
+        config = HarborTaskConfig.model_validate_toml((root / "task.toml").read_text())
+        if config.steps:
+            raise OptimizationError("CATENA currently supports single-step Harbor Cases only")
+        declared = normalize_artifact_entries(config.artifacts)
+        if any(a.service not in (None, "main") or a.exclude for a in declared):
+            raise OptimizationError("CATENA deliverables must be text files from the main Harbor service")
+        extras = artifacts if artifacts is not None else []
+        if not isinstance(extras, list) or any(not isinstance(p, str) for p in extras):
+            raise OptimizationError("Case artifacts must be absolute container file paths")
+        sources = tuple(dict.fromkeys([a.source for a in declared] + extras))
+        if not 1 <= len(sources) <= 32 or any(
+            not PurePosixPath(p).is_absolute()
+            or len(p) > 1024
+            or "\0" in p
+            or ".." in PurePosixPath(p).parts
+            or p.startswith(("/tests/", "/solution/", "/logs/"))
+            or p in ("/", "/tests", "/solution", "/logs")
+            for p in sources
+        ):
+            raise OptimizationError("Case requires 1–32 explicit deliverable files outside grader and log paths")
+        return cls(root, sha256, sources)
 
 
 class HarborEvaluator:
@@ -74,24 +97,32 @@ class HarborEvaluator:
     async def _probe(self, case_id, candidate, timeout):
         from harbor.job import Job
         from harbor.models.job.config import JobConfig
+        from harbor.models.task.artifacts import normalize_artifact_entries
+        from harbor.models.task.config import TaskConfig as HarborTaskConfig
         from harbor.models.trial.config import AgentConfig, EnvironmentConfig, TaskConfig
+        from harbor.models.trial.paths import TrialPaths
 
-        from ..codex_artifacts import read_native
+        from .evidence import read_deliverables, read_trajectory
         from .harbor_agent import CREDENTIALS
 
-        started = time.monotonic()
         case = self.cases[case_id]
         if task_digest(case.path) != case.sha256:
             raise OptimizationError("Harbor Case changed before execution")
         trial_id = uuid.uuid4().hex
+        declared_sources = {
+            a.source
+            for a in normalize_artifact_entries(
+                HarborTaskConfig.model_validate_toml((case.path / "task.toml").read_text()).artifacts
+            )
+        }
         # No default/shared provider: use the owner model, pinned runtime and low effort.
-        CREDENTIALS[trial_id] = {"api_key": self.model.api_key, "base_url": self.model.base_url}
         config = JobConfig(
             job_name=trial_id,
             jobs_dir=self.output,
             n_concurrent_trials=1,
             n_attempts=1,
             quiet=True,
+            artifacts=[p for p in case.artifacts if p not in declared_sources],
             environment=EnvironmentConfig(type="docker", delete=True, override_cpus=1, override_memory_mb=1024),
             agents=[
                 AgentConfig(
@@ -108,43 +139,57 @@ class HarborEvaluator:
             ],
             tasks=[TaskConfig(path=case.path)],
         )
+        CREDENTIALS[trial_id] = {"api_key": self.model.api_key, "base_url": self.model.base_url}
         try:
             async with asyncio.timeout(timeout):
                 job = await Job.create(config)
-                await job.run()
+                result = await job.run()
             if task_digest(case.path) != case.sha256:
                 raise OptimizationError("Harbor Case changed during execution")
-            results = list((self.output / trial_id).glob("*/result.json"))
-            if len(results) != 1:
+            if len(result.trial_results) != 1:
                 raise OptimizationError("Harbor did not produce exactly one trial")
-            data = json.loads(results[0].read_text())
-            if data.get("exception_info"):
+            native = result.trial_results[0]
+            uri = urlparse(native.trial_uri)
+            if uri.scheme != "file" or uri.netloc:
+                raise OptimizationError("Harbor trial must have local artifacts")
+            directory = Path(unquote(uri.path)).resolve()
+            if not directory.is_relative_to((self.output / trial_id).resolve()):
+                raise OptimizationError("Harbor artifact path escaped its job")
+            paths = TrialPaths(directory)
+            if native.exception_info:
                 raise OptimizationError("Harbor trial is invalid")
-            calls, answer = read_native(results[0].parent / "agent")
-            agent = data.get("agent_result") or {}
-            rewards = (data.get("verifier_result") or {}).get("rewards") or {}
+            trajectory, answer, tool_calls = read_trajectory(paths.agent_dir / "trajectory.json")
+            deliverables = read_deliverables(paths.artifacts_dir, case.artifacts)
+            rewards = native.verifier_result.rewards if native.verifier_result else {}
+            n_input, _, n_output, cost = native.compute_token_cost_totals()
             return Trial(
                 safe_id(trial_id),
                 case_id,
                 candidate.id,
-                json.dumps(calls, ensure_ascii=False),
+                trajectory,
                 answer,
-                bool(rewards) and bool(answer.strip()),
-                rewards,
-                agent.get("n_input_tokens"),
-                agent.get("n_output_tokens"),
-                time.monotonic() - started,
-                artifact_dir=results[0].parent.relative_to(self.output).as_posix(),
-                cost_usd=agent.get("cost_usd"),
-                tool_calls=len(calls),
-                nonzero_command_exits=sum(c["exit_code"] != 0 for c in calls) if all(c["exit_code"] is not None for c in calls) else None,
-                result_sha256=hashlib.sha256(results[0].read_bytes()).hexdigest(),
+                bool(rewards),
+                rewards or {},
+                n_input,
+                n_output,
+                (native.finished_at - native.started_at).total_seconds()
+                if native.finished_at and native.started_at
+                else None,
+                artifact_dir=directory.relative_to(self.output).as_posix(),
+                cost_usd=cost,
+                tool_calls=tool_calls,
+                # ATIF does not promise per-shell exit codes, especially inside custom tools.
+                nonzero_command_exits=None,
+                result_sha256=hashlib.sha256(paths.result_path.read_bytes()).hexdigest(),
+                deliverables=deliverables,
             )
         except Exception:
             directory = self.output / trial_id
             try:
                 directory.mkdir(parents=True, exist_ok=True)
-                with os.fdopen(os.open(directory / "private-error.txt", os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "w") as log:
+                with os.fdopen(
+                    os.open(directory / "private-error.txt", os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "w"
+                ) as log:
                     log.write(traceback.format_exc().replace(self.model.api_key, "[REDACTED]"))
             except OSError:
                 pass  # Diagnostic failure must not replace the original execution error.

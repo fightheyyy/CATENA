@@ -1,5 +1,11 @@
 # CATENA — Operation Rebirth
 
+> Follow-up: the original five-phase results below describe commit `f540c32`.
+> The upstream contract correction and its separately BLOCKED real rerun are
+> documented in [UPSTREAM_INTEGRATION.md](UPSTREAM_INTEGRATION.md). The earlier
+> successful Verifier pair does not validate the corrected integration.
+
+
 Audit baseline: `origin/main f7a6075`, 2026-11-06 (Asia/Shanghai).
 Implementation: `codex/operation-rebirth`, isolated worktree; original dirty worktree untouched.
 
@@ -20,7 +26,7 @@ Actual dependencies and change scope:
 | OpenViking Compose, embedding image/server, setup/env/CI | Delete | Removes two deployment services and provider configuration |
 | Community HTTP, profile creation on login, storage methods | Delete | No role in trace-driven engineering; preserve existing SQL data |
 | `rsi/registry.py`, CATENA Algorithm/RSIAdapter protocol, host composition | Delete | Only Harness² exists; upstream owns its native search modes |
-| `rsi/harness2.py` → pinned upstream `schedule.run_task` | Keep thin integration | Already calls native algorithm, no copied algorithm loop |
+| `rsi/harness2.py` → pinned upstream `schedule.run_task` | Keep integration, audit semantics | Native algorithm; custom Codex JSON Proposer is not equivalent to native upstream sessions (see follow-up below) |
 | `evaluation/harbor.py`, `RSICodex(Codex)` | Keep | Harbor owns Job/Trial/environment/verifier; subclass injects harness and owner credentials |
 | Analysis Job checkpoint/artifacts, React Analysis workspace | Extend minimally | Persist comparisons and human decisions, display measured results |
 | Existing SQL tables, historical experiments/results/docs | Preserve | Removing runtime does not authorize historical data deletion |

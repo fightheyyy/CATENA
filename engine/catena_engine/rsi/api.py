@@ -81,7 +81,7 @@ def run_payload(payload: dict, cancelled=None) -> dict:
         value = manifest[case_id]
         if not isinstance(value, dict) or not isinstance(value.get("confirmed_by"), str) or not value["confirmed_by"].strip():
             raise OptimizationError("Case requires operator human confirmation before model execution")
-        cases[case_id] = HarborCase.load(value["path"], value["sha256"])
+        cases[case_id] = HarborCase.load(value["path"], value["sha256"], value.get("artifacts", []))
     reserved = 2 * (1 + len(validation))
     preflight(options, budget, reserved)
     runtime = CodexRuntime(model)
@@ -90,7 +90,7 @@ def run_payload(payload: dict, cancelled=None) -> dict:
     output.mkdir(parents=True, mode=0o700)
     evaluator = HarborEvaluator(cases, output, model)
     evaluator.preflight()
-    services = Services(context, runtime, evaluator, budget, reserved)
+    services = Services(context, runtime, evaluator, budget, reserved, output=output)
     if cancelled is not None:
         services.cancelled = cancelled
     try:
@@ -109,6 +109,8 @@ def run_payload(payload: dict, cancelled=None) -> dict:
     result["experiment_id"] = output.name
     result["case_confirmations"] = {name: manifest[name]["confirmed_by"] for name in cases}
     result["case_fingerprints"] = {name: case.sha256 for name, case in cases.items()}
+    result["case_artifacts"] = {name: list(case.artifacts) for name, case in cases.items()}
+    result["harness2_artifact_dir"] = "harness2"
     result["model"] = {
         "provider": model.provider,
         "model": model.model,

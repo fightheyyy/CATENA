@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import threading
 import time
 from dataclasses import asdict, replace
+from pathlib import Path
 
 from .contracts import (
     RESULT_SCHEMA,
@@ -19,14 +21,18 @@ from .harness2 import Harness2Adapter
 
 
 def trial_summary(trial: Trial) -> dict:
-    return {key: value for key, value in asdict(trial).items() if key not in ("trajectory", "answer")}
+    summary = {key: value for key, value in asdict(trial).items() if key not in ("trajectory", "answer", "deliverables")}
+    summary["deliverable_sha256"] = {
+        name: hashlib.sha256(body.encode("utf-8")).hexdigest() for name, body in trial.deliverables.items()
+    }
+    return summary
 
 
 class Services:
     """Enforce limits at paid-operation boundaries, including failed attempts."""
 
     def __init__(
-        self, context: Context, runtime, evaluator, budget: Budget, reserved_trials: int = 0
+        self, context: Context, runtime, evaluator, budget: Budget, reserved_trials: int = 0, *, output: Path
     ):
         self.context, self.runtime, self.evaluator, self.budget = context, runtime, evaluator, budget
         self.deadline = time.monotonic() + budget.seconds
@@ -39,6 +45,7 @@ class Services:
         self.input_tokens = self.output_tokens = 0
         self.failure = ""
         self.reserved_trials = reserved_trials
+        self.output = output
 
     def remaining(self) -> float:
         if self.failure:
@@ -51,9 +58,9 @@ class Services:
     def task_prompt(self) -> str:
         return self.evaluator.task_prompt(self.context.case_id)
 
-    def complete(self, prompt: str) -> Completion:
+    def complete(self, prompt: str, timeout: float | None = None) -> Completion:
         with self.lock:
-            timeout = self.remaining()
+            timeout = min(self.remaining(), timeout) if timeout is not None else self.remaining()
             if self.calls >= self.budget.model_calls:
                 self.failure = "RSI model-call budget exceeded"
                 raise OptimizationError(self.failure)
@@ -73,12 +80,12 @@ class Services:
             self.remaining()
             return reply
 
-    def probe(self, candidate: Candidate) -> Trial:
+    def probe(self, candidate: Candidate, timeout: float | None = None) -> Trial:
         with self.lock:
             if self.attempted_trials >= self.budget.trials - self.reserved_trials:
                 self.failure = "RSI probe budget exceeded; validation trials are reserved"
                 raise OptimizationError(self.failure)
-            return self._trial(self.context.case_id, candidate, "probe")
+            return self._trial(self.context.case_id, candidate, "probe", timeout)
 
     def validate_candidate(self, case_id: str, candidate: Candidate) -> Trial:
         with self.lock:
@@ -87,9 +94,9 @@ class Services:
             self.reserved_trials -= 1
             return self._trial(case_id, candidate, "validation")
 
-    def _trial(self, case_id: str, candidate: Candidate, phase: str) -> Trial:
+    def _trial(self, case_id: str, candidate: Candidate, phase: str, timeout: float | None = None) -> Trial:
         with self.lock:
-            timeout = self.remaining()
+            timeout = min(self.remaining(), timeout) if timeout is not None else self.remaining()
             if self.attempted_trials >= self.budget.trials:
                 self.failure = "RSI trial budget exceeded"
                 raise OptimizationError(self.failure)

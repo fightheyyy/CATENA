@@ -1,0 +1,71 @@
+{
+  "status": "BLOCKED",
+  "reason": "CLIProxyAPI upstream usage_limit_reached (429), not an Agent-quality result",
+  "quota_resets_at": "2026-11-06T06:27:09+08:00",
+  "job_id": "analysis-job-1793915043484-46971a714c093570",
+  "experiment_id": "analysis-job-1793915043484-46971a714c093570-2ec5aad3c2f94e0f8c853db909446f06",
+  "case_fingerprints": {
+    "path-discovery-01": "ab833f252bb46383cd49b40fa4a54d3e329301cf4c869d1a816853e918b75eef"
+  },
+  "case_artifacts": {
+    "path-discovery-01": [
+      "/workspace/case/result.json"
+    ]
+  },
+  "model": {
+    "provider": "openai",
+    "model": "gpt-5.6-luna",
+    "optimizer_reasoning_effort": "low",
+    "target_reasoning_effort": "low",
+    "runtime": "codex-cli@0.160.0"
+  },
+  "usage": {
+    "model_calls": 2,
+    "attempted_trials": 2,
+    "input_tokens": 836932,
+    "output_tokens": 3045,
+    "optimizer_usage_complete": true,
+    "trial_usage_complete": false,
+    "trial_input_tokens": [
+      38253
+    ],
+    "trial_output_tokens": [
+      511
+    ]
+  },
+  "trials": [
+    {
+      "trial_directory": "analysis-job-1793915043484-46971a714c093570-2ec5aad3c2f94e0f8c853db909446f06/7c03593402b74509b6dbe96d5cd9d7a9/path-discovery-01__aQSRX9b",
+      "result_sha256": "8fc1ff3034cca6dd80975fc5a40b6be78c496550d1d34cfe29669956e5347f55",
+      "rewards": {
+        "reward": 1.0
+      },
+      "exception_type": null,
+      "deliverables": {
+        "/workspace/case/result.json": "1bbb8f8ec91fdb908f8b70fcf20f4b60025d7b738aa360c338eda7a0aa4b4b0c"
+      },
+      "atif_sha256": "0fea71dc7136634a1a9f50e24c36be512c74ab0aa64c1fcfab057500d2f06c45",
+      "tool_calls": 4
+    },
+    {
+      "trial_directory": "analysis-job-1793915043484-46971a714c093570-2ec5aad3c2f94e0f8c853db909446f06/e26c6437a85b42d796d71e1f26196b02/path-discovery-01__paaCymw",
+      "result_sha256": "923435770224db99089bcd524a55eba73874e780bbf2073cca3b29e76970d8ed",
+      "rewards": {
+        "reward": 0.0
+      },
+      "exception_type": "ApiRateLimitError"
+    }
+  ],
+  "compare_completed": false,
+  "candidate_published": false,
+  "human_review_created": false,
+  "previous_review_preserved": true,
+  "harness2_artifact_dir": "harness2",
+  "retained_upstream_file_count": 70,
+  "upstream_context_contains_verifier_result": false,
+  "limitations": [
+    "One valid rollout verifies artifact/ATIF integration only.",
+    "No new Baseline/Candidate comparison or improvement claim.",
+    "Custom Codex JSON Proposer remains distinct from upstream native Proposer."
+  ]
+}
