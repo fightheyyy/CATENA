@@ -1,0 +1,8 @@
+{
+  "ready": true,
+  "real_compare_retained": true,
+  "real_artifact_retained": true,
+  "real_human_review_retained": true,
+  "current_web_title": true,
+  "frontend_install": "pnpm 10.24 frozen lockfile in Docker build"
+}

@@ -352,3 +352,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: .85; }
 .comparison-table th, .comparison-table td { padding: .5rem; text-align: left; }
 .analysis-workspace pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .analysis-workspace form label { display: block; margin: .75rem 0; }
+
+.analysis-workspace { padding: 24px; min-width: 0; }
+.analysis-workspace > nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.analysis-workspace > article { margin-top: 24px; }
+.analysis-workspace textarea { width: 100%; min-height: 80px; }

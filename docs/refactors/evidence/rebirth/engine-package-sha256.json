@@ -1,0 +1,19 @@
+{
+  "protocol.py": "ff7472faf167011deb8b6a78f60cb884c3e56a64f1035ef4482df244bcb52977",
+  "codex_artifacts.py": "972195549c72be62ca6231a60473bf48cc3f63ee2726492f7c2429ff2380ceec",
+  "server.py": "1143e49a11a233f986e43002d160a2c25adcdc857cddb1b515965695045909d2",
+  "__init__.py": "fcb35be5dfd544132cb230382b4f38126c07ac21918013bb72b7541dc6cf873c",
+  "executions.py": "155e8dfa53d92c4927bfa7214d9e632e4eacb5083f95c5824db94fa4fed239af",
+  "runtime/codex.py": "c784f8adb6599bca8da24b56c547076e93b25bf25f7041d55d8f6cc00b5b0157",
+  "runtime/__init__.py": "b71796130b2520191e578a67da52b7184086c50e86c2cb3202a6a76848e3aa4b",
+  "evaluation/__init__.py": "91f5700d33a24d177e131ce26a169bb3c59c494de330e1e2f94871af57534095",
+  "evaluation/harbor_agent.py": "f2e66a0bf28f951754616cecabe5a9be8fb22f16c83d9003ab23caaf21c9c06a",
+  "evaluation/harbor.py": "371e0285cf3053ebc02dc8205eea4f5a50cc501f8bca9733e5e86e76e6070a3b",
+  "rsi/harness2.py": "2ed8d46fe3d48b21d3fc8574f1c1a7b5e7653c4f9cdf1f75f064aa45ac7ea8f9",
+  "rsi/api.py": "60015cd9f177057fcbf95aa3af969447d7d753cfa21302d683ff47ba3b3a3e49",
+  "rsi/contracts.py": "251b1f5eb08ef6db98a0a3c8bed0646b50b75d1e0c5531e259828e713dea52d0",
+  "rsi/cancellation.py": "8007531a633265771f0b618a133b2ab63947d2b99f1eba84076ef546eaba285b",
+  "rsi/host.py": "c4a0d56bdb98bfc763f07ed0433c9ceffbb661cf8d32bc0a7d22c3c4f2487f25",
+  "rsi/__init__.py": "43d9c9eceee647e16f8f25750b79bf0a7efa79bc2b9f83e487e9ebcbd76ceb0b",
+  "rsi/runtime.py": "b935b936ee19a614fdc48dddf84d5d12bd0310e5ebd0dfcf401a428b046ccf6a"
+}

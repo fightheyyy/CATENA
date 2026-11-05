@@ -1,5 +1,7 @@
 # Case：Windows PowerShell 缺少 rg 时的仓库搜索
 
+> 历史实验记录。旧 `catena_tap.skill_experiment` 直接执行器已退役；当前正式评测只使用 Harbor，见 [Rebirth 复跑](../../docs/refactors/evidence/rebirth/COMMANDS.md)。以下旧命令保留为历史方法说明，其实现可从 Git `f7a6075` 读取。
+
 2026-10-04 更新：完成 [OpenViking 记忆 / Skill 的 Harbor 三组对照](../../docs/MEMORY_SKILL_EXPERIMENT_20261004.md)。
 每题每组两次，共 18 个有效 Trial。三组答案均 6/6，缺失 rg 错误为 baseline 4、记忆 3、Skill 0。
 Skill 总 token 增加约 15.2%，没有成功率或耗时改善。此 Linux / PowerShell 7 适配结果与下文 Windows 实验分别记录。

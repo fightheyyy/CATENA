@@ -1,0 +1,47 @@
+$ node --test --experimental-strip-types tests/*.test.mjs
+✔ the Agent registry hides telemetry-only aliases (0.808084ms)
+✔ connection previews contain a placeholder and copied shell values remain literal (0.415ms)
+✔ Trace Farm requires a connected multi-Trace Agent (0.109167ms)
+✔ Agent selection uses its server window instead of inferring from global Top 100 (1.470334ms)
+✔ one registered Agent presents accepted runtime and generic OTel sources (0.340875ms)
+✔ source presentation tolerates summaries without source details (0.104667ms)
+✔ shared analysis contract retains artifacts and ignores malformed/foreign job envelopes (1.485125ms)
+✔ copyText prefers the async Clipboard API (1.8055ms)
+✔ copyText falls back when the user agent denies Clipboard API access (0.215625ms)
+✔ copyText reports failure so the UI can keep plaintext selectable (0.187167ms)
+✔ primary navigation follows the focused cloud workspace (1.149667ms)
+✔ evidence links retain exact IDs through URL encoding and reload (0.422584ms)
+✔ Agent evolution presets produce exact UTC windows (5.921ms)
+✔ Agent evolution requires at least two matching Traces (0.141041ms)
+✔ Agent evolution makes the twelve-Trace freeze cap explicit (0.122542ms)
+✔ Agent evolution request identity changes with Agent, window, or objective (0.16175ms)
+✔ Trace list search stays focused on root Trace identity (1.822084ms)
+✔ Trace rows use the real user request instead of a Runtime fallback label (0.776666ms)
+✔ Trace filters expose errors and multi-step runs without a query builder (0.073625ms)
+✔ Trace filtering preserves raw service names from a canonical Agent query (0.191125ms)
+✔ Trace summaries preserve Agent, Session, Trace, Span hierarchy (5.42225ms)
+✔ Session titles use the earliest retained user request without an LLM (0.133292ms)
+✔ missing Session identity stays explicitly ungrouped per Agent (0.057625ms)
+✔ Span depth follows parent links and fails closed on cycles (0.06175ms)
+✔ Tool names and evidence are rendered semantically (0.083083ms)
+✔ Token usage accepts both Codex and Claude Runtime attribute names (0.135042ms)
+✔ Codex model requests render the visible conversation instead of raw request JSON (0.092041ms)
+✔ Codex turn inputs unwrap chat_messages instead of exposing protocol fields (0.05625ms)
+✔ Codex exec wrappers render arguments and terminal output without JSON chrome (0.147709ms)
+✔ truncated Codex requests fail closed instead of rendering giant JSON as a user message (0.187375ms)
+✔ Long Trace IDs are shortened without losing both ends (0.031834ms)
+✔ Agent semantic lens separates useful steps from Runtime internals (0.629417ms)
+✔ Catena canonical states keep failed tools visible in both tool and error lenses (0.059875ms)
+✔ Canonical narrative preserves parallel tools, Subagents, and distinct state events (0.175291ms)
+✔ Codex and Claude OTLP goldens render as Agent, Tool, Subagent and Error evidence (2.255333ms)
+✔ Runtime turn-context helpers stay folded instead of masquerading as Agent turns (0.053042ms)
+✔ Barena and XiaoBaOS spans render as one readable cross-process Agent chain (0.071708ms)
+✔ Raw Span disclosure is bounded even for a 30k Span Trace (17.086ms)
+ℹ tests 38
+ℹ suites 0
+ℹ pass 38
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 141.632458

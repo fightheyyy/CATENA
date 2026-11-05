@@ -1,0 +1,33 @@
+{
+  "baseline": "f7a6075",
+  "scope": {
+    "prefixes": [
+      "backend/",
+      "engine/",
+      "frontend/src/",
+      "tap/catena_tap/"
+    ],
+    "extensions": [
+      ".go",
+      ".py",
+      ".ts",
+      ".tsx"
+    ],
+    "excluded": [
+      "*_test.go",
+      "tests",
+      "Go embedded web",
+      "CSS",
+      "research/evals archives"
+    ]
+  },
+  "before": {
+    "files": 93,
+    "lines": 19868
+  },
+  "after": {
+    "files": 76,
+    "lines": 16562
+  },
+  "delta_lines": -3306
+}

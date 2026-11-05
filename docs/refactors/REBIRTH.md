@@ -31,7 +31,9 @@ Historical Job documents stay readable. No production DB or volumes are changed 
 
 Baseline commands and raw output: [evidence/rebirth](evidence/rebirth/).
 Go `go test ./...`: PASS (database integrations skip without configured services).
-React `pnpm test`: PASS, 48 tests. Python baseline is recorded separately.
+React `pnpm test`: PASS, 48 tests. Python baseline: 56 PASS / 1 FAIL
+(300ms process-start timeout; raw output retained). Phase 1 deleted no runtime
+code; it preserved main/history and froze the change scope before implementation.
 
 Real E2E preflight: **BLOCKED**. Docker client exists but daemon at
 `unix:///Users/chan/.docker/run/docker.sock` is unavailable. No controlled PostgreSQL/
@@ -161,3 +163,72 @@ Evidence: [status](evidence/rebirth/real-e2e-status.json),
 Remaining unverified: held-out/general improvement, repeatability statistics,
 provider invoices and production capacity. Next: stabilize fresh-install and
 upgrade compatibility, finish all language suites and refresh embedded Web/docs.
+
+## Phase 5 — Stabilize
+
+Deleted the remaining packaged `tap/catena_tap/skill_experiment.py` direct Codex
+runner and its exclusive tests after checking all callers; its only active caller
+was its test, plus a historical reproduction command. That Case document now marks
+the command retired and points to Harbor. Tap remains a collector/parser; the new
+`evals/rebirth.py` is only a small public-API client with provenance/result self-checks,
+not another Agent runner. Existing Harbor-based research scripts and frozen
+verifiers remain for historical reproducibility.
+
+Fresh bootstrap no longer creates `catena_memory_tasks` or `barena_agent_profiles`.
+The real PostgreSQL migration test confirms fresh absence and preservation of a
+pre-existing historical table/row, checkpoint, terminal Job and unrelated RSI Job.
+Existing authentication, queue table names and Go module path remain to avoid
+unnecessary compatibility/data migrations. Historical conversation/Memory Artifact
+read compatibility remains; no retired execution can be created.
+
+Rewrote root README, SPEC, current architecture, runtime and deployment docs.
+Refreshed Go's embedded React bundle; Memory Graph/Conversation chunks and the
+unused Memory icon are absent. Existing components/styles handle Compare and
+explicit review, with no new frontend dependency. The real user's restricted
+adoption survives both PostgreSQL restart and the rebuilt Go process; the final
+Docker Go/React image can also read the exact same Compare/Artifact/Review.
+
+Final checks (raw outputs in [evidence/rebirth](evidence/rebirth/)):
+
+| Check | Actual result |
+|---|---|
+| Go + real PostgreSQL/ClickHouse + race, cross-process Python | PASS; only opt-in capacity/load study skipped |
+| `go vet ./...` | PASS |
+| Engine Python with pinned Harness² / Harbor | 56 PASS |
+| Remaining Tap Python suite | 20 PASS |
+| React unit / TypeScript / production build | 38 PASS; typecheck/build PASS |
+| Browser core journeys, including Compare/Review/reload/mobile | 12 PASS |
+| Frozen verifier checks | 28 tasks / 116 checks PASS |
+| Engine Docker build, writable HOME, Codex 0.160.0, Compose, private 401 | PASS |
+| Packaged Engine vs current source | Exact SHA256 match, 17 Python files |
+| Go/React Docker build using frozen pnpm 10.24 lockfile | PASS |
+| Packaged Go/React real-record read/ready smoke | PASS |
+| Compose RSI config, embedded Web equality, source diff whitespace | PASS; raw console logs excluded |
+| Actual provider-key scan of tracked/non-ignored outputs | No match |
+
+[Source inventory](evidence/rebirth/source-inventory.json), compared with audited
+main `f7a6075`: active core files **93 → 76**, lines **19,868 → 16,562** (**−3,306**).
+The metric excludes tests, docs, generated Web, CSS and research/evals; its exact
+prefixes are recorded. Removed runtime dependencies are real, not directory moves:
+OpenViking + embedding services, React graph packages, Memory/provider chains,
+community profile writes and the extra local execution path.
+
+Private raw source, native Harbor results, requests, execution receipts and SQL/
+ClickHouse exports remain under `.local/rebirth/`. Only the temporary isolated
+Connections model credential was deleted after testing; the user's existing
+CLIProxyAPI credentials were untouched. Re-running needs model configuration again.
+No original dirty-worktree changes, production DB/volumes, main commits or remote
+branch were changed. No candidate was installed.
+
+Unverified: held-out/general improvement, repeated-trial statistics, provider
+invoice reconciliation, production capacity and production upgrade/deployment.
+The API-only reproduction client's CLI/syntax and live result invariants were
+checked; the actual paid experiments were driven by the same API contract, with
+private submitted requests retained. No additional paid experiment was launched
+solely to retest the wrapper client.
+
+No implementation blocker remains for this engineering loop. The next evidence
+needed for wider adoption is a separately approved held-out Case and repeated,
+predeclared comparisons; current adoption is strictly `path-discovery-01` only.
+
+Exact changed-file lists: [Phase 2](evidence/rebirth/phase2-files.txt), [Phase 3](evidence/rebirth/phase3-files.txt), [Phase 4](evidence/rebirth/phase4-files.txt), [Phase 5](evidence/rebirth/phase5-files.txt). Phase 1 added this audit and its Docker preflight record.

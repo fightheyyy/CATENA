@@ -1,0 +1,6 @@
+=== RUN   TestRebirthMigrationRetiresOnlyActiveMemoryAndPreservesHistory
+--- PASS: TestRebirthMigrationRetiresOnlyActiveMemoryAndPreservesHistory (0.12s)
+=== RUN   TestPostgresHumanReview
+--- PASS: TestPostgresHumanReview (0.06s)
+PASS
+ok  	github.com/fightheyyy/barena/platform/internal/control	1.800s

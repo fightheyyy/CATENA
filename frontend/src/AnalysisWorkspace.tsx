@@ -18,12 +18,12 @@ export function AnalysisWorkspace({ locale, jobs, initialJobID, onAnalyze, onJob
  const terminal = selected && ["completed", "failed", "cancelled"].includes(selected.state);
  return <section className="workspace-panel analysis-workspace">
   <h2>{locale === "zh" ? "分析任务与产物" : "Analysis jobs and artifacts"}</h2>
-  <button onClick={onAnalyze}>{locale === "zh" ? "创建分析" : "New analysis"}</button>
+  <button className="primary-button compact" onClick={onAnalyze}>{locale === "zh" ? "创建分析" : "New analysis"}</button>
   {error && <p role="alert">{error}</p>}
-  <nav>{jobs.map(j => <button key={j.job_id} onClick={() => onJobSelected(j.job_id)}>{j.pipeline ?? "Historical"} · {j.state} · {j.job_id}</button>)}</nav>
+  <nav>{jobs.map(j => <button className="text-button" key={j.job_id} onClick={() => onJobSelected(j.job_id)}>{j.pipeline ?? "Historical"} · {j.state} · {j.job_id}</button>)}</nav>
   {selected && <article><h3>{selected.pipeline} / {selected.adapter}</h3><p>{selected.objective}</p>
     <p>{selected.state} · attempt {selected.attempt ?? 0}</p>{selected.error && <p role="alert">{selected.error}</p>}
-    <button disabled={!!selected.reviews?.length || (!terminal && selected.cancel_requested)} onClick={() => { if (terminal && !window.confirm("Delete this analysis and its artifacts?")) return; void (terminal ? api.deleteAnalysisJob(selected.job_id).then(() => onJobDeleted(selected.job_id)) : api.cancelAnalysisJob(selected.job_id).then(next => onJobsUpdated(jobs.map(j => j.job_id === next.job_id ? next : j)))).catch(e => setError(String(e))); }}>{terminal ? "Delete" : "Cancel"}</button>
+    <button className="text-button" disabled={!!selected.reviews?.length || (!terminal && selected.cancel_requested)} onClick={() => { if (terminal && !window.confirm("Delete this analysis and its artifacts?")) return; void (terminal ? api.deleteAnalysisJob(selected.job_id).then(() => onJobDeleted(selected.job_id)) : api.cancelAnalysisJob(selected.job_id).then(next => onJobsUpdated(jobs.map(j => j.job_id === next.job_id ? next : j)))).catch(e => setError(String(e))); }}>{terminal ? "Delete" : "Cancel"}</button>
     <p>Source: {selected.source_trace_ids.join(", ") || selected.source_trace_id || selected.source_conversation_id}</p>
     {(selected.artifacts ?? []).map(a => <section key={a.id}><h4>{a.type} · {a.validation_status}</h4>
       <Compare value={a.provenance} />
@@ -42,8 +42,8 @@ function ArtifactPayload({value,onError}:{value:unknown;onError:(message:string)
  if(!files || typeof files!=="object" || Array.isArray(files)) return <pre>{JSON.stringify(value,null,2)}</pre>;
  return <div>{Object.entries(files).filter((entry):entry is [string,string]=>typeof entry[1]==="string").map(([path,text])=><section key={path}>
   <h5>{path}</h5><pre>{text}</pre>
-  <button onClick={()=>{void navigator.clipboard.writeText(text).catch(()=>onError("Clipboard unavailable"));}}>Copy</button>
-  <button onClick={()=>{const url=URL.createObjectURL(new Blob([text],{type:"text/plain;charset=utf-8"}));const link=document.createElement("a");link.href=url;link.download=path.split("/").at(-1)||"artifact.txt";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}>Download</button>
+  <button className="text-button" onClick={()=>{void navigator.clipboard.writeText(text).catch(()=>onError("Clipboard unavailable"));}}>Copy</button>
+  <button className="text-button" onClick={()=>{const url=URL.createObjectURL(new Blob([text],{type:"text/plain;charset=utf-8"}));const link=document.createElement("a");link.href=url;link.download=path.split("/").at(-1)||"artifact.txt";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}>Download</button>
  </section>)}</div>;
 }
 
@@ -52,7 +52,7 @@ function Compare({ value }: { value: unknown }) {
  return <section aria-label="Baseline / Candidate Compare"><h4>Baseline / Candidate Compare</h4>
   <p>每个 Case 各 1 次；不能证明普遍提升。Missing cost/token data is unknown.</p>
   {value.compare.map((pair, i) => <section key={i}><h5>{pair.case_id} · {pair.held_out ? "held-out" : "optimization Case reused"}</h5>
-   <div className="comparison-table"><table><thead><tr><th scope="col">Arm</th><th scope="col">Verifier pass / trials</th><th scope="col">Nonzero command exits / calls</th><th scope="col">Input / output tokens</th><th scope="col">Seconds</th><th scope="col">USD</th></tr></thead>
+   <div className="comparison-table"><table><thead><tr><th scope="col">Arm</th><th scope="col">Verifier pass / trials</th><th scope="col">Nonzero command exits / tool calls</th><th scope="col">Input / output tokens</th><th scope="col">Seconds</th><th scope="col">USD</th></tr></thead>
     <tbody>{(["baseline", "candidate"] as const).map(arm => { const trial = pair[arm]; return <tr key={arm}><th scope="row">{arm}</th><td>{trial?.valid && [0, 1].includes(trial.rewards?.reward) ? `${trial.rewards.reward} / 1` : "unknown"}</td><td>{trial?.nonzero_command_exits ?? "?"} / {trial?.tool_calls ?? "?"}</td><td>{trial?.input_tokens ?? "?"} / {trial?.output_tokens ?? "?"}</td><td>{trial?.seconds?.toFixed(2) ?? "?"}</td><td>{trial?.cost_usd ?? "?"}</td></tr>; })}</tbody>
    </table></div>
    <p>Raw Harbor artifacts: {pair.baseline?.artifact_dir ?? "unknown"} / {pair.candidate?.artifact_dir ?? "unknown"}</p>
@@ -75,6 +75,6 @@ function Review({ jobID, artifactID, ready, review, onSaved }: { jobID: string; 
  }}><h4>Human Review</h4><p>Record a decision after reviewing verifier and trajectory. Adoption does not install files.</p>
   <label>Decision<select value={decision} disabled={busy} onChange={e => setDecision(e.target.value as "adopt" | "reject")}><option value="reject">Reject</option><option value="adopt">Adopt</option></select></label>
   <label>Reason<textarea required maxLength={4000} value={reason} disabled={busy} onChange={e => setReason(e.target.value)} /></label>
-  <button disabled={busy || !reason.trim()}>Record decision</button>{error && <p role="alert">{error}</p>}
+  <button className="primary-button compact" disabled={busy || !reason.trim()}>Record decision</button>{error && <p role="alert">{error}</p>}
  </form>;
 }

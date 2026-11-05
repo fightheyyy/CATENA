@@ -144,6 +144,13 @@ func TestV2MigrationPreservesLegacyDocumentAndRetiresOnlyActiveJobs(t *testing.T
 func TestRebirthMigrationRetiresOnlyActiveMemoryAndPreservesHistory(t *testing.T) {
 	store, _ := isolatedQueuePostgres(t)
 	ctx := context.Background()
+	var retired int
+	if err := store.db.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.tables WHERE table_schema=current_schema() AND table_name IN ('catena_memory_tasks','barena_agent_profiles')`).Scan(&retired); err != nil || retired != 0 {
+		t.Fatal("fresh install creates retired tables", err)
+	}
+	if _, err := store.db.ExecContext(ctx, `CREATE TABLE catena_memory_tasks (task_id TEXT PRIMARY KEY, document JSONB); INSERT INTO catena_memory_tasks VALUES ('historical','{"preserved":true}')`); err != nil {
+		t.Fatal(err)
+	}
 	active, terminal, rsi := seedQueueJob(t, store), seedQueueJob(t, store), seedQueueJob(t, store)
 	for _, job := range []AnalysisJob{active, terminal} {
 		job.Pipeline = "memory"
@@ -162,6 +169,10 @@ func TestRebirthMigrationRetiresOnlyActiveMemoryAndPreservesHistory(t *testing.T
 		if err := store.migrate(ctx); err != nil {
 			t.Fatal(err)
 		}
+	}
+	var history []byte
+	if err := store.db.QueryRowContext(ctx, `SELECT document FROM catena_memory_tasks WHERE task_id='historical'`).Scan(&history); err != nil || !bytes.Contains(history, []byte("preserved")) {
+		t.Fatal("historical table lost", err)
 	}
 	for _, job := range []AnalysisJob{active, terminal, rsi} {
 		saved, err := store.GetAnalysisJob(ctx, job.ID)

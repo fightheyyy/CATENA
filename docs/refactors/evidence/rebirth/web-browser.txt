@@ -1,0 +1,21 @@
+$ node --test tests/browser/core-journeys.test.mjs
+✔ Settings and Agent routes avoid unrelated endpoints; failed reads remain recoverable (1600.185917ms)
+✔ An empty workspace offers an Agent connection and labels its sample counts (1701.288834ms)
+✔ Leaving a slow route cancels its request and permits Settings immediately (222.526042ms)
+✔ Recent Trace opens the exact record, including reload, history and an out-of-window deep link (4153.293333ms)
+✔ Trace mobile detail supports direct links, failures, retry and return to the index (1014.157791ms)
+✔ Analysis polling publishes sourced unverified artifacts and cancellation retains acknowledgement (2715.983917ms)
+✔ Agent setup copies a shell-safe secret only to clipboard and recovers first-data checks (5209.07075ms)
+✔ Connection setup fits 390px in English and dark appearance (1029.11175ms)
+✔ Workspace retains exact recent evidence and analysis links (2517.651042ms)
+✔ Workspace retains analyses when history fails and can retry the failed read (984.448375ms)
+✔ Mobile navigation stays reachable and retired conversation links return home (2508.030084ms)
+✔ Compare preserves unknown cost and Human Review records an explicit decision (1833.167625ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 25685.530458

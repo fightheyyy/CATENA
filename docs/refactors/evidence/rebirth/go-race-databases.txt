@@ -1,0 +1,241 @@
+=== RUN   TestValidateBinding
+=== PAUSE TestValidateBinding
+=== CONT  TestValidateBinding
+--- PASS: TestValidateBinding (0.00s)
+PASS
+ok  	github.com/fightheyyy/barena/platform/cmd/catena-server	1.574s
+=== RUN   TestCanonicalAgentForSourcePreservesAcceptedRuntimeIdentity
+--- PASS: TestCanonicalAgentForSourcePreservesAcceptedRuntimeIdentity (0.00s)
+=== RUN   TestCanonicalAgentForSourceKeepsUnknownServiceIdentity
+--- PASS: TestCanonicalAgentForSourceKeepsUnknownServiceIdentity (0.00s)
+=== RUN   TestTraceSummaryBelongsToRegisteredAgentBeforeServiceName
+--- PASS: TestTraceSummaryBelongsToRegisteredAgentBeforeServiceName (0.00s)
+=== RUN   TestClassifyKnownBarenaSources
+--- PASS: TestClassifyKnownBarenaSources (0.00s)
+=== RUN   TestInternalSourcesAreNotSelectableAgents
+--- PASS: TestInternalSourcesAreNotSelectableAgents (0.00s)
+=== RUN   TestXiaoBaOSTargetMembershipUsesCanonicalID
+--- PASS: TestXiaoBaOSTargetMembershipUsesCanonicalID (0.00s)
+=== RUN   TestMergeAgentSourceAggregatesReturnsOneCredentialBoundRuntimeAgent
+--- PASS: TestMergeAgentSourceAggregatesReturnsOneCredentialBoundRuntimeAgent (0.00s)
+=== RUN   TestMergeAgentSourceAggregatesExcludesInternalSources
+--- PASS: TestMergeAgentSourceAggregatesExcludesInternalSources (0.00s)
+=== RUN   TestNormalizedAgentIDPreservesExactAcceptedRuntimeServiceIDs
+--- PASS: TestNormalizedAgentIDPreservesExactAcceptedRuntimeServiceIDs (0.00s)
+=== RUN   TestCreateRegisteredAgentCreatesStableIdentityAndBoundKey
+--- PASS: TestCreateRegisteredAgentCreatesStableIdentityAndBoundKey (0.00s)
+=== RUN   TestLocalModeCreatesAgentAndAcceptsItsBoundKey
+--- PASS: TestLocalModeCreatesAgentAndAcceptsItsBoundKey (0.00s)
+=== RUN   TestGetRegisteredAgentReturnsCheapConnectionStatus
+--- PASS: TestGetRegisteredAgentReturnsCheapConnectionStatus (0.00s)
+=== RUN   TestBoundAgentKeyOwnsOTLPIdentityAndDetectsRuntime
+--- PASS: TestBoundAgentKeyOwnsOTLPIdentityAndDetectsRuntime (0.00s)
+=== RUN   TestBoundAgentKeyOverridesConversationPayloadIdentity
+--- PASS: TestBoundAgentKeyOverridesConversationPayloadIdentity (0.00s)
+=== RUN   TestDetectOTLPRuntimeUsesEvidenceAndFallsBackToGenericOTel
+--- PASS: TestDetectOTLPRuntimeUsesEvidenceAndFallsBackToGenericOTel (0.00s)
+=== RUN   TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease
+2026/11/06 02:52:29 INFO Analysis job claimed job_id=analysis-job-1793904749870-55b3d7601dff80d2 attempt=1 fence=1 age_seconds=0.002468
+2026/11/06 02:52:29 INFO Analysis job completed job_id=analysis-job-1793904749870-55b3d7601dff80d2 attempt=1 execution_seconds=0.003659666
+--- PASS: TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease (0.01s)
+=== RUN   TestEngineClientTimeoutCancelsExternalExecution
+--- PASS: TestEngineClientTimeoutCancelsExternalExecution (0.05s)
+=== RUN   TestAnalysisQueueMemoryContract
+=== RUN   TestAnalysisQueueMemoryContract/admission_limit_preserves_idempotent_retries
+=== RUN   TestAnalysisQueueMemoryContract/concurrent_claim_and_commit
+=== RUN   TestAnalysisQueueMemoryContract/expired_worker_cannot_overwrite_successor
+=== RUN   TestAnalysisQueueMemoryContract/retry_checkpoint_backoff_and_limit
+=== RUN   TestAnalysisQueueMemoryContract/cancellation_ownership_and_commit_race
+=== RUN   TestAnalysisQueueMemoryContract/crashed_final_attempt_is_reaped
+--- PASS: TestAnalysisQueueMemoryContract (0.62s)
+    --- PASS: TestAnalysisQueueMemoryContract/admission_limit_preserves_idempotent_retries (0.02s)
+    --- PASS: TestAnalysisQueueMemoryContract/concurrent_claim_and_commit (0.01s)
+    --- PASS: TestAnalysisQueueMemoryContract/expired_worker_cannot_overwrite_successor (0.19s)
+    --- PASS: TestAnalysisQueueMemoryContract/retry_checkpoint_backoff_and_limit (0.19s)
+    --- PASS: TestAnalysisQueueMemoryContract/cancellation_ownership_and_commit_race (0.00s)
+    --- PASS: TestAnalysisQueueMemoryContract/crashed_final_attempt_is_reaped (0.19s)
+=== RUN   TestAnalysisWorkerBoundsConcurrencyAndDrainsPersistedQueue
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750547-4433ea429280b0f1 attempt=1 fence=1 age_seconds=0.005322
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750548-d5703281ac3e4764 attempt=1 fence=1 age_seconds=0.004959
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750547-4433ea429280b0f1 attempt=1 execution_seconds=0.02105
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750548-d5703281ac3e4764 attempt=1 execution_seconds=0.020943458
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750548-454f09106838c5f9 attempt=1 fence=1 age_seconds=0.02579
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750549-64027b8f3d3e270b attempt=1 fence=1 age_seconds=0.025724
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750548-454f09106838c5f9 attempt=1 execution_seconds=0.021032833
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750549-64027b8f3d3e270b attempt=1 execution_seconds=0.021107125
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750549-90fc66447f2e2342 attempt=1 fence=1 age_seconds=0.047246
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750550-ea234e966e48556c attempt=1 fence=1 age_seconds=0.047399
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750549-90fc66447f2e2342 attempt=1 execution_seconds=0.020518166
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750550-ea234e966e48556c attempt=1 execution_seconds=0.020252291
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750550-ab1cd5f3f0ae987e attempt=1 fence=1 age_seconds=0.067772
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750550-649a4b49c2a8aab5 attempt=1 fence=1 age_seconds=0.067761
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750550-649a4b49c2a8aab5 attempt=1 execution_seconds=0.020581292
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750550-ab1cd5f3f0ae987e attempt=1 execution_seconds=0.021086
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750551-1c0d76d57f0754a1 attempt=1 fence=1 age_seconds=0.088944
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750551-8a3cfcd7e3565d90 attempt=1 fence=1 age_seconds=0.089258
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750551-1c0d76d57f0754a1 attempt=1 execution_seconds=0.0208145
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750551-8a3cfcd7e3565d90 attempt=1 execution_seconds=0.020301833
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750551-052e762a2cba606d attempt=1 fence=1 age_seconds=0.109552
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750552-21dc2317fd527c67 attempt=1 fence=1 age_seconds=0.10945
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750552-21dc2317fd527c67 attempt=1 execution_seconds=0.020488041
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750551-052e762a2cba606d attempt=1 execution_seconds=0.020933459
+--- PASS: TestAnalysisWorkerBoundsConcurrencyAndDrainsPersistedQueue (0.13s)
+=== RUN   TestAnalysisWorkerCancellationAndShutdownRecovery
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750682-181383ac197608d6 attempt=1 fence=1 age_seconds=0.000654
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750711-a42de603123808dd attempt=1 fence=1 age_seconds=0.000835
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750711-a42de603123808dd attempt=2 fence=2 age_seconds=0.201545
+2026/11/06 02:52:30 INFO Analysis job completed job_id=queue-test-1793904750711-a42de603123808dd attempt=2 execution_seconds=0.000150125
+--- PASS: TestAnalysisWorkerCancellationAndShutdownRecovery (0.24s)
+=== RUN   TestAnalysisWorkerPermanentFailureDoesNotRetry
+2026/11/06 02:52:30 INFO Analysis job claimed job_id=queue-test-1793904750918-bf99cee7eb33d26e attempt=1 fence=1 age_seconds=0.000632
+--- PASS: TestAnalysisWorkerPermanentFailureDoesNotRetry (0.01s)
+=== RUN   TestAnalysisCancelQueuedJobHTTP
+--- PASS: TestAnalysisCancelQueuedJobHTTP (0.00s)
+=== RUN   TestLocalModeCanCancelLocalTraceSetOwner
+--- PASS: TestLocalModeCanCancelLocalTraceSetOwner (0.00s)
+=== RUN   TestAPITokenEnvelopeRoundTripAndTamperDetection
+--- PASS: TestAPITokenEnvelopeRoundTripAndTamperDetection (0.00s)
+=== RUN   TestMaskAPIToken
+--- PASS: TestMaskAPIToken (0.00s)
+=== RUN   TestArtifactWritesUseExistingFencedJobAndOwner
+--- PASS: TestArtifactWritesUseExistingFencedJobAndOwner (0.00s)
+=== RUN   TestClickHouseTraceRoundTrip
+--- PASS: TestClickHouseTraceRoundTrip (0.14s)
+=== RUN   TestClickHouseTraceListPaging
+--- PASS: TestClickHouseTraceListPaging (0.05s)
+=== RUN   TestPostgresConversationPersistenceIsOwnerScopedOrderedIdempotentAndAtomic
+--- PASS: TestPostgresConversationPersistenceIsOwnerScopedOrderedIdempotentAndAtomic (0.04s)
+=== RUN   TestConversationIngestEndpointIsRetired
+--- PASS: TestConversationIngestEndpointIsRetired (0.00s)
+=== RUN   TestHistoricalConversationRemainsReadable
+--- PASS: TestHistoricalConversationRemainsReadable (0.00s)
+=== RUN   TestConversationPreviewPreservesUTF8AtRuneBoundary
+--- PASS: TestConversationPreviewPreservesUTF8AtRuneBoundary (0.00s)
+=== RUN   TestPlatformGatewayVerificationRestoresBody
+--- PASS: TestPlatformGatewayVerificationRestoresBody (0.00s)
+=== RUN   TestGatewaySecretValidation
+--- PASS: TestGatewaySecretValidation (0.00s)
+=== RUN   TestAPITokenEncryptionConfigurationValidation
+--- PASS: TestAPITokenEncryptionConfigurationValidation (0.00s)
+=== RUN   TestAnalysisModelConfigLifecycleNeverReturnsSecret
+--- PASS: TestAnalysisModelConfigLifecycleNeverReturnsSecret (0.00s)
+=== RUN   TestAnalysisModelConfigRejectsCredentialBearingBaseURL
+--- PASS: TestAnalysisModelConfigRejectsCredentialBearingBaseURL (0.00s)
+=== RUN   TestAnalysisModelConfigIsIsolatedByOwner
+--- PASS: TestAnalysisModelConfigIsIsolatedByOwner (0.00s)
+=== RUN   TestGitHubHTTPClientAllowsPublicNetworkLatency
+--- PASS: TestGitHubHTTPClientAllowsPublicNetworkLatency (0.00s)
+=== RUN   TestGitHubRequestRetriesTransientNetworkTimeouts
+--- PASS: TestGitHubRequestRetriesTransientNetworkTimeouts (0.75s)
+=== RUN   TestGitHubRequestDoesNotRetryNonNetworkFailures
+--- PASS: TestGitHubRequestDoesNotRetryNonNetworkFailures (0.00s)
+=== RUN   TestGitHubLoginCanonicalizesHostBeforeIssuingFlowCookies
+--- PASS: TestGitHubLoginCanonicalizesHostBeforeIssuingFlowCookies (0.00s)
+=== RUN   TestGitHubCallbackRejectsStaleStateWithSafeRecovery
+--- PASS: TestGitHubCallbackRejectsStaleStateWithSafeRecovery (0.00s)
+=== RUN   TestGitHubCallbackRecoversFromUpstreamFailureWithoutLeakingProblemJSON
+2026/11/06 02:52:31 WARN GitHub token exchange failed error="GitHub token response was invalid"
+--- PASS: TestGitHubCallbackRecoversFromUpstreamFailureWithoutLeakingProblemJSON (0.00s)
+=== RUN   TestPostgresPrivatePythonPipelinesPersistArtifacts
+2026/11/06 02:52:32 INFO Analysis job claimed job_id=analysis-job-1793904752034-5a9edfe889f3e891 attempt=1 fence=1 age_seconds=0.020195
+2026/11/06 02:52:32 INFO Analysis job completed job_id=analysis-job-1793904752034-5a9edfe889f3e891 attempt=1 execution_seconds=0.02430975
+--- PASS: TestPostgresPrivatePythonPipelinesPersistArtifacts (0.18s)
+=== RUN   TestV2MigrationPreservesLegacyDocumentAndRetiresOnlyActiveJobs
+--- PASS: TestV2MigrationPreservesLegacyDocumentAndRetiresOnlyActiveJobs (0.05s)
+=== RUN   TestRebirthMigrationRetiresOnlyActiveMemoryAndPreservesHistory
+--- PASS: TestRebirthMigrationRetiresOnlyActiveMemoryAndPreservesHistory (0.06s)
+=== RUN   TestPostgresAnalysisQueueContract
+=== RUN   TestPostgresAnalysisQueueContract/admission_limit_preserves_idempotent_retries
+=== RUN   TestPostgresAnalysisQueueContract/concurrent_claim_and_commit
+=== RUN   TestPostgresAnalysisQueueContract/expired_worker_cannot_overwrite_successor
+=== RUN   TestPostgresAnalysisQueueContract/retry_checkpoint_backoff_and_limit
+=== RUN   TestPostgresAnalysisQueueContract/cancellation_ownership_and_commit_race
+=== RUN   TestPostgresAnalysisQueueContract/crashed_final_attempt_is_reaped
+--- PASS: TestPostgresAnalysisQueueContract (1.25s)
+    --- PASS: TestPostgresAnalysisQueueContract/admission_limit_preserves_idempotent_retries (0.21s)
+    --- PASS: TestPostgresAnalysisQueueContract/concurrent_claim_and_commit (0.14s)
+    --- PASS: TestPostgresAnalysisQueueContract/expired_worker_cannot_overwrite_successor (0.25s)
+    --- PASS: TestPostgresAnalysisQueueContract/retry_checkpoint_backoff_and_limit (0.27s)
+    --- PASS: TestPostgresAnalysisQueueContract/cancellation_ownership_and_commit_race (0.11s)
+    --- PASS: TestPostgresAnalysisQueueContract/crashed_final_attempt_is_reaped (0.27s)
+=== RUN   TestPostgresAnalysisQueueUpgradesLegacyRows
+--- PASS: TestPostgresAnalysisQueueUpgradesLegacyRows (0.06s)
+=== RUN   TestAnalysisQueueCrashProcessHelper
+--- PASS: TestAnalysisQueueCrashProcessHelper (0.00s)
+=== RUN   TestPostgresAnalysisRecoversKilledProcess
+=== RUN   TestPostgresAnalysisRecoversKilledProcess/after_claim
+=== RUN   TestPostgresAnalysisRecoversKilledProcess/external_completed
+=== RUN   TestPostgresAnalysisRecoversKilledProcess/checkpoint
+--- PASS: TestPostgresAnalysisRecoversKilledProcess (1.81s)
+    --- PASS: TestPostgresAnalysisRecoversKilledProcess/after_claim (0.59s)
+    --- PASS: TestPostgresAnalysisRecoversKilledProcess/external_completed (0.60s)
+    --- PASS: TestPostgresAnalysisRecoversKilledProcess/checkpoint (0.61s)
+=== RUN   TestPostgresAnalysisWorkerRecoversDatabaseInterruption
+2026/11/06 02:52:35 INFO Analysis job claimed job_id=queue-test-1793904755390-4c79d50f8c3efae3 attempt=1 fence=1 age_seconds=0.024203
+2026/11/06 02:52:35 WARN Analysis job release deferred to lease recovery job_id=queue-test-1793904755390-4c79d50f8c3efae3 attempt=1
+2026/11/06 02:52:35 WARN Analysis queue claim unavailable worker=job-worker-1793904755411-48ed5c30f1f33a04 consecutive_failures=1
+2026/11/06 02:52:35 WARN Analysis queue claim unavailable worker=job-worker-1793904755411-48ed5c30f1f33a04 consecutive_failures=10
+2026/11/06 02:52:35 INFO Analysis job claimed job_id=queue-test-1793904755390-4c79d50f8c3efae3 attempt=2 fence=2 age_seconds=0.457597
+2026/11/06 02:52:35 INFO Analysis job completed job_id=queue-test-1793904755390-4c79d50f8c3efae3 attempt=2 execution_seconds=0.002719125
+--- PASS: TestPostgresAnalysisWorkerRecoversDatabaseInterruption (0.53s)
+=== RUN   TestPostgresConcurrentProjectIdentityUpsert
+--- PASS: TestPostgresConcurrentProjectIdentityUpsert (0.06s)
+=== RUN   TestPostgresAPITokenRecoverySurvivesStoreRestart
+--- PASS: TestPostgresAPITokenRecoverySurvivesStoreRestart (0.03s)
+=== RUN   TestPostgresRegisteredAgentAndBoundKeyAreAtomic
+--- PASS: TestPostgresRegisteredAgentAndBoundKeyAreAtomic (0.02s)
+=== RUN   TestRetiredMemoryAndCommunityCannotExecute
+--- PASS: TestRetiredMemoryAndCommunityCannotExecute (0.00s)
+=== RUN   TestMemoryStoreHumanReview
+--- PASS: TestMemoryStoreHumanReview (0.00s)
+=== RUN   TestPostgresHumanReview
+--- PASS: TestPostgresHumanReview (0.05s)
+=== RUN   TestReviewRequiresIndependentComparison
+--- PASS: TestReviewRequiresIndependentComparison (0.00s)
+=== RUN   TestSPAHandlerServesIndexForProductRoute
+--- PASS: TestSPAHandlerServesIndexForProductRoute (0.00s)
+=== RUN   TestSPAHandlerServesKnownAsset
+--- PASS: TestSPAHandlerServesKnownAsset (0.01s)
+=== RUN   TestRequestMiddlewareAllowsGitHubAvatarOrigin
+--- PASS: TestRequestMiddlewareAllowsGitHubAvatarOrigin (0.00s)
+=== RUN   TestTraceAdmissionRejectsBeforeReadingAndNeverAcknowledgesFailedWrite
+--- PASS: TestTraceAdmissionRejectsBeforeReadingAndNeverAcknowledgesFailedWrite (0.00s)
+=== RUN   TestTraceAdmissionOwnerSlotsReleasedAndBounded
+--- PASS: TestTraceAdmissionOwnerSlotsReleasedAndBounded (0.00s)
+=== RUN   TestTraceAdmissionSpanLimitAndCancellation
+--- PASS: TestTraceAdmissionSpanLimitAndCancellation (0.00s)
+=== RUN   TestTraceBackendLoadStudy
+    trace_load_study_test.go:67: opt-in load study
+--- SKIP: TestTraceBackendLoadStudy (0.00s)
+=== RUN   TestCatenaRuntimeOTLPGoldensPreserveCanonicalHierarchyAndFailureState
+=== RUN   TestCatenaRuntimeOTLPGoldensPreserveCanonicalHierarchyAndFailureState/codex
+=== RUN   TestCatenaRuntimeOTLPGoldensPreserveCanonicalHierarchyAndFailureState/claude
+--- PASS: TestCatenaRuntimeOTLPGoldensPreserveCanonicalHierarchyAndFailureState (0.05s)
+    --- PASS: TestCatenaRuntimeOTLPGoldensPreserveCanonicalHierarchyAndFailureState/codex (0.03s)
+    --- PASS: TestCatenaRuntimeOTLPGoldensPreserveCanonicalHierarchyAndFailureState/claude (0.02s)
+=== RUN   TestDecodeOTLPRequestPreservesToolEvidence
+=== RUN   TestDecodeOTLPRequestPreservesToolEvidence/protobuf
+=== RUN   TestDecodeOTLPRequestPreservesToolEvidence/json
+--- PASS: TestDecodeOTLPRequestPreservesToolEvidence (0.00s)
+    --- PASS: TestDecodeOTLPRequestPreservesToolEvidence/protobuf (0.00s)
+    --- PASS: TestDecodeOTLPRequestPreservesToolEvidence/json (0.00s)
+=== RUN   TestSummarizeTracePreservesAgentSessionHierarchy
+--- PASS: TestSummarizeTracePreservesAgentSessionHierarchy (0.00s)
+=== RUN   TestTraceSpanSessionIDUsesSupportedAttributesWithoutGuessing
+--- PASS: TestTraceSpanSessionIDUsesSupportedAttributesWithoutGuessing (0.00s)
+=== RUN   TestDecodeOTLPJSONAcceptsCatenaRuntimeProtoJSONIDs
+--- PASS: TestDecodeOTLPJSONAcceptsCatenaRuntimeProtoJSONIDs (0.00s)
+=== RUN   TestConvertOTLPSpanRecognizesCodexHistoryEvidenceAttributes
+=== RUN   TestConvertOTLPSpanRecognizesCodexHistoryEvidenceAttributes/turn_root
+=== RUN   TestConvertOTLPSpanRecognizesCodexHistoryEvidenceAttributes/tool_child
+--- PASS: TestConvertOTLPSpanRecognizesCodexHistoryEvidenceAttributes (0.00s)
+    --- PASS: TestConvertOTLPSpanRecognizesCodexHistoryEvidenceAttributes/turn_root (0.00s)
+    --- PASS: TestConvertOTLPSpanRecognizesCodexHistoryEvidenceAttributes/tool_child (0.00s)
+=== RUN   TestOTLPHandlerAuthenticatesAndStoresByOwner
+--- PASS: TestOTLPHandlerAuthenticatesAndStoresByOwner (0.00s)
+=== RUN   TestAgentTraceHandlerUsesCredentialBoundRuntimeIdentity
+--- PASS: TestAgentTraceHandlerUsesCredentialBoundRuntimeIdentity (0.00s)
+=== RUN   TestAgentTraceHandlerCanonicalizesXiaoBaOSTargetAndRejectsInternalSource
+--- PASS: TestAgentTraceHandlerCanonicalizesXiaoBaOSTargetAndRejectsInternalSource (0.00s)
+PASS
+ok  	github.com/fightheyyy/barena/platform/internal/control	8.331s

@@ -231,3 +231,26 @@ test("Mobile navigation stays reachable and retired conversation links return ho
 
 
 
+
+// UI protocol fixture only; this synthetic table is not Agent quality evidence.
+test("Compare preserves unknown cost and Human Review records an explicit decision", async (t) => {
+ const { page, origin, state } = await setup(t);
+ state.jobComplete = true;
+ const artifact = state.completedJob.artifacts[0];
+ artifact.validation_status = "review_required";
+ const trial = { valid: true, rewards: { reward: 1 }, input_tokens: 10, output_tokens: 2, seconds: 1.5, cost_usd: null, tool_calls: 5, nonzero_command_exits: null };
+ artifact.provenance = {compare: [{case_id: "protocol-fixture", held_out: false, baseline: trial, candidate: trial}]};
+ await page.goto(origin + "/evolution?job=job-fixture");
+ await visible(page.getByRole("heading", {name: "Baseline / Candidate Compare", exact: true}));
+ assert.match(await page.locator("table").innerText(), /1 \/ 1/);
+ assert.match(await page.locator("table").innerText(), /\? \/ 5/);
+ const form = page.getByRole("form", {name: "Human Review", exact: true});
+ await form.getByLabel("Reason", {exact: true}).fill("Reviewed synthetic UI fixture only.");
+ await form.getByRole("button", {name: "Record decision"}).click();
+ await visible(page.getByRole("heading", {name: "Human Review · reject", exact: true}));
+ assert.equal(state.completedJob.reviews.length, 1);
+ assert.equal(await page.getByRole("button", {name: "Delete", exact: true}).isDisabled(), true);
+ await page.reload();
+ await visible(page.getByRole("heading", {name: "Human Review · reject", exact: true}));
+ await noOverflow(page);
+});

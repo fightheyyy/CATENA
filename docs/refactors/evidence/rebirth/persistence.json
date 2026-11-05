@@ -5,5 +5,11 @@
   "human_review_retained": true,
   "decision": "adopt",
   "scope": "path-discovery-01 only",
-  "automatic_installation": false
+  "automatic_installation": false,
+  "go_process_restart": "passed",
+  "temporary_model_credential_removed": true,
+  "private_backups": {
+    "postgres.sql": "3bcbeb2b7f8b29ba81dadf028499e45231cb8a74e468313612aa99205f23cbef",
+    "clickhouse-spans.native": "d6050844fc51567e03f9183f1bf26579aec82e6c8d14f4acd1cb8953e718d1f8"
+  }
 }

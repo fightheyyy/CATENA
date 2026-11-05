@@ -1,24 +1,29 @@
-# Catena V2 当前规格
+# CATENA 当前规格
 
-定位保持 **Agent 长期记忆、团队工作记忆与工作进化平台**。当前实现 owner 级隔离；组织成员、共享权限和自动采用仍不属于已交付能力。
+CATENA = Trace-driven Agent Engineering Control Plane。
 
-主链路：Trace → Evidence → Analysis Job → Artifact → Evaluation / Review。
+Agent Trace → Evidence → Case → Harness² → Candidate → Harbor → Compare → Human Review。
 
-| 边界 | 当前职责 |
+CATENA 管理 Trace、脱敏且固定来源的 Evidence、已审核 Case 的注册、PostgreSQL Job 调度、Artifact / 版本 / 实验与人工决定。Harness² 提供优化算法，Harbor 提供唯一正式 Agent 执行与评测底座。模型自己的选择或评分不构成改进证据。
+
+| 边界 | 实现职责 |
 |---|---|
-| Tap / Go OTLP / ClickHouse | 采集、限流背压、身份隔离、持久化和查询 |
-| Go Control Plane / PostgreSQL | Auth、Agent、加密模型配置、任务调度、Lease/Heartbeat/Fencing、Retry/Timeout/Cancel、Artifact 审计 |
-| Engine RSI | 复用 Harness² Adapter/registry/host，经隔离 Codex CLI 生成优化候选；Harbor 验证 |
-| Engine Memory | 独立 OpenViking Adapter 提炼与检索，沿用 owner 哈希和文件 URI 边界 |
-| Artifact | 最小共享 envelope；类型 rsi_candidate / engineering_memory，具体 payload 各自保留语义 |
-| React | Trace、任务状态、产物、来源和验证结果；保留历史会话读取 |
+| Tap / Go / ClickHouse | OTLP 持久化、背压、身份隔离、可追溯的原始经历 |
+| Go / PostgreSQL | Auth、Agent、加密模型配置、Evidence、Lease / Heartbeat / Fencing、幂等 / Retry / Timeout / Cancel、Artifact、Review |
+| Harness² Integration | 固定 commit，直接调用原生 scheduler；模型与文件边界保持受限 |
+| Harbor | 原生 Agent / Environment / Job / Trial / Verifier，固定 Case 指纹前后校验 |
+| React | Trace、实验配置、状态、可比较指标、候选文件和人工审查 |
 
-RSI 与 Memory 彼此不是启动前提。Harbor 不是第三种 Pipeline，也不接管 Go 的任务队列。唯一正式任务创建入口 `POST /v1/analysis-jobs`；查询、取消、删除位于相同资源下。`GET /v1/artifacts` 按 owner/type 读取现有 Job JSON，不新建产物数据库。
+唯一任务创建入口为 `POST /v1/analysis-jobs`，pipeline 仅 `rsi`，算法仅 Harness²。删除 CATENA 多算法 Registry 和 Composition；Harness² 上游原生搜索模式保留。旧算法/组合选项显式拒绝。外部请求不能选择 import path、执行器、任意文件路径或 Owner。
 
-RSI 输入必须引用 operator 注册且 fingerprint 固定的 Harbor Case；原始 Trace 不足以自动复现。Candidate 保留 parents/content hash/files；Harbor Trial 及 held-out 情况供人审查，不把模型评价等同于 verifier，通过率需明确分母和样本限制。Memory Artifact 保存原始证据关联、provider task/result，extracted 不等于 confirmed。
+Candidate 只允许 AGENTS.md / Skill 文本，保留父版本与内容哈希。冻结候选后，Harbor 新跑 Baseline / Candidate 对照；可添加独立 held-out Case。复用优化 Case 不伪称 held-out。结果持久化原始 Verifier、用量、耗时、Artifact 路径/指纹和已知费用；未知值不补零。单次对照只支持有限工程结论。
 
-Go 提供单一持久队列，Engine receipt 只记录外部操作身份与结果，不是第二套队列。重试可连接仍在运行或读取已完成的执行；Engine 重启留下不确定 running receipt 时拒绝自动重放，防止重复模型费用。Memory 接收后先持久化 native task ID，再轮询；取消后远程 provider task 可能继续，Catena 不发布它的 Artifact。
+Review 必须基于已完成候选和有效独立对照，记录认证用户、时间、adopt/reject 和理由。同一决定重试幂等；决定不可覆盖，普通 API 不能删除已有 Review 的 Job。采用不触发自动安装。
 
-部署默认 Go + Engine + PostgreSQL + ClickHouse；Memory/RSI 的外部依赖按指南显式配置。无 Redis/Kafka/Kubernetes。旧三 Role、SDK 回退、GauzMem、内嵌 Barena/XiaoBaOS Runner 不再运行。历史 DB 表和实验材料保留，V2 增量迁移不清空生产数据。
+Go 只有一套持久队列。Engine receipt 是付费操作去重记录；Engine 重启后的不确定执行拒绝自动重放。重试、取消、租约丢失和 fencing 仍是必要正确性边界。
 
-[实现、兼容性、验证与限制](docs/refactors/CATENA_V2.md)。历史路线图仅供研究参考，以本规格与当前源码为准。
+Memory / OpenViking、Memory API/UI、Embedding 和社区功能退役。历史数据不清空，旧终态 Job / Artifact 和会话读取兼容保留。未来 Context 仅预留经过授权的 Markdown / AGENTS.md 文本输入，不实现检索、Embedding、知识图谱或长期记忆引擎。
+
+部署四个服务，无 Redis、Kafka、Kubernetes。Harbor Docker socket 由可信部署者显式授权；不承诺安全的恶意多租户 Docker 沙箱。Owner 隔离保留，组织成员与共享权限未交付。
+
+[阶段报告、测试、迁移与实验边界](docs/refactors/REBIRTH.md)。历史研究文档不代表当前执行架构。

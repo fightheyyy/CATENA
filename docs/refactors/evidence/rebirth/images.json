@@ -1,0 +1,46 @@
+[
+  {
+    "Id": "sha256:3b964c17d295c218d47173a4be1fa2d8ac12842d3f8bce99e3e64ebe6bcd9be6",
+    "RepoTags": [
+      "catena/engine:rebirth"
+    ],
+    "RepoDigests": [
+      "catena/engine@sha256:3b964c17d295c218d47173a4be1fa2d8ac12842d3f8bce99e3e64ebe6bcd9be6"
+    ],
+    "Architecture": "arm64",
+    "Os": "linux"
+  },
+  {
+    "Id": "sha256:9158073774ae5fd2e4c6305bf02deef21f4673849b3048ced29f1b24d083ad14",
+    "RepoTags": [
+      "catena/core:rebirth"
+    ],
+    "RepoDigests": [
+      "catena/core@sha256:9158073774ae5fd2e4c6305bf02deef21f4673849b3048ced29f1b24d083ad14"
+    ],
+    "Architecture": "arm64",
+    "Os": "linux"
+  },
+  {
+    "Id": "sha256:58dc0178b7c771aada8233fa00fb3689b2534c35381566c948c067496ac09389",
+    "RepoTags": [
+      "catena/codex-eval:0.160.0"
+    ],
+    "RepoDigests": [
+      "catena/codex-eval@sha256:58dc0178b7c771aada8233fa00fb3689b2534c35381566c948c067496ac09389"
+    ],
+    "Architecture": "amd64",
+    "Os": "linux"
+  },
+  {
+    "Id": "sha256:40d075d6cbc142481c0af205fe2ca022a25520dfc6573b23cfe9c37c1a2a5bf8",
+    "RepoTags": [
+      "catena/trace-skill-eval:1"
+    ],
+    "RepoDigests": [
+      "catena/trace-skill-eval@sha256:40d075d6cbc142481c0af205fe2ca022a25520dfc6573b23cfe9c37c1a2a5bf8"
+    ],
+    "Architecture": "amd64",
+    "Os": "linux"
+  }
+]

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Artifact is a shared envelope, not a common payload schema for RSI and Memory.
+// Artifact retains versioned candidates and read compatibility for historical Memory payloads.
 // It is stored inside the leased Job document, atomically with job progress.
 type Artifact struct {
 	ID               string          `json:"id"`

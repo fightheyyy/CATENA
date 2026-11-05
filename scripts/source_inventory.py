@@ -5,8 +5,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = "8ac6708"
-BASE_PREFIXES = ("control-plane/", "engine/", "catena-web/src/", "tap/catena_tap/")
+BASE = "f7a6075"
 PREFIXES = ("backend/", "engine/", "frontend/src/", "tap/catena_tap/")
 EXTENSIONS = {".go", ".py", ".ts", ".tsx"}
 
@@ -22,7 +21,7 @@ def measure(items):
 
 def main():
     names = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", BASE], cwd=ROOT, text=True).splitlines()
-    before = {name: subprocess.check_output(["git", "show", BASE + ":" + name], cwd=ROOT) for name in names if core(name, BASE_PREFIXES)}
+    before = {name: subprocess.check_output(["git", "show", BASE + ":" + name], cwd=ROOT) for name in names if core(name)}
     after = {str(p.relative_to(ROOT)): p.read_bytes() for prefix in PREFIXES for p in (ROOT / prefix).rglob("*")
              if p.is_file() and core(str(p.relative_to(ROOT)))}
     result = {"baseline": BASE, "scope": {"prefixes": PREFIXES, "extensions": sorted(EXTENSIONS),

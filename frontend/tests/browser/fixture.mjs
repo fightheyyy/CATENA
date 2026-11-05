@@ -71,6 +71,12 @@ export async function fixtureServer(overrides = {}) {
       }
       if (pathname === "/v1/evaluation-cases") return json(res, {cases:[{id:"fixture-case"}]});
       if (pathname === "/v1/analysis-jobs") return state.failJobs ? json(res, { detail: "Output query temporarily failed" }, 503) : json(res, { analysis_jobs: state.jobs ? [currentJob()] : [] });
+      if (pathname === "/v1/analysis-jobs/job-fixture/reviews" && req.method === "POST") {
+        let body = ""; for await (const chunk of req) body += chunk;
+        const review = JSON.parse(body);
+        state.completedJob.reviews = [{...review, reviewer: "fixture-human", created_at: now}];
+        return json(res, state.completedJob);
+      }
       if (pathname === "/v1/analysis-jobs/job-fixture") return json(res, currentJob());
       if (pathname === "/v1/analysis-jobs/job-fixture/cancel" && req.method === "POST") {
         if (state.failCancel) return json(res, { detail: "Cancellation temporarily unavailable" }, 503);

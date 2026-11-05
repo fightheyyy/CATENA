@@ -49,27 +49,7 @@ CREATE TABLE IF NOT EXISTS catena_evolution_model_configs (
   encrypted_api_key TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL
 );
-CREATE TABLE IF NOT EXISTS catena_memory_tasks (
-  task_id TEXT PRIMARY KEY,
-  owner_user_id TEXT NOT NULL,
-  source_conversation_id TEXT NOT NULL,
-  agent_id TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('pending','processing','completed','failed')),
-  document JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX IF NOT EXISTS catena_memory_tasks_owner_updated_idx
-  ON catena_memory_tasks (owner_user_id, updated_at DESC);
-CREATE TABLE IF NOT EXISTS barena_agent_profiles (
-  owner_user_id TEXT PRIMARY KEY REFERENCES barena_users(user_id) ON DELETE CASCADE,
-  slug TEXT NOT NULL UNIQUE,
-  display_name TEXT NOT NULL,
-  bio TEXT NOT NULL DEFAULT '',
-  is_public BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
+-- Retired Memory/profile tables are preserved in existing databases, not created on fresh installs.
 CREATE TABLE IF NOT EXISTS catena_conversation_messages (
   owner_user_id TEXT NOT NULL,
   message_id TEXT NOT NULL,
