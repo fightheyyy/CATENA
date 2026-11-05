@@ -1,0 +1,48 @@
+.........F...............................................                [100%]
+=================================== FAILURES ===================================
+_____________ test_timeout_kills_process_group_and_cleans_session ______________
+
+cli = <function cli.<locals>.install at 0x1088d3c40>
+turn_payload = {'model': {'api_key': 'sk-test-secret-value', 'base_url': 'http://127.0.0.1:9999/v1', 'model': 'fixture', 'provider': 'openai'}, 'prompt': 'Inspect the supplied evidence.', 'request_id': 'operation-1', 'run_id': 'job-1', ...}
+tmp_path = PosixPath('/private/var/folders/49/rc0dq6qn5zv5g25t0c9_81x00000gn/T/pytest-of-chan/pytest-2/test_timeout_kills_process_gro0')
+
+    def test_timeout_kills_process_group_and_cleans_session(cli, turn_payload, tmp_path):
+        pid_file = tmp_path / "pid"
+        snapshot = cli(
+            body=f"""child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    pathlib.Path({str(pid_file)!r}).write_text(str(child.pid))
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    time.sleep(60)"""
+        )
+        turn_payload["timeout_ms"] = 300
+        result = asyncio.run(run_turn(parse_turn_request(turn_payload)))
+        assert result["reason_code"] == "timeout"
+>       pid = int(pid_file.read_text())
+                  ^^^^^^^^^^^^^^^^^^^^
+
+engine/tests/test_codex_runtime.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../.cache/codex-runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py:1027: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/49/rc0dq6qn5zv5g25t0c9_81x00000gn/T/pytest-of-chan/pytest-2/test_timeout_kills_process_gro0/pid')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/49/rc0dq6qn5zv5g25t0c9_81x00000gn/T/pytest-of-chan/pytest-2/test_timeout_kills_process_gro0/pid'
+
+../../../.cache/codex-runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py:1013: FileNotFoundError
+=========================== short test summary info ============================
+FAILED engine/tests/test_codex_runtime.py::test_timeout_kills_process_group_and_cleans_session
+1 failed, 56 passed in 6.86s

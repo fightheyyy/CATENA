@@ -92,9 +92,9 @@ func buildAnalysisEvidencePack(
 		}
 		pack.SourceRuntimeKind = detectOTLPRuntime(trace.Spans)
 		pack.TraceSummary = trace.Summary
-		pack.TraceSummary.RootName = bounded(redactMemoryText(pack.TraceSummary.RootName), 1000)
-		pack.TraceSummary.ServiceName = bounded(redactMemoryText(pack.TraceSummary.ServiceName), 1000)
-		pack.TraceSummary.Model = bounded(redactMemoryText(pack.TraceSummary.Model), 1000)
+		pack.TraceSummary.RootName = bounded(redactEvidenceText(pack.TraceSummary.RootName), 1000)
+		pack.TraceSummary.ServiceName = bounded(redactEvidenceText(pack.TraceSummary.ServiceName), 1000)
+		pack.TraceSummary.Model = bounded(redactEvidenceText(pack.TraceSummary.Model), 1000)
 		pack.TotalSpanCount = trace.Summary.SpanCount
 		if pack.TotalSpanCount == 0 {
 			pack.TotalSpanCount = uint64(len(trace.Spans))
@@ -116,7 +116,7 @@ func buildAnalysisEvidencePack(
 			}
 			eventNames := make([]string, 0, len(span.Events))
 			for _, event := range span.Events {
-				if name := bounded(redactMemoryText(event.Name), 256); name != "" {
+				if name := bounded(redactEvidenceText(event.Name), 256); name != "" {
 					eventNames = append(eventNames, name)
 				}
 				if len(eventNames) == 16 {
@@ -132,14 +132,14 @@ func buildAnalysisEvidencePack(
 			pack.Spans = append(pack.Spans, AnalysisEvidenceSpan{
 				SpanID:        span.SpanID,
 				ParentSpanID:  span.ParentSpanID,
-				Name:          bounded(redactMemoryText(span.Name), 1000),
-				ServiceName:   bounded(redactMemoryText(span.ServiceName), 1000),
+				Name:          bounded(redactEvidenceText(span.Name), 1000),
+				ServiceName:   bounded(redactEvidenceText(span.ServiceName), 1000),
 				StartTime:     span.StartTime,
 				EndTime:       span.EndTime,
 				StatusCode:    span.StatusCode,
-				StatusMessage: bounded(redactMemoryText(span.StatusMessage), 1000),
-				Model:         bounded(redactMemoryText(span.Model), 1000),
-				ToolName: bounded(redactMemoryText(firstAttributeString(
+				StatusMessage: bounded(redactEvidenceText(span.StatusMessage), 1000),
+				Model:         bounded(redactEvidenceText(span.Model), 1000),
+				ToolName: bounded(redactEvidenceText(firstAttributeString(
 					span.Attributes,
 					"tool.name",
 					"gen_ai.tool.name",
@@ -434,7 +434,7 @@ func sanitizeAnalysisText(value string, max int) string {
 			return bounded(string(encoded), max)
 		}
 	}
-	return bounded(redactMemoryText(value), max)
+	return bounded(redactEvidenceText(value), max)
 }
 
 func sanitizeAnalysisValue(key string, value any) any {
@@ -461,7 +461,7 @@ func sanitizeAnalysisValue(key string, value any) any {
 		}
 		return result
 	case string:
-		return redactMemoryText(typed)
+		return redactEvidenceText(typed)
 	default:
 		return value
 	}
@@ -517,19 +517,4 @@ func boundedAnalysisJSON(value json.RawMessage, max int, reason string) json.Raw
 		"sha256":  fmt.Sprintf("%x", digest[:]),
 	})
 	return encoded
-}
-
-func conversationEvidencePack(agent, id string, messages []ConversationMessage, now time.Time) (AnalysisEvidencePack, error) {
-	if len(messages) == 0 {
-		return AnalysisEvidencePack{}, ErrNotFound
-	}
-	doc := ConversationDocument{Summary: summarizeConversation(messages), Messages: messages}
-	pack := AnalysisEvidencePack{Schema: "catena.conversation_evidence.v2", SourceKind: AnalysisSourceConversation, SourceConversationID: id, SourceAgentID: agent, Document: conversationMemoryDocument(doc), Redacted: true, CreatedAt: now, Boundary: AnalysisEvidenceBoundary{ReleaseAuthority: analysisReleaseAuthority, CandidateStatus: analysisCandidateStatus, ReviewScope: analysisReviewScope}}
-	encoded, err := analysisEvidenceDigestInput(pack)
-	if err != nil {
-		return pack, err
-	}
-	hash := sha256.Sum256(encoded)
-	pack.SHA256 = hex.EncodeToString(hash[:])
-	return pack, nil
 }

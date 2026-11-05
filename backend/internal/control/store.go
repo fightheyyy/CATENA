@@ -51,14 +51,6 @@ type Store interface {
 	UpsertAnalysisModelConfig(context.Context, AnalysisModelConfig) (AnalysisModelConfig, error)
 	GetAnalysisModelConfigByOwner(context.Context, string) (AnalysisModelConfig, error)
 	DeleteAnalysisModelConfigByOwner(context.Context, string) error
-	UpsertMemoryTask(context.Context, MemoryTaskRecord) error
-	GetMemoryTaskByOwner(context.Context, string, string) (MemoryTaskRecord, error)
-	ListMemoryTasksByOwner(context.Context, string, int) ([]MemoryTaskRecord, error)
-	EnsureAgentProfile(context.Context, AgentProfile) (AgentProfile, error)
-	GetAgentProfileByOwner(context.Context, string) (AgentProfile, error)
-	UpdateAgentProfile(context.Context, AgentProfile) (AgentProfile, error)
-	ListPublicAgentProfiles(context.Context, int) ([]ProfileRecord, error)
-	GetPublicAgentProfile(context.Context, string) (ProfileRecord, error)
 	Ping(context.Context) error
 	Close()
 }
@@ -70,12 +62,10 @@ type MemoryStore struct {
 	sessions             map[string]Session
 	apiTokens            map[string]APIToken
 	registeredAgents     map[string]RegisteredAgent
-	profiles             map[string]AgentProfile
 	analysisJobs         map[string]AnalysisJob
 	analysisLeases       map[string]AnalysisLease
 	conversationMessages map[string]ConversationMessage
 	analysisModelConfigs map[string]AnalysisModelConfig
-	memoryTasks          map[string]MemoryTaskRecord
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -85,12 +75,10 @@ func NewMemoryStore() *MemoryStore {
 		sessions:             make(map[string]Session),
 		apiTokens:            make(map[string]APIToken),
 		registeredAgents:     make(map[string]RegisteredAgent),
-		profiles:             make(map[string]AgentProfile),
 		analysisJobs:         make(map[string]AnalysisJob),
 		analysisLeases:       make(map[string]AnalysisLease),
 		conversationMessages: make(map[string]ConversationMessage),
 		analysisModelConfigs: make(map[string]AnalysisModelConfig),
-		memoryTasks:          make(map[string]MemoryTaskRecord),
 	}
 }
 
@@ -516,74 +504,6 @@ func (s *MemoryStore) DeleteAPIToken(
 		}
 	}
 	return ErrNotFound
-}
-
-func (s *MemoryStore) EnsureAgentProfile(_ context.Context, profile AgentProfile) (AgentProfile, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if existing, ok := s.profiles[profile.OwnerUserID]; ok {
-		return existing, nil
-	}
-	for _, existing := range s.profiles {
-		if existing.Slug == profile.Slug {
-			return AgentProfile{}, ErrConflict
-		}
-	}
-	s.profiles[profile.OwnerUserID] = profile
-	return profile, nil
-}
-
-func (s *MemoryStore) GetAgentProfileByOwner(_ context.Context, ownerUserID string) (AgentProfile, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	profile, ok := s.profiles[ownerUserID]
-	if !ok {
-		return AgentProfile{}, ErrNotFound
-	}
-	return profile, nil
-}
-
-func (s *MemoryStore) UpdateAgentProfile(_ context.Context, profile AgentProfile) (AgentProfile, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	existing, ok := s.profiles[profile.OwnerUserID]
-	if !ok {
-		return AgentProfile{}, ErrNotFound
-	}
-	profile.Slug = existing.Slug
-	profile.CreatedAt = existing.CreatedAt
-	s.profiles[profile.OwnerUserID] = profile
-	return profile, nil
-}
-
-func (s *MemoryStore) ListPublicAgentProfiles(_ context.Context, limit int) ([]ProfileRecord, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]ProfileRecord, 0)
-	for ownerID, profile := range s.profiles {
-		if !profile.IsPublic {
-			continue
-		}
-		result = append(result, ProfileRecord{Profile: profile, User: s.users[ownerID]})
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Profile.UpdatedAt.After(result[j].Profile.UpdatedAt)
-	})
-	if limit > 0 && len(result) > limit {
-		result = result[:limit]
-	}
-	return result, nil
-}
-
-func (s *MemoryStore) GetPublicAgentProfile(_ context.Context, slug string) (ProfileRecord, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for ownerID, profile := range s.profiles {
-		if profile.IsPublic && profile.Slug == slug {
-			return ProfileRecord{Profile: profile, User: s.users[ownerID]}, nil
-		}
-	}
-	return ProfileRecord{}, ErrNotFound
 }
 
 func (s *MemoryStore) Ping(context.Context) error { return nil }

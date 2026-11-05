@@ -1,7 +1,6 @@
 package control
 
 import (
-	"context"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -10,14 +9,12 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type HTTPServer struct {
 	store           Store
 	traces          TraceStore
 	analysisRuntime *EngineClient
-	memory          MemoryBackend
 	auth            AuthConfig
 	jobs            *analysisWorker
 	ingestion       *traceAdmission
@@ -30,13 +27,12 @@ type HTTPConfig struct {
 	Auth      AuthConfig
 	Engine    *EngineClient
 	Traces    TraceStore
-	Memory    MemoryBackend
 	Workers   AnalysisWorkerConfig
 	Ingestion TraceIngestConfig
 }
 
 func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error) {
-	auth, analysisRuntime, traces, memory, workers, ingestion := config.Auth, config.Engine, config.Traces, config.Memory, config.Workers, config.Ingestion
+	auth, analysisRuntime, traces, workers, ingestion := config.Auth, config.Engine, config.Traces, config.Workers, config.Ingestion
 	if workers.Workers == 0 {
 		workers = DefaultAnalysisWorkerConfig()
 	}
@@ -54,7 +50,6 @@ func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error)
 		store:           store,
 		traces:          traces,
 		analysisRuntime: analysisRuntime,
-		memory:          memory,
 		auth:            auth.normalized(),
 		ingestion:       &traceAdmission{config: ingestion, owners: make(map[string]int)},
 	}
@@ -91,10 +86,6 @@ func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error)
 	mux.HandleFunc("POST /v1/me/api-tokens", server.createAPIToken)
 	mux.HandleFunc("POST /v1/me/api-tokens/{token_id}/reveal", server.revealAPIToken)
 	mux.HandleFunc("DELETE /v1/me/api-tokens/{token_id}", server.deleteAPIToken)
-	mux.HandleFunc("GET /v1/me/profile", server.myAgentProfile)
-	mux.HandleFunc("PUT /v1/me/profile", server.updateMyAgentProfile)
-	mux.HandleFunc("GET /v1/community/profiles", server.communityProfiles)
-	mux.HandleFunc("GET /v1/community/profiles/{slug}", server.communityProfile)
 	mux.HandleFunc("GET /v1/runtimes", server.runtimes)
 	mux.HandleFunc("GET /v1/agents", server.listAgents)
 	mux.HandleFunc("POST /v1/agents", server.createRegisteredAgent)
@@ -103,13 +94,6 @@ func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error)
 	mux.HandleFunc("GET /v1/agents/{agent_id}/traces", server.listAgentTraces)
 	mux.HandleFunc("GET /v1/traces", server.listTraces)
 	mux.HandleFunc("GET /v1/traces/{trace_id}", server.getTrace)
-	mux.HandleFunc("GET /v1/memories/status", server.memoryStatus)
-	mux.HandleFunc("GET /v1/memories/tasks", server.listMemoryTasks)
-	mux.HandleFunc("GET /v1/memories/tasks/{task_id}", server.memoryTaskStatus)
-	mux.HandleFunc("GET /v1/memories", server.listMemories)
-	mux.HandleFunc("POST /v1/memories", server.createMemoryNote)
-	mux.HandleFunc("POST /v1/memories/search", server.searchMemories)
-	mux.HandleFunc("GET /v1/memories/facts/{fact_id}/graph", server.memoryFactGraph)
 	mux.HandleFunc("POST /v1/otlp/v1/traces", server.ingestOTLPTraces)
 	mux.HandleFunc("GET /v1/conversations", server.listConversations)
 	mux.HandleFunc("GET /v1/conversations/{conversation_id}", server.getConversation)
@@ -184,14 +168,6 @@ func (s *HTTPServer) systemStatus(w http.ResponseWriter, r *http.Request) {
 			traceStore = "available"
 		}
 	}
-	memoryStore := "unavailable"
-	if s.memory != nil {
-		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-		defer cancel()
-		if err := s.memory.Ping(ctx); err == nil {
-			memoryStore = "available"
-		}
-	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":            "ready",
 		"auth_mode":         map[bool]string{true: "github", false: "local"}[s.auth.Enabled()],
@@ -199,7 +175,6 @@ func (s *HTTPServer) systemStatus(w http.ResponseWriter, r *http.Request) {
 		"analysis_protocol": engineTurnRequestSchema,
 		"analysis_engine":   analysisRuntime.Status,
 		"trace_store":       traceStore,
-		"memory_store":      memoryStore,
 	})
 }
 

@@ -1,1 +1,0 @@
-"""Independent engineering-memory pipeline."""

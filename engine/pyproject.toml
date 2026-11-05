@@ -1,7 +1,7 @@
 [project]
 name = "catena-engine"
 version = "0.1.0"
-description = "Catena independent RSI and engineering-memory pipelines."
+description = "Trace-driven Agent engineering control plane."
 requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = [

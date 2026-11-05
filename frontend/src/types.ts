@@ -19,7 +19,6 @@ export type SystemStatus = {
   analysis_protocol: string;
   analysis_engine: string;
   trace_store: string;
-  memory_store: string;
 };
 
 export type AnalysisModelSettings = {
@@ -93,98 +92,16 @@ export type TraceDetail = {
   spans: TraceSpan[];
 };
 
-export type MemoryIngestReceipt = {
-  trace_id?: string;
-  source_conversation_id?: string;
-  conversation_id: number;
-  task_id: string;
-  status: string;
-  indexed: boolean;
-  message?: string;
-};
 
-export type MemoryTaskStep = {
-  name: string;
-  status: "pending" | "processing" | "completed" | "failed";
-  started_at?: string;
-  finished_at?: string;
-  duration_seconds?: number;
-  error?: string;
-};
 
-export type MemoryTaskStatus = {
-  task_id: string;
-  status: "pending" | "processing" | "completed" | "failed";
-  current_step?: string;
-  progress: number;
-  message?: string;
-  error?: string;
-  conversation_id?: number;
-  created_at?: string;
-  updated_at?: string;
-  steps: MemoryTaskStep[];
-};
 
-export type MemoryTaskRecord = MemoryTaskStatus & {
-  source_conversation_id: string;
-  source_conversation_title?: string;
-  agent_id: string;
-  agent_name?: string;
-};
 
-export type MemoryRecallItem = {
-  id: string;
-  content: string;
-  title?: string;
-  score: number;
-  metadata?: Record<string, unknown>;
-};
 
-export type MemoryRecallBundle = {
-  success: boolean;
-  query: string;
-  facts: MemoryRecallItem[];
-  conversations: MemoryRecallItem[];
-  topics: MemoryRecallItem[];
-  graph_expansion?: Record<string, unknown>;
-  temporal_expansion?: Record<string, unknown>;
-  search_time_ms?: number;
-};
 
-export type MemoryRecord = {
-  id: string;
-  content: string;
-  created_at?: string;
-  metadata?: Record<string, unknown>;
-};
 
-export type MemoryList = {
-  memories: MemoryRecord[];
-  total: number;
-};
 
-export type MemoryGraphEntity = {
-  name: string;
-  type: string;
-  description?: string;
-};
 
-export type MemoryGraphRelation = {
-  source: string;
-  target: string;
-  type: string;
-  confidence: number;
-  origin?: "semantic" | "provenance" | string;
-};
 
-export type MemoryFactGraph = {
-  fact_id: number;
-  content: string;
-  entities: MemoryGraphEntity[];
-  relations: MemoryGraphRelation[];
-  total_entities: number;
-  total_relations: number;
-};
 
 export type AgentSummary = {
   agent_id: string;

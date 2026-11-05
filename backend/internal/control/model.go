@@ -58,30 +58,6 @@ type RegisteredAgent struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-type AgentProfile struct {
-	OwnerUserID string    `json:"-"`
-	Slug        string    `json:"slug"`
-	DisplayName string    `json:"display_name"`
-	Bio         string    `json:"bio"`
-	IsPublic    bool      `json:"is_public"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-type CommunityProfile struct {
-	Slug        string    `json:"slug"`
-	DisplayName string    `json:"display_name"`
-	Bio         string    `json:"bio"`
-	GitHubLogin string    `json:"github_login"`
-	AvatarURL   string    `json:"avatar_url,omitempty"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-type ProfileRecord struct {
-	Profile AgentProfile
-	User    User
-}
-
 type AnalysisJobState string
 
 const (

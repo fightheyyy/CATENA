@@ -154,7 +154,7 @@ func TestAnalysisWorkerPermanentFailureDoesNotRetry(t *testing.T) {
 func TestAnalysisCancelQueuedJobHTTP(t *testing.T) {
 	s := NewMemoryStore()
 	j := seedQueueJob(t, s)
-	h, err := NewHTTPHandler(s, HTTPConfig{Auth: AuthConfig{}, Engine: nil, Traces: nil, Memory: nil})
+	h, err := NewHTTPHandler(s, HTTPConfig{Auth: AuthConfig{}, Engine: nil, Traces: nil})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestLocalModeCanCancelLocalTraceSetOwner(t *testing.T) {
 	if _, _, err := s.CreateAnalysisJob(context.Background(), j); err != nil {
 		t.Fatal(err)
 	}
-	h, err := NewHTTPHandler(s, HTTPConfig{Auth: AuthConfig{}, Engine: nil, Traces: nil, Memory: nil})
+	h, err := NewHTTPHandler(s, HTTPConfig{Auth: AuthConfig{}, Engine: nil, Traces: nil})
 	if err != nil {
 		t.Fatal(err)
 	}

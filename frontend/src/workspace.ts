@@ -12,13 +12,13 @@ export const routeResources: Record<Route, Array<keyof typeof workspaceResources
   home: ["agents", "traces", "analysisJobs"],
   assistant: ["agents", "traces", "analysisJobs"],
   agents: ["agents"], apiKeys: ["agents"], traces: ["agents", "traces"],
-  evolution: ["agents", "analysisJobs"], conversations: ["system"], memory: ["system"], settings: [],
+  evolution: ["agents", "analysisJobs"], settings: [],
 };
 
 export function emptyWorkspace(): WorkspaceData {
   return {
     system: { status: "unknown", auth_mode: "", edge_ingest: "",
-      analysis_protocol: "catena.analysis_request.v2", analysis_engine: "", trace_store: "unknown", memory_store: "unknown" },
+      analysis_protocol: "catena.analysis_request.v2", analysis_engine: "", trace_store: "unknown" },
     analysisJobs: [],
     traceAvailable: false, agentAvailable: false, traces: [], agents: [],
   };

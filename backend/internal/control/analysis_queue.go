@@ -146,7 +146,7 @@ func (s *MemoryStore) SaveLeasedAnalysisJob(ctx context.Context, l AnalysisLease
 
 func releaseAnalysisState(j *AnalysisJob, detail string, retry bool, delay time.Duration, maxAttempts int, now time.Time) {
 	j.UpdatedAt = now
-	j.Error = bounded(redactMemoryText(detail), 1000)
+	j.Error = bounded(redactEvidenceText(detail), 1000)
 	j.NextAttemptAt = nil
 	switch {
 	case j.CancelRequested:

@@ -35,7 +35,7 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	}))
 	defer engine.Close()
 	manager, _ := NewEngineClient(EngineConfig{URL: engine.URL, Token: "private"})
-	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testAnalysisAuthConfig(), Engine: manager, Traces: &analysisTraceFixture{}, Memory: nil, Workers: fastWorkerConfig(), Ingestion: DefaultTraceIngestConfig()})
+	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testAnalysisAuthConfig(), Engine: manager, Traces: &analysisTraceFixture{}, Workers: fastWorkerConfig(), Ingestion: DefaultTraceIngestConfig()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,57 +78,6 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	}
 }
 
-func TestMemoryJobResumesNativeTaskWithoutRepeatingExtraction(t *testing.T) {
-	store := NewMemoryStore()
-	extracts, polls := 0, 0
-	engine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Catena-Owner") != "local" {
-			t.Error("wrong owner")
-		}
-		switch r.URL.Path {
-		case "/v2/memory/extract":
-			extracts++
-			var payload map[string]any
-			json.NewDecoder(r.Body).Decode(&payload)
-			writeJSON(w, 200, map[string]any{"request_id": payload["request_id"], "state": "completed", "output": MemoryIngestReceipt{TaskID: "native-extraction", Status: "pending"}})
-		case "/v2/memory/task":
-			polls++
-			if polls == 1 {
-				writeProblem(w, 503, "temporary provider outage")
-			} else {
-				writeJSON(w, 200, MemoryTaskStatus{TaskID: "native-extraction", Status: "completed", Result: json.RawMessage(`{"memory_count":1}`)})
-			}
-		default:
-			writeProblem(w, 404, "unknown")
-		}
-	}))
-	defer engine.Close()
-	manager, _ := NewEngineClient(EngineConfig{URL: engine.URL, Token: "private"})
-	h, err := NewHTTPHandler(store, HTTPConfig{Auth: testAnalysisAuthConfig(), Engine: manager, Traces: &analysisTraceFixture{}, Memory: nil, Workers: fastWorkerConfig(), Ingestion: DefaultTraceIngestConfig()})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-	req := httptest.NewRequest("POST", "/v1/analysis-jobs", bytes.NewBufferString(`{"pipeline":"memory","trace_id":"00112233445566778899aabbccddeeff"}`))
-	req.Header.Set("Idempotency-Key", "memory-retry")
-	out := httptest.NewRecorder()
-	h.ServeHTTP(out, req)
-	if out.Code != 202 {
-		t.Fatal(out.Body.String())
-	}
-	var job AnalysisJob
-	json.Unmarshal(out.Body.Bytes(), &job)
-	eventually(t, func() bool { j, _ := store.GetAnalysisJob(context.Background(), job.ID); return j.State.Terminal() })
-	saved, _ := store.GetAnalysisJob(context.Background(), job.ID)
-	if saved.State != AnalysisJobCompleted || extracts != 1 || polls != 2 || saved.Attempt != 2 || len(saved.Artifacts) != 1 {
-		t.Fatalf("state=%s attempts=%d extracts=%d polls=%d error=%s", saved.State, saved.Attempt, extracts, polls, saved.Error)
-	}
-	a := saved.Artifacts[0]
-	if a.Type != "engineering_memory" || a.ValidationStatus != "extracted" || !bytes.Contains(a.Payload, []byte("memory_count")) {
-		t.Fatal("missing provider evidence")
-	}
-}
-
 func TestEngineClientTimeoutCancelsExternalExecution(t *testing.T) {
 	cancelled := make(chan struct{}, 1)
 	engine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -154,21 +103,5 @@ func TestEngineClientTimeoutCancelsExternalExecution(t *testing.T) {
 	case <-cancelled:
 	case <-time.After(time.Second):
 		t.Fatal("cancel was not forwarded")
-	}
-}
-
-func TestConversationEvidenceKeepsSourceAndRedactsSecrets(t *testing.T) {
-	now := time.Now().UTC()
-	pack, err := conversationEvidencePack("registered-agent", "session", []ConversationMessage{{Sequence: 1, Role: "user", OccurredAt: now, Content: []ConversationContentPart{{Type: "text", Text: "api_key=sk_abcdefghijklmnop"}}}}, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	job := AnalysisJob{Pipeline: "memory", SourceKind: AnalysisSourceConversation, SourceAgentID: pack.SourceAgentID, SourceConversationID: pack.SourceConversationID, EvidencePack: &pack}
-	if !validAnalysisJobSource(job) || !validAnalysisEvidencePack(pack, job) || bytes.Contains([]byte(pack.Document), []byte("abcdefghijklmnop")) {
-		t.Fatal("invalid or unredacted conversation evidence")
-	}
-	job.SourceConversationID = "foreign"
-	if validAnalysisEvidencePack(pack, job) {
-		t.Fatal("foreign session evidence accepted")
 	}
 }

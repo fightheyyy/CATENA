@@ -6,6 +6,7 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -57,16 +58,23 @@ func (s *PostgresStore) migrate(ctx context.Context) error {
 	if _, err = tx.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS catena_schema_migrations(version INTEGER PRIMARY KEY,applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`); err != nil {
 		return err
 	}
-	var applied bool
-	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM catena_schema_migrations WHERE version=2)`).Scan(&applied); err != nil {
-		return err
-	}
-	if !applied {
-		sql, _ := migrationFiles.ReadFile("migrations/002_v2.sql")
+	for _, version := range []int{2, 3} {
+		var applied bool
+		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM catena_schema_migrations WHERE version=$1)`, version).Scan(&applied); err != nil {
+			return err
+		}
+		if applied {
+			continue
+		}
+		name := map[int]string{2: "002_v2.sql", 3: "003_rebirth.sql"}[version]
+		sql, readErr := migrationFiles.ReadFile("migrations/" + name)
+		if readErr != nil {
+			return fmt.Errorf("migration %d: %w", version, readErr)
+		}
 		if _, err = tx.ExecContext(ctx, string(sql)); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO catena_schema_migrations(version) VALUES(2)`); err != nil {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO catena_schema_migrations(version) VALUES($1)`, version); err != nil {
 			return err
 		}
 	}
@@ -599,89 +607,6 @@ DELETE FROM barena_api_tokens WHERE token_id=$1 AND user_id=$2`,
 	return nil
 }
 
-func (s *PostgresStore) EnsureAgentProfile(
-	ctx context.Context,
-	profile AgentProfile,
-) (AgentProfile, error) {
-	_, err := s.db.ExecContext(ctx, `
-INSERT INTO barena_agent_profiles
-  (owner_user_id,slug,display_name,bio,is_public,created_at,updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7)
-ON CONFLICT (owner_user_id) DO NOTHING`,
-		profile.OwnerUserID, profile.Slug, profile.DisplayName, profile.Bio,
-		profile.IsPublic, profile.CreatedAt, profile.UpdatedAt)
-	if err != nil {
-		return AgentProfile{}, mapStoreError(err)
-	}
-	return s.GetAgentProfileByOwner(ctx, profile.OwnerUserID)
-}
-
-func (s *PostgresStore) GetAgentProfileByOwner(
-	ctx context.Context,
-	ownerUserID string,
-) (AgentProfile, error) {
-	row := s.db.QueryRowContext(ctx, `
-SELECT owner_user_id,slug,display_name,bio,is_public,created_at,updated_at
-FROM barena_agent_profiles WHERE owner_user_id=$1`, ownerUserID)
-	return scanAgentProfile(row)
-}
-
-func (s *PostgresStore) UpdateAgentProfile(
-	ctx context.Context,
-	profile AgentProfile,
-) (AgentProfile, error) {
-	row := s.db.QueryRowContext(ctx, `
-UPDATE barena_agent_profiles
-SET display_name=$2,bio=$3,is_public=$4,updated_at=$5
-WHERE owner_user_id=$1
-RETURNING owner_user_id,slug,display_name,bio,is_public,created_at,updated_at`,
-		profile.OwnerUserID, profile.DisplayName, profile.Bio,
-		profile.IsPublic, profile.UpdatedAt)
-	return scanAgentProfile(row)
-}
-
-func (s *PostgresStore) ListPublicAgentProfiles(
-	ctx context.Context,
-	limit int,
-) ([]ProfileRecord, error) {
-	if limit < 1 || limit > 200 {
-		limit = 50
-	}
-	rows, err := s.db.QueryContext(ctx, `
-SELECT p.owner_user_id,p.slug,p.display_name,p.bio,p.is_public,p.created_at,p.updated_at,
-       u.user_id,u.github_id,u.github_login,u.display_name,u.avatar_url,u.created_at,u.updated_at
-FROM barena_agent_profiles p
-JOIN barena_users u ON u.user_id=p.owner_user_id
-WHERE p.is_public=TRUE
-ORDER BY p.updated_at DESC LIMIT $1`, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	result := make([]ProfileRecord, 0)
-	for rows.Next() {
-		record, err := scanProfileRecord(rows)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, record)
-	}
-	return result, rows.Err()
-}
-
-func (s *PostgresStore) GetPublicAgentProfile(
-	ctx context.Context,
-	slug string,
-) (ProfileRecord, error) {
-	row := s.db.QueryRowContext(ctx, `
-SELECT p.owner_user_id,p.slug,p.display_name,p.bio,p.is_public,p.created_at,p.updated_at,
-       u.user_id,u.github_id,u.github_login,u.display_name,u.avatar_url,u.created_at,u.updated_at
-FROM barena_agent_profiles p
-JOIN barena_users u ON u.user_id=p.owner_user_id
-WHERE p.slug=$1 AND p.is_public=TRUE`, slug)
-	return scanProfileRecord(row)
-}
-
 func (s *PostgresStore) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
 func (s *PostgresStore) Close()                         { _ = s.db.Close() }
 
@@ -753,38 +678,6 @@ func scanUser(row rowScanner) (User, error) {
 		return User{}, err
 	}
 	return user, nil
-}
-
-func scanAgentProfile(row rowScanner) (AgentProfile, error) {
-	var profile AgentProfile
-	if err := row.Scan(
-		&profile.OwnerUserID, &profile.Slug, &profile.DisplayName,
-		&profile.Bio, &profile.IsPublic, &profile.CreatedAt, &profile.UpdatedAt,
-	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return AgentProfile{}, ErrNotFound
-		}
-		return AgentProfile{}, err
-	}
-	return profile, nil
-}
-
-func scanProfileRecord(row rowScanner) (ProfileRecord, error) {
-	var record ProfileRecord
-	if err := row.Scan(
-		&record.Profile.OwnerUserID, &record.Profile.Slug,
-		&record.Profile.DisplayName, &record.Profile.Bio,
-		&record.Profile.IsPublic, &record.Profile.CreatedAt,
-		&record.Profile.UpdatedAt, &record.User.ID, &record.User.GitHubID,
-		&record.User.Login, &record.User.DisplayName, &record.User.AvatarURL,
-		&record.User.CreatedAt, &record.User.UpdatedAt,
-	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ProfileRecord{}, ErrNotFound
-		}
-		return ProfileRecord{}, err
-	}
-	return record, nil
 }
 
 func mapStoreError(err error) error {

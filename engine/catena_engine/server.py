@@ -52,7 +52,7 @@ def create_server(address, token="", rsi_handler=None, receipt_root=None):
             try:
                 if self.path == "/v2/manifest":
                     self._json(
-                        200, {"schema": "catena.engine_manifest.v2", "status": "ready", "pipelines": ["rsi", "memory"]}
+                        200, {"schema": "catena.engine_manifest.v2", "status": "ready", "pipelines": ["rsi"]}
                     )
                 elif self.path == "/v2/rsi/adapters":
                     from .rsi.registry import default_registry
@@ -114,29 +114,9 @@ def create_server(address, token="", rsi_handler=None, receipt_root=None):
                         self._json(status, result)
                     finally:
                         slots.release()
-                elif self.path.startswith("/v2/memory/"):
-                    from .memory.api import memory_request
-
-                    operation = self.path.rsplit("/", 1)[1]
-                    admitted = operation == "extract"
-                    cached = executions.replay(owner, payload) if admitted else None
-                    if cached is not None:
-                        self._json(*cached)
-                        return
-                    if admitted and not slots.acquire(blocking=False):
-                        self._json(429, {"error": "analysis capacity is full"})
-                        return
-                    try:
-                        result = memory_request(owner, operation, payload, executions)
-                        if admitted:
-                            self._json(*executions.lookup(owner, payload["request_id"]))
-                        else:
-                            self._json(200, result)
-                    finally:
-                        if admitted:
-                            slots.release()
                 else:
                     self._json(404, {"error": "endpoint retired or unknown"})
+
             except (OptimizationError, ValueError, TypeError):
                 self._json(400, {"error": "invalid pipeline request"})
             except Exception:

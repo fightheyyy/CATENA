@@ -38,23 +38,19 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, 400, e.Error())
 		return
 	}
-	if req.Pipeline != "rsi" && req.Pipeline != "memory" {
-		writeProblem(w, 400, "pipeline must be rsi or memory")
+	if req.Pipeline != "rsi" {
+		writeProblem(w, 400, "only the rsi pipeline is supported")
 		return
 	}
 	if req.Adapter == "" {
-		if req.Pipeline == "rsi" {
-			req.Adapter = "harness2"
-		} else {
-			req.Adapter = "openviking"
-		}
+		req.Adapter = "harness2"
 	}
 	if len(req.Objective) > 4000 || len(req.Options) > 128*1024 {
 		writeProblem(w, 400, "analysis input is too large")
 		return
 	}
-	if req.Pipeline == "memory" && req.Adapter != "openviking" {
-		writeProblem(w, 400, "unknown Memory adapter")
+	if req.Adapter != "harness2" {
+		writeProblem(w, 400, "only Harness2 is supported")
 		return
 	}
 	if len(req.Options) > 0 {
@@ -64,10 +60,6 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for key := range options {
-			if req.Pipeline == "memory" {
-				writeProblem(w, 400, "Memory options are not supported")
-				return
-			}
 			switch key {
 			case "case_id", "baseline", "algorithms", "composition", "budget", "validation_case_ids":
 			default:
@@ -89,15 +81,8 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 	var pack AnalysisEvidencePack
 	var err error
 	if req.ConversationID != "" {
-		if req.Pipeline != "memory" || req.AgentID == "" || req.TraceID != "" || !req.WindowStart.IsZero() || !req.WindowEnd.IsZero() {
-			writeProblem(w, 400, "invalid conversation memory request")
-			return
-		}
-		var messages []ConversationMessage
-		messages, err = s.store.ListConversationMessagesByOwner(r.Context(), owner, req.AgentID, req.ConversationID, 2000)
-		if err == nil {
-			pack, err = conversationEvidencePack(req.AgentID, req.ConversationID, messages, now)
-		}
+		writeProblem(w, 400, "conversation extraction is retired; select Trace evidence")
+		return
 	} else if req.AgentID != "" {
 		if req.TraceID != "" || req.WindowStart.IsZero() || !req.WindowEnd.After(req.WindowStart) || req.WindowEnd.Sub(req.WindowStart) > 31*24*time.Hour || req.WindowEnd.After(now.Add(5*time.Minute)) {
 			writeProblem(w, 400, "invalid Agent Trace window")
@@ -151,14 +136,11 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease, job AnalysisJob) error {
-	if job.Schema != "catena.analysis_job.v2" || (job.Pipeline != "rsi" && job.Pipeline != "memory") {
+	if job.Schema != "catena.analysis_job.v2" || job.Pipeline != "rsi" {
 		return errors.New("legacy execution retired; create a V2 Analysis Job")
 	}
 	if job.EvidencePack == nil || !validAnalysisEvidencePack(*job.EvidencePack, job) {
 		return errors.New("invalid retained Evidence Pack")
-	}
-	if job.Pipeline == "memory" {
-		return s.executeMemoryJob(ctx, lease, job)
 	}
 	var payload map[string]any
 	if len(job.Options) > 0 {

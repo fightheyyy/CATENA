@@ -1,19 +1,15 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { api } from "./api";
-import type { MemoryVisualNode } from "./memoryGraph";
 import { primaryNavigationRoutes, readNavigation, navigationURL, type Route, type EvidenceSelection } from "./navigation";
 import { useWorkspace } from "./useWorkspace";
 import { Icon, type IconName } from "./Icons";
-import { isMemoryTaskActive, memoryTaskDisplayPercent } from "./memoryTaskView";
-import type { AnalysisJob, MemoryFactGraph, MemoryRecallBundle, MemoryRecallItem, MemoryRecord, MemoryTaskRecord, Session, WorkspaceData } from "./types";
+import type { AnalysisJob, Session, WorkspaceData } from "./types";
 
 const AgentWorkspace = lazy(() => import("./AgentWorkspace").then((module) => ({ default: module.AgentWorkspace })));
 const ApiManagementPage = lazy(() => import("./ApiManagementPage").then((module) => ({ default: module.ApiManagementPage })));
 const WorkbenchWorkspace = lazy(() => import("./WorkbenchWorkspace").then((module) => ({ default: module.WorkbenchWorkspace })));
-const ConversationWorkspace = lazy(() => import("./ConversationWorkspace").then((module) => ({ default: module.ConversationWorkspace })));
 const AnalysisWorkspace = lazy(() => import("./AnalysisWorkspace").then((module) => ({ default: module.AnalysisWorkspace })));
-const MemoryGraphCanvas = lazy(() => import("./MemoryGraphCanvas").then((module) => ({ default: module.MemoryGraphCanvas })));
 const TraceExplorer = lazy(() => import("./TraceExplorer").then((module) => ({ default: module.TraceExplorer })));
 
 type Locale = "zh" | "en";
@@ -21,7 +17,7 @@ type Theme = "system" | "light" | "dark";
 
 const copy = {
   zh: {
-    nav: { home: "工作台", assistant: "工作台", cases: "实验", agents: "Agent", apiKeys: "连接", conversations: "对话", traces: "经历", evolution: "产出", memory: "记忆", settings: "设置" },
+    nav: { home: "工作台", assistant: "工作台", cases: "实验", agents: "Agent", apiKeys: "连接", conversations: "对话", traces: "经历", evolution: "产出", settings: "设置" },
     signIn: "使用 GitHub 登录",
     oauthFlowExpired: "登录流程已过期或从另一个地址发起。请重新登录，Catena 会自动使用正确的回调地址。",
     oauthUpstreamUnavailable: "GitHub 连接暂时超时，请重新登录。Catena 不会保留失败的授权流程。",
@@ -30,64 +26,11 @@ const copy = {
     landingBody: "回看 Codex 和 Claude Code 的运行证据，提炼可审查的 Skill 候选。",
     landingNote: "原始运行留在端侧；Catena 保存可追溯的分析证据。",
     homeTitle: "今天的 Agent 状态",
-    homeBody: "汇聚不同 Agent 的 Trace，通过独立的 RSI 和 Memory 分析生成产物。",
+    homeBody: "从 Trace 生成 Harness² 候选，通过 Harbor 评测并人工审查。",
     agentsTitle: "Agent",
     agentsBody: "这里只展示被观测和进化的目标 Agent；编排器与评测角色保留在 Trace 执行链中。",
     tracesTitle: "Trace",
     tracesBody: "Trace 是运行证据，不是日志堆。工具调用、结果与产物会保留同一条因果链。",
-    memoryTitle: "记忆",
-    memoryBody: "保留重要的事实、决定与经验，每一条都能回看来源。",
-    memoryConnected: "记忆能力已就绪",
-    memoryConnectedBody: "记忆按当前空间独立保存，并保留来源对话。",
-    memoryTasks: "提炼任务",
-    memoryTasksHint: "离开对话后任务仍会继续；这里保留最近状态和进度。",
-    memoryTaskEmpty: "还没有提炼任务。请从一段对话中开始提炼。",
-    memoryTaskPending: "等待处理",
-    memoryTaskProcessing: "正在提炼",
-    memoryTaskCompleted: "提炼完成",
-    memoryTaskFailed: "提炼失败",
-    memoryTaskUnknownSource: "未命名对话",
-    semanticRecall: "语义召回",
-    semanticRecallBody: "从事实、原始对话和主题中寻找相关内容。",
-    graphRecall: "关系扩展",
-    graphRecallBody: "沿事实之间的关系补充相关上下文。",
-    temporalRecall: "时间扩展",
-    temporalRecallBody: "恢复相邻轮次和事件顺序。",
-    memoryUnavailable: "记忆能力尚未就绪",
-    memoryUnavailableBody: "对话记录会继续保存；记忆服务配置完成后，即可从对话中提炼并召回长期记忆。",
-    memoryQuery: "找回一段记忆",
-    memoryPlaceholder: "例如：上次发布为什么失败？",
-    memorySearch: "搜索记忆",
-    memorySearching: "正在寻找",
-    memoryResults: "找到的记忆",
-    recentMemories: "最近记忆",
-    memoryCount: "条长期记忆",
-    noMemories: "还没有长期记忆。打开一段对话，选择“提炼为记忆”。",
-    memoryLoadFailed: "无法读取记忆",
-    memoryRecallFailed: "暂时无法召回，请稍后重试或联系管理员检查记忆配置。",
-    memoryGraph: "记忆关系图",
-    memoryGraphHint: "选择一条记忆，看看它和其他信息如何相连。",
-    memoryGraphFailed: "暂时无法读取这条记忆的关系图。",
-    memoryGraphEmpty: "从一段对话提炼记忆后，这里会出现可探索的关系图。",
-    memoryInspector: "当前节点",
-    memorySelectHint: "选择图中的节点查看完整内容和来源。",
-    memoryEntities: "实体",
-    memoryRelations: "关系",
-    relationType: "关系类型",
-    confidence: "置信度",
-    graphFact: "记忆事实",
-    graphEntity: "实体",
-    graphRelated: "相关事实",
-    recallContext: "召回上下文",
-    recallNotRun: "搜索后，这里会显示关系扩展、时间扩展与查询耗时。",
-    graphExpanded: "关系扩展事实",
-    temporalExpanded: "时间扩展事实",
-    searchTime: "查询耗时",
-    sourceConversation: "来源对话",
-    noMemoryResults: "没有找到相关记忆。",
-    recallFact: "事实",
-    recallConversation: "原始对话",
-    recallTopic: "主题",
     settingsTitle: "设置",
     settingsBody: "让 Catena 更符合你的阅读习惯。",
     language: "语言",
@@ -136,7 +79,7 @@ const copy = {
     latest: "最近更新",
   },
   en: {
-    nav: { home: "Workspace", assistant: "Workspace", cases: "Experiments", agents: "Agents", apiKeys: "Connections", conversations: "Conversations", traces: "History", evolution: "Outputs", memory: "Memory", settings: "Settings" },
+    nav: { home: "Workspace", assistant: "Workspace", cases: "Experiments", agents: "Agents", apiKeys: "Connections", conversations: "Conversations", traces: "History", evolution: "Outputs", settings: "Settings" },
     signIn: "Continue with GitHub",
     oauthFlowExpired: "This sign-in flow expired or started on another address. Restart it and Catena will use the canonical callback origin.",
     oauthUpstreamUnavailable: "GitHub temporarily timed out. Restart sign-in; Catena does not retain the failed authorization flow.",
@@ -145,64 +88,11 @@ const copy = {
     landingBody: "Review Codex and Claude Code evidence, then draft Skills grounded in the observed behavior.",
     landingNote: "Your Agents run locally; Catena keeps the analysis traceable.",
     homeTitle: "Your Agent state today",
-    homeBody: "Unify Traces across Agents and generate artifacts through independent RSI and Memory analyses.",
+    homeBody: "Review traces, generate a Harness² candidate, and compare Harbor results.",
     agentsTitle: "Agents",
     agentsBody: "Only target Agents appear here. Orchestrators and evaluator roles stay in the Trace execution chain.",
     tracesTitle: "Traces",
     tracesBody: "A Trace is causal evidence, not a log pile. Tool calls, results, and artifacts stay linked.",
-    memoryTitle: "Memory",
-    memoryBody: "Keep useful facts, decisions, and experience, with their sources close by.",
-    memoryConnected: "Memory is ready",
-    memoryConnectedBody: "Memory is isolated to the current space and keeps its source Conversation.",
-    memoryTasks: "Distillation tasks",
-    memoryTasksHint: "Tasks continue after you leave a Conversation. Recent status and progress stay visible here.",
-    memoryTaskEmpty: "No distillation task yet. Start one from a Conversation.",
-    memoryTaskPending: "Waiting",
-    memoryTaskProcessing: "Distilling",
-    memoryTaskCompleted: "Completed",
-    memoryTaskFailed: "Failed",
-    memoryTaskUnknownSource: "Untitled Conversation",
-    semanticRecall: "Semantic recall",
-    semanticRecallBody: "Find related facts, original conversations, and topics.",
-    graphRecall: "Graph expansion",
-    graphRecallBody: "Follow relationships between facts to recover context.",
-    temporalRecall: "Temporal expansion",
-    temporalRecallBody: "Recover adjacent turns and event order.",
-    memoryUnavailable: "Memory is not ready",
-    memoryUnavailableBody: "Conversations will keep syncing. Complete the memory setup to distill and recall long-term memory from them.",
-    memoryQuery: "Find a memory",
-    memoryPlaceholder: "Example: Why did the last release fail?",
-    memorySearch: "Search memory",
-    memorySearching: "Recalling",
-    memoryResults: "Recall results",
-    recentMemories: "Recent memory",
-    memoryCount: "long-term memories",
-    noMemories: "No long-term memory yet. Open a Conversation and choose Distill to memory.",
-    memoryLoadFailed: "Could not read memory",
-    memoryRecallFailed: "Recall is temporarily unavailable. Retry later or ask an administrator to check the memory setup.",
-    memoryGraph: "Memory graph",
-    memoryGraphHint: "Select a Fact to inspect its real entities and related facts.",
-    memoryGraphFailed: "This memory graph is temporarily unavailable.",
-    memoryGraphEmpty: "Distill a Conversation and its explorable relationship graph will appear here.",
-    memoryInspector: "Selected node",
-    memorySelectHint: "Select a graph node to inspect its full content and provenance.",
-    memoryEntities: "Entities",
-    memoryRelations: "Relations",
-    relationType: "Relation type",
-    confidence: "Confidence",
-    graphFact: "Memory fact",
-    graphEntity: "Entity",
-    graphRelated: "Related fact",
-    recallContext: "Recall context",
-    recallNotRun: "Run a search to see graph expansion, temporal expansion, and query time.",
-    graphExpanded: "Graph-expanded facts",
-    temporalExpanded: "Time-expanded facts",
-    searchTime: "Query time",
-    sourceConversation: "Source Conversation",
-    noMemoryResults: "No related memory was found.",
-    recallFact: "Fact",
-    recallConversation: "Conversation",
-    recallTopic: "Topic",
     settingsTitle: "Settings",
     settingsBody: "Make Catena feel comfortable to read and use.",
     language: "Language",
@@ -380,7 +270,7 @@ export function App() {
     <div className="app-shell">
       <a className="skip-link" href="#workspace-content">{locale === "zh" ? "跳转至内容" : "Skip to content"}</a>
       <Sidebar
-        route={route === "conversations" ? "traces" : route}
+        route={route}
         locale={locale}
         session={session}
         onNavigate={navigateFromSidebar}
@@ -414,7 +304,6 @@ export function App() {
             onOpenAgentTraces={openAgentTraces}
             onConnectAgent={() => navigate("apiKeys")}
             onOpenAgent={(agentID) => navigate("agents", { agentID })}
-            onOpenMemory={() => navigate("memory")}
             onRefresh={workspaceState.refresh}
             theme={theme}
             onLocale={selectLocale}
@@ -599,7 +488,7 @@ function Sidebar({
   refreshing: boolean;
 }) {
   const t = copy[locale];
-  const icons: Record<Route, IconName> = { home: "home", assistant: "assistant", traces: "history", memory: "memory", evolution: "outputs", agents: "agents", apiKeys: "plug", settings: "settings", conversations: "book" };
+  const icons: Record<Route, IconName> = { home: "home", assistant: "assistant", traces: "history", evolution: "outputs", agents: "agents", apiKeys: "plug", settings: "settings" };
   return (
     <aside className="sidebar">
       <div className="sidebar-brand"><Brand />{onRefresh && <button className="text-button icon-button" type="button" aria-label={locale === "zh" ? "刷新" : "Refresh"} title={locale === "zh" ? "刷新" : "Refresh"} disabled={refreshing} onClick={() => void onRefresh()}><Icon name="refresh" /></button>}</div>
@@ -637,7 +526,6 @@ function RouteView({
   locale,
   workspace,
   session,
-  onNavigate,
   selectedAnalysisJobID,
   selectedAnalysisAgentID,
   selectedTraceAgentID,
@@ -652,7 +540,6 @@ function RouteView({
   onOpenAgentTraces,
   onConnectAgent,
   onOpenAgent,
-  onOpenMemory,
   onRefresh,
   theme,
   onLocale,
@@ -678,7 +565,6 @@ function RouteView({
   onOpenAgentTraces: (agentID: string, traceID?: string) => void;
   onConnectAgent: () => void;
   onOpenAgent: (agentID: string) => void;
-  onOpenMemory: () => void;
   onRefresh: () => Promise<void>;
   theme: Theme;
   onLocale: (locale: Locale) => void;
@@ -686,12 +572,10 @@ function RouteView({
   onLogout: () => void;
 }) {
   let content: React.ReactNode;
-  const historyTabs = route === "conversations" ? <div className="history-tabs" role="group" aria-label={locale === "zh" ? "经历视图" : "History view"}><button type="button" onClick={() => onNavigate("traces")}><Icon name="history" />Trace</button><button className="active" type="button" aria-pressed="true"><Icon name="book" />{locale === "zh" ? "对话" : "Conversations"}</button></div> : null;
   if (route === "home" && !selectedAnalysisJobID) content = <WorkbenchWorkspace key={session.user?.id ?? "local"} locale={locale} workspace={workspace} ownerID={session.user?.id ?? "local"} initialAgentID={selectedAgentID} onOpenTrace={onOpenAgentTraces} onOpenJob={onOpenAnalysisJob} onConnectAgent={onConnectAgent} onRefresh={onRefresh} />;
   else if (route === "agents") content = <AgentWorkspace locale={locale} workspace={workspace} initialAgentID={selectedAgentID} onSelectAgent={onOpenAgent} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} onConnect={onConnectAgent} />;
   else if (route === "apiKeys") content = <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} onOpenAgent={onOpenAgent} />;
-  else if (route === "conversations") content = <ConversationWorkspace locale={locale} memoryReady={workspace.system.memory_store === "available"} onOpenMemory={onOpenMemory} navigation={historyTabs} />;
-  else if (route === "traces") content = <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} initialTraceID={selectedTraceID} onSelectTrace={onOpenAgentTraces} refreshVersion={refreshVersion} navigation={historyTabs} />;
+  else if (route === "traces") content = <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} initialTraceID={selectedTraceID} onSelectTrace={onOpenAgentTraces} refreshVersion={refreshVersion} />;
   else if (route === "evolution" || route === "home") content = (
     <AnalysisWorkspace
       locale={locale}
@@ -706,7 +590,6 @@ function RouteView({
       refreshVersion={refreshVersion}
     />
   );
-  else if (route === "memory") content = <Memory locale={locale} workspace={workspace} />;
   else if (route === "settings") content = <Settings locale={locale} session={session} theme={theme} onLocale={onLocale} onTheme={onTheme} onLogout={onLogout} />;
   else content = null;
 
@@ -715,364 +598,6 @@ function RouteView({
 
 function PageHeader({ title }: { title: string }) {
   return <header className="page-header"><h1>{title}</h1></header>;
-}
-
-function Memory({ locale, workspace }: { locale: Locale; workspace: WorkspaceData }) {
-  const t = copy[locale];
-  const ready = workspace.system.memory_store === "available";
-  const [query, setQuery] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [loadingRecent, setLoadingRecent] = useState(false);
-  const [recentError, setRecentError] = useState("");
-  const [recentReload, setRecentReload] = useState(0);
-  const [message, setMessage] = useState("");
-  const [recent, setRecent] = useState<MemoryRecord[]>([]);
-  const [total, setTotal] = useState(0);
-  const [results, setResults] = useState<Array<{ kind: string; item: MemoryRecallItem }> | null>(null);
-  const [bundle, setBundle] = useState<MemoryRecallBundle | null>(null);
-  const [graph, setGraph] = useState<MemoryFactGraph | null>(null);
-  const [graphLoading, setGraphLoading] = useState(false);
-  const [graphError, setGraphError] = useState("");
-  const [selectedNode, setSelectedNode] = useState<MemoryVisualNode | null>(null);
-  const [tasks, setTasks] = useState<MemoryTaskRecord[]>([]);
-  const [taskError, setTaskError] = useState("");
-  const [memoryView, setMemoryView] = useState<"collection" | "graph">("collection");
-  const [provider, setProvider] = useState("");
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [noteTitle, setNoteTitle] = useState("");
-  const [noteContent, setNoteContent] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
-  const [noteError, setNoteError] = useState("");
-  const [expandedMemory, setExpandedMemory] = useState<{ kind: string; item: MemoryRecallItem } | null>(null);
-  const readerRef = useRef<HTMLElement>(null);
-  const graphSequence = useRef(0);
-
-  useEffect(() => {
-    let active = true;
-    void api.memoryStatus().then((status) => { if (active) setProvider(status.backend); }).catch(() => {});
-    return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    if (expandedMemory && memoryView === "collection") {
-      readerRef.current?.focus({ preventScroll: true });
-      readerRef.current?.scrollIntoView({ block: "nearest" });
-    }
-  }, [expandedMemory, memoryView]);
-
-  useEffect(() => () => { graphSequence.current += 1; }, []);
-
-  const resetGraph = useCallback(() => {
-    graphSequence.current += 1;
-    setGraph(null);
-    setSelectedNode(null);
-    setGraphError("");
-    setGraphLoading(false);
-  }, []);
-
-  const loadTasks = useCallback(async () => {
-    try {
-      const response = await api.memoryTasks(12);
-      const refreshed = await Promise.all(response.tasks.map(async (task) => {
-        if (!isMemoryTaskActive(task)) return task;
-        try {
-          return { ...task, ...await api.memoryTask(task.task_id) };
-        } catch {
-          return task;
-        }
-      }));
-      setTasks(refreshed);
-      setTaskError("");
-      return refreshed;
-    } catch {
-      setTaskError(t.memoryLoadFailed);
-      return [];
-    }
-  }, [t.memoryLoadFailed]);
-
-  const loadGraph = useCallback(async (factID: string) => {
-    if (!/^\d+$/.test(factID)) return;
-    const sequence = ++graphSequence.current;
-    setGraph(null);
-    setSelectedNode(null);
-    setGraphLoading(true);
-    setGraphError("");
-    try {
-      const nextGraph = await api.memoryGraph(factID);
-      if (sequence !== graphSequence.current) return;
-      setGraph(nextGraph);
-      setSelectedNode({
-        id: `fact:${nextGraph.fact_id}`,
-        kind: "fact",
-        eyebrow: `FACT ${nextGraph.fact_id}`,
-        title: nextGraph.content,
-        content: nextGraph.content,
-        factId: String(nextGraph.fact_id),
-        position: { x: 0, y: 0 },
-      });
-    } catch {
-      if (sequence === graphSequence.current) setGraphError(t.memoryGraphFailed);
-    } finally {
-      if (sequence === graphSequence.current) setGraphLoading(false);
-    }
-  }, [t.memoryGraphFailed]);
-
-  useEffect(() => {
-    if (!ready) return;
-    let active = true;
-    setLoadingRecent(true);
-    setRecentError("");
-    void api.memories(30).then((response) => {
-      if (!active) return;
-      setRecent(response.memories);
-      setTotal(response.total);
-    }).catch(() => {
-      if (!active) return;
-      setRecentError(t.memoryLoadFailed);
-    }).finally(() => {
-      if (active) setLoadingRecent(false);
-    });
-    return () => { active = false; };
-  }, [ready, t.memoryLoadFailed, recentReload]);
-
-  useEffect(() => {
-    if (!ready) return;
-    let stopped = false;
-    let timer = 0;
-    const poll = async () => {
-      const latest = await loadTasks();
-      if (!stopped && latest.some(isMemoryTaskActive)) {
-        timer = window.setTimeout(poll, 1800);
-      }
-    };
-    void poll();
-    return () => {
-      stopped = true;
-      window.clearTimeout(timer);
-    };
-  }, [ready, loadTasks]);
-
-  const visibleEntries: Array<{ kind: string; item: MemoryRecallItem; createdAt?: string }> = results === null
-    ? recent.map((item) => ({
-      kind: t.recallFact,
-      item: { id: item.id, content: item.content, title: typeof item.metadata?.title === "string" ? item.metadata.title : undefined, score: 0, metadata: item.metadata },
-      createdAt: item.created_at,
-    }))
-    : results.map((item) => ({ ...item }));
-
-  const visibleFacts = visibleEntries.filter(({ item }) => /^\d+$/.test(item.id) && (results === null || results.some((result) => result.item === item && result.kind === t.recallFact)));
-  const graphCatalog: MemoryRecord[] = [
-    ...recent,
-    ...(bundle?.facts ?? []).map((item) => ({ id: item.id, content: item.content, metadata: item.metadata })),
-  ].filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index);
-  const selectedRecord = graph && graphCatalog.find((item) => item.id === String(graph.fact_id));
-  const sourceConversation = typeof selectedRecord?.metadata?.conversation_id === "string" ? selectedRecord.metadata.conversation_id : "";
-  const nodeLabel = selectedNode?.kind === "entity" ? t.graphEntity : selectedNode?.kind === "related" ? t.graphRelated : t.graphFact;
-
-  return (
-    <section className="page memory-page">
-      <header className="memory-page-header">
-        <h1>{t.memoryTitle}</h1>
-        {ready && provider === "openviking" && <button className="secondary-button" type="button" onClick={() => setNoteOpen(!noteOpen)}><Icon name="plus" />{locale === "zh" ? "添加记忆" : "Add memory"}</button>}
-      </header>
-      {ready && noteOpen && <form className="memory-note-form" onSubmit={async (event) => {
-        event.preventDefault(); setSavingNote(true); setNoteError("");
-        try {
-          await api.createMemory(noteTitle.trim(), noteContent.trim());
-          setNoteTitle(""); setNoteContent(""); setNoteOpen(false); setResults(null); setRecentReload((value) => value + 1);
-        } catch { setNoteError(locale === "zh" ? "保存未完成，请稍后重试。" : "Could not save memory. Please retry."); }
-        finally { setSavingNote(false); }
-      }}>
-        <label>{locale === "zh" ? "标题" : "Title"}<input value={noteTitle} maxLength={100} required onChange={(event) => setNoteTitle(event.target.value)} placeholder={locale === "zh" ? "一件值得记住的事" : "Something worth remembering"} /></label>
-        <label>{locale === "zh" ? "内容" : "Content"}<textarea value={noteContent} maxLength={8000} required rows={5} onChange={(event) => setNoteContent(event.target.value)} placeholder={locale === "zh" ? "偏好、生活记录、决定或经验……" : "A preference, event, decision or experience…"} /></label>
-        {noteError && <p role="alert">{noteError}</p>}
-        <div><button className="primary-button" disabled={savingNote || !noteTitle.trim() || !noteContent.trim()}>{savingNote ? (locale === "zh" ? "正在保存" : "Saving") : (locale === "zh" ? "保存记忆" : "Save memory")}</button><button className="text-button" type="button" disabled={savingNote} onClick={() => setNoteOpen(false)}>{locale === "zh" ? "取消" : "Cancel"}</button></div>
-      </form>}
-      {!ready ? (
-        <section className="memory-unavailable">
-          <Status value="unavailable" locale={locale} />
-          <div><h2>{t.memoryUnavailable}</h2><p>{t.memoryUnavailableBody}</p></div>
-        </section>
-      ) : (
-        <>
-          <div className="memory-controls">
-          <form className="memory-search" onSubmit={async (event) => {
-            event.preventDefault();
-            if (!query.trim()) return;
-            setBusy(true);
-            setMessage("");
-            try {
-              const bundle = await api.searchMemories(query.trim());
-              setBundle(bundle);
-              setResults([
-                ...bundle.facts.map((item) => ({ kind: t.recallFact, item })),
-                ...bundle.conversations.map((item) => ({ kind: t.recallConversation, item })),
-                ...bundle.topics.map((item) => ({ kind: t.recallTopic, item })),
-              ]);
-              const firstFact = bundle.facts.find((item) => /^\d+$/.test(item.id));
-              setExpandedMemory(null);
-              resetGraph();
-              if (firstFact && memoryView === "graph") await loadGraph(firstFact.id);
-            } catch {
-              setResults(null);
-              setBundle(null);
-              setMessage(t.memoryRecallFailed);
-            } finally {
-              setBusy(false);
-            }
-          }}>
-            <label><span className="sr-only">{t.memoryQuery}</span><span className="memory-search-input"><Icon name="search" /><input value={query} disabled={busy} onChange={(event) => setQuery(event.target.value)} placeholder={locale === "zh" ? "搜索记忆" : "Search memories"} /></span></label>
-            <button className="text-button icon-button" type="submit" aria-label={busy ? t.memorySearching : t.memorySearch} title={t.memorySearch} disabled={busy || !query.trim()}><Icon name="arrow" /></button>
-          </form>
-          <div className="memory-view-toolbar">
-            <div className="history-tabs" role="group" aria-label={locale === "zh" ? "记忆视图" : "Memory view"}>
-              <button type="button" className={memoryView === "collection" ? "active" : ""} aria-pressed={memoryView === "collection"} onClick={() => setMemoryView("collection")}><Icon name="book" />{locale === "zh" ? "卡片" : "Collection"}</button>
-              <button type="button" className={memoryView === "graph" ? "active" : ""} aria-pressed={memoryView === "graph"} onClick={() => { setMemoryView("graph"); if (!graph && visibleFacts[0]) void loadGraph(visibleFacts[0].item.id); }}><Icon name="graph" />{locale === "zh" ? "关系图" : "Connections"}</button>
-            </div>
-            {results !== null && <button className="text-button" type="button" disabled={busy} onClick={() => {
-              setQuery(""); setResults(null); setBundle(null); setExpandedMemory(null); setMemoryView("collection"); resetGraph();
-            }}>{locale === "zh" ? "返回全部记忆" : "Back to all memories"}<Icon name="close" /></button>}
-          </div>
-          </div>
-          {message ? <InlineNote tone="error">{message}</InlineNote> : null}
-          {memoryView === "graph" ? <div className="memory-graph-workspace">
-            <section className="memory-graph-panel">
-              <header><div><h2>{t.memoryGraph}</h2><p>{t.memoryGraphHint}</p></div>{graph ? <dl><div><dt>{t.memoryEntities}</dt><dd>{graph.total_entities}</dd></div><div><dt>{t.memoryRelations}</dt><dd>{graph.total_relations}</dd></div></dl> : null}</header>
-              {graphLoading && !graph ? <LoadingPanel label={t.loading} /> : graph ? (
-                <Suspense fallback={<LoadingPanel label={t.loading} />}>
-                  <MemoryGraphCanvas graph={graph} facts={graphCatalog} locale={locale} selectedNodeID={selectedNode?.id ?? `fact:${graph.fact_id}`} onSelect={setSelectedNode} onOpenFact={(factID: string) => { void loadGraph(factID); }} />
-                </Suspense>
-              ) : loadingRecent ? <LoadingPanel label={t.loading} /> : <EmptyState title={t.memoryGraphEmpty} />}
-              {graphError ? <p className="memory-graph-error" role="alert">{graphError}</p> : null}
-            </section>
-            <aside className="memory-inspector">
-              <p className="section-label">{t.memoryInspector}</p>
-              {selectedNode ? (
-                <>
-                  <span className={`memory-node-kind ${selectedNode.kind}`}>{nodeLabel}</span>
-                  <h2>{selectedNode.title}</h2>
-                  {selectedNode.title !== selectedNode.content ? <p>{selectedNode.content}</p> : null}
-                  <dl>
-                    {typeof selectedRecord?.metadata?.uri === "string" && selectedNode.kind === "fact" && <MemoryContextFact label={locale === "zh" ? "文件" : "File"} value={selectedRecord.metadata.uri} />}
-                    {selectedNode.relation ? <MemoryContextFact label={t.relationType} value={selectedNode.relation.type} /> : null}
-                    {selectedNode.relation && selectedNode.relation.origin !== "openviking_link" ? <MemoryContextFact label={t.confidence} value={`${Math.round(selectedNode.relation.confidence * 100)}%`} /> : null}
-                    {selectedNode.entity?.type && selectedNode.entity.type !== "unknown" ? <MemoryContextFact label="Type" value={selectedNode.entity.type} /> : null}
-                    {sourceConversation && selectedNode.kind === "fact" ? <MemoryContextFact label={t.sourceConversation} value={sourceConversation} /> : null}
-                    {bundle && selectedNode.kind === "fact" ? <MemoryContextFact label={t.searchTime} value={typeof bundle.search_time_ms === "number" ? `${Math.round(bundle.search_time_ms)} ms` : "-"} /> : null}
-                  </dl>
-                </>
-              ) : <p>{t.memorySelectHint}</p>}
-            </aside>
-          </div> : <>
-          {expandedMemory && <section className="memory-reader" ref={readerRef} tabIndex={-1} aria-label={locale === "zh" ? "记忆详情" : "Memory detail"}>
-            <header><span className="output-kind">{expandedMemory.kind}</span><button className="text-button" type="button" aria-label={locale === "zh" ? "关闭记忆详情" : "Close memory detail"} onClick={() => setExpandedMemory(null)}><Icon name="close" /></button></header>
-            {expandedMemory.item.title && <h2>{expandedMemory.item.title}</h2>}
-            <p>{expandedMemory.item.content}</p>
-            <footer>
-              {typeof expandedMemory.item.metadata?.conversation_id === "string" && <span>{t.sourceConversation} · {expandedMemory.item.metadata.conversation_id}</span>}
-              {/^\d+$/.test(expandedMemory.item.id) && expandedMemory.kind === t.recallFact && <button className="text-button" type="button" onClick={() => { setMemoryView("graph"); void loadGraph(expandedMemory.item.id); }}>{locale === "zh" ? "查看相关记忆" : "Explore connections"}<Icon name="arrow" /></button>}
-            </footer>
-          </section>}
-          <section className="memory-index">
-            <header><h2 className="sr-only">{results === null ? t.recentMemories : t.memoryResults}</h2><span>{results === null ? `${recentError || loadingRecent ? "—" : total} ${locale === "zh" ? "条记忆" : "memories"}` : `${visibleEntries.length} ${locale === "zh" ? "条结果" : "results"}`}</span></header>
-            {recentError && results === null ? <InlineError message={recentError} action={t.retry} onRetry={() => setRecentReload((value) => value + 1)} /> : null}
-            {loadingRecent && results === null ? <LoadingPanel label={t.loading} /> : visibleEntries.length === 0 ? (recentError && results === null ? null : <EmptyState title={results === null ? t.noMemories : t.noMemoryResults} />) : (
-              <div className="memory-index-list">
-                {visibleEntries.map(({ kind, item, createdAt }, index) => (
-                  <MemoryEntry key={`${kind}-${item.id}-${index}`} kind={kind} item={item} createdAt={createdAt} showKind={results !== null} locale={locale} active={expandedMemory?.item.id === item.id && expandedMemory.kind === kind} onSelect={() => setExpandedMemory({ kind, item })} />
-                ))}
-              </div>
-            )}
-          </section>
-          </>}
-          {(tasks.length > 0 || taskError) && <details className="memory-task-disclosure"><summary><Icon name="clock" />{t.memoryTasks}<span>{tasks.filter(isMemoryTaskActive).length ? `${tasks.filter(isMemoryTaskActive).length} ${t.memoryTaskProcessing}` : taskError ? (locale === "zh" ? "读取失败" : "Unavailable") : tasks.length}</span></summary><MemoryTaskCenter tasks={tasks} locale={locale} error={taskError} /></details>}
-        </>
-      )}
-    </section>
-  );
-}
-
-function MemoryTaskCenter({ tasks, locale, error }: { tasks: MemoryTaskRecord[]; locale: Locale; error: string }) {
-  const t = copy[locale];
-  const activeCount = tasks.filter(isMemoryTaskActive).length;
-  const statusLabel = (status: MemoryTaskRecord["status"]) => ({
-    pending: t.memoryTaskPending,
-    processing: t.memoryTaskProcessing,
-    completed: t.memoryTaskCompleted,
-    failed: t.memoryTaskFailed,
-  })[status];
-
-  return (
-    <section className="memory-task-center" aria-live="polite">
-      <header>
-        <div><h2>{t.memoryTasks}</h2><p>{t.memoryTasksHint}</p></div>
-        {activeCount > 0 ? <strong>{activeCount} {t.memoryTaskProcessing}</strong> : null}
-      </header>
-      {error ? <p className="memory-task-error" role="alert">{error}</p> : tasks.length === 0 ? (
-        <p className="memory-task-empty">{t.memoryTaskEmpty}</p>
-      ) : (
-        <div className="memory-task-list">
-          {tasks.slice(0, 5).map((task) => {
-            const percent = memoryTaskDisplayPercent(task);
-            return (
-              <article className={`memory-task-row ${task.status}`} key={task.task_id}>
-                <i aria-hidden="true" />
-                <div className="memory-task-copy">
-                  <strong>{task.source_conversation_title || task.source_conversation_id || t.memoryTaskUnknownSource}</strong>
-                  <span>{task.agent_name || task.agent_id}{task.current_step ? ` · ${task.current_step}` : task.message ? ` · ${task.message}` : ""}</span>
-                </div>
-                <div className="memory-task-state">
-                  <strong>{statusLabel(task.status)}</strong>
-                  <span>{percent}%</span>
-                </div>
-                <div className="memory-task-meter" aria-label={`${statusLabel(task.status)} ${percent}%`}><i style={{ width: `${percent}%` }} /></div>
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function MemoryEntry({
-  kind,
-  item,
-  createdAt,
-  showKind,
-  locale,
-  active,
-  onSelect,
-}: {
-  kind: string;
-  item: MemoryRecallItem;
-  createdAt?: string;
-  showKind: boolean;
-  locale: Locale;
-  active: boolean;
-  onSelect: () => void;
-}) {
-  const score = item.score > 0 ? `${Math.round(item.score * 100)}%` : "";
-  return (
-    <button className={`memory-result ${active ? "active" : ""}`} type="button" onClick={onSelect}>
-      <span className="memory-result-title">{item.title || item.content}</span>
-      <span className="memory-result-footer"><span>{showKind ? kind : null}{score ? ` · ${score}` : createdAt ? <Time value={createdAt} locale={locale} /> : null}</span><Icon name="arrow" /></span>
-    </button>
-  );
-}
-
-function MemoryContextFact({ label, value }: { label: string; value: string }) {
-  return <div><dt>{label}</dt><dd>{value}</dd></div>;
-}
-
-function Time({ value, locale }: { value: string; locale: Locale }) {
-  const formatted = new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
-  return <time dateTime={value}>{formatted}</time>;
-}
-
-function Status({ value, locale }: { value: string; locale: Locale }) {
-  const ready = value === "ready" || value === "ok" || value === "available";
-  return <span className={ready ? "status ready" : "status blocked"}>{ready ? copy[locale].statusReady : copy[locale].statusUnavailable}</span>;
 }
 
 function Settings({ locale, session, theme, onLocale, onTheme, onLogout }: { locale: Locale; session: Session; theme: Theme; onLocale: (locale: Locale) => void; onTheme: (theme: Theme) => void; onLogout: () => void }) {

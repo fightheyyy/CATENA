@@ -42,3 +42,20 @@ Do not invent evidence, human approval, verifier results or optimization gains.
 Next: remove retired runtime and callers, then use one pinned Harness² path with
 post-freeze Harbor baseline/candidate evaluation. A protocol fixture proves transport
 only. A single real pair would prove engineering execution only, not general improvement.
+
+## Phase 2 — Remove Complexity
+
+Deleted Python `memory/`, provider protocol fixture, Go Memory client/handlers/task
+storage/types, React Memory/Graph/conversation extraction, graph dependency
+(`@xyflow/react` and 20 installed packages), embedding service and setup/overlay.
+Removed community routes/profile methods and login's profile-write dependency.
+Preserved Go auth/Trace/queue and shared redaction; historical conversation read API,
+SQL tables, terminal jobs and benchmark materials remain available for export.
+Migration 003 retires active Memory jobs without deleting retained documents.
+See [retirement/export instructions](../OPENVIKING_INTEGRATION.md).
+
+Checks: Go unit suite PASS; React typecheck PASS; 41 remaining unit tests PASS.
+Python 54 PASS / 1 existing timeout test FAIL (same failure as baseline: child PID
+file absent at 300ms). Provider-specific tests removed, not counted as new coverage.
+DB migration execution and Docker image checks remain BLOCKED by absent services.
+Next: eliminate CATENA Registry/composition and require post-freeze Harbor comparison.

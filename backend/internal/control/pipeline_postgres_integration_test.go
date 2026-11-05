@@ -68,11 +68,8 @@ func TestPostgresPrivatePythonPipelinesPersistArtifacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := []string{}
-	for _, pipeline := range []string{"rsi", "memory"} {
+	for _, pipeline := range []string{"rsi"} {
 		raw := `{"pipeline":"` + pipeline + `","trace_id":"00112233445566778899aabbccddeeff","options":{"case_id":"fixture"}}`
-		if pipeline == "memory" {
-			raw = `{"pipeline":"memory","trace_id":"00112233445566778899aabbccddeeff"}`
-		}
 		req := httptest.NewRequest("POST", "/v1/analysis-jobs", strings.NewReader(raw))
 		req.Header.Set("Idempotency-Key", "pipeline-"+pipeline)
 		response := httptest.NewRecorder()
@@ -99,7 +96,7 @@ func TestPostgresPrivatePythonPipelinesPersistArtifacts(t *testing.T) {
 	}
 	defer reopened.Close()
 	rows, err := reopened.ListArtifactsByOwner(context.Background(), "", "", 20)
-	if err != nil || len(rows) != 2 {
+	if err != nil || len(rows) != 1 {
 		t.Fatalf("restart artifacts: %d %v", len(rows), err)
 	}
 	foreign, err := reopened.ListArtifactsByOwner(context.Background(), "foreign", "", 20)

@@ -178,11 +178,9 @@ jobs:
           CATENA_CORE_DB_PASSWORD: 3123456789abcdef0123456789abcdef
           CATENA_CLICKHOUSE_PASSWORD: 5123456789abcdef0123456789abcdef
         run: docker compose -f deploy/catena-mvp1/compose.yml -f deploy/catena-mvp1/compose.public.yml config >/dev/null
-      - name: Validate optional RSI and Memory overlays
+      - name: Validate RSI overlay
         env:
           CATENA_RSI_WORKSPACE: /tmp/catena-rsi
           CATENA_DOCKER_GID: "998"
-          CATENA_OPENVIKING_API_KEY: fixture-only
         run: |
           docker compose -f deploy/catena-mvp1/compose.yml -f deploy/catena-mvp1/compose.rsi.yml config >/dev/null
-          docker compose -f deploy/catena-mvp1/compose.yml -f deploy/catena-mvp1/compose.openviking.yml config >/dev/null

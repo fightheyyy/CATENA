@@ -7,13 +7,6 @@ import type {
   ConversationSummary,
   AnalysisJob,
   AnalysisModelSettings,
-  MemoryIngestReceipt,
-  MemoryTaskStatus,
-  MemoryTaskRecord,
-  MemoryFactGraph,
-  MemoryList,
-  MemoryRecord,
-  MemoryRecallBundle,
   Session,
   TraceDetail,
   TraceSummary,
@@ -97,7 +90,6 @@ export const api = {
     return Object.assign({}, ...parts) as Partial<WorkspaceData>;
   },
   trace: (traceID: string, signal?: AbortSignal) => request<TraceDetail>(`/v1/traces/${encodeURIComponent(traceID)}`, { signal }),
-  rememberTrace: (traceID: string) => request<AnalysisJob>("/v1/analysis-jobs", {method:"POST", headers: {"Idempotency-Key": `memory-${traceID}-${crypto.randomUUID()}`}, body: JSON.stringify({pipeline:"memory", trace_id:traceID})}),
   traces: (limit = 100, signal?: AbortSignal) => request<{ available: boolean; traces: TraceSummary[] }>(`/v1/traces?limit=${limit}`, { signal }),
   agentTraces: (agentID: string, windowStart: string, windowEnd: string, limit = 100, signal?: AbortSignal) => {
     const query = new URLSearchParams({
@@ -135,7 +127,7 @@ export const api = {
   ),
   startAgentAnalysisJob: async (
     agentID: string,
-    input: { window_start: string; window_end: string; objective?: string; pipeline?: "rsi" | "memory"; options?: Record<string, unknown>; output_language: "zh-CN" | "en" },
+    input: { window_start: string; window_end: string; objective?: string; pipeline?: "rsi"; options?: Record<string, unknown>; output_language: "zh-CN" | "en" },
     idempotencyKey: string,
   ) => normalizeAnalysisJob(
     await request<unknown>("/v1/analysis-jobs", {
@@ -144,25 +136,6 @@ export const api = {
       body: JSON.stringify({ pipeline: input.pipeline ?? "rsi", agent_id: agentID, window_start: input.window_start, window_end: input.window_end, objective: input.objective, options: input.options }),
     }),
   ),
-  startConversationMemory: (agentID: string, conversationID: string) => request<AnalysisJob>("/v1/analysis-jobs", {method:"POST",headers:{"Idempotency-Key":crypto.randomUUID()},body:JSON.stringify({pipeline:"memory",agent_id:agentID,conversation_id:conversationID})}),
-  memoryTask: (taskID: string) =>
-    request<MemoryTaskStatus>(`/v1/memories/tasks/${encodeURIComponent(taskID)}`, {
-      signal: AbortSignal.timeout(8000),
-    }),
-  memoryTasks: (limit = 20) =>
-    request<{ tasks: MemoryTaskRecord[] }>(`/v1/memories/tasks?limit=${limit}`),
-  memories: (limit = 24) => request<MemoryList>(`/v1/memories?limit=${limit}`),
-  memoryStatus: () => request<{status: string; backend: string; capabilities: string[]}>("/v1/memories/status"),
-  createMemory: (title: string, content: string) => request<MemoryRecord>("/v1/memories", {
-    method: "POST", body: JSON.stringify({title, content}),
-  }),
-  memoryGraph: (factID: string | number) =>
-    request<MemoryFactGraph>(`/v1/memories/facts/${encodeURIComponent(String(factID))}/graph`),
-  searchMemories: (query: string, topK = 8) =>
-    request<MemoryRecallBundle>("/v1/memories/search", {
-      method: "POST",
-      body: JSON.stringify({ query, top_k: topK }),
-    }),
   conversations: (limit = 100) =>
     request<{ schema: string; conversations: ConversationSummary[] }>(`/v1/conversations?limit=${limit}`),
   conversation: (agentID: string, conversationID: string) => {

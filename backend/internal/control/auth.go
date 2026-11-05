@@ -260,19 +260,6 @@ func (s *HTTPServer) githubCallback(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, http.StatusInternalServerError, "GitHub user persistence failed")
 		return
 	}
-	_, err = s.store.EnsureAgentProfile(r.Context(), AgentProfile{
-		OwnerUserID: user.ID,
-		Slug:        profileSlug(user.Login, user.GitHubID),
-		DisplayName: fmt.Sprintf("%s 的小八", user.DisplayName),
-		Bio:         "",
-		IsPublic:    false,
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	})
-	if err != nil {
-		writeProblem(w, http.StatusInternalServerError, "Agent profile persistence failed")
-		return
-	}
 	sessionToken, err := randomURLToken(32)
 	if err != nil {
 		writeProblem(w, http.StatusInternalServerError, "session generation failed")
@@ -780,8 +767,4 @@ func randomURLToken(byteCount int) (string, error) {
 func sessionTokenHash(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
-}
-
-func profileSlug(login string, githubID int64) string {
-	return strings.ToLower(login) + "-" + strconv.FormatInt(githubID, 10)
 }

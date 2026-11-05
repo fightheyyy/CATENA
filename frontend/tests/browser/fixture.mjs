@@ -80,9 +80,7 @@ export async function fixtureServer(overrides = {}) {
       }
       if (pathname === "/v1/me/llm-config") return json(res, { provider: "", base_url: "", model: "", api_key_configured: false, configured: false });
       if (pathname === "/v1/system/status") return json(res, { status: "ok", memory_store: state.memoryReady ? "available" : "unavailable", trace_store: "available" });
-      if (pathname === "/v1/memories") return state.failMemories ? json(res, { detail: "Memory query temporarily failed" }, 503) : json(res, { memories: state.memories, total: state.memories.length });
       if (pathname === "/v1/memories/tasks") return json(res, { tasks: [] });
-      if (pathname === "/v1/memories/search") return state.failSearch ? json(res, { detail: "Memory search temporarily failed" }, 503) : json(res, state.memorySearch ?? { success: true, query: "", facts: [], conversations: [], topics: [] });
       if (/^\/v1\/memories\/facts\/\d+\/graph$/.test(pathname)) {
         const factID = Number(pathname.split('/')[4]);
         return json(res, { fact_id: factID, content: state.memories.find((memory) => memory.id === String(factID))?.content ?? "Fixture memory",
