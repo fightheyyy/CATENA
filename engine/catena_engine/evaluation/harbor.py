@@ -132,6 +132,11 @@ class HarborEvaluator:
                 agent.get("n_input_tokens"),
                 agent.get("n_output_tokens"),
                 time.monotonic() - started,
+                artifact_dir=results[0].parent.relative_to(self.output).as_posix(),
+                cost_usd=agent.get("cost_usd"),
+                tool_calls=len(calls),
+                nonzero_command_exits=sum(c["exit_code"] != 0 for c in calls) if all(c["exit_code"] is not None for c in calls) else None,
+                result_sha256=hashlib.sha256(results[0].read_bytes()).hexdigest(),
             )
         finally:
             CREDENTIALS.pop(trial_id, None)

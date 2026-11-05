@@ -18,6 +18,7 @@ var (
 )
 
 type Store interface {
+	ReviewAnalysisJob(context.Context, string, string, HumanReview) (AnalysisJob, error)
 	ListArtifactsByOwner(context.Context, string, string, int) ([]Artifact, error)
 	IngestConversationMessages(context.Context, string, []ConversationMessage, time.Time) (int, int, error)
 	ListConversationSummariesByOwner(context.Context, string, string, int) ([]ConversationSummary, error)
@@ -244,7 +245,7 @@ func (s *MemoryStore) DeleteAnalysisJob(
 	if !exists || job.OwnerUserID != ownerUserID {
 		return ErrNotFound
 	}
-	if !job.State.Terminal() {
+	if !job.State.Terminal() || len(job.Reviews) > 0 {
 		return ErrConflict
 	}
 	delete(s.analysisJobs, id)

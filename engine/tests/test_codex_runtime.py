@@ -85,7 +85,7 @@ pathlib.Path({str(pid_file)!r}).write_text(str(child.pid))
 signal.signal(signal.SIGTERM, signal.SIG_IGN)
 time.sleep(60)"""
     )
-    turn_payload["timeout_ms"] = 300
+    turn_payload["timeout_ms"] = 1500
     result = asyncio.run(run_turn(parse_turn_request(turn_payload)))
     assert result["reason_code"] == "timeout"
     pid = int(pid_file.read_text())

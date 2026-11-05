@@ -34,7 +34,10 @@ export type Artifact = {
  id: string; job_id: string; type: string; schema_version: string; evidence_refs: string[]; payload: unknown; provenance: unknown; validation_status: string; created_at: string;
 };
 
+export type HumanReview = { artifact_id: string; decision: "adopt" | "reject"; reason: string; reviewer: string; created_at: string };
+
 export type AnalysisJob = {
+ reviews?: HumanReview[]; checkpoint?: unknown;
  schema?: string; job_id: string; pipeline?: string; adapter?: string; artifacts: Artifact[];
  state: string; attempt?: number; next_attempt_at?: string; cancel_requested?: boolean; error?: string;
  source_kind?: string; source_trace_id?: string; source_trace_ids: string[]; source_agent_id?: string; source_conversation_id?: string;
@@ -143,55 +146,6 @@ export type AgentTraceWindow = {
   window_start: string;
   window_end: string;
   traces: TraceSummary[];
-};
-
-export type ConversationContentPart = {
-  type: "text" | "file";
-  text?: string;
-  name?: string;
-  ref?: string;
-  mime_type?: string;
-};
-
-export type ConversationMessage = {
-  schema: "xiaoba.conversation_message.v1";
-  message_id: string;
-  conversation_id: string;
-  sequence: number;
-  occurred_at: string;
-  received_at?: string;
-  runtime: "xiaobaos";
-  agent_id: string;
-  agent_name?: string;
-  surface: "cli" | "feishu" | "weixin" | "pet";
-  role: "user" | "assistant";
-  role_name?: string;
-  content: ConversationContentPart[];
-  delivery: {
-    status: "received" | "delivered";
-    platform_message_ids?: string[];
-  };
-  trace_id?: string;
-};
-
-export type ConversationSummary = {
-  conversation_id: string;
-  agent_id: string;
-  agent_name?: string;
-  runtime: "xiaobaos";
-  surface: ConversationMessage["surface"];
-  title: string;
-  message_count: number;
-  user_message_count: number;
-  last_visible_message_preview?: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type ConversationDocument = {
-  schema: "catena.conversation.v1";
-  conversation: ConversationSummary;
-  messages: ConversationMessage[];
 };
 
 export type WorkspaceData = {

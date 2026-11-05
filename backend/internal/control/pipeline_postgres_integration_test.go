@@ -140,3 +140,46 @@ func TestV2MigrationPreservesLegacyDocumentAndRetiresOnlyActiveJobs(t *testing.T
 		t.Fatal("fresh V2 creates retired tables", err)
 	}
 }
+
+func TestRebirthMigrationRetiresOnlyActiveMemoryAndPreservesHistory(t *testing.T) {
+	store, _ := isolatedQueuePostgres(t)
+	ctx := context.Background()
+	active, terminal, rsi := seedQueueJob(t, store), seedQueueJob(t, store), seedQueueJob(t, store)
+	for _, job := range []AnalysisJob{active, terminal} {
+		job.Pipeline = "memory"
+		job.Checkpoint = json.RawMessage(`{"provider_task_id":"preserve-this"}`)
+		if job.ID == terminal.ID {
+			job.State = AnalysisJobCompleted
+		}
+		if err := store.UpdateAnalysisJob(ctx, job); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := store.db.ExecContext(ctx, `DELETE FROM catena_schema_migrations WHERE version=3`); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := store.migrate(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, job := range []AnalysisJob{active, terminal, rsi} {
+		saved, err := store.GetAnalysisJob(ctx, job.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected := job.State
+		if job.ID == active.ID {
+			expected = AnalysisJobFailed
+		}
+		if job.ID == terminal.ID {
+			expected = AnalysisJobCompleted
+		}
+		if saved.State != expected {
+			t.Fatalf("%s: %s", job.ID, saved.State)
+		}
+		if job.ID != rsi.ID && !bytes.Contains(saved.Checkpoint, []byte("preserve-this")) {
+			t.Fatal("provider checkpoint lost")
+		}
+	}
+}

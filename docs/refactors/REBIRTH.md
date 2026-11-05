@@ -59,3 +59,35 @@ Python 54 PASS / 1 existing timeout test FAIL (same failure as baseline: child P
 file absent at 300ms). Provider-specific tests removed, not counted as new coverage.
 DB migration execution and Docker image checks remain BLOCKED by absent services.
 Next: eliminate CATENA Registry/composition and require post-freeze Harbor comparison.
+
+## Phase 3 — Integrate Upstream
+
+Removed `rsi/registry.py`, Algorithm/RSIAdapter/OptimizationServices protocols and
+CATENA parallel/sequential orchestration. One concrete Harness² integration calls
+the pinned upstream scheduler; upstream's native search options remain intact.
+Preserved budget, cancellation, owner credentials, file whitelist and Harbor Case
+fingerprints. Engine base package now uses only the standard library; deleted its
+unused direct httpx dependency. Optional Harbor dependencies remain upstream-owned.
+
+Changed Engine request to v2 (`harness2` options only); old algorithm/composition
+inputs fail explicitly. Case manifests now require actual `confirmed_by` records.
+Every candidate is frozen before fresh Harbor baseline/candidate comparisons,
+including the optimization Case; distinct held-out Cases are optional and labeled.
+Trial summaries retain provider costs if known, measured tokens/time/command exits,
+raw artifact directories and result hashes. Go persists full comparison provenance
+and failure checkpoints. Added immutable owner-scoped human reviews in the existing
+Job document, with PostgreSQL row locking; no second state machine or review DB.
+React uses its existing Analysis workspace for Compare/Review and baseline text.
+
+Checks: 54 Python tests PASS, including pinned real upstream Harness² scheduler
+with synthetic model/evaluator responses (integration contract, NOT quality proof).
+Go unit/vet PASS; PostgreSQL + ClickHouse + race + cross-process protocol suite PASS
+on isolated Docker containers after Docker Desktop was started at user request.
+React typecheck/build and 11 browser journeys PASS. The former 300ms timeout test
+now allows 1500ms to start its interpreter/child; process-tree cleanup still checked.
+An additional Memory-retirement migration test is included in stabilization checks.
+
+Real E2E remains pending: Docker is now available and Engine image building.
+Local API-key environment is absent, prior proxy has no auth files/service, and
+Codex's local auth file is subscription auth rather than an owner API Key.
+No model credentials have been printed or copied into tracked files.

@@ -160,6 +160,7 @@ type AnalysisEvidencePack struct {
 }
 
 type AnalysisJob struct {
+	Reviews              []HumanReview   `json:"reviews,omitempty"`
 	SourceConversationID string          `json:"source_conversation_id,omitempty"`
 	Pipeline             string          `json:"pipeline,omitempty"`
 	Adapter              string          `json:"adapter,omitempty"`

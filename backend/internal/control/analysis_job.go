@@ -61,7 +61,7 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 		}
 		for key := range options {
 			switch key {
-			case "case_id", "baseline", "algorithms", "composition", "budget", "validation_case_ids":
+			case "case_id", "baseline", "harness2", "budget", "validation_case_ids":
 			default:
 				writeProblem(w, 400, "unsupported RSI option")
 				return
@@ -153,7 +153,7 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	}
 	for key := range payload {
 		switch key {
-		case "case_id", "baseline", "algorithms", "composition", "budget", "validation_case_ids":
+		case "case_id", "baseline", "harness2", "budget", "validation_case_ids":
 		default:
 			return errors.New("unsupported RSI option")
 		}
@@ -164,9 +164,6 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	if payload["baseline"] == nil {
 		payload["baseline"] = map[string]string{"AGENTS.md": "Complete the supplied task faithfully."}
 	}
-	if payload["algorithms"] == nil {
-		payload["algorithms"] = []any{map[string]any{"name": job.Adapter}}
-	}
 	credentials, err := s.analysisModelCredentials(ctx, job.OwnerUserID)
 	if err != nil {
 		return err
@@ -174,7 +171,7 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	evidence, _ := json.Marshal(map[string]any{"pack": job.EvidencePack, "objective": job.Objective})
 	payload["evidence"] = string(evidence)
 	payload["evidence_refs"] = analysisJobTraceIDs(job)
-	payload["schema"] = "catena.rsi_request.v1"
+	payload["schema"] = "catena.rsi_request.v2"
 	payload["request_id"] = job.ID
 	payload["model"] = map[string]string{"provider": credentials.Provider, "base_url": credentials.BaseURL, "model": credentials.Model, "api_key": credentials.APIKey}
 	job.State = AnalysisJobRunning
@@ -195,20 +192,34 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	var out struct {
 		Status     string            `json:"status"`
 		Candidates []json.RawMessage `json:"candidates"`
-		Trials     []json.RawMessage `json:"trials"`
-		Validation []string          `json:"validation_case_ids"`
 	}
-	if err = json.Unmarshal(result, &out); err != nil || out.Status != "completed" || len(out.Candidates) == 0 {
-		return errors.New("RSI execution failed; no candidate adopted")
+	if err = json.Unmarshal(result, &out); err != nil {
+		return errors.New("invalid RSI result")
 	}
 	job.Checkpoint = result
+	if out.Status != "completed" || len(out.Candidates) == 0 {
+		if err = s.saveAnalysisProgress(ctx, lease, job); err != nil {
+			return err
+		}
+		return errors.New("RSI execution failed; retained trial evidence requires review")
+	}
 	job.Artifacts = []Artifact{}
+	var provenanceFields map[string]json.RawMessage
+	json.Unmarshal(result, &provenanceFields)
+	provenanceFields["evidence_sha256"], _ = json.Marshal(job.EvidencePack.SHA256)
+	provenanceFields["execution_id"], _ = json.Marshal(job.ID)
+	provenance, _ := json.Marshal(provenanceFields)
 	for i, payload := range out.Candidates {
 		status := "unverified"
-		if len(out.Validation) > 0 && len(out.Trials) > 0 {
+		var candidate struct {
+			ID string `json:"id"`
+		}
+		if json.Unmarshal(payload, &candidate) != nil || candidate.ID == "" {
+			return errors.New("invalid candidate identity")
+		}
+		if hasComparison(result, candidate.ID) {
 			status = "review_required"
 		}
-		provenance, _ := json.Marshal(map[string]any{"pipeline": "rsi", "adapter": job.Adapter, "evidence_sha256": job.EvidencePack.SHA256, "evaluation": out.Trials, "execution_id": job.ID})
 		digest := sha256.Sum256([]byte(fmt.Sprintf("%s:%d", job.ID, i)))
 		job.Artifacts = append(job.Artifacts, Artifact{ID: "artifact-" + hex.EncodeToString(digest[:16]), OwnerID: job.OwnerUserID, JobID: job.ID, Type: "rsi_candidate", SchemaVersion: "catena.artifact.v1", EvidenceRefs: analysisJobTraceIDs(job), Payload: payload, Provenance: provenance, ValidationStatus: status, CreatedAt: time.Now().UTC()})
 	}

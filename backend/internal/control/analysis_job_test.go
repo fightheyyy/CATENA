@@ -31,7 +31,11 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 		var payload map[string]any
 		json.NewDecoder(r.Body).Decode(&payload)
 		calls++
-		writeJSON(w, 200, map[string]any{"request_id": payload["request_id"], "state": "completed", "output": map[string]any{"status": "completed", "candidates": []any{map[string]any{"id": "candidate-version", "files": map[string]string{"AGENTS.md": "Check tools"}}}, "trials": []any{map[string]any{"phase": "validation", "valid": true, "rewards": map[string]int{"reward": 1}}}, "validation_case_ids": []string{"heldout"}}})
+		var output map[string]any
+		json.Unmarshal(comparisonFixture(), &output)
+		output["status"] = "completed"
+		output["candidates"] = []any{map[string]any{"id": "candidate-version", "files": map[string]string{"AGENTS.md": "Check tools"}}}
+		writeJSON(w, 200, map[string]any{"request_id": payload["request_id"], "state": "completed", "output": output})
 	}))
 	defer engine.Close()
 	manager, _ := NewEngineClient(EngineConfig{URL: engine.URL, Token: "private"})

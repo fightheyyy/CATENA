@@ -182,7 +182,7 @@ test("Workspace retains exact recent evidence and analysis links", async (t) => 
   const history = page.locator(".proactive-list").filter({ has: page.getByRole("heading", { name: "最近经历", exact: true }) });
   const analyses = page.locator(".proactive-list").filter({ has: page.getByRole("heading", { name: /^分析记录/ }) });
   await visible(history.getByRole("button").first());
-  assert.deepEqual(await page.locator(".sidebar nav button").allTextContents(), ["工作台", "经历", "记忆", "产出"]);
+  assert.deepEqual(await page.locator(".sidebar nav button").allTextContents(), ["工作台", "经历", "产出"]);
   assert.equal(await history.getByRole("button").count(), 4);
   assert.equal(await history.locator("small").first().innerText(), state.traces[0].input_preview);
   await noOverflow(page);
@@ -210,7 +210,7 @@ test("Workspace retains analyses when history fails and can retry the failed rea
   assert.equal(await page.getByRole("alert").filter({ hasText: "Trace query temporarily failed" }).count(), 0);
 });
 
-test("Mobile navigation stays reachable and legacy conversation links retain History selection", async (t) => {
+test("Mobile navigation stays reachable and retired conversation links return home", async (t) => {
   const { page, origin, state } = await setup(t, { viewport: { width: 390, height: 844 } });
   populateWorkspace(state);
   await page.goto(origin);
@@ -223,8 +223,8 @@ test("Mobile navigation stays reachable and legacy conversation links retain His
   await visible(page.locator(".trace-index"));
   await page.goto(origin + "/conversations");
   await page.waitForURL(/conversations/);
-  await visible(page.locator(".conversation-index"));
-  assert.equal(await page.locator('.sidebar nav [aria-current="page"]').innerText(), "经历");
+  await visible(page.locator(".proactive-page"));
+  assert.equal(await page.locator('.sidebar nav [aria-current="page"]').innerText(), "工作台");
   await noOverflow(page);
 });
 

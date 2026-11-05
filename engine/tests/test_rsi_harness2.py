@@ -6,9 +6,8 @@ pytest.importorskip("harness2")
 
 from test_rsi import Evaluator, context
 
-from catena_engine.rsi.contracts import Algorithm, Budget, Completion, OptimizationError
+from catena_engine.rsi.contracts import Budget, Completion, OptimizationError
 from catena_engine.rsi.host import Services, optimize
-from catena_engine.rsi.registry import default_registry
 
 
 class Editor:
@@ -37,10 +36,10 @@ class Editor:
 def test_upstream_loop_uses_host_and_keeps_grades_out(mode, k):
     ctx, editor, evaluator = context(), Editor(), Evaluator()
     services = Services(ctx, editor, evaluator, Budget(20, 16, 10))
-    result = optimize(ctx, [Algorithm("harness2", {"mode": mode, "k": k})], "sequential", default_registry(), services)
+    result = optimize(ctx, {"mode": mode, "k": k}, services)
     candidate = result["candidates"][0]
     assert candidate["files"]["AGENTS.md"] == "Check available tools; use portable search."
-    ledger = result["algorithms"][0]["diagnostics"]["ledger"]
+    ledger = result["harness2"]["diagnostics"]["ledger"]
     assert (ledger["R"], ledger["P"]) == (4 * k, 3 * k)
     assert len(evaluator.seen) == 4 * k
     assert services.calls == 3 * k + 1 + (1 if k > 1 else 0)
@@ -50,19 +49,10 @@ def test_upstream_loop_uses_host_and_keeps_grades_out(mode, k):
     assert "Observed repeated search." in editor.prompts[0]
 
 
-def test_harness2_adapters_can_be_composed_in_parallel():
-    ctx = context()
-    services = Services(ctx, Editor(), Evaluator(), Budget(10, 8, 10))
-    result = optimize(ctx, [Algorithm("harness2"), Algorithm("harness2")], "parallel", default_registry(), services)
-    assert len(result["candidates"]) == 2
-    assert services.calls == services.attempted_trials == 8
-    assert all(c["parents"] == [ctx.baseline.id] for c in result["candidates"])
-
-
 def test_failure_cannot_publish_a_fallback_candidate():
     services = Services(context(), Editor(), Evaluator(), Budget(12, 3, 10))
     with pytest.raises(OptimizationError):
-        optimize(context(), [Algorithm("harness2")], "sequential", default_registry(), services)
+        optimize(context(), {}, services)
     assert services.attempted_trials == 0
 
 
@@ -73,7 +63,7 @@ def test_upstream_cannot_emit_scripts_or_hooks():
 
     services = Services(context(), Unsafe(), Evaluator(), Budget())
     with pytest.raises(OptimizationError):
-        optimize(context(), [Algorithm("harness2")], "sequential", default_registry(), services)
+        optimize(context(), {}, services)
     assert services.attempted_trials == 1
 
 
@@ -109,13 +99,13 @@ def test_private_http_runs_registered_algorithm_and_persists_private_report(monk
         directory.mkdir()
         (directory / "task.toml").write_text('schema_version = "1.4"\n')
         (directory / "instruction.md").write_text("Inspect signed amounts.")
-        cases[name] = {"path": str(directory), "sha256": task_digest(directory)}
+        cases[name] = {"path": str(directory), "sha256": task_digest(directory), "confirmed_by": "protocol-fixture"}
     manifest = tmp_path / "cases.json"
     manifest.write_text(json.dumps(cases))
     monkeypatch.setenv("CATENA_RSI_CASES_MANIFEST", str(manifest))
     monkeypatch.setenv("CATENA_RSI_RUNS_ROOT", str(tmp_path / "runs"))
     request = payload()
-    request["algorithms"] = [{"name": "harness2", "options": {"k": 1}}]
+    request["harness2"] = {"k": 1}
     request["validation_case_ids"] = ["heldout"]
     request["model"]["api_key"] = "APIKEY_DO_NOT_PERSIST"
     server = create_server("127.0.0.1:0", token="private", receipt_root=tmp_path / "receipts")
@@ -127,8 +117,8 @@ def test_private_http_runs_registered_algorithm_and_persists_private_report(monk
         assert result["status"] == "completed"
         assert result["decision"] == "review_required"
         assert result["usage"]["model_calls"] == 4
-        assert result["usage"]["attempted_trials"] == 6
-        assert [t["phase"] for t in result["trials"]] == ["probe"] * 4 + ["validation"] * 2
+        assert result["usage"]["attempted_trials"] == 8
+        assert [t["phase"] for t in result["trials"]] == ["probe"] * 4 + ["validation"] * 4
         report = tmp_path / "runs" / result["experiment_id"] / "result.json"
         assert json.loads(report.read_text()) == result
         assert report.stat().st_mode & 0o777 == 0o600

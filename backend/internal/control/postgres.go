@@ -240,7 +240,8 @@ func (s *PostgresStore) DeleteAnalysisJob(
 DELETE FROM spiral_evolution_jobs
 WHERE job_id=$1
   AND COALESCE(owner_user_id,'')=$2
-  AND state IN ('completed','failed')`, id, ownerUserID)
+  AND state IN ('completed','failed','cancelled')
+  AND jsonb_array_length(COALESCE(document->'reviews','[]'::jsonb))=0`, id, ownerUserID)
 	if err != nil {
 		return mapStoreError(err)
 	}
@@ -252,7 +253,7 @@ WHERE job_id=$1
 	if lookupErr != nil || job.OwnerUserID != ownerUserID {
 		return ErrNotFound
 	}
-	if !job.State.Terminal() {
+	if !job.State.Terminal() || len(job.Reviews) > 0 {
 		return ErrConflict
 	}
 	return ErrNotFound

@@ -5,7 +5,6 @@ import pytest
 from catena_engine.rsi.api import parse, run_and_validate
 from catena_engine.rsi.contracts import (
     SCHEMA,
-    Algorithm,
     Budget,
     Candidate,
     Completion,
@@ -16,7 +15,6 @@ from catena_engine.rsi.contracts import (
     Trial,
 )
 from catena_engine.rsi.host import Services, optimize
-from catena_engine.rsi.registry import Registry
 
 
 class Runtime:
@@ -73,32 +71,28 @@ def context():
     return Context("request", "training", Candidate({"AGENTS.md": "Follow the task."}), "Observed repeated search.")
 
 
-def registry():
-    result = Registry()
-    result.register(Strategy())
-    return result
+@pytest.fixture
+def single_harness(monkeypatch):
+    from catena_engine.rsi import host
+    monkeypatch.setattr(host, "Harness2Adapter", Strategy)
 
 
-@pytest.mark.parametrize("composition", ["sequential", "parallel"])
-def test_composition_shares_budgets_and_tracks_lineage(composition):
+def test_single_candidate_keeps_lineage_and_limits(single_harness):
     ctx = context()
-    services = Services(ctx, Runtime(), Evaluator(), Budget(2, 2, 5))
-    result = optimize(ctx, [Algorithm("custom"), Algorithm("custom")], composition, registry(), services)
-    first, second = result["candidates"]
-    assert first["parents"] == [ctx.baseline.id]
-    assert second["parents"] == ([first["id"]] if composition == "sequential" else [ctx.baseline.id])
-    assert result["usage"]["model_calls"] == result["usage"]["attempted_trials"] == 2
+    services = Services(ctx, Runtime(), Evaluator(), Budget(1, 1, 5))
+    result = optimize(ctx, {}, services)
+    assert len(result["candidates"]) == 1
+    assert result["candidates"][0]["parents"] == [ctx.baseline.id]
+    assert result["candidates"][0]["status"] == "unverified"
     assert result["decision"] == "evidence_insufficient"
-    assert all(c["status"] == "unverified" for c in result["candidates"])
+    assert result["usage"]["model_calls"] == result["usage"]["attempted_trials"] == 1
 
 
-def test_all_strategies_are_preflighted_before_model_calls():
+def test_preflight_rejects_before_paid_work(single_harness):
     services = Services(context(), Runtime(), Evaluator(), Budget())
-    with pytest.raises(OptimizationError, match="unknown RSI"):
-        optimize(context(), [Algorithm("custom"), Algorithm("missing")], "sequential", registry(), services)
-    assert services.calls == 0
-    with pytest.raises(OptimizationError, match="duplicate"):
-        registry().register(Strategy())
+    with pytest.raises(OptimizationError, match="unknown option"):
+        optimize(context(), {"unknown": True}, services)
+    assert services.calls == services.attempted_trials == 0
 
 
 @pytest.mark.parametrize("kind", ["calls", "trials", "deadline", "cancel"])
@@ -129,12 +123,12 @@ def test_failed_calls_count_and_do_not_leak_provider_errors():
     assert services.calls == 1
 
 
-def test_validation_is_reserved_and_happens_after_candidate_freeze():
+def test_validation_is_reserved_and_happens_after_candidate_freeze(single_harness):
     ctx = context()
-    services = Services(ctx, Runtime(), Evaluator(), Budget(1, 3, 5), reserved_trials=2)
-    result = run_and_validate(ctx, [Algorithm("custom")], "sequential", registry(), services, ["heldout"])
-    assert [t["case_id"] for t in result["trials"]] == ["training", "heldout", "heldout"]
-    assert [t["phase"] for t in result["trials"]] == ["probe", "validation", "validation"]
+    services = Services(ctx, Runtime(), Evaluator(), Budget(1, 5, 5), reserved_trials=4)
+    result = run_and_validate(ctx, {}, services, ["heldout"])
+    assert [t["case_id"] for t in result["trials"]] == ["training", "training", "training", "heldout", "heldout"]
+    assert [t["phase"] for t in result["trials"]] == ["probe"] + ["validation"] * 4
     assert result["decision"] == "review_required"
     assert "heldout" not in "".join(services.runtime.prompts)
 
@@ -176,7 +170,7 @@ def payload():
         "request_id": "rsi-1",
         "case_id": "training",
         "baseline": {"AGENTS.md": "Follow the task."},
-        "algorithms": [{"name": "custom"}],
+        "harness2": {},
         "model": {
             "provider": "openai",
             "base_url": "https://example.test/v1",
@@ -190,13 +184,14 @@ def payload():
     "patch",
     [
         {"case_id": "../outside"},
-        {"algorithms": [{"name": "custom", "options": []}]},
+        {"harness2": []},
         {"budget": {"trials": True}},
         {"budget": {"model_calls": 0}},
         {"validation_case_ids": ["training"]},
         {"validation_case_ids": ["heldout", "heldout"]},
         {"shell_command": "arbitrary"},
         {"algorithms": []},
+        {"composition": "parallel"},
     ],
 )
 def test_invalid_requests_fail_before_execution(patch):
@@ -235,33 +230,14 @@ def test_inflight_cancellation_awaits_operation_cleanup():
     assert stopped.is_set()
 
 
-def test_parallel_failure_cancels_siblings_before_pool_drain():
-    import threading
-
-    started = threading.Event()
-
-    class Broken(Strategy):
-        name = "broken"
-
-        def requirements(self, options):
-            return Requirements(0, 0)
-
-        def optimize(self, ctx, services, options):
-            assert started.wait(1)
-            raise OptimizationError("rejected edit")
-
-    class Waiting(Broken):
-        name = "waiting"
-
-        def optimize(self, ctx, services, options):
-            started.set()
-            assert services.cancelled.wait(1), "parallel sibling was not cancelled"
-            raise OptimizationError("cancelled")
-
-    reg = Registry()
-    reg.register(Broken())
-    reg.register(Waiting())
-    services = Services(context(), Runtime(), Evaluator(), Budget())
-    with pytest.raises(OptimizationError, match="rejected edit"):
-        optimize(context(), [Algorithm("broken"), Algorithm("waiting")], "parallel", reg, services)
-    assert services.calls == services.attempted_trials == 0
+def test_compare_without_heldout_is_explicit_about_limits(single_harness):
+    ctx = context()
+    services = Services(ctx, Runtime(), Evaluator(), Budget(1, 3, 5), reserved_trials=2)
+    result = run_and_validate(ctx, {}, services, [])
+    assert result["decision"] == "review_required"
+    pair, = result["compare"]
+    assert pair["held_out"] is False
+    assert pair["baseline"]["candidate_id"] == ctx.baseline.id
+    assert pair["candidate"]["candidate_id"] == result["candidates"][0]["id"]
+    assert pair["baseline"]["cost_usd"] is None
+    assert "HIDDEN_VERIFIER_SENTINEL" not in "".join(services.runtime.prompts)

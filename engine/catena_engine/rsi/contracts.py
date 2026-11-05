@@ -7,9 +7,9 @@ import json
 import re
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Any, Protocol
+from typing import Any
 
-SCHEMA = "catena.rsi_request.v1"
+SCHEMA = "catena.rsi_request.v2"
 RESULT_SCHEMA = "catena.rsi_result.v1"
 _SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
 _SKILL = re.compile(r"\.agents/skills/[a-z0-9][a-z0-9_-]*/SKILL\.md\Z")
@@ -82,12 +82,6 @@ class Budget:
 
 
 @dataclass(frozen=True)
-class Algorithm:
-    name: str
-    options: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
 class Requirements:
     model_calls: int
     trials: int
@@ -126,32 +120,14 @@ class Trial:
     output_tokens: int | None = None
     seconds: float | None = None
     phase: str = "probe"
-
-
-class OptimizationServices(Protocol):
-    """Only host-mediated model calls and probes; no arbitrary paths or graders."""
-
-    def complete(self, prompt: str) -> Completion: ...
-
-    def probe(self, candidate: Candidate) -> Trial: ...
-
-    def task_prompt(self) -> str: ...
+    artifact_dir: str | None = None
+    cost_usd: float | None = None
+    tool_calls: int | None = None
+    nonzero_command_exits: int | None = None
+    result_sha256: str | None = None
 
 
 @dataclass(frozen=True)
 class OptimizationResult:
     candidates: tuple[Candidate, ...]
     diagnostics: dict[str, Any] = field(default_factory=dict)
-
-
-class RSIAdapter(Protocol):
-    name: str
-    version: str
-
-    def validate(self, options: dict[str, Any]) -> None: ...
-
-    def requirements(self, options: dict[str, Any]) -> Requirements: ...
-
-    def optimize(
-        self, context: Context, services: OptimizationServices, options: dict[str, Any]
-    ) -> OptimizationResult: ...

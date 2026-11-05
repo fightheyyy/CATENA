@@ -3,8 +3,6 @@ import type {
   AgentTraceWindow,
   RegisteredAgent,
   RegisteredAgentConnection,
-  ConversationDocument,
-  ConversationSummary,
   AnalysisJob,
   AnalysisModelSettings,
   Session,
@@ -60,6 +58,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  reviewAnalysisJob: async (jobID: string, artifactID: string, decision: "adopt" | "reject", reason: string) => normalizeAnalysisJob(
+    await request<unknown>(`/v1/analysis-jobs/${encodeURIComponent(jobID)}/reviews`, { method: "POST", body: JSON.stringify({ artifact_id: artifactID, decision, reason }) }),
+  ),
  evaluationCases: () => request<{cases:{id:string}[]}>("/v1/evaluation-cases"),
   session: () => request<Session>("/v1/auth/session"),
   logout: () => request<void>("/v1/auth/logout", { method: "POST" }),
@@ -136,14 +137,6 @@ export const api = {
       body: JSON.stringify({ pipeline: input.pipeline ?? "rsi", agent_id: agentID, window_start: input.window_start, window_end: input.window_end, objective: input.objective, options: input.options }),
     }),
   ),
-  conversations: (limit = 100) =>
-    request<{ schema: string; conversations: ConversationSummary[] }>(`/v1/conversations?limit=${limit}`),
-  conversation: (agentID: string, conversationID: string) => {
-    const query = new URLSearchParams({ agent_id: agentID });
-    return request<ConversationDocument>(
-      `/v1/conversations/${encodeURIComponent(conversationID)}?${query}`,
-    );
-  },
   apiTokens: () => request<{ api_tokens: ApiToken[] }>("/v1/me/api-tokens"),
   createApiToken: (name: string) =>
     request<{ api_token: ApiToken; token: string }>("/v1/me/api-tokens", {

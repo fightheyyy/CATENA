@@ -1,35 +1,21 @@
-"""Shared budgets and composition; algorithms cannot choose arbitrary executors."""
+"""Budget, cancellation and trial evidence for the single Harness² integration."""
 
 from __future__ import annotations
 
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, replace
-from typing import Protocol
 
 from .contracts import (
     RESULT_SCHEMA,
-    Algorithm,
     Budget,
     Candidate,
     Completion,
     Context,
     OptimizationError,
-    OptimizationResult,
     Trial,
 )
-from .registry import Registry
-
-
-class Runtime(Protocol):
-    def complete(self, prompt: str, timeout: float, cancelled: threading.Event) -> Completion: ...
-
-
-class Evaluator(Protocol):
-    def task_prompt(self, case_id: str) -> str: ...
-
-    def probe(self, case_id: str, candidate: Candidate, timeout: float, cancelled: threading.Event) -> Trial: ...
+from .harness2 import Harness2Adapter
 
 
 def trial_summary(trial: Trial) -> dict:
@@ -37,10 +23,10 @@ def trial_summary(trial: Trial) -> dict:
 
 
 class Services:
-    """One ledger and one execution slot shared across all composed algorithms."""
+    """Enforce limits at paid-operation boundaries, including failed attempts."""
 
     def __init__(
-        self, context: Context, runtime: Runtime, evaluator: Evaluator, budget: Budget, reserved_trials: int = 0
+        self, context: Context, runtime, evaluator, budget: Budget, reserved_trials: int = 0
     ):
         self.context, self.runtime, self.evaluator, self.budget = context, runtime, evaluator, budget
         self.deadline = time.monotonic() + budget.seconds
@@ -137,72 +123,37 @@ class Services:
         }
 
 
-def preflight(
-    algorithms: list[Algorithm], composition: str, registry: Registry, budget: Budget, reserved_trials: int = 0
-):
-    if composition not in ("sequential", "parallel") or not 1 <= len(algorithms) <= 4:
-        raise OptimizationError("select sequential/parallel composition and 1–4 algorithms")
-    # Validate every adapter before the first potentially billable operation.
-    for spec in algorithms:
-        registry.get(spec.name).validate(spec.options)
-    required = [registry.get(spec.name).requirements(spec.options) for spec in algorithms]
-    if sum(r.model_calls for r in required) > budget.model_calls:
-        raise OptimizationError("model-call budget does not cover adapter requirements")
-    if sum(r.trials for r in required) + reserved_trials > budget.trials:
-        raise OptimizationError("trial budget does not cover adapter requirements and validation")
+def preflight(options: dict, budget: Budget, reserved_trials: int = 0):
+    harness = Harness2Adapter()
+    harness.validate(options)
+    required = harness.requirements(options)
+    if required.model_calls > budget.model_calls:
+        raise OptimizationError("model-call budget does not cover Harness2 requirements")
+    if required.trials + reserved_trials > budget.trials:
+        raise OptimizationError("trial budget does not cover Harness2 and comparison")
 
 
-def optimize(
-    context: Context, algorithms: list[Algorithm], composition: str, registry: Registry, services: Services
-) -> dict:
-    preflight(algorithms, composition, registry, services.budget, services.reserved_trials)
-    results: list[OptimizationResult] = []
-    candidates: list[Candidate] = []
-
-    def run(spec: Algorithm, ctx: Context) -> OptimizationResult:
-        try:
-            services.remaining()
-            result = registry.get(spec.name).optimize(ctx, services, dict(spec.options))
-            services.remaining()
-            if len(result.candidates) != 1:
-                raise OptimizationError("RSI adapters must produce exactly one candidate per invocation")
-            for candidate in result.candidates:
-                if ctx.baseline.id not in candidate.parents:
-                    raise OptimizationError("candidate must cite its input harness as a parent")
-            return result
-        except BaseException:
-            # Stop siblings, including an in-flight hosted operation, before
-            # draining the pool. A rejected branch must not leave paid work running.
-            services.cancelled.set()
-            raise
-
-    if composition == "sequential":
-        current = context
-        for spec in algorithms:
-            result = run(spec, current)
-            results.append(result)
-            candidates.extend(result.candidates)
-            if len(result.candidates) != 1:
-                raise OptimizationError("sequential stages must produce exactly one candidate")
-            current = replace(context, baseline=result.candidates[0])
-    else:
-        # Algorithms can reason concurrently; expensive host operations share one slot.
-        with ThreadPoolExecutor(max_workers=len(algorithms)) as pool:
-            results = list(pool.map(lambda spec: run(spec, context), algorithms))
-        candidates = [candidate for result in results for candidate in result.candidates]
+def optimize(context: Context, options: dict, services: Services) -> dict:
+    preflight(options, services.budget, services.reserved_trials)
+    harness = Harness2Adapter()
+    try:
+        services.remaining()
+        result = harness.optimize(context, services, options)
+        services.remaining()
+        if len(result.candidates) != 1 or context.baseline.id not in result.candidates[0].parents:
+            raise OptimizationError("Harness2 must return one candidate citing its baseline")
+    except BaseException:
+        services.cancelled.set()
+        raise
     return {
         "schema": RESULT_SCHEMA,
         "request_id": context.request_id,
         "status": "completed",
         "decision": "evidence_insufficient",
-        "composition": composition,
         "evidence_refs": list(context.evidence_refs),
         "baseline_id": context.baseline.id,
-        "candidates": [c.to_dict() for c in candidates],
+        "candidates": [c.to_dict() for c in result.candidates],
         "usage": services.usage(),
         "trials": [trial_summary(t) for t in services.trials],
-        "algorithms": [
-            {"name": s.name, "version": registry.get(s.name).version, "diagnostics": r.diagnostics}
-            for s, r in zip(algorithms, results, strict=True)
-        ],
+        "harness2": {"revision": harness.version, "diagnostics": result.diagnostics},
     }

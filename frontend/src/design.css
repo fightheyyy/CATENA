@@ -347,3 +347,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: .85; }
 @media (prefers-reduced-motion: reduce) {
 *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+.comparison-table { overflow-x: auto; }
+.comparison-table th, .comparison-table td { padding: .5rem; text-align: left; }
+.analysis-workspace pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.analysis-workspace form label { display: block; margin: .75rem 0; }

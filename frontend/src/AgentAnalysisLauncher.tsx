@@ -81,6 +81,7 @@ export function AgentAnalysisLauncher({
     agents.some((agent) => agent.agent_id === initialAgentID) ? initialAgentID ?? "" : firstAgentID,
   );
   const [preset, setPreset] = useState<AnalysisWindowPreset>("7d");
+  const [baseline, setBaseline] = useState("Complete the supplied task faithfully.");
   const [caseID, setCaseID] = useState("");
   const [cases, setCases] = useState<string[]>([]);
   useEffect(() => { void api.evaluationCases().then(r => setCases((r.cases ?? []).map((c: {id: string}) => c.id))).catch(() => setCases([])); }, []);
@@ -155,7 +156,7 @@ export function AgentAnalysisLauncher({
           setSubmitting(true);
           setSubmitError("");
           const input = {
-             options: { case_id: caseID },
+             options: { case_id: caseID, baseline: { "AGENTS.md": baseline } },
             window_start: preview.window_start,
             window_end: preview.window_end,
             output_language: locale === "zh" ? "zh-CN" as const : "en" as const,
@@ -174,6 +175,7 @@ export function AgentAnalysisLauncher({
           }
         }}>
           <div className="launcher-form-grid">
+            <label>Baseline AGENTS.md<textarea required maxLength={32768} value={baseline} onChange={e => setBaseline(e.target.value)} /></label>
             {<label>Evaluation Case<select value={caseID} onChange={e => setCaseID(e.target.value)}><option value="">Select a registered Harbor case</option>{cases.map(id => <option key={id}>{id}</option>)}</select></label>}
             <label><span>{t.agent}</span><select value={agentID} onChange={(event) => setAgentID(event.target.value)} aria-label={t.chooseAgent}>
               {agents.map((agent) => <option value={agent.agent_id} key={agent.agent_id}>{agent.display_name}</option>)}

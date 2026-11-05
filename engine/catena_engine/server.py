@@ -55,9 +55,9 @@ def create_server(address, token="", rsi_handler=None, receipt_root=None):
                         200, {"schema": "catena.engine_manifest.v2", "status": "ready", "pipelines": ["rsi"]}
                     )
                 elif self.path == "/v2/rsi/adapters":
-                    from .rsi.registry import default_registry
+                    from .rsi.harness2 import UPSTREAM_REVISION
 
-                    self._json(200, {"adapters": default_registry().describe()})
+                    self._json(200, {"adapters": [{"name": "harness2", "version": UPSTREAM_REVISION}]})
                 elif self.path == "/v2/cases":
                     path = os.environ.get("CATENA_RSI_CASES_MANIFEST")
                     cases = json.loads(Path(path).read_text(encoding="utf-8")) if path else {}

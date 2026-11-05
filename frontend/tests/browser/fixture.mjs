@@ -25,7 +25,6 @@ export async function fixtureServer(overrides = {}) {
     connected: false, failAgents: false, failConnection: false, failTrace: false, emptyTraces: false,
     holdAgents: false, heldClosed: false, failTraceList: false, failJobs: false,
     traces: structuredClone(traces), completedJob: structuredClone(completed),
-    memoryReady: false, failMemories: false, failSearch: false, memories: [], memorySearch: null, conversations: [],
     ...overrides };
   const currentJob = () => state.jobCancelled ? { ...baseJob, state: "cancelled", cancel_requested: true }
     : state.jobComplete ? state.completedJob : { ...baseJob, cancel_requested: state.jobCancelRequested };
@@ -79,15 +78,7 @@ export async function fixtureServer(overrides = {}) {
         return json(res, currentJob());
       }
       if (pathname === "/v1/me/llm-config") return json(res, { provider: "", base_url: "", model: "", api_key_configured: false, configured: false });
-      if (pathname === "/v1/system/status") return json(res, { status: "ok", memory_store: state.memoryReady ? "available" : "unavailable", trace_store: "available" });
-      if (pathname === "/v1/memories/tasks") return json(res, { tasks: [] });
-      if (/^\/v1\/memories\/facts\/\d+\/graph$/.test(pathname)) {
-        const factID = Number(pathname.split('/')[4]);
-        return json(res, { fact_id: factID, content: state.memories.find((memory) => memory.id === String(factID))?.content ?? "Fixture memory",
-          entities: [{ name: "Catena", type: "project" }, { name: "阅读体验", type: "topic" }],
-          relations: [{ source: "Catena", target: "阅读体验", type: "focuses_on", confidence: .95 }], total_entities: 2, total_relations: 1 });
-      }
-      if (pathname === "/v1/conversations") return json(res, { conversations: state.conversations });
+      if (pathname === "/v1/system/status") return json(res, { status: "ok", trace_store: "available" });
       // Unrelated legacy endpoints deliberately fail, exposing accidental global fan-out.
       return json(res, { detail: "Unrelated fixture endpoint is unavailable" }, 503);
     }
