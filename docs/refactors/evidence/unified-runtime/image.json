@@ -1,0 +1,22 @@
+{
+  "source_sha256": {
+    "__init__.py": "fcb35be5dfd544132cb230382b4f38126c07ac21918013bb72b7541dc6cf873c",
+    "contracts.py": "eb47d81e1a455e8acdcd3d51ffb750b4152fb5f4c744cbbc4ea1030f34991da1",
+    "evaluation/__init__.py": "91f5700d33a24d177e131ce26a169bb3c59c494de330e1e2f94871af57534095",
+    "evaluation/evidence.py": "7e30a8ab26d609c00ede4df33e94c0943948be1f7a0863895810599b8c7a1cef",
+    "evaluation/harbor.py": "28c15afd0419b59672e866a74179d7d4a83f83c502d1faefca8ece6eb2403c7b",
+    "evaluation/harbor_agent.py": "8ece311643922a2d2d654321ac341434af62617b2c3a54c5be4ab4e8de51b1e8",
+    "executions.py": "e1eb201c91a760f9a2a4c0fc1f2f7b0f83cbc5275bbf97534c91a5478aab4182",
+    "improvement.py": "fb387c512cb1f8a25161b2af37281aeec853fb31e7d368669db57aef1a445bca",
+    "protocol.py": "ff7472faf167011deb8b6a78f60cb884c3e56a64f1035ef4482df244bcb52977",
+    "runtime/__init__.py": "b71796130b2520191e578a67da52b7184086c50e86c2cb3202a6a76848e3aa4b",
+    "runtime/cancellation.py": "5f5d2d82076772d840e85c3652bf10714954960be541c197872f6d347966005c",
+    "runtime/codex.py": "df4044fe1d792247988c8cf3f1bab603272271f31950fbfbc222af7f5a9eaef2",
+    "server.py": "4c19f1358b255250894f0b688332f3826e777e2512dfa20503ad072e3660a5da"
+  },
+  "skill_sha256": "9dae9b0a88cb82b2e784cd2942e51f5ac6d21bda05b2b9787f49e4ac3050e5b4",
+  "harbor": "0.23.0",
+  "codex": "codex-cli 0.160.0",
+  "harness2_installed": false,
+  "image_id": "sha256:6ee2aa1951d9927c8af76b27a2af182d7f1a52f12679b5f17f6fe4eb5ebc3bb9"
+}

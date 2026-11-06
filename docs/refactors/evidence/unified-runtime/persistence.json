@@ -1,0 +1,10 @@
+{
+  "core_restarted": true,
+  "engine_restarted": true,
+  "new_compare_artifacts_review_unchanged": true,
+  "new_decision": "reject",
+  "legacy_review_preserved": "adopt, historical Case-only decision",
+  "temporary_model_credential_removed": true,
+  "private_postgres_backup_saved": true,
+  "candidate_installed": false
+}

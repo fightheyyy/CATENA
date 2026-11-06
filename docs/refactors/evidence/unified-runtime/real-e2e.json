@@ -1,0 +1,201 @@
+{
+  "status": "engineering_e2e_completed_and_human_rejected",
+  "job_id": "analysis-job-1793925382008-bf733740e4183870",
+  "artifact_id": "artifact-e2251cb92a9bb21dbc9610b4b0de50cd",
+  "evidence_sha256": "196d2d0e06c33095db9b577bc4c8790a8dd446ee172cb5056af33abeab45f46c",
+  "evidence_refs": [
+    "89b6c10a758a66675fb5af3307972197"
+  ],
+  "case_fingerprints": {
+    "path-discovery-01": "ab833f252bb46383cd49b40fa4a54d3e329301cf4c869d1a816853e918b75eef"
+  },
+  "case_confirmations": {
+    "path-discovery-01": "Operation Rebirth chat 2026-11-06: user delegated selection of path-discovery-01 (看你); engineering E2E only"
+  },
+  "case_artifacts": {
+    "path-discovery-01": [
+      "/workspace/case/result.json"
+    ]
+  },
+  "strategy": {
+    "name": "harness-improvement",
+    "method": "Harness2-inspired; not native algorithm equivalence",
+    "skill_sha256": "9dae9b0a88cb82b2e784cd2942e51f5ac6d21bda05b2b9787f49e4ac3050e5b4"
+  },
+  "model": {
+    "model": "gpt-5.6-luna",
+    "runtime": "codex-app-server@0.160.0",
+    "provider": "openai",
+    "target_reasoning_effort": "[REDACTED]",
+    "analysis_reasoning_effort": "[REDACTED]"
+  },
+  "environment": {
+    "cpus": 1,
+    "backend": "docker",
+    "memory_mb": 1024
+  },
+  "usage": {
+    "agent_turns": 1,
+    "input_tokens": 226277,
+    "output_tokens": 705,
+    "model_requests": null,
+    "attempted_trials": 4,
+    "trial_usage_complete": true,
+    "analysis_usage_complete": true
+  },
+  "trials": [
+    {
+      "id": "47ddd85f85e24b0690fda1e7670a542f",
+      "phase": "probe",
+      "valid": true,
+      "case_id": "path-discovery-01",
+      "rewards": {
+        "reward": 1
+      },
+      "seconds": 40.450625,
+      "cost_usd": 0.00323748,
+      "tool_calls": 5,
+      "artifact_dir": "47ddd85f85e24b0690fda1e7670a542f/path-discovery-01__54CfeMJ",
+      "candidate_id": "e819152fab5134db65f8a7aca425d8ccdb7f27a49b54299c8848e1029a3fa0c5",
+      "input_tokens": 46491,
+      "output_tokens": 575,
+      "result_sha256": "36a685b63d05160ec2c1b388c949eabed3c7035ec27416caeb8fbf722fe5a10d",
+      "deliverable_sha256": {
+        "/workspace/case/result.json": "1bbb8f8ec91fdb908f8b70fcf20f4b60025d7b738aa360c338eda7a0aa4b4b0c"
+      },
+      "nonzero_command_exits": null
+    },
+    {
+      "id": "3bed08a4b5064af0a89681ad3ac35f39",
+      "phase": "probe",
+      "valid": true,
+      "case_id": "path-discovery-01",
+      "rewards": {
+        "reward": 1
+      },
+      "seconds": 31.266114,
+      "cost_usd": 0.0029308399999999992,
+      "tool_calls": 4,
+      "artifact_dir": "3bed08a4b5064af0a89681ad3ac35f39/path-discovery-01__fZXyRSZ",
+      "candidate_id": "dd8cd6225d28c2aeb256d3e80d394478774a528a031465167b3c34171411f216",
+      "input_tokens": 39421,
+      "output_tokens": 461,
+      "result_sha256": "d7f04e980a08694a39c6eb321d10f5a72b25d43f6a5271916f80ca74502c8e81",
+      "deliverable_sha256": {
+        "/workspace/case/result.json": "1bbb8f8ec91fdb908f8b70fcf20f4b60025d7b738aa360c338eda7a0aa4b4b0c"
+      },
+      "nonzero_command_exits": null
+    },
+    {
+      "id": "ff4cba298a5240a296ecf234a9d36b91",
+      "phase": "validation",
+      "valid": true,
+      "case_id": "path-discovery-01",
+      "rewards": {
+        "reward": 1
+      },
+      "seconds": 36.209806,
+      "cost_usd": 0.00321532,
+      "tool_calls": 5,
+      "artifact_dir": "ff4cba298a5240a296ecf234a9d36b91/path-discovery-01__mhAJDGz",
+      "candidate_id": "e819152fab5134db65f8a7aca425d8ccdb7f27a49b54299c8848e1029a3fa0c5",
+      "input_tokens": 46295,
+      "output_tokens": 570,
+      "result_sha256": "7560ddd5342becf5b0d5cd3de53a46143955b630e8ade12710c50b0f2d7635e2",
+      "deliverable_sha256": {
+        "/workspace/case/result.json": "1bbb8f8ec91fdb908f8b70fcf20f4b60025d7b738aa360c338eda7a0aa4b4b0c"
+      },
+      "nonzero_command_exits": null
+    },
+    {
+      "id": "23b445edbd5a47fab32e111bd013759b",
+      "phase": "validation",
+      "valid": true,
+      "case_id": "path-discovery-01",
+      "rewards": {
+        "reward": 1
+      },
+      "seconds": 35.553457,
+      "cost_usd": 0.0034072399999999997,
+      "tool_calls": 5,
+      "artifact_dir": "23b445edbd5a47fab32e111bd013759b/path-discovery-01__V5zxE2a",
+      "candidate_id": "dd8cd6225d28c2aeb256d3e80d394478774a528a031465167b3c34171411f216",
+      "input_tokens": 47545,
+      "output_tokens": 656,
+      "result_sha256": "9ccbc35b76783ff2c379cbf683b7f21a548729f171744ab82d5d94a9802a13d5",
+      "deliverable_sha256": {
+        "/workspace/case/result.json": "1bbb8f8ec91fdb908f8b70fcf20f4b60025d7b738aa360c338eda7a0aa4b4b0c"
+      },
+      "nonzero_command_exits": null
+    }
+  ],
+  "compare": [
+    {
+      "case_id": "path-discovery-01",
+      "baseline": {
+        "id": "ff4cba298a5240a296ecf234a9d36b91",
+        "phase": "validation",
+        "valid": true,
+        "case_id": "path-discovery-01",
+        "rewards": {
+          "reward": 1
+        },
+        "seconds": 36.209806,
+        "cost_usd": 0.00321532,
+        "tool_calls": 5,
+        "artifact_dir": "ff4cba298a5240a296ecf234a9d36b91/path-discovery-01__mhAJDGz",
+        "candidate_id": "e819152fab5134db65f8a7aca425d8ccdb7f27a49b54299c8848e1029a3fa0c5",
+        "input_tokens": 46295,
+        "output_tokens": 570,
+        "result_sha256": "7560ddd5342becf5b0d5cd3de53a46143955b630e8ade12710c50b0f2d7635e2",
+        "deliverable_sha256": {
+          "/workspace/case/result.json": "1bbb8f8ec91fdb908f8b70fcf20f4b60025d7b738aa360c338eda7a0aa4b4b0c"
+        },
+        "nonzero_command_exits": null
+      },
+      "held_out": false,
+      "candidate": {
+        "id": "23b445edbd5a47fab32e111bd013759b",
+        "phase": "validation",
+        "valid": true,
+        "case_id": "path-discovery-01",
+        "rewards": {
+          "reward": 1
+        },
+        "seconds": 35.553457,
+        "cost_usd": 0.0034072399999999997,
+        "tool_calls": 5,
+        "artifact_dir": "23b445edbd5a47fab32e111bd013759b/path-discovery-01__V5zxE2a",
+        "candidate_id": "dd8cd6225d28c2aeb256d3e80d394478774a528a031465167b3c34171411f216",
+        "input_tokens": 47545,
+        "output_tokens": 656,
+        "result_sha256": "9ccbc35b76783ff2c379cbf683b7f21a548729f171744ab82d5d94a9802a13d5",
+        "deliverable_sha256": {
+          "/workspace/case/result.json": "1bbb8f8ec91fdb908f8b70fcf20f4b60025d7b738aa360c338eda7a0aa4b4b0c"
+        },
+        "nonzero_command_exits": null
+      }
+    }
+  ],
+  "candidate_id": "dd8cd6225d28c2aeb256d3e80d394478774a528a031465167b3c34171411f216",
+  "candidate_content_sha256": "17075adbd1e078cace0afd4b433fbd5969b2000b3abd036f4714cdc17d708fc1",
+  "human_review": {
+    "artifact_id": "artifact-e2251cb92a9bb21dbc9610b4b0de50cd",
+    "decision": "reject",
+    "reason": "User Human Review: reject this candidate. Both arms passed 1/1 on path-discovery-01, with no held-out evidence; candidate total tokens increased about 2.9% and Harbor-reported cost about 6.0%, while duration fell about 1.8%. The AGENTS.md applies JSON output and task-text trust rules too broadly. Retain as engineering E2E evidence only; do not adopt or install.",
+    "reviewer": "local",
+    "created_at": "2026-11-06T00:41:02.909577Z"
+  },
+  "native_skill_load_confirmed": true,
+  "native_candidate_tool_calls": 1,
+  "protocol_sha256": "226e689de35ccc9cde5dfe39d48c052024eca540b6b8f6e8bf15ff4fce3ae337",
+  "candidate_installed": false,
+  "quality_improvement_established": false,
+  "limitations": [
+    "One pair per Case does not establish general improvement.",
+    "Optimization Case is reused unless distinct held-out Cases are supplied.",
+    "Analysis uses a Harness2-inspired Skill, not the original algorithm.",
+    "Missing usage/cost is unknown. No provider-enforced money or token cap.",
+    "Human review is required; no automatic installation."
+  ]
+}

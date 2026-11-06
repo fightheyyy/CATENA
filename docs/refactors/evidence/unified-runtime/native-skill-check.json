@@ -1,0 +1,7 @@
+{
+  "native_skill_body_injected": true,
+  "harbor_tool_declared": true,
+  "provider": "offline HTTP fixture",
+  "quality_evidence": false,
+  "image_id": "sha256:6ee2aa1951d9927c8af76b27a2af182d7f1a52f12679b5f17f6fe4eb5ebc3bb9"
+}

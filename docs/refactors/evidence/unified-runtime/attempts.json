@@ -1,0 +1,70 @@
+[
+  {
+    "attempt": "v1",
+    "job_id": "analysis-job-1793923792082-8f12fd51f6f1bb97",
+    "state": "completed",
+    "native_trial_results": 4,
+    "usage": {
+      "agent_turns": 1,
+      "model_requests": null,
+      "attempted_trials": 4,
+      "input_tokens": 225687,
+      "output_tokens": 1418,
+      "analysis_usage_complete": true,
+      "trial_usage_complete": true
+    },
+    "assessment": "Excluded: analysis Skill copied into target harness, despite successful verifier pair.",
+    "engineering_acceptance_evidence": false
+  },
+  {
+    "attempt": "v2",
+    "job_id": "analysis-job-1793924264180-76de4c070e41ce3b",
+    "state": "failed",
+    "native_trial_results": 2,
+    "usage": {
+      "agent_turns": 1,
+      "model_requests": null,
+      "attempted_trials": 2,
+      "input_tokens": 223987,
+      "output_tokens": 504,
+      "analysis_usage_complete": true,
+      "trial_usage_complete": true
+    },
+    "assessment": "Failed: empty final files under former full-replacement contract; external Skill also not registered.",
+    "engineering_acceptance_evidence": false
+  },
+  {
+    "attempt": "v3",
+    "job_id": "analysis-job-1793924726378-310961631fa3c1d4",
+    "state": "failed",
+    "native_trial_results": 1,
+    "usage": {
+      "agent_turns": 1,
+      "model_requests": null,
+      "attempted_trials": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "analysis_usage_complete": false,
+      "trial_usage_complete": true
+    },
+    "assessment": "Failed closed: attempted result.json edit before probe; path-only Skill input was not injected at this pin.",
+    "engineering_acceptance_evidence": false
+  },
+  {
+    "attempt": "v4",
+    "job_id": "analysis-job-1793925382008-bf733740e4183870",
+    "state": "completed",
+    "native_trial_results": 4,
+    "usage": {
+      "agent_turns": 1,
+      "model_requests": null,
+      "attempted_trials": 4,
+      "input_tokens": 226277,
+      "output_tokens": 705,
+      "analysis_usage_complete": true,
+      "trial_usage_complete": true
+    },
+    "assessment": "Completed: registered Skill, one native Harbor tool call, fresh comparison and user rejection.",
+    "engineering_acceptance_evidence": true
+  }
+]

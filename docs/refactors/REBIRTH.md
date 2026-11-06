@@ -1,5 +1,7 @@
 # CATENA — Operation Rebirth
 
+> Current execution has moved to the [unified Codex Workflow](../IMPROVEMENT_WORKFLOW.md). This report describes the historical implementation and its evidence, not the current strategy.
+
 > Follow-up: the original five-phase results below describe commit `f540c32`.
 > The upstream contract correction and its separately BLOCKED real rerun are
 > documented in [UPSTREAM_INTEGRATION.md](UPSTREAM_INTEGRATION.md). The earlier

@@ -1,5 +1,7 @@
 # Upstream integration correction
 
+> Current execution has moved to the [unified Codex Workflow](../IMPROVEMENT_WORKFLOW.md). This report describes the historical implementation and its evidence, not the current strategy.
+
 The earlier `f540c32` integration used the real upstream Harness² algorithm but
 misrepresented delivery: a final assistant reply became a fabricated `answer.txt`.
 It also discarded upstream run directories and independently parsed Codex JSONL

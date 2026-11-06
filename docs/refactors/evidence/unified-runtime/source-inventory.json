@@ -1,0 +1,13 @@
+{
+  "baseline": "02a6907",
+  "scope": "Engine production Python only, excludes tests/docs/Skill text/bundles",
+  "before": {
+    "files": 17,
+    "lines": 1699
+  },
+  "after": {
+    "files": 13,
+    "lines": 1392
+  },
+  "delta_lines": -307
+}

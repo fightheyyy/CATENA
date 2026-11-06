@@ -1,0 +1,20 @@
+{
+  "engine": "40 passed",
+  "tap": "20 passed",
+  "web_unit": "38 passed",
+  "web_browser": "12 passed",
+  "web_typescript_build": "passed",
+  "go_race_postgres_clickhouse_cross_process": "passed",
+  "base_engine_without_harbor_cross_process": "passed",
+  "go_vet": "passed",
+  "ruff": "passed",
+  "pip_check": "passed, Harness2 uninstalled",
+  "skill_validation": "passed",
+  "compose_base_and_evaluation_overlay": "passed",
+  "packaged_engine_source_skill_hashes": "exact match",
+  "native_offline_skill_injection": "passed, not quality evidence",
+  "real_model_run": "4 genuine Harbor Trials; independent pair; user rejected candidate",
+  "implementation_commit": "bb23b86bb2aa10314b2d39db6cd63d03bf2b723d",
+  "go_opt_in_load_study": "not run",
+  "real_human_review": "user rejected; persisted and unchanged after Core/Engine restart"
+}
