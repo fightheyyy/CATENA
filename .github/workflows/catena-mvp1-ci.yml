@@ -43,7 +43,6 @@ jobs:
       - run: ruff check catena_engine tests
       - name: Engine, native Codex protocol and Harbor contracts
         run: pytest
-      - run: python ../evals/trace-skill-benchmark/validate_verifiers.py
 
   web:
     runs-on: ubuntu-latest

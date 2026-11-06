@@ -1,4 +1,0 @@
-[project]
-name="fixture-3"
-version="1.0.0"
-dependencies=["couriercalc==2.0.0"]

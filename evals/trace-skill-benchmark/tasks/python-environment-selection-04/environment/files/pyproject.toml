@@ -1,4 +1,0 @@
-[project]
-name="fixture-4"
-version="1.0.0"
-dependencies=["deltacalc==2.0.0"]

@@ -2,5 +2,3 @@ frontend/index.html text eol=lf
 backend/internal/control/web/index.html text eol=lf
 deploy/catena-mvp1/postgres-init.sh text eol=lf
 
-# Preserve the exact bytes checked by the benchmark freeze manifests.
-evals/trace-skill-benchmark/** -text

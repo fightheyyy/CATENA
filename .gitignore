@@ -3,9 +3,6 @@
 .env.*
 !.env.example
 !.env.*.example
-# Synthetic credential canaries required by the frozen public benchmark.
-!evals/trace-skill-benchmark/tasks/secret-output-control-*/environment/files/.env
-!evals/trace-skill-benchmark/releases/*/evals/trace-skill-benchmark/tasks/secret-output-control-*/environment/files/.env
 
 node_modules/
 dist/
@@ -27,12 +24,8 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 
-# Exported benchmark source copies are reproducible from Git history.
-/evals/trace-skill-benchmark/releases/*/vendor/
-/evals/trace-skill-benchmark/releases/*/evals/
-/evals/trace-skill-benchmark/releases/*/docs/
-/evals/trace-skill-benchmark/releases/*.zip
-/evals/trace-skill-benchmark/releases/*.zip.sha256
+# Historical benchmark stays local; recover published versions from Git history.
+/evals/trace-skill-benchmark/
 
 .vscode/
 .idea/

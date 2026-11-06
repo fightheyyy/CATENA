@@ -22,7 +22,7 @@
 - [统一 Runtime](refactors/UNIFIED_RUNTIME.md)：真实候选和 Harbor 对比；该候选已由人工拒绝。
 - [Rebirth](refactors/REBIRTH.md)：删减、兼容与分阶段证据；描述其提交时的架构。
 - [后端负载实验](benchmarks/trace-backend-load-20261027.md)：保留测试口径与原始结果。
-- [冻结评测集](../evals/trace-skill-benchmark/README.md)：历史手工 Skill 实验，不代表当前改进策略的效果。
+- [历史 Skill Benchmark](https://github.com/fightheyyy/CATENA/tree/f3178ca70fc15f1fdd314fd7534c6d182387ba81/evals/trace-skill-benchmark)：已退出当前源码树，仅从 Git 历史查看；不代表当前改进策略的效果。
 
 真实模型实验、协议 Fixture、参考解和 UI 测试分别记录，不能互相替代。
 

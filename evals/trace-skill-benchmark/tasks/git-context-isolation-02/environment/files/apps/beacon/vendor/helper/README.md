@@ -1,1 +1,0 @@
-Independent vendor repository.
