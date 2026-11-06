@@ -2,7 +2,7 @@
 
 CATENA = Trace-driven Agent Engineering Control Plane。
 
-Agent Trace → Evidence / Case → Codex + Skill / Tool → Frozen Candidate → Harbor Compare → Human Review。
+Agent Trace → Codex 工具调查 → Problem / Evidence → 人工决定是否优化 → 冻结 Candidate → Harbor Compare → Human Review。
 
 CATENA 管理 Trace、脱敏且固定来源的 Evidence、已审核 Case 的注册、PostgreSQL Job 调度、Artifact / 版本 / 实验与人工决定。Codex 提供统一的内部分析与改进 Runtime，Harbor 提供独立目标执行与评测底座。模型自己的选择或评分不构成改进证据。
 
@@ -30,3 +30,11 @@ Go 只有一套持久队列。Engine receipt 是付费操作去重记录；Engin
 部署四个服务，无 Redis、Kafka、Kubernetes。Harbor Docker socket 由可信部署者显式授权；不承诺安全的恶意多租户 Docker 沙箱。Owner 隔离保留，组织成员与共享权限未交付。
 
 [当前 Workflow 与边界](docs/IMPROVEMENT_WORKFLOW.md) · [分析门验收](docs/refactors/ANALYSIS_GATE.md) · [改进实测](docs/refactors/UNIFIED_RUNTIME.md) · [历史重构报告](docs/refactors/REBIRTH.md)。历史研究文档不代表当前执行架构。
+
+## 收敛边界与下一验收
+
+当前冻结 Go / PostgreSQL / ClickHouse、统一 Codex Runtime 和 Harbor 的职责边界。新增策略优先复用现有 Skill / Tool / Workflow；不为尚不存在的第二实现增加框架。
+
+近期工作仅限核心接入、报告可读性、证据可信度、实验操作和真实案例验证。组织共享、通用 Code Patch、经验检索、插件市场与自动采用不属于本轮交付；版本化工程记录继续保留。
+
+下一验收目标是：外部开发者不依赖作者陪同，独立完成 Trace → 调查 → 人工选择优化 → Harbor 评测 → Review。需记录操作阻碍、问题是否被用户认可及决策依据；工程链路通过和优化效果成立分别评价。该验收尚未完成，现有独立实验不能替代它。

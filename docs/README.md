@@ -2,6 +2,13 @@
 
 当前流程：Trace → 分析报告 → 人工决定是否优化 → Candidate → Harbor Compare → Human Review。
 
+## 对外阅读顺序
+
+先看 [README 的产品范围](../README.md#产品范围)，再看 [架构与源码](ARCHITECTURE.md) 和 [执行契约](IMPROVEMENT_WORKFLOW.md)。
+核查实际完成程度时，分别阅读 [动态调查实测](refactors/TRACE_INVESTIGATION.md) 与 [候选评测实测](refactors/UNIFIED_RUNTIME.md)。二者不是当前版本由外部用户独立完成的同一次闭环验收。
+
+当前最需要验证的是：接入能否独立完成、调查问题是否被用户认可、评测结果是否足以支持采纳或拒绝。历史方案不是待实现功能清单。
+
 ## 当前文档
 
 | 需要了解什么 | 入口 |
@@ -19,7 +26,6 @@
 ## 验证记录
 
 - [动态 Trace 调查](refactors/TRACE_INVESTIGATION.md)：真实模型自主查询、参数修正、分页取证与报告落库。
-
 - [分析与人工优化门](refactors/ANALYSIS_GATE.md)：真实 Trace 分析、五项问题、零自动评测。
 - [统一 Runtime](refactors/UNIFIED_RUNTIME.md)：真实候选和 Harbor 对比；该候选已由人工拒绝。
 - [Rebirth](refactors/REBIRTH.md)：删减、兼容与分阶段证据；描述其提交时的架构。

@@ -18,6 +18,22 @@ Agent Trace → Evidence → Codex Analysis → Problem / Evidence
                                      Compare → Human Review
 ```
 
+## 产品范围
+
+面向维护 Coding Agent 的开发者，当前只围绕三个用户动作交付：
+
+| 用户动作 | 当前入口 | 得到什么 |
+|---|---|---|
+| 找到值得调查的执行记录 | 经历 `/traces` | 原始 Trace、工具调用、错误和执行上下文 |
+| 调查问题，决定是否优化 | 产出 `/evolution?job=…` 的分析报告 | 问题、证据引用、根因假设和不确定性 |
+| 验证候选，决定采纳或拒绝 | 同一入口的改进任务 | 候选文件、Harbor 对比、人工决定 |
+
+调查报告和改进实验目前共用产出页，不是三个独立工作台。连接、Agent 和设置只提供必要的接入与配置。
+
+当前固定 **Go 控制面 + Codex 内部 Agent + Harbor 评测**。Skill 是内部策略扩展手段，不建设插件市场；工程记忆先保留版本化记录。暂不扩展新的 Runtime、Memory 检索、自动采用或通用 Code Patch。
+
+下一阶段只解决核心使用障碍和真实案例验证：让一位外部开发者在没有作者陪同的情况下，完成一次 Trace → 调查 → 人工选择优化 → 评测 → Review。这个目标尚未验收。
+
 ## 架构
 
 | 模块 | 职责 |
@@ -66,8 +82,9 @@ docs/      当前文档；archive/ 保存旧方案，refactors/ 保存迁移证�
 
 ## 验证状态
 
-- [真实 Trace 调查](docs/refactors/TRACE_INVESTIGATION.md)：报告已持久化，不自动启动优化。
+- [真实 Trace 调查](docs/refactors/TRACE_INVESTIGATION.md)：7 次工具调用，读取单条 Trace 的 95/145 个 Span，保存 3 个问题，不自动启动优化。
 - [真实候选与 Harbor 对比](docs/refactors/UNIFIED_RUNTIME.md)：工程链路已运行，该候选已由人工拒绝。
+- 调查与候选评测的证据来自不同次实验；尚未验证外部用户独立完成当前版本全流程，也未证明归因持续有效或候选普遍提升。
 - Fixture、协议测试、UI 测试和参考解不属于 Agent 质量证据。一次对照也不能证明普遍提升。
 - 当前目标薄适配为 Codex；组织共享权限、通用 Code Patch 和自动经验检索未交付。Docker socket 仅供可信部署者使用。
 
