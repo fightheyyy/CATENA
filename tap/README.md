@@ -13,7 +13,7 @@ Supported and acceptance-tested runtimes:
 
 Codex App live-hook integration, Hermes and OpenClaw are not supported.
 Persisted Codex rollout history, including migrated native lifecycle records,
-has separate [historical import acceptance](../docs/CODEX_LOCAL_IMPORT_20260915.md).
+has separate [historical import acceptance](../docs/archive/CODEX_LOCAL_IMPORT_20260915.md).
 A new live runtime requires its own parser, redacted fixture, golden graph
 and real E2E.
 
@@ -24,7 +24,7 @@ reviewable tool-error and repeated-call signals. It emits no prompt, tool
 argument, or tool-result text. `scan` records every eligible Turn and every
 skipped source; `sample` creates a fixed-seed human labeling sheet; `score`
 calculates rates only after labels are filled. See the
-[study protocol](../docs/FAILURE_STUDY.md). This is an offline research path,
+[study protocol](../docs/archive/FAILURE_STUDY.md). This is an offline research path,
 not an automatic failure verdict in the Catena UI.
 
 ## Configuration

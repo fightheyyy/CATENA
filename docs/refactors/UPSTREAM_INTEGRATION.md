@@ -79,7 +79,7 @@ metrics, case fingerprint and incomplete work.
 **Outstanding:** after provider quota recovers, restore the authorized connection
 and submit a fresh idempotent Job using [the normal API client](../../evals/rebirth.py).
 The current single-step text-file contract is documented in
-[RSI_ADAPTERS.md](../RSI_ADAPTERS.md). The full six-Trial comparison is not verified
+[RSI_ADAPTERS.md](../archive/RSI_ADAPTERS.md). The full six-Trial comparison is not verified
 for this revision. Held-out/repeated quality improvement and native Proposer
 equivalence remain unproven. Do not reuse the previous candidate's human decision
 for a newly generated artifact.

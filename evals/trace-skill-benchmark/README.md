@@ -2,7 +2,7 @@
 
 Seven scoped Skills, 28 anonymous tasks, native Harbor Codex adapter, three repeats per arm: 168 planned model rollouts.
 
-The task families come from the [Trace audit](../../docs/TRACE_SKILL_AUDIT_20261004.md). Skills are manually written from those observations. The tasks are anonymous reconstructions and synthetic variants; they are **not** strict historical held-out tasks. All audited traces were available during design. The four task types per family are two reconstructions, one mutation, and one transfer fixture with a changed project layout or workflow.
+The task families come from the [Trace audit](../../docs/archive/TRACE_SKILL_AUDIT_20261004.md). Skills are manually written from those observations. The tasks are anonymous reconstructions and synthetic variants; they are **not** strict historical held-out tasks. All audited traces were available during design. The four task types per family are two reconstructions, one mutation, and one transfer fixture with a changed project layout or workflow.
 
 | Skill | Tasks | Observable target |
 |---|---:|---|

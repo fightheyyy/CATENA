@@ -27,4 +27,4 @@ Go 只有一套持久队列。Engine receipt 是付费操作去重记录；Engin
 
 部署四个服务，无 Redis、Kafka、Kubernetes。Harbor Docker socket 由可信部署者显式授权；不承诺安全的恶意多租户 Docker 沙箱。Owner 隔离保留，组织成员与共享权限未交付。
 
-[当前 Workflow 与边界](docs/IMPROVEMENT_WORKFLOW.md) · [实现与实测](docs/refactors/UNIFIED_RUNTIME.md) · [历史重构报告](docs/refactors/REBIRTH.md)。历史研究文档不代表当前执行架构。
+[当前 Workflow 与边界](docs/IMPROVEMENT_WORKFLOW.md) · [分析门验收](docs/refactors/ANALYSIS_GATE.md) · [改进实测](docs/refactors/UNIFIED_RUNTIME.md) · [历史重构报告](docs/refactors/REBIRTH.md)。历史研究文档不代表当前执行架构。
