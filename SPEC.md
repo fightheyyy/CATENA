@@ -15,7 +15,7 @@ CATENA 管理 Trace、脱敏且固定来源的 Evidence、已审核 Case 的注�
 | Harbor | 原生 Agent / Environment / Job / Trial / Verifier，固定 Case 指纹前后校验 |
 | React | Trace、实验配置、状态、可比较指标、候选文件和人工审查 |
 
-唯一任务创建入口为 `POST /v1/analysis-jobs`，pipeline 仅 `improve`，内部执行为 `codex-skill`。Engine 私有调用为 `POST /v3/improve`。旧 rsi/Harness² 创建请求显式拒绝，已有终态记录和 Review 继续读取。旧非终态任务不得转成新策略自动执行；升级需先停旧 Worker。Skill 借鉴 Propose / Compose，运行依赖和原生算法循环已删除，不宣称原算法等价。
+唯一任务创建入口为 `POST /v1/analysis-jobs`，pipeline 为 `analyze` 或 `improve`，内部执行为 `codex-skill`。分析调用 `/v3/analyze`，不依赖 Harbor；优化调用 `/v3/improve`，必须由用户显式提交已完成分析的 analysis_job_id，复制其报告和 Evidence 快照。分析不会自动进入优化。旧 rsi/Harness² 创建请求显式拒绝，已有终态记录和 Review 继续读取。旧非终态任务不得转成新策略自动执行；升级需先停旧 Worker。Skill 借鉴 Propose / Compose，运行依赖和原生算法循环已删除，不宣称原算法等价。
 
 Candidate 只允许 AGENTS.md / Skill 文本，保留父版本与内容哈希。冻结候选后，Harbor 新跑 Baseline / Candidate 对照；可添加独立 held-out Case。复用优化 Case 不伪称 held-out。结果持久化原始 Verifier、用量、耗时、Artifact 路径/指纹和已知费用；未知值不补零。单次对照只支持有限工程结论。
 

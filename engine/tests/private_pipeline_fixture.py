@@ -6,6 +6,8 @@ from catena_engine.server import create_server
 
 
 def rsi(payload, event):
+    if payload.get("schema") == "catena.analysis_request.v1":
+        return {"schema":"catena.analysis_result.v1","status":"completed","summary":"Protocol fixture only","problems":[]}
     return {
         "status": "completed",
         "candidates": [{"id": "fixture-candidate", "files": {"AGENTS.md": "Inspect evidence before acting."}}],

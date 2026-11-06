@@ -13,6 +13,7 @@ import (
 )
 
 type CreateAnalysisRequest struct {
+	AnalysisJobID  string          `json:"analysis_job_id,omitempty"`
 	ConversationID string          `json:"conversation_id,omitempty"`
 	Pipeline       string          `json:"pipeline"`
 	TraceID        string          `json:"trace_id,omitempty"`
@@ -37,8 +38,8 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, 400, e.Error())
 		return
 	}
-	if req.Pipeline != "improve" {
-		writeProblem(w, 400, "only the improve pipeline is supported")
+	if req.Pipeline != "improve" && req.Pipeline != "analyze" {
+		writeProblem(w, 400, "supported pipelines: analyze, improve")
 		return
 	}
 	if len(req.Objective) > 4000 || len(req.Options) > 128*1024 {
@@ -51,6 +52,10 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 			writeProblem(w, 400, "options must be an object")
 			return
 		}
+		if req.Pipeline == "analyze" && len(options) != 0 {
+			writeProblem(w, 400, "analysis does not accept improvement options")
+			return
+		}
 		for key := range options {
 			switch key {
 			case "case_id", "baseline", "budget", "validation_case_ids":
@@ -59,6 +64,10 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+	}
+	if req.Pipeline == "analyze" && (req.AnalysisJobID != "") {
+		writeProblem(w, 400, "analysis does not accept improvement options")
+		return
 	}
 	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if e := validateReplayIdempotencyKey(key); e != nil {
@@ -72,7 +81,24 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	var pack AnalysisEvidencePack
 	var err error
-	if req.ConversationID != "" {
+	var analysisInput json.RawMessage
+	if req.Pipeline == "improve" {
+		if req.AnalysisJobID == "" || req.TraceID != "" || req.AgentID != "" || req.ConversationID != "" {
+			writeProblem(w, 400, "improvement requires an explicit completed analysis_job_id, not new evidence")
+			return
+		}
+		source, e := s.store.GetAnalysisJob(r.Context(), req.AnalysisJobID)
+		if e != nil || source.OwnerUserID != owner {
+			writeProblem(w, 404, "analysis unavailable")
+			return
+		}
+		if source.Pipeline != "analyze" || source.State != AnalysisJobCompleted || source.EvidencePack == nil || !validAnalysisEvidencePack(*source.EvidencePack, source) || !json.Valid(source.Checkpoint) {
+			writeProblem(w, 400, "a completed analysis with frozen evidence is required")
+			return
+		}
+		pack = *source.EvidencePack
+		analysisInput = append(json.RawMessage(nil), source.Checkpoint...)
+	} else if req.ConversationID != "" {
 		writeProblem(w, 400, "conversation extraction is retired; select Trace evidence")
 		return
 	} else if req.AgentID != "" {
@@ -114,7 +140,7 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 	}
 	raw, _ := json.Marshal(req)
 	hash := sha256.Sum256(append(raw, []byte(pack.SHA256)...))
-	job := AnalysisJob{Schema: "catena.analysis_job.v2", ID: newID("analysis-job"), OwnerUserID: owner, Pipeline: req.Pipeline, Adapter: "codex-skill", Options: req.Options, SourceKind: pack.SourceKind, SourceConversationID: pack.SourceConversationID, SourceTraceID: pack.SourceTraceID, SourceTraceIDs: pack.SourceTraceIDs, SourceAgentID: pack.SourceAgentID, SourceRuntimeKind: pack.SourceRuntimeKind, WindowStart: pack.WindowStart, WindowEnd: pack.WindowEnd, Objective: sanitizeAnalysisText(req.Objective, 4000), IdempotencyKey: key, RequestFingerprint: hex.EncodeToString(hash[:]), State: AnalysisJobQueued, Stages: []AnalysisStage{{Name: "generate", State: AnalysisStageQueued}}, Artifacts: []Artifact{}, EvidencePack: &pack, CreatedAt: now, UpdatedAt: now}
+	job := AnalysisJob{Schema: "catena.analysis_job.v2", ID: newID("analysis-job"), OwnerUserID: owner, Pipeline: req.Pipeline, Adapter: "codex-skill", SourceAnalysisJobID: req.AnalysisJobID, AnalysisInput: analysisInput, Options: req.Options, SourceKind: pack.SourceKind, SourceConversationID: pack.SourceConversationID, SourceTraceID: pack.SourceTraceID, SourceTraceIDs: pack.SourceTraceIDs, SourceAgentID: pack.SourceAgentID, SourceRuntimeKind: pack.SourceRuntimeKind, WindowStart: pack.WindowStart, WindowEnd: pack.WindowEnd, Objective: sanitizeAnalysisText(req.Objective, 4000), IdempotencyKey: key, RequestFingerprint: hex.EncodeToString(hash[:]), State: AnalysisJobQueued, Stages: []AnalysisStage{{Name: "generate", State: AnalysisStageQueued}}, Artifacts: []Artifact{}, EvidencePack: &pack, CreatedAt: now, UpdatedAt: now}
 	stored, created, err := s.store.CreateAnalysisJob(r.Context(), job)
 	if err != nil {
 		writeProblem(w, statusFor(err), err.Error())
@@ -128,7 +154,7 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease, job AnalysisJob) error {
-	if job.Schema != "catena.analysis_job.v2" || job.Pipeline != "improve" {
+	if job.Schema != "catena.analysis_job.v2" || (job.Pipeline != "improve" && job.Pipeline != "analyze") {
 		return errors.New("legacy execution retired; create a V2 Analysis Job")
 	}
 	if job.EvidencePack == nil || !validAnalysisEvidencePack(*job.EvidencePack, job) {
@@ -150,11 +176,17 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 			return errors.New("unsupported improvement option")
 		}
 	}
-	if _, ok := payload["case_id"].(string); !ok {
+	if _, ok := payload["case_id"].(string); job.Pipeline == "improve" && !ok {
 		return errors.New("a registered evaluation case_id is required for improvement")
 	}
-	if payload["baseline"] == nil {
+	if job.Pipeline == "improve" && payload["baseline"] == nil {
 		payload["baseline"] = map[string]string{"AGENTS.md": "Complete the supplied task faithfully."}
+	}
+	if job.Pipeline == "improve" {
+		if job.SourceAnalysisJobID == "" || !json.Valid(job.AnalysisInput) {
+			return errors.New("human-started analysis reference is required")
+		}
+		payload["analysis_input"] = json.RawMessage(job.AnalysisInput)
 	}
 	credentials, err := s.analysisModelCredentials(ctx, job.OwnerUserID)
 	if err != nil {
@@ -163,7 +195,12 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	evidence, _ := json.Marshal(map[string]any{"pack": job.EvidencePack, "objective": job.Objective})
 	payload["evidence"] = string(evidence)
 	payload["evidence_refs"] = analysisJobTraceIDs(job)
+	path := "/v3/improve"
 	payload["schema"] = "catena.improvement_request.v1"
+	if job.Pipeline == "analyze" {
+		path = "/v3/analyze"
+		payload["schema"] = "catena.analysis_request.v1"
+	}
 	payload["request_id"] = job.ID
 	payload["model"] = map[string]string{"provider": credentials.Provider, "base_url": credentials.BaseURL, "model": credentials.Model, "api_key": credentials.APIKey}
 	job.State = AnalysisJobRunning
@@ -176,7 +213,7 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	if owner == "" {
 		owner = "local"
 	}
-	result, err := s.analysisRuntime.execute(ctx, owner, job.ID, payload, "/v3/improve")
+	result, err := s.analysisRuntime.execute(ctx, owner, job.ID, payload, path)
 	if err != nil {
 		return err
 	}
@@ -189,6 +226,22 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 		return errors.New("invalid improvement result")
 	}
 	job.Checkpoint = result
+	if job.Pipeline == "analyze" && out.Status == "completed" {
+		var report struct {
+			Schema   string            `json:"schema"`
+			Problems []json.RawMessage `json:"problems"`
+		}
+		if json.Unmarshal(result, &report) != nil || report.Schema != "catena.analysis_result.v1" || report.Problems == nil {
+			return errors.New("invalid analysis report")
+		}
+		provenance, _ := json.Marshal(map[string]any{"evidence_sha256": job.EvidencePack.SHA256, "execution_id": job.ID, "report": json.RawMessage(result)})
+		digest := sha256.Sum256([]byte(job.ID + ":analysis"))
+		job.Artifacts = []Artifact{{ID: "artifact-" + hex.EncodeToString(digest[:16]), OwnerID: job.OwnerUserID, JobID: job.ID, Type: "analysis_report", SchemaVersion: "catena.artifact.v1", EvidenceRefs: analysisJobTraceIDs(job), Payload: result, Provenance: provenance, ValidationStatus: "unverified", CreatedAt: time.Now().UTC()}}
+		job.State = AnalysisJobCompleted
+		job.CurrentStage = "complete"
+		job.Stages[0].State = AnalysisStageCompleted
+		return s.saveAnalysisProgress(ctx, lease, job)
+	}
 	if out.Status != "completed" || len(out.Candidates) == 0 {
 		if err = s.saveAnalysisProgress(ctx, lease, job); err != nil {
 			return err
@@ -200,6 +253,12 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	json.Unmarshal(result, &provenanceFields)
 	provenanceFields["evidence_sha256"], _ = json.Marshal(job.EvidencePack.SHA256)
 	provenanceFields["execution_id"], _ = json.Marshal(job.ID)
+	if job.SourceAnalysisJobID != "" {
+		provenanceFields["analysis_job_id"], _ = json.Marshal(job.SourceAnalysisJobID)
+		provenanceFields["analysis_input"] = job.AnalysisInput
+		digest := sha256.Sum256(job.AnalysisInput)
+		provenanceFields["analysis_sha256"], _ = json.Marshal(hex.EncodeToString(digest[:]))
+	}
 	provenance, _ := json.Marshal(provenanceFields)
 	for i, payload := range out.Candidates {
 		status := "unverified"

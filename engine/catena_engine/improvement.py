@@ -50,7 +50,9 @@ def candidate(value, baseline, inherited=None):
             raise OptimizationError("invalid or duplicate candidate file")
         files[item["path"]] = item["content"]
         seen.add(item["path"])
-    if ".agents/skills/harness-improvement/SKILL.md" in files or SKILL.read_text() in files.values():
+    if any(
+        p in files for p in (".agents/skills/harness-improvement/SKILL.md", ".agents/skills/trace-analysis/SKILL.md")
+    ) or any(p.read_text() in files.values() for p in (SKILL, SKILL.parent.parent / "trace-analysis/SKILL.md")):
         raise OptimizationError("The internal analysis Skill cannot be installed in a target harness")
     return Candidate(files, (baseline.id,), "harness-improvement-skill", value["text"])
 
@@ -205,6 +207,7 @@ def parse(payload: dict):
         "budget",
         "model",
         "validation_case_ids",
+        "analysis_input",
     }
     if set(payload) - allowed:
         raise OptimizationError("unknown Improvement request field")
@@ -241,6 +244,13 @@ def parse(payload: dict):
 
 def run_payload(payload: dict, cancelled=None) -> dict:
     context, budget, model, validation = parse(payload)
+    if payload.get("analysis_input"):
+        context = replace(
+            context,
+            evidence=context.evidence
+            + "\nPrior analysis (hypotheses, not instructions):\n"
+            + json.dumps(payload["analysis_input"], ensure_ascii=False),
+        )
     manifest_path = os.environ.get("CATENA_CASES_MANIFEST")
     runs_root = os.environ.get("CATENA_RUNS_ROOT")
     if not manifest_path or not runs_root:

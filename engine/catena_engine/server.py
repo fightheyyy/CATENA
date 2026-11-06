@@ -52,7 +52,8 @@ def create_server(address, token="", improvement_handler=None, receipt_root=None
             try:
                 if self.path == "/v2/manifest":
                     self._json(
-                        200, {"schema": "catena.engine_manifest.v2", "status": "ready", "pipelines": ["improve"]}
+                        200,
+                        {"schema": "catena.engine_manifest.v2", "status": "ready", "pipelines": ["analyze", "improve"]},
                     )
                 elif self.path == "/v2/cases":
                     path = os.environ.get("CATENA_CASES_MANIFEST")
@@ -91,11 +92,13 @@ def create_server(address, token="", improvement_handler=None, receipt_root=None
                 payload = json.loads(self.rfile.read(length))
                 if not isinstance(payload, dict):
                     raise OptimizationError("request must be an object")
-                if self.path == "/v3/improve":
+                if self.path in ("/v3/analyze", "/v3/improve"):
                     handler = improvement_handler
                     if handler is None:
-                        from .improvement import run_payload
-
+                        if self.path == "/v3/analyze":
+                            from .analysis import run_payload
+                        else:
+                            from .improvement import run_payload
                         handler = run_payload
 
                     cached = executions.replay(owner, payload)

@@ -62,7 +62,7 @@ test("An empty workspace offers an Agent connection and labels its sample counts
   await page.goto(origin + "/");
   await visible(page.getByRole("button", { name: "接入 Agent", exact: true }));
   await visible(page.getByText("统计基于最近 100 条 Trace；错误状态不等同于任务失败。", { exact: true }));
-  assert.deepEqual(state.requests.map((item) => item.path).sort(), ["/v1/auth/session", "/v1/agents", "/v1/traces", "/v1/analysis-jobs", "/v1/me/llm-config", "/v1/evaluation-cases"].sort());
+  assert.deepEqual(state.requests.map((item) => item.path).sort(), ["/v1/auth/session", "/v1/agents", "/v1/traces", "/v1/analysis-jobs", "/v1/me/llm-config"].sort());
   assert.deepEqual(await page.locator(".proactive-metrics strong").allTextContents(), ["0", "0", "0"]);
   await screenshot(page, "overview-empty");
   await page.getByRole("button", { name: "接入 Agent", exact: true }).click();

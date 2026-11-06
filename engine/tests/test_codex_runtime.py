@@ -12,7 +12,15 @@ from catena_engine.runtime.codex import SKILL, CodexRuntime
 
 @pytest.fixture
 def cli(tmp_path, monkeypatch):
-    def install(extra="", final=None, usage=None, tool="evaluate_candidate", duplicate=False, skill_enabled=True):
+    def install(
+        extra="",
+        final=None,
+        usage=None,
+        tool="evaluate_candidate",
+        duplicate=False,
+        skill_enabled=True,
+        skill_name="harness-improvement",
+    ):
         if final is None:
             final = json.dumps({"text": "hypothesis", "files": [{"path": "AGENTS.md", "content": "Inspect."}]})
         if usage is None:
@@ -32,11 +40,11 @@ send({{"id":first["id"],"result":{{}}}})
 assert receive()["method"]=="initialized"
 roots=receive()
 assert roots["method"]=="skills/extraRoots/set"
-skill=pathlib.Path(roots["params"]["extraRoots"][0])/"harness-improvement/SKILL.md"
+skill=pathlib.Path(roots["params"]["extraRoots"][0])/({skill_name!r}+"/SKILL.md")
 send({{"id":roots["id"],"result":{{}}}})
 listing=receive()
 assert listing["method"]=="skills/list"
-send({{"id":listing["id"],"result":{{"data":[{{"skills":[{{"name":"harness-improvement","path":str(skill),"enabled":{skill_enabled!r}}}]}}]}}}})
+send({{"id":listing["id"],"result":{{"data":[{{"skills":[{{"name":{skill_name!r},"path":str(skill),"enabled":{skill_enabled!r}}}]}}]}}}})
 start=receive()
 assert start["params"]["ephemeral"] and start["params"]["sandbox"]=="read-only"
 send({{"id":start["id"],"result":{{"thread":{{"id":"thread-one"}}}}}})
@@ -174,3 +182,20 @@ def test_disabled_skill_aborts_before_starting_model_turn(cli, turn_payload, tmp
         asyncio.run(CodexRuntime(request(turn_payload).model)._run(request(turn_payload), evaluate, tmp_path / "agent"))
     messages = [json.loads(line)["message"] for line in (tmp_path / "agent/protocol.jsonl").read_text().splitlines()]
     assert not any(m.get("method") == "turn/start" for m in messages)
+
+
+def test_analysis_mode_has_no_evaluation_tool(cli, turn_payload, tmp_path):
+    cli(skill_name="trace-analysis")
+
+    async def forbidden(value):
+        raise AssertionError("analysis must not evaluate")
+
+    with pytest.raises(OptimizationError):
+        asyncio.run(
+            CodexRuntime(request(turn_payload).model)._run(
+                request(turn_payload), forbidden, tmp_path / "agent", mode="analyze"
+            )
+        )
+    messages = [json.loads(line)["message"] for line in (tmp_path / "agent/protocol.jsonl").read_text().splitlines()]
+    thread = next(m for m in messages if m.get("method") == "thread/start")
+    assert thread["params"]["dynamicTools"] == []

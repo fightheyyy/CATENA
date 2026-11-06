@@ -12,7 +12,7 @@ from pathlib import Path
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", required=True)
-    parser.add_argument("--trace-id", required=True)
+    parser.add_argument("--analysis-job-id", required=True, help="Completed owned analysis selected by a human")
     parser.add_argument("--case-id", required=True)
     parser.add_argument("--baseline", required=True, type=Path, help="Authorized baseline AGENTS.md")
     parser.add_argument("--output", required=True, type=Path, help="New private output directory")
@@ -36,7 +36,7 @@ def main():
     if args.case_id not in {case["id"] for case in request("/v1/evaluation-cases")["cases"]}:
         raise RuntimeError("BLOCKED: register and human-confirm the Case first")
     payload = {
-        "pipeline": "improve", "trace_id": args.trace_id,
+        "pipeline": "improve", "analysis_job_id": args.analysis_job_id,
         "options": {"case_id": args.case_id, "baseline": {"AGENTS.md": args.baseline.read_text(encoding="utf-8")},
                     "budget": {"agent_turns": 1, "trials": 4, "seconds": 900}},
     }

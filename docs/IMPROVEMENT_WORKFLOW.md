@@ -4,7 +4,21 @@ Codex is the internal analysis/improvement Agent. CATENA owns evidence,
 deterministic orchestration and engineering records. Harbor owns target execution
 and verification. There is one concrete strategy, no algorithm/plugin registry.
 
-## Fixed workflow
+## Analysis and the first human decision
+
+Create `POST /v1/analysis-jobs` with `{"pipeline":"analyze","trace_id":"<owned Trace>"}`.
+Analysis needs neither a Case nor Harbor. It loads trace-analysis in the same Codex
+Runtime, advertises no evaluation tools and persists summary/problems, evidence
+references, hypotheses and uncertainty. Reports remain unverified hypotheses.
+
+The report page lets the user keep the analysis or explicitly start improvement.
+Only an owned completed analysis can be used. A new improvement Job freezes its
+report and original Evidence; `analysis_job_id`, report hash and full snapshot are
+retained in provenance. There is no automatic transition or new approval queue.
+The explicit authenticated create request records the first human decision;
+candidate adoption still has its separate Human Review after evaluation.
+
+## Improvement workflow after the human decision
 
 1. Go freezes owner-scoped Trace Evidence and resolves the operator-confirmed Case.
 2. Harbor runs a baseline probe.
@@ -65,7 +79,7 @@ Configure the owner's model in Connections and submit with an Idempotency-Key:
 ```json
 {
   "pipeline": "improve",
-  "trace_id": "<owned retained Trace>",
+  "analysis_job_id": "<owned completed analysis Job>",
   "objective": "Investigate observed path-discovery failures",
   "options": {
     "case_id": "approved-case",
@@ -76,14 +90,14 @@ Configure the owner's model in Connections and submit with an Idempotency-Key:
 }
 ```
 
-Agent/window Evidence selection also remains supported. Minimum budget is one
+Agent/window Evidence selection remains supported for analysis. Minimum budget is one
 analysis turn and four Harbor trials: two probes plus an independent pair. Each
 held-out Case adds two trials. Codex can make multiple provider requests within its
 turn: `agent_turns` is not an inference-request, token or money cap. Native total
 input/output usage is recorded when available; missing usage/cost is unknown.
 Timeout and tool allowance bound the loop. There is no custom transport retry loop.
 
-Private schema: `catena.improvement_request.v1`; endpoint: `/v3/improve`.
+Analysis uses private schema `catena.analysis_request.v1` and `/v3/analyze`. Improvement uses private schema: `catena.improvement_request.v1`; endpoint: `/v3/improve`.
 New artifacts use `improvement_candidate`; internal executor is `codex-skill`.
 Old rsi/Harness² creation/options are explicitly rejected. Existing Jobs must never
 be relabeled or replayed as this new strategy.

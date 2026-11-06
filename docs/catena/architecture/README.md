@@ -6,10 +6,14 @@ CATENA = attribution, orchestration and engineering records.
 ```mermaid
 flowchart TD
     Trace[Tap / OTLP] --> CH[(ClickHouse)]
-    CH --> Go[Go: owner-scoped frozen Evidence + confirmed Case]
+    CH --> Go[Go: owner-scoped frozen Evidence]
     Go --> Queue[(PostgreSQL: Job / lease / heartbeat / fencing)]
     Queue --> Receipt[Private Engine execution receipt]
-    Receipt --> Workflow[improvement.py: Experiment.run]
+    Receipt --> Analyze[analysis.py + trace-analysis Skill / no tools]
+    Analyze --> Report[Problem / Evidence / hypotheses / uncertainty]
+    Report --> Decision{Human decides whether to improve}
+    Decision -->|keep report| Records
+    Decision -->|explicit new Job + frozen analysis snapshot + confirmed Case| Workflow[improvement.py: Experiment.run]
     Workflow --> Base[Harbor baseline probe]
     Base --> Agent[Codex App Server + explicit improvement Skill]
     Agent --> Tool[evaluate_candidate: validated files / fixed Case / one probe]

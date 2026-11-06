@@ -68,8 +68,8 @@ func TestPostgresPrivatePythonPipelinesPersistArtifacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := []string{}
-	for _, pipeline := range []string{"improve"} {
-		raw := `{"pipeline":"` + pipeline + `","trace_id":"00112233445566778899aabbccddeeff","options":{"case_id":"fixture"}}`
+	for _, pipeline := range []string{"analyze"} {
+		raw := `{"pipeline":"` + pipeline + `","trace_id":"00112233445566778899aabbccddeeff"}`
 		req := httptest.NewRequest("POST", "/v1/analysis-jobs", strings.NewReader(raw))
 		req.Header.Set("Idempotency-Key", "pipeline-"+pipeline)
 		response := httptest.NewRecorder()

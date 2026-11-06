@@ -21,7 +21,7 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	seedTestAnalysisModelConfig(t, store, "local")
 	calls := 0
 	engine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v3/improve" {
+		if r.URL.Path != "/v3/improve" && r.URL.Path != "/v3/analyze" {
 			writeProblem(w, 404, "unknown")
 			return
 		}
@@ -31,6 +31,10 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 		var payload map[string]any
 		json.NewDecoder(r.Body).Decode(&payload)
 		calls++
+		if r.URL.Path == "/v3/analyze" {
+			writeJSON(w, 200, map[string]any{"request_id": payload["request_id"], "state": "completed", "output": map[string]any{"schema": "catena.analysis_result.v1", "status": "completed", "summary": "Fixture observations only", "problems": []any{}}})
+			return
+		}
 		var output map[string]any
 		json.Unmarshal(comparisonFixture(), &output)
 		output["status"] = "completed"
@@ -46,7 +50,42 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	defer h.Close()
 	server := httptest.NewServer(h)
 	defer server.Close()
-	raw := []byte(`{"pipeline":"improve","trace_id":"00112233445566778899aabbccddeeff","options":{"case_id":"approved-case"}}`)
+	first := httptest.NewRequest("POST", "/v1/analysis-jobs", bytes.NewBufferString(`{"pipeline":"analyze","trace_id":"00112233445566778899aabbccddeeff"}`))
+	first.Header.Set("Idempotency-Key", "analysis-first")
+	firstResponse := httptest.NewRecorder()
+	h.ServeHTTP(firstResponse, first)
+	if firstResponse.Code != 202 {
+		t.Fatal(firstResponse.Body.String())
+	}
+	var analysis AnalysisJob
+	json.Unmarshal(firstResponse.Body.Bytes(), &analysis)
+	eventually(t, func() bool {
+		j, _ := store.GetAnalysisJob(context.Background(), analysis.ID)
+		return j.State.Terminal()
+	})
+	analysis, _ = store.GetAnalysisJob(context.Background(), analysis.ID)
+	if analysis.State != AnalysisJobCompleted || calls != 1 {
+		t.Fatal("analysis must finish without optimization", analysis.Error)
+	}
+	foreign := analysis
+	foreign.ID = "foreign-analysis"
+	foreign.OwnerUserID = "foreign"
+	foreign.Artifacts = nil
+	foreign.IdempotencyKey = "foreign-key"
+	if _, _, err := store.CreateAnalysisJob(context.Background(), foreign); err != nil {
+		t.Fatal(err)
+	}
+	// The explicit owner request is the first human gate; missing/foreign reports cannot start improvement.
+	for _, id := range []string{"", "foreign-analysis"} {
+		denied := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/v1/analysis-jobs", bytes.NewBufferString(`{"pipeline":"improve","analysis_job_id":"`+id+`","options":{"case_id":"approved-case"}}`))
+		r.Header.Set("Idempotency-Key", "denied-"+id)
+		h.ServeHTTP(denied, r)
+		if denied.Code != 400 && denied.Code != 404 {
+			t.Fatal("unapproved optimization accepted", denied.Code)
+		}
+	}
+	raw := []byte(`{"pipeline":"improve","analysis_job_id":"` + analysis.ID + `","options":{"case_id":"approved-case"}}`)
 	req, _ := http.NewRequest("POST", server.URL+"/v1/analysis-jobs", bytes.NewReader(raw))
 	req.Header.Set("Idempotency-Key", "stable-job")
 	response, err := http.DefaultClient.Do(req)
@@ -74,8 +113,11 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	if saved.Artifacts[0].ValidationStatus != "review_required" || len(saved.Artifacts[0].EvidenceRefs) != 1 {
 		t.Fatal("missing source or verification")
 	}
-	if calls != 1 {
+	if calls != 2 {
 		t.Fatal("unexpected executions")
+	}
+	if saved.SourceAnalysisJobID != analysis.ID || !bytes.Equal(saved.AnalysisInput, analysis.Checkpoint) || saved.EvidencePack.SHA256 != analysis.EvidencePack.SHA256 {
+		t.Fatal("analysis snapshot was not retained")
 	}
 	if !bytes.Contains(saved.Checkpoint, []byte(`"rewards"`)) {
 		t.Fatal("verifier evidence was not persisted")

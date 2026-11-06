@@ -7,7 +7,7 @@
 它从 Agent 的运行证据中发现可改进的问题，通过统一 Codex Agent 分析并生成候选，通过 Harbor 独立验证，并保留可追溯的改进决策。
 
 ```text
-Agent Trace → Evidence / Case → Codex + Skill / Tool → Frozen Candidate → Harbor Compare → Human Review
+Trace → Analysis Skill → Problem / Evidence → 人工决定是否优化 → Improvement Skill → Harbor Compare → 人工决定是否采用
 ```
 
 | 组件 | 负责什么 |
@@ -19,7 +19,7 @@ Agent Trace → Evidence / Case → Codex + Skill / Tool → Frozen Candidate �
 | Harbor | Agent、Environment、Job、Trial、Verifier 和原始评测产物 |
 | React | Agent / Trace、Case / Baseline 配置、Job、Compare、Artifact 和人工决定 |
 
-Codex 负责推理，Skill 指导分析，Tool 提供受控能力，Workflow 控制确定性步骤。当前只实现一种 harness-improvement 策略：借鉴 Harness² 的 Propose / Compose 思路，不保留其递归搜索、选择或 Library 语义。Harness² 已从运行依赖中移除，没有算法 Registry 或插件 SDK。
+Codex 负责推理，Skill 指导分析，Tool 提供受控能力，Workflow 控制确定性步骤。当前提供 trace-analysis 与 harness-improvement 两种受控任务模式；改进模式借鉴 Harness² 的 Propose / Compose 思路，不保留其递归搜索、选择或 Library 语义。Harness² 已从运行依赖中移除，没有算法 Registry 或插件 SDK。
 
 Harbor 负责被评测 Agent 的原生执行和 Verifier。内部分析 Runtime 与评测目标分开；当前薄适配仅接入 Codex 目标，没有宣称已交付其他 Agent 的候选注入协议。
 

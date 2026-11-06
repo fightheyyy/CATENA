@@ -14,7 +14,7 @@ type Locale = "zh" | "en";
 const launcherCopy = {
   zh: {
     title: "开始一次分析",
-    body: "选择 Agent 和时间范围，Catena 会自动发现重复问题并生成可复制资产。",
+    body: "选择 Agent 和时间范围，Catena 会输出问题、证据和根因假设，再由你决定是否优化。",
     agent: "Agent",
     chooseAgent: "选择 Agent",
     window: "分析范围",
@@ -34,7 +34,7 @@ const launcherCopy = {
   },
   en: {
     title: "Start an analysis",
-    body: "Choose an Agent and time range. Catena will find recurring problems and produce copyable assets.",
+    body: "Choose an Agent and time range. Catena reports problems, evidence and hypotheses. You decide whether to improve.",
     agent: "Agent",
     chooseAgent: "Choose an Agent",
     window: "Time range",
@@ -81,10 +81,6 @@ export function AgentAnalysisLauncher({
     agents.some((agent) => agent.agent_id === initialAgentID) ? initialAgentID ?? "" : firstAgentID,
   );
   const [preset, setPreset] = useState<AnalysisWindowPreset>("7d");
-  const [baseline, setBaseline] = useState("Complete the supplied task faithfully.");
-  const [caseID, setCaseID] = useState("");
-  const [cases, setCases] = useState<string[]>([]);
-  useEffect(() => { void api.evaluationCases().then(r => setCases((r.cases ?? []).map((c: {id: string}) => c.id))).catch(() => setCases([])); }, []);
   const [objective, setObjective] = useState(initialObjective);
   const [preview, setPreview] = useState<AgentTraceWindow | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -152,17 +148,17 @@ export function AgentAnalysisLauncher({
       {agents.length === 0 ? <p className="quiet-empty">{t.noAgents}</p> : (
         <form onSubmit={async (event) => {
           event.preventDefault();
-          if (!canStart || !preview || !caseID) return;
+          if (!canStart || !preview) return;
           setSubmitting(true);
           setSubmitError("");
           const input = {
-             options: { case_id: caseID, baseline: { "AGENTS.md": baseline } },
+             pipeline: "analyze" as const,
             window_start: preview.window_start,
             window_end: preview.window_end,
             output_language: locale === "zh" ? "zh-CN" as const : "en" as const,
             ...(objective.trim() ? { objective: objective.trim() } : {}),
           };
-          const signature = JSON.stringify([agentAnalysisRequestSignature(agentID, input, objective, input.output_language),  caseID]);
+          const signature = JSON.stringify([agentAnalysisRequestSignature(agentID, input, objective, input.output_language)]);
           if (requestIdentity.current.signature !== signature) {
             requestIdentity.current = { signature, key: evolutionIdempotencyKey(agentID) };
           }
@@ -175,8 +171,6 @@ export function AgentAnalysisLauncher({
           }
         }}>
           <div className="launcher-form-grid">
-            <label>Baseline AGENTS.md<textarea required maxLength={32768} value={baseline} onChange={e => setBaseline(e.target.value)} /></label>
-            {<label>Evaluation Case<select value={caseID} onChange={e => setCaseID(e.target.value)}><option value="">Select a registered Harbor case</option>{cases.map(id => <option key={id}>{id}</option>)}</select></label>}
             <label><span>{t.agent}</span><select value={agentID} onChange={(event) => setAgentID(event.target.value)} aria-label={t.chooseAgent}>
               {agents.map((agent) => <option value={agent.agent_id} key={agent.agent_id}>{agent.display_name}</option>)}
             </select></label>
@@ -204,7 +198,7 @@ export function AgentAnalysisLauncher({
               {submitError ? <p className="inline-note error" role="alert">{submitError}</p> : null}
             </div>
             {previewError ? <button className="text-button" type="button" onClick={() => setRefreshVersion((value) => value + 1)}>{t.retry}</button> : null}
-            <button className="primary-button compact" type="submit" disabled={!canStart || !caseID}>{submitting ? t.starting : `${t.start}${selectedAgent ? ` ${selectedAgent.display_name}` : ""}`}</button>
+            <button className="primary-button compact" type="submit" disabled={!canStart}>{submitting ? t.starting : `${t.start}${selectedAgent ? ` ${selectedAgent.display_name}` : ""}`}</button>
           </div>
         </form>
       )}

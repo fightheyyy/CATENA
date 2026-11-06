@@ -38,7 +38,7 @@ export type HumanReview = { artifact_id: string; decision: "adopt" | "reject"; r
 
 export type AnalysisJob = {
  reviews?: HumanReview[]; checkpoint?: unknown;
- schema?: string; job_id: string; pipeline?: string; adapter?: string; artifacts: Artifact[];
+ schema?: string; job_id: string; analysis_job_id?: string; pipeline?: string; adapter?: string; artifacts: Artifact[];
  state: string; attempt?: number; next_attempt_at?: string; cancel_requested?: boolean; error?: string;
  source_kind?: string; source_trace_id?: string; source_trace_ids: string[]; source_agent_id?: string; source_conversation_id?: string;
  source_runtime_kind?: string; window_start?: string; window_end?: string; objective?: string;

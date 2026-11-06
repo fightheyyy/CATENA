@@ -1,7 +1,7 @@
 # Codex analysis runtime
 
 The Engine uses Codex App Server `0.160.0` over stdio, with a private HOME/CODEX_HOME,
-explicit native Skill input (private root registration and load confirmation) and one `evaluate_candidate` dynamic tool. Native Codex
+explicit native Skill input (private root registration and load confirmation) and two controlled task modes: analysis has no tools; improvement has one `evaluate_candidate` dynamic tool. Native Codex
 owns reasoning/tool continuation. The former JSON `codex exec` transport and
 Harness² Proposer were deleted.
 

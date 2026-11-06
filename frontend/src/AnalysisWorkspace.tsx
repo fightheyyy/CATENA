@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import type { AgentSummary, AnalysisJob, HumanReview } from "./types";
 
@@ -24,16 +24,35 @@ export function AnalysisWorkspace({ locale, jobs, initialJobID, onAnalyze, onJob
   {selected && <article><h3>{selected.pipeline} / {selected.adapter}</h3><p>{selected.objective}</p>
     <p>{selected.state} · attempt {selected.attempt ?? 0}</p>{selected.error && <p role="alert">{selected.error}</p>}
     <button className="text-button" disabled={!!selected.reviews?.length || (!terminal && selected.cancel_requested)} onClick={() => { if (terminal && !window.confirm("Delete this analysis and its artifacts?")) return; void (terminal ? api.deleteAnalysisJob(selected.job_id).then(() => onJobDeleted(selected.job_id)) : api.cancelAnalysisJob(selected.job_id).then(next => onJobsUpdated(jobs.map(j => j.job_id === next.job_id ? next : j)))).catch(e => setError(String(e))); }}>{terminal ? "Delete" : "Cancel"}</button>
+    {selected.analysis_job_id && <p>Analysis source: <button className="text-button" onClick={()=>onJobSelected(selected.analysis_job_id!)}>{selected.analysis_job_id}</button></p>}
     <p>Source: {selected.source_trace_ids.join(", ") || selected.source_trace_id || selected.source_conversation_id}</p>
+    {selected.pipeline === "analyze" && selected.state === "completed" && <StartImprovement key={selected.job_id} jobID={selected.job_id} locale={locale} onStarted={job=>{onJobsUpdated([job]);onJobSelected(job.job_id);}} />}
     {(selected.artifacts ?? []).map(a => <section key={a.id}><h4>{a.type} · {a.validation_status}</h4>
       <Compare value={a.provenance} />
-      <Review key={a.id} jobID={selected.job_id} artifactID={a.id} ready={a.validation_status === "review_required"} review={selected.reviews?.find(r => r.artifact_id === a.id)} onSaved={job => onJobsUpdated([job])} />
-      <ArtifactPayload value={a.payload} onError={setError} /><details><summary>Provenance / evaluation</summary><pre>{JSON.stringify(a.provenance, null, 2)}</pre></details>
+      {a.type === "analysis_report" ? <ProblemReport value={a.payload} /> : <><Review key={a.id} jobID={selected.job_id} artifactID={a.id} ready={a.validation_status === "review_required"} review={selected.reviews?.find(r => r.artifact_id === a.id)} onSaved={job => onJobsUpdated([job])} /><ArtifactPayload value={a.payload} onError={setError} /></>}
+      <details><summary>Provenance / evaluation</summary><pre>{JSON.stringify(a.provenance, null, 2)}</pre></details>
     </section>)}
     {selected.state === "failed" && selected.checkpoint != null && <details><summary>Failed execution evidence</summary><pre>{JSON.stringify(selected.checkpoint, null, 2)}</pre></details>}
     <details><summary>Evidence</summary><pre>{JSON.stringify(selected.evidence_pack, null, 2)}</pre></details>
   </article>}
  </section>;
+}
+
+function ProblemReport({value}:{value:unknown}) {
+ const report=value as {summary?:string;problems?:{title:string;evidence:string;evidence_refs:string[];hypothesis:string;uncertainty:string}[]};
+ return <section aria-label="Analysis report"><p>{report?.summary}</p>{report?.problems?.map((p,i)=><article key={i}><h4>{p.title}</h4><p>Evidence: {p.evidence}</p><p>{p.evidence_refs.join(", ")}</p><p>Hypothesis: {p.hypothesis}</p><p>Uncertainty: {p.uncertainty}</p></article>)}</section>;
+}
+
+function StartImprovement({jobID,locale,onStarted}:{jobID:string;locale:"zh"|"en";onStarted:(job:AnalysisJob)=>void}) {
+ const [opened,setOpened]=useState(false),[cases,setCases]=useState<string[]>([]),[caseID,setCaseID]=useState(""),[baseline,setBaseline]=useState("Complete the supplied task faithfully."),[error,setError]=useState(""),[busy,setBusy]=useState(false);
+ const replay=useRef({signature:"",key:""});
+ useEffect(()=>{if(opened)void api.evaluationCases().then(r=>setCases(r.cases.map(c=>c.id))).catch(e=>setError(String(e)));},[opened]);
+ return <section aria-label="Human improvement decision"><p>{locale==="zh"?"分析已保存。由你决定是否优化；也可以保留报告，结束本次分析。":"Analysis saved. You decide whether to improve; keeping the report ends the analysis."}</p>
+ {!opened?<button className="primary-button compact" onClick={()=>setOpened(true)}>{locale==="zh"?"决定优化…":"Choose to improve…"}</button>:<form onSubmit={async e=>{e.preventDefault();setBusy(true);setError("");const signature=JSON.stringify([jobID,caseID,baseline]);if(replay.current.signature!==signature)replay.current={signature,key:crypto.randomUUID()};try{onStarted(await api.startImprovementJob(jobID,caseID,baseline,replay.current.key));}catch(cause){setError(String(cause));}finally{setBusy(false);}}}>
+ <label>Harbor Case<select required value={caseID} onChange={e=>setCaseID(e.target.value)}><option value="">Select a confirmed Case</option>{cases.map(id=><option key={id}>{id}</option>)}</select></label>
+ <label>Baseline AGENTS.md<textarea required maxLength={32768} value={baseline} onChange={e=>setBaseline(e.target.value)} /></label>
+ <button type="submit" disabled={busy||!caseID}>{locale==="zh"?"人工确认，启动优化":"Confirm and start improvement"}</button><button type="button" onClick={()=>setOpened(false)} disabled={busy}>{locale==="zh"?"暂不优化":"Keep analysis only"}</button>
+ {error&&<p role="alert">{error}</p>}</form>}</section>;
 }
 
 // Candidate file controls retain the former library's portable output behavior.

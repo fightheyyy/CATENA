@@ -160,6 +160,8 @@ type AnalysisEvidencePack struct {
 }
 
 type AnalysisJob struct {
+	SourceAnalysisJobID  string          `json:"analysis_job_id,omitempty"`
+	AnalysisInput        json.RawMessage `json:"analysis_input,omitempty"`
 	Reviews              []HumanReview   `json:"reviews,omitempty"`
 	SourceConversationID string          `json:"source_conversation_id,omitempty"`
 	Pipeline             string          `json:"pipeline,omitempty"`
