@@ -1,4 +1,3 @@
 frontend/index.html text eol=lf
 backend/internal/control/web/index.html text eol=lf
 deploy/catena-mvp1/postgres-init.sh text eol=lf
-
