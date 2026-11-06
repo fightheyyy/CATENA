@@ -1,11 +1,20 @@
-# V2 Engine 与 Codex CLI
+# Codex analysis runtime
 
-固定 Inspector/Evolution/Reviewer 与 OpenAI Agents SDK 回退已移除。当前 RSI Adapter 使用 `engine/catena_engine/runtime/codex.py` 的通用 JSON transport，固定 Codex CLI 0.160.0，Responses 协议，默认 low effort。独立临时 HOME/CODEX_HOME，禁用 shell、MCP/扩展、宿主 Skill 发现；输出和流大小受限，超时/取消终止进程组并清理临时目录。
+The Engine uses Codex App Server `0.160.0` over stdio, with a private HOME/CODEX_HOME,
+explicit native Skill input (private root registration and load confirmation) and one `evaluate_candidate` dynamic tool. Native Codex
+owns reasoning/tool continuation. The former JSON `codex exec` transport and
+Harness² Proposer were deleted.
 
-Go 创建持久化 Analysis Job，经私有 Bearer token 和 X-Catena-Owner 调用 `/v2/rsi`。收到运行 receipt 后轮询 `/v2/executions/{id}`；取消发 DELETE。Engine 一次只允许一个新的分析启动，health/状态查询保持可读。
+The process runs read-only with shell, host Skills, plugins, hooks, MCP and subagents
+disabled. Unknown requests are refused. A bounded, key-redacted protocol audit
+persists; temporary homes are cleaned and process groups terminated on completion,
+timeout or cancellation. Harbor target cleanup is awaited separately.
 
-`CATENA_ENGINE_REQUEST_TIMEOUT` 默认 20m；外层 `CATENA_JOB_TIMEOUT` 默认 20m，实际较早到期者生效。RSI budget.seconds 默认 900，单次 CLI/Harbor 遵守 host 剩余预算。Worker 关闭、lease loss 和超时通过 context 传递；进程组清理由 transport 测试覆盖。
+Go supplies the owner's Responses-compatible model privately. API keys are excluded
+from execution fingerprints and reports. Receipt/run volumes remain persistent and
+single-Engine-owned. One turn is not an inference-request, token or dollar cap.
 
-模型由用户 Connections 配置，Go 解密后临时传入；Engine receipt fingerprint 排除 API key，不存请求密钥。重启后的不确定执行不得自动再花费。Engine 状态目录必须持久化、单实例使用；不支持多个 Engine 共享同一 receipt root 的并发保证。
-
-[RSI](RSI_ADAPTERS.md) · [部署](../deploy/catena-mvp1/README.md) · [Rebirth 验收](refactors/REBIRTH.md)。
+See [Workflow](IMPROVEMENT_WORKFLOW.md) for order, restrictions and compatibility.
+Harbor's installed target Agent uses its own native execution; it is independent
+of the internal analysis process. The analysis Skill stays outside the target
+workspace and is rejected from generated target harnesses.

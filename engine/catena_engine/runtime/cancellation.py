@@ -2,7 +2,7 @@
 
 import asyncio
 
-from .contracts import OptimizationError
+from ..contracts import OptimizationError
 
 
 async def cancellable(operation, cancelled):
@@ -10,7 +10,7 @@ async def cancellable(operation, cancelled):
     try:
         while not task.done():
             if cancelled is not None and cancelled.is_set():
-                raise OptimizationError("RSI cancelled")
+                raise OptimizationError("Improvement cancelled")
             await asyncio.wait((task,), timeout=0.05)
         return await task
     finally:

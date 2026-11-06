@@ -3,10 +3,10 @@
 services:
   catena-engine:
     environment:
-      CATENA_RSI_CASES_MANIFEST: ${CATENA_RSI_WORKSPACE:?set an absolute operator-owned workspace}/cases.json
-      CATENA_RSI_RUNS_ROOT: ${CATENA_RSI_WORKSPACE:?set an absolute operator-owned workspace}/runs
+      CATENA_CASES_MANIFEST: ${CATENA_EVALUATION_WORKSPACE:?set an absolute operator-owned workspace}/cases.json
+      CATENA_RUNS_ROOT: ${CATENA_EVALUATION_WORKSPACE:?set an absolute operator-owned workspace}/runs
     volumes:
-      - ${CATENA_RSI_WORKSPACE:?set workspace}:${CATENA_RSI_WORKSPACE:?set workspace}
+      - ${CATENA_EVALUATION_WORKSPACE:?set workspace}:${CATENA_EVALUATION_WORKSPACE:?set workspace}
       - /var/run/docker.sock:/var/run/docker.sock
     group_add:
       - ${CATENA_DOCKER_GID:?set host docker socket GID}

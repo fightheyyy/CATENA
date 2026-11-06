@@ -22,17 +22,17 @@ def test_receipts_deduplicate_cancel_and_isolate_owners(tmp_path):
     base = f"http://127.0.0.1:{server.server_port}"
     payload = {"request_id": "job-1", "model": {"api_key": "NEVER_PERSIST_THIS"}}
     try:
-        assert call(base + "/v2/rsi", payload)[0] == 401
+        assert call(base + "/v3/improve", payload)[0] == 401
         with concurrent.futures.ThreadPoolExecutor() as pool:
-            first = pool.submit(call, base + "/v2/rsi", payload, "private")
+            first = pool.submit(call, base + "/v3/improve", payload, "private")
             assert started.wait(2)
-            assert call(base + "/v2/rsi", payload, "private")[0] == 202
-            assert call(base + "/v2/rsi", {"request_id": "other"}, "private")[0] == 429
+            assert call(base + "/v3/improve", payload, "private")[0] == 202
+            assert call(base + "/v3/improve", {"request_id": "other"}, "private")[0] == 429
             assert call(base + "/v2/executions/job-1", token="private", owner="foreign")[0] == 404
             assert call(base + "/v2/executions/job-1", token="private", method="DELETE")[0] == 202
             assert first.result()[1]["state"] == "cancelled"
         assert ended.is_set() and calls == ["job-1"]
-        assert call(base + "/v2/rsi", payload, "private")[1]["state"] == "cancelled"
+        assert call(base + "/v3/improve", payload, "private")[1]["state"] == "cancelled"
         assert "NEVER_PERSIST_THIS" not in "".join(p.read_text() for p in tmp_path.rglob("*.json"))
     finally:
         server.shutdown()

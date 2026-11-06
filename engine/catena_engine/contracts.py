@@ -1,4 +1,4 @@
-"""Versioned RSI contracts, independent of algorithms, runtimes and evaluators."""
+"""Evidence, candidate, budget and Harbor trial contracts."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any
 
-SCHEMA = "catena.rsi_request.v2"
-RESULT_SCHEMA = "catena.rsi_result.v1"
+SCHEMA = "catena.improvement_request.v1"
+RESULT_SCHEMA = "catena.improvement_result.v1"
 _SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
 _SKILL = re.compile(r"\.agents/skills/[a-z0-9][a-z0-9_-]*/SKILL\.md\Z")
 
@@ -71,24 +71,14 @@ class Candidate:
 
 @dataclass(frozen=True)
 class Budget:
-    model_calls: int = 12
-    trials: int = 8
+    agent_turns: int = 1
+    trials: int = 4
     seconds: int = 900
 
     def __post_init__(self):
-        for value, limit in ((self.model_calls, 64), (self.trials, 64), (self.seconds, 3600)):
+        for value, limit in ((self.agent_turns, 1), (self.trials, 64), (self.seconds, 3600)):
             if type(value) is not int or not 1 <= value <= limit:
-                raise OptimizationError("budget requires positive model_calls/trials ≤64 and seconds ≤3600")
-
-
-@dataclass(frozen=True)
-class Requirements:
-    model_calls: int
-    trials: int
-
-    def __post_init__(self):
-        if any(type(n) is not int or not 0 <= n <= 64 for n in (self.model_calls, self.trials)):
-            raise OptimizationError("invalid adapter budget requirements")
+                raise OptimizationError("budget requires positive agent_turns=1, trials ≤64 and seconds ≤3600")
 
 
 @dataclass(frozen=True)
@@ -98,13 +88,6 @@ class Context:
     baseline: Candidate
     evidence: str = ""
     evidence_refs: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
-class Completion:
-    value: dict[str, Any]
-    input_tokens: int
-    output_tokens: int
 
 
 @dataclass(frozen=True)
@@ -126,9 +109,3 @@ class Trial:
     nonzero_command_exits: int | None = None
     result_sha256: str | None = None
     deliverables: dict[str, str] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class OptimizationResult:
-    candidates: tuple[Candidate, ...]
-    diagnostics: dict[str, Any] = field(default_factory=dict)

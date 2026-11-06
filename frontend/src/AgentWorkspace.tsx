@@ -157,7 +157,7 @@ export function AgentWorkspace({
 
             {canAnalyzeAgent(selected) ? (
               <section className="agent-next-action">
-                <div><h3>{t.analyze}</h3><p>{locale === "zh" ? "从这个 Agent 最近一段时间的 Trace 中发现重复问题，并生成 agent.md、Skill、Role 或 Harness 建议。" : "Find repeated problems in this Agent's recent Traces and produce agent.md, Skill, Role, or Harness proposals."}</p></div>
+                <div><h3>{t.analyze}</h3><p>{locale === "zh" ? "从这个 Agent 最近一段时间的 Trace 中发现重复问题，并生成 AGENTS.md 或 Skill 改进候选。" : "Find repeated problems in this Agent's recent Traces and produce AGENTS.md or Skill improvement candidates."}</p></div>
                 <button className="secondary-button" type="button" onClick={() => onAnalyze(selected.agent_id)}>{t.analyze}</button>
               </section>
             ) : <p className="agent-analysis-note">{t.analyzeHint}</p>}

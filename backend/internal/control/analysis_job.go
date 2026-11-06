@@ -15,7 +15,6 @@ import (
 type CreateAnalysisRequest struct {
 	ConversationID string          `json:"conversation_id,omitempty"`
 	Pipeline       string          `json:"pipeline"`
-	Adapter        string          `json:"adapter,omitempty"`
 	TraceID        string          `json:"trace_id,omitempty"`
 	AgentID        string          `json:"agent_id,omitempty"`
 	WindowStart    time.Time       `json:"window_start,omitempty"`
@@ -38,19 +37,12 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, 400, e.Error())
 		return
 	}
-	if req.Pipeline != "rsi" {
-		writeProblem(w, 400, "only the rsi pipeline is supported")
+	if req.Pipeline != "improve" {
+		writeProblem(w, 400, "only the improve pipeline is supported")
 		return
-	}
-	if req.Adapter == "" {
-		req.Adapter = "harness2"
 	}
 	if len(req.Objective) > 4000 || len(req.Options) > 128*1024 {
 		writeProblem(w, 400, "analysis input is too large")
-		return
-	}
-	if req.Adapter != "harness2" {
-		writeProblem(w, 400, "only Harness2 is supported")
 		return
 	}
 	if len(req.Options) > 0 {
@@ -61,9 +53,9 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 		}
 		for key := range options {
 			switch key {
-			case "case_id", "baseline", "harness2", "budget", "validation_case_ids":
+			case "case_id", "baseline", "budget", "validation_case_ids":
 			default:
-				writeProblem(w, 400, "unsupported RSI option")
+				writeProblem(w, 400, "unsupported improvement option")
 				return
 			}
 		}
@@ -122,7 +114,7 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 	}
 	raw, _ := json.Marshal(req)
 	hash := sha256.Sum256(append(raw, []byte(pack.SHA256)...))
-	job := AnalysisJob{Schema: "catena.analysis_job.v2", ID: newID("analysis-job"), OwnerUserID: owner, Pipeline: req.Pipeline, Adapter: req.Adapter, Options: req.Options, SourceKind: pack.SourceKind, SourceConversationID: pack.SourceConversationID, SourceTraceID: pack.SourceTraceID, SourceTraceIDs: pack.SourceTraceIDs, SourceAgentID: pack.SourceAgentID, SourceRuntimeKind: pack.SourceRuntimeKind, WindowStart: pack.WindowStart, WindowEnd: pack.WindowEnd, Objective: sanitizeAnalysisText(req.Objective, 4000), IdempotencyKey: key, RequestFingerprint: hex.EncodeToString(hash[:]), State: AnalysisJobQueued, Stages: []AnalysisStage{{Name: "generate", State: AnalysisStageQueued}}, Artifacts: []Artifact{}, EvidencePack: &pack, CreatedAt: now, UpdatedAt: now}
+	job := AnalysisJob{Schema: "catena.analysis_job.v2", ID: newID("analysis-job"), OwnerUserID: owner, Pipeline: req.Pipeline, Adapter: "codex-skill", Options: req.Options, SourceKind: pack.SourceKind, SourceConversationID: pack.SourceConversationID, SourceTraceID: pack.SourceTraceID, SourceTraceIDs: pack.SourceTraceIDs, SourceAgentID: pack.SourceAgentID, SourceRuntimeKind: pack.SourceRuntimeKind, WindowStart: pack.WindowStart, WindowEnd: pack.WindowEnd, Objective: sanitizeAnalysisText(req.Objective, 4000), IdempotencyKey: key, RequestFingerprint: hex.EncodeToString(hash[:]), State: AnalysisJobQueued, Stages: []AnalysisStage{{Name: "generate", State: AnalysisStageQueued}}, Artifacts: []Artifact{}, EvidencePack: &pack, CreatedAt: now, UpdatedAt: now}
 	stored, created, err := s.store.CreateAnalysisJob(r.Context(), job)
 	if err != nil {
 		writeProblem(w, statusFor(err), err.Error())
@@ -136,7 +128,7 @@ func (s *HTTPServer) createAnalysisJob(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease, job AnalysisJob) error {
-	if job.Schema != "catena.analysis_job.v2" || job.Pipeline != "rsi" {
+	if job.Schema != "catena.analysis_job.v2" || job.Pipeline != "improve" {
 		return errors.New("legacy execution retired; create a V2 Analysis Job")
 	}
 	if job.EvidencePack == nil || !validAnalysisEvidencePack(*job.EvidencePack, job) {
@@ -145,7 +137,7 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	var payload map[string]any
 	if len(job.Options) > 0 {
 		if json.Unmarshal(job.Options, &payload) != nil {
-			return errors.New("invalid RSI options")
+			return errors.New("invalid improvement options")
 		}
 	}
 	if payload == nil {
@@ -153,13 +145,13 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	}
 	for key := range payload {
 		switch key {
-		case "case_id", "baseline", "harness2", "budget", "validation_case_ids":
+		case "case_id", "baseline", "budget", "validation_case_ids":
 		default:
-			return errors.New("unsupported RSI option")
+			return errors.New("unsupported improvement option")
 		}
 	}
 	if _, ok := payload["case_id"].(string); !ok {
-		return errors.New("a registered evaluation case_id is required for RSI")
+		return errors.New("a registered evaluation case_id is required for improvement")
 	}
 	if payload["baseline"] == nil {
 		payload["baseline"] = map[string]string{"AGENTS.md": "Complete the supplied task faithfully."}
@@ -171,7 +163,7 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	evidence, _ := json.Marshal(map[string]any{"pack": job.EvidencePack, "objective": job.Objective})
 	payload["evidence"] = string(evidence)
 	payload["evidence_refs"] = analysisJobTraceIDs(job)
-	payload["schema"] = "catena.rsi_request.v2"
+	payload["schema"] = "catena.improvement_request.v1"
 	payload["request_id"] = job.ID
 	payload["model"] = map[string]string{"provider": credentials.Provider, "base_url": credentials.BaseURL, "model": credentials.Model, "api_key": credentials.APIKey}
 	job.State = AnalysisJobRunning
@@ -184,7 +176,7 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	if owner == "" {
 		owner = "local"
 	}
-	result, err := s.analysisRuntime.execute(ctx, owner, job.ID, payload, "/v2/rsi")
+	result, err := s.analysisRuntime.execute(ctx, owner, job.ID, payload, "/v3/improve")
 	if err != nil {
 		return err
 	}
@@ -194,14 +186,14 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 		Candidates []json.RawMessage `json:"candidates"`
 	}
 	if err = json.Unmarshal(result, &out); err != nil {
-		return errors.New("invalid RSI result")
+		return errors.New("invalid improvement result")
 	}
 	job.Checkpoint = result
 	if out.Status != "completed" || len(out.Candidates) == 0 {
 		if err = s.saveAnalysisProgress(ctx, lease, job); err != nil {
 			return err
 		}
-		return errors.New("RSI execution failed; retained trial evidence requires review")
+		return errors.New("improvement execution failed; retained trial evidence requires review")
 	}
 	job.Artifacts = []Artifact{}
 	var provenanceFields map[string]json.RawMessage
@@ -221,7 +213,7 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 			status = "review_required"
 		}
 		digest := sha256.Sum256([]byte(fmt.Sprintf("%s:%d", job.ID, i)))
-		job.Artifacts = append(job.Artifacts, Artifact{ID: "artifact-" + hex.EncodeToString(digest[:16]), OwnerID: job.OwnerUserID, JobID: job.ID, Type: "rsi_candidate", SchemaVersion: "catena.artifact.v1", EvidenceRefs: analysisJobTraceIDs(job), Payload: payload, Provenance: provenance, ValidationStatus: status, CreatedAt: time.Now().UTC()})
+		job.Artifacts = append(job.Artifacts, Artifact{ID: "artifact-" + hex.EncodeToString(digest[:16]), OwnerID: job.OwnerUserID, JobID: job.ID, Type: "improvement_candidate", SchemaVersion: "catena.artifact.v1", EvidenceRefs: analysisJobTraceIDs(job), Payload: payload, Provenance: provenance, ValidationStatus: status, CreatedAt: time.Now().UTC()})
 	}
 	job.State = AnalysisJobCompleted
 	job.CurrentStage = "complete"

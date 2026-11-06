@@ -20,7 +20,7 @@ func TestRetiredMemoryAndCommunityCannotExecute(t *testing.T) {
 			t.Fatalf("%s: %d", path, out.Code)
 		}
 	}
-	for _, raw := range []string{`{"pipeline":"memory"}`, `{"pipeline":"rsi","adapter":"other"}`, `{"pipeline":"rsi","conversation_id":"old-session"}`} {
+	for _, raw := range []string{`{"pipeline":"memory"}`, `{"pipeline":"improve","adapter":"other"}`, `{"pipeline":"improve","conversation_id":"old-session"}`, `{"pipeline":"rsi"}`, `{"pipeline":"improve","options":{"harness2":{}}}`} {
 		out := httptest.NewRecorder()
 		h.ServeHTTP(out, httptest.NewRequest("POST", "/v1/analysis-jobs", strings.NewReader(raw)))
 		if out.Code != 400 {

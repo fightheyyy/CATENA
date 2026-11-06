@@ -9,13 +9,13 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from .contracts import OptimizationError
 from .executions import Executions
-from .rsi.contracts import OptimizationError
 
 MAX_BODY_BYTES = 2 * 1024 * 1024
 
 
-def create_server(address, token="", rsi_handler=None, receipt_root=None):
+def create_server(address, token="", improvement_handler=None, receipt_root=None):
     host, _, port = address.rpartition(":")
     slots = threading.BoundedSemaphore(1)
     executions = Executions(receipt_root or os.environ.get("CATENA_ENGINE_EXECUTIONS_ROOT", ".local/executions"))
@@ -52,14 +52,10 @@ def create_server(address, token="", rsi_handler=None, receipt_root=None):
             try:
                 if self.path == "/v2/manifest":
                     self._json(
-                        200, {"schema": "catena.engine_manifest.v2", "status": "ready", "pipelines": ["rsi"]}
+                        200, {"schema": "catena.engine_manifest.v2", "status": "ready", "pipelines": ["improve"]}
                     )
-                elif self.path == "/v2/rsi/adapters":
-                    from .rsi.harness2 import UPSTREAM_REVISION
-
-                    self._json(200, {"adapters": [{"name": "harness2", "version": UPSTREAM_REVISION}]})
                 elif self.path == "/v2/cases":
-                    path = os.environ.get("CATENA_RSI_CASES_MANIFEST")
+                    path = os.environ.get("CATENA_CASES_MANIFEST")
                     cases = json.loads(Path(path).read_text(encoding="utf-8")) if path else {}
                     self._json(200, {"cases": [{"id": key} for key in cases]})
                 elif self.path.startswith("/v2/executions/"):
@@ -95,8 +91,12 @@ def create_server(address, token="", rsi_handler=None, receipt_root=None):
                 payload = json.loads(self.rfile.read(length))
                 if not isinstance(payload, dict):
                     raise OptimizationError("request must be an object")
-                if self.path == "/v2/rsi":
-                    from .rsi.api import run_payload
+                if self.path == "/v3/improve":
+                    handler = improvement_handler
+                    if handler is None:
+                        from .improvement import run_payload
+
+                        handler = run_payload
 
                     cached = executions.replay(owner, payload)
                     if cached is not None:
@@ -109,7 +109,7 @@ def create_server(address, token="", rsi_handler=None, receipt_root=None):
                         status, result = executions.execute(
                             owner,
                             payload,
-                            lambda event: rsi_handler(payload, event) if rsi_handler else run_payload(payload, event),
+                            lambda event: handler(payload, event),
                         )
                         self._json(status, result)
                     finally:

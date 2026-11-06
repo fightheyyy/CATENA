@@ -14,9 +14,9 @@ export const traces = ["first", "second"].map((name, index) => ({ trace_id: `tra
   session_id: "session-fixture", root_name: "agent.turn", input_preview: `请求 ${index + 1}：核对工具结果`,
   service_name: agent.display_name, span_count: 1, error_count: 0, duration_ms: 120,
   start_time: now, end_time: now }));
-const baseJob = { schema: "catena.analysis_job.v2", job_id: "job-fixture", pipeline: "rsi", adapter: "harness2", source_kind: "agent_trace_set",
+const baseJob = { schema: "catena.analysis_job.v2", job_id: "job-fixture", pipeline: "improve", adapter: "codex-skill", source_kind: "agent_trace_set",
  source_agent_id: agent.agent_id, source_trace_ids: traces.map(t=>t.trace_id), state: "running", stages: [], artifacts: [], created_at: now, updated_at: now };
-const completed = { ...baseJob, state: "completed", artifacts: [{id:"artifact-fixture",job_id:"job-fixture",type:"rsi_candidate",schema_version:"catena.artifact.v1",
+const completed = { ...baseJob, state: "completed", artifacts: [{id:"artifact-fixture",job_id:"job-fixture",type:"improvement_candidate",schema_version:"catena.artifact.v1",
  evidence_refs:baseJob.source_trace_ids,payload:{files:{"AGENTS.md":"Inspect evidence before acting."}},provenance:{evaluation:[{fixture:true,valid:false,error:"No real verifier executed"}]},validation_status:"unverified",created_at:now}] };
 
 export async function fixtureServer(overrides = {}) {

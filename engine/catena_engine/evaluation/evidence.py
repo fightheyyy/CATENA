@@ -6,7 +6,7 @@ from pathlib import Path
 from harbor.models.trajectories.trajectory import Trajectory
 from harbor.models.trial.artifact_manifest import ArtifactManifestEntry
 
-from ..rsi.contracts import OptimizationError
+from ..contracts import OptimizationError
 
 
 def text(content) -> str:
@@ -64,5 +64,5 @@ def read_deliverables(root: Path, sources: tuple[str, ...]) -> dict[str, str]:
         total += path.stat().st_size
         if total > 256_000:
             raise OptimizationError("Harbor deliverables exceed optimizer context limit")
-        files[source] = path.read_text(encoding="utf-8")
+        files[source] = path.read_bytes().decode("utf-8")
     return files

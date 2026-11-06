@@ -6,7 +6,7 @@ import os
 import threading
 from pathlib import Path
 
-from .rsi.contracts import safe_id
+from .contracts import safe_id
 
 
 class Executions:

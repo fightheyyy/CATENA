@@ -125,7 +125,7 @@ test("Analysis polling publishes sourced unverified artifacts and cancellation r
  await page.getByRole("button",{name:"Cancel",exact:true}).click();
  await page.getByRole("button",{name:"Cancel",exact:true}).waitFor();
  state.jobComplete=true;
- await visible(page.getByRole("heading",{name:"rsi_candidate · unverified"}));
+ await visible(page.getByRole("heading",{name:"improvement_candidate · unverified"}));
  await visible(page.getByText('Inspect evidence before acting.',{exact:false}));
  await page.getByText("Provenance / evaluation",{exact:true}).click();
  await visible(page.getByText("No real verifier executed",{exact:false}));

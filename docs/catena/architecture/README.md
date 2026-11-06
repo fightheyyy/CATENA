@@ -1,57 +1,49 @@
 # CATENA architecture
 
-CATENA is a Trace-driven Agent Engineering Control Plane.
+Codex = analysis/improvement Agent. Harbor = evaluation engine.
+CATENA = attribution, orchestration and engineering records.
 
 ```mermaid
-flowchart LR
-    Agent[Agent] --> Tap[Tap / OTLP]
-    Tap --> Go[Go control plane]
-    Go --> CH[(ClickHouse Trace)]
-    CH --> Evidence[Bounded redacted Evidence]
-    Evidence --> Queue[(PostgreSQL Job / lease / fencing)]
-    Case[Operator-reviewed Harbor Case + fingerprint] --> Queue
-    Queue --> Engine[Private Engine + execution receipts]
-    Engine --> H2[Pinned native Harness² scheduler]
-    H2 --> Proposer[Custom read-only Codex JSON Proposer]
-    H2 --> Probe[Harbor probes: ATIF + real deliverables]
-    H2 --> Audit[(Private upstream tree / selection / Library / audits)]
-    H2 --> Candidate[Frozen Candidate]
-    Candidate --> Harbor[Harbor Job / Trial / Environment / Verifier]
-    Harbor --> Compare[Baseline / Candidate Compare]
-    Compare --> Go
-    Go --> Review[React + human decision]
-    Review --> Queue
+flowchart TD
+    Trace[Tap / OTLP] --> CH[(ClickHouse)]
+    CH --> Go[Go: owner-scoped frozen Evidence + confirmed Case]
+    Go --> Queue[(PostgreSQL: Job / lease / heartbeat / fencing)]
+    Queue --> Receipt[Private Engine execution receipt]
+    Receipt --> Workflow[improvement.py: Experiment.run]
+    Workflow --> Base[Harbor baseline probe]
+    Base --> Agent[Codex App Server + explicit improvement Skill]
+    Agent --> Tool[evaluate_candidate: validated files / fixed Case / one probe]
+    Tool --> Probe[Harbor native Job / Trial / Codex / Environment / Verifier]
+    Probe --> Observation[Actual deliverables + ATIF; no rewards]
+    Observation --> Agent
+    Agent --> Freeze[Workflow freezes final Candidate]
+    Freeze --> Pair[Harbor fresh baseline then candidate; optional held-out pairs]
+    Pair --> Persist[Go: Compare / Artifact / version / provenance]
+    Persist --> Review[React Human Review]
+    Review --> Records[(PostgreSQL engineering records)]
 ```
 
-Go owns identity, evidence, scheduling, persistence and audit. Harness² owns its
-optimization algorithm. Harbor owns all target Agent execution and verification.
-The small Codex subclass only installs validated harness files and supplies private
-owner credentials. The optimizer model transport cannot execute shell commands or
-read host Skills. Candidate files and registered Cases remain separate from verifier
-outputs; rewards never enter proposer context.
+| Source | Responsibility |
+|---|---|
+| `backend/internal/control/analysis_job.go` | Evidence, Job admission, private invocation, persisted result/artifacts |
+| `analysis_worker.go`, `postgres_analysis_queue.go` | Durable scheduling, retry/cancel/timeout, lease and fencing |
+| `review.go`, `artifact.go` | Independent Compare eligibility, immutable review, owner-scoped history |
+| `engine/catena_engine/improvement.py` | Fixed stages, trial reserve, candidate validation/freeze, score-free tool callback |
+| `runtime/codex.py`, `skills/harness-improvement/SKILL.md` | One native analysis loop, strategy instructions, isolated process and audit |
+| `evaluation/harbor.py`, `harbor_agent.py`, `evidence.py` | Native Harbor execution, thin target injection, TrialResult/ATIF/artifact reads |
+| `executions.py`, `server.py` | Private authentication, owner receipts, operation deduplication |
+| `frontend/src/AgentAnalysisLauncher.tsx`, `AnalysisWorkspace.tsx` | Configuration, state, Compare, candidate files and Human Review |
 
-The pinned upstream Proposer only supports Claude CLI/OpenCode; our Codex JSON
-transport is an explicit custom channel, not native Proposer equivalence. Harbor
-supplies native TrialResult metrics, ATIF and pre-verifier collected output files.
-Harness² sees real task artifacts rather than assistant summaries. Native upstream
-runs and the experiment-scoped Library persist alongside Harbor evidence. Exact
-contracts and current limits are in [the integration guide](../../RSI_ADAPTERS.md).
+Harness² supplies method inspiration, not a runtime dependency. No Registry,
+custom optimizer Host/Bench/Proposer, universal Plugin SDK or second durable queue
+remains. Internal analysis Runtime is separate from the evaluated target; the
+current target adapter is Codex, not a universal harness format.
 
-A single durable PostgreSQL queue handles admission, leases, heartbeat, fencing,
-retry, timeout and cancellation. Engine receipts identify external paid operations,
-not another queue. An uncertain receipt after restart requires inspection before
-any replay. One Engine instance owns each receipt root.
+The four permanent services remain Go+React, Python Engine, PostgreSQL and
+ClickHouse. Codex analysis is an Engine child process. Harbor creates disposable
+target containers. No new service or middleware was added.
 
-After candidate freeze, Harbor runs a fresh baseline/candidate pair. Optional
-held-out Cases remain distinct from the optimization Case. Go retains the full
-comparison checkpoint and artifact provenance. Human decisions append atomically
-to the terminal Job; they cannot overwrite verifier results or authorize automatic
-installation. Unknown cost/usage remains unknown. One pair establishes no general
-improvement.
-
-OpenViking, Memory, embeddings, community and algorithm registries are retired.
-Historical tables/terminal records remain for export. No provider-specific runtime
-is required to read retained artifacts. Explicitly authorized Markdown/AGENTS.md
-text is the only reserved future team-context boundary.
-
-[Current spec](../../../SPEC.md) · [Implementation and evidence](../../refactors/REBIRTH.md)
+Engineering memory reuses versioned Evidence/Candidate/Compare/Review. OpenViking
+and automatic retrieval remain retired. Historical terminal Jobs are unchanged.
+See [workflow contracts](../../IMPROVEMENT_WORKFLOW.md), [spec](../../../SPEC.md)
+[current acceptance](../../refactors/UNIFIED_RUNTIME.md) and [historical evidence](../../refactors/REBIRTH.md).

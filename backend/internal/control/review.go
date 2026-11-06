@@ -71,7 +71,7 @@ func appendReview(job *AnalysisJob, review HumanReview) error {
 		}
 	}
 	for _, artifact := range job.Artifacts {
-		if artifact.ID != review.ArtifactID || artifact.Type != "rsi_candidate" || artifact.ValidationStatus != "review_required" {
+		if artifact.ID != review.ArtifactID || (artifact.Type != "improvement_candidate" && artifact.Type != "rsi_candidate") || artifact.ValidationStatus != "review_required" {
 			continue
 		}
 		var candidate struct {

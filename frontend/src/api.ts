@@ -128,13 +128,13 @@ export const api = {
   ),
   startAgentAnalysisJob: async (
     agentID: string,
-    input: { window_start: string; window_end: string; objective?: string; pipeline?: "rsi"; options?: Record<string, unknown>; output_language: "zh-CN" | "en" },
+    input: { window_start: string; window_end: string; objective?: string; pipeline?: "improve"; options?: Record<string, unknown>; output_language: "zh-CN" | "en" },
     idempotencyKey: string,
   ) => normalizeAnalysisJob(
     await request<unknown>("/v1/analysis-jobs", {
       method: "POST",
       headers: { "Idempotency-Key": idempotencyKey },
-      body: JSON.stringify({ pipeline: input.pipeline ?? "rsi", agent_id: agentID, window_start: input.window_start, window_end: input.window_end, objective: input.objective, options: input.options }),
+      body: JSON.stringify({ pipeline: input.pipeline ?? "improve", agent_id: agentID, window_start: input.window_start, window_end: input.window_end, objective: input.objective, options: input.options }),
     }),
   ),
   apiTokens: () => request<{ api_tokens: ApiToken[] }>("/v1/me/api-tokens"),

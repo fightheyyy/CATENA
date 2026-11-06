@@ -21,7 +21,7 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	seedTestAnalysisModelConfig(t, store, "local")
 	calls := 0
 	engine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v2/rsi" {
+		if r.URL.Path != "/v3/improve" {
 			writeProblem(w, 404, "unknown")
 			return
 		}
@@ -46,7 +46,7 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	defer h.Close()
 	server := httptest.NewServer(h)
 	defer server.Close()
-	raw := []byte(`{"pipeline":"rsi","trace_id":"00112233445566778899aabbccddeeff","options":{"case_id":"approved-case"}}`)
+	raw := []byte(`{"pipeline":"improve","trace_id":"00112233445566778899aabbccddeeff","options":{"case_id":"approved-case"}}`)
 	req, _ := http.NewRequest("POST", server.URL+"/v1/analysis-jobs", bytes.NewReader(raw))
 	req.Header.Set("Idempotency-Key", "stable-job")
 	response, err := http.DefaultClient.Do(req)
@@ -100,7 +100,7 @@ func TestEngineClientTimeoutCancelsExternalExecution(t *testing.T) {
 	manager, _ := NewEngineClient(EngineConfig{URL: engine.URL, Token: "private", RequestTimeout: 50 * time.Millisecond})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	if _, err := manager.execute(ctx, "owner", "bounded-job", map[string]string{"request_id": "bounded-job"}, "/v2/rsi"); err == nil {
+	if _, err := manager.execute(ctx, "owner", "bounded-job", map[string]string{"request_id": "bounded-job"}, "/v3/improve"); err == nil {
 		t.Fatal("timeout not propagated")
 	}
 	select {

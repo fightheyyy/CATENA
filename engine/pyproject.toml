@@ -17,8 +17,7 @@ build-backend = "setuptools.build_meta"
 include = ["catena_engine*"]
 
 [project.optional-dependencies]
-rsi = [
-  "harness2 @ git+https://github.com/google-research/harness2.git@1cfe254e8d25b15f37048c3730134686abe60335",
+evaluation = [
   "harbor==0.23.0",
 ]
 dev = [
@@ -37,3 +36,6 @@ line-length = 120
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
 ignore = ["E501"]
+
+[tool.setuptools.package-data]
+catena_engine = ["skills/*/SKILL.md"]

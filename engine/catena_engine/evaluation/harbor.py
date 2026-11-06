@@ -13,9 +13,9 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlparse
 
+from ..contracts import Candidate, OptimizationError, Trial, safe_id
 from ..protocol import ModelConfig
-from ..rsi.cancellation import cancellable
-from ..rsi.contracts import Candidate, OptimizationError, Trial, safe_id
+from ..runtime.cancellation import cancellable
 
 
 def task_digest(root: Path) -> str:

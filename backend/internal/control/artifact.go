@@ -27,7 +27,7 @@ func validJobArtifacts(job AnalysisJob) error {
 	seen := map[string]bool{}
 	for _, a := range job.Artifacts {
 		if a.ID == "" || seen[a.ID] || a.OwnerID != job.OwnerUserID || a.JobID != job.ID ||
-			(a.Type != "rsi_candidate" && a.Type != "engineering_memory") || a.SchemaVersion != "catena.artifact.v1" ||
+			(a.Type != "improvement_candidate" && a.Type != "rsi_candidate" && a.Type != "engineering_memory") || a.SchemaVersion != "catena.artifact.v1" ||
 			len(a.EvidenceRefs) == 0 || !equalStringSlices(a.EvidenceRefs, analysisJobTraceIDs(job)) || !json.Valid(a.Payload) || !json.Valid(a.Provenance) || a.CreatedAt.IsZero() {
 			return errors.New("invalid artifact identity, source or payload")
 		}

@@ -63,8 +63,8 @@ services:
     environment:
       CATENA_CODEX_REASONING_EFFORT: ${CATENA_CODEX_REASONING_EFFORT:-low}
       CATENA_ENGINE_EXECUTIONS_ROOT: /var/lib/catena-engine/executions
-      CATENA_RSI_RUNS_ROOT: /var/lib/catena-engine/runs
-      CATENA_RSI_CASES_MANIFEST: ${CATENA_RSI_CASES_MANIFEST:-}
+      CATENA_RUNS_ROOT: /var/lib/catena-engine/runs
+      CATENA_CASES_MANIFEST: ${CATENA_CASES_MANIFEST:-}
       CATENA_ENGINE_ADDR: 0.0.0.0:8790
       CATENA_ENGINE_TOKEN: ${CATENA_ENGINE_TOKEN:-catena-local-engine-token-change-me}
     volumes:

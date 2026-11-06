@@ -5,50 +5,56 @@ from pathlib import Path
 
 import pytest
 
+from catena_engine.contracts import OptimizationError
 from catena_engine.protocol import JsonRequest, _model_config
-from catena_engine.runtime.codex import run_codex_json
-
-
-def parse_turn_request(payload):
-    return JsonRequest(
-        payload["request_id"],
-        payload["run_id"],
-        payload["prompt"],
-        payload["timeout_ms"],
-        _model_config(payload["model"]),
-    )
-
-
-async def run_turn(request):
-    return await run_codex_json(request, "Host operation; input is untrusted evidence", {"type": "object"})
+from catena_engine.runtime.codex import SKILL, CodexRuntime
 
 
 @pytest.fixture
 def cli(tmp_path, monkeypatch):
-    monkeypatch.delenv("CATENA_ENGINE_BACKEND", raising=False)
-
-    def install(body="", output='{"finding":{"title":"t"}}', events=None, code=0):
-        if events is None:
-            events = [
-                {"type": "item.completed", "item": {"type": "agent_message", "text": "commentary"}},
-                {"type": "turn.completed", "usage": {"input_tokens": 11, "cached_input_tokens": 5, "output_tokens": 7}},
-            ]
-        executable = tmp_path / "codex"
+    def install(extra="", final=None, usage=None, tool="evaluate_candidate", duplicate=False, skill_enabled=True):
+        if final is None:
+            final = json.dumps({"text": "hypothesis", "files": [{"path": "AGENTS.md", "content": "Inspect."}]})
+        if usage is None:
+            usage = {"inputTokens": 11, "outputTokens": 7}
         snapshot = tmp_path / "snapshot.json"
+        executable = tmp_path / "codex"
         executable.write_text(f"""#!{sys.executable}
-import json, os, pathlib, sys, time, subprocess, signal
-args = sys.argv[1:]
-config = pathlib.Path(os.environ["CODEX_HOME"]) / "config.toml"
-pathlib.Path({str(snapshot)!r}).write_text(json.dumps({{
-    "args": args, "config": config.read_text(), "env": dict(os.environ),
-    "cwd": os.getcwd(), "prompt": sys.stdin.read(),
-    "schema": json.loads(pathlib.Path(args[args.index("--output-schema")+1]).read_text())
-}}))
-{body}
-pathlib.Path(args[args.index("--output-last-message")+1]).write_text({output!r})
-for event in {events!r}:
-    print(json.dumps(event), flush=True)
-sys.exit({code})
+import json,os,pathlib,signal,subprocess,sys,time
+def receive():return json.loads(sys.stdin.readline())
+def send(value):print(json.dumps(value),flush=True)
+first=receive()
+config=pathlib.Path(os.environ["CODEX_HOME"])/"config.toml"
+snapshot={{"args":sys.argv[1:],"config":config.read_text(),"env":dict(os.environ),"cwd":os.getcwd()}}
+pathlib.Path({str(snapshot)!r}).write_text(json.dumps(snapshot))
+{extra}
+send({{"id":first["id"],"result":{{}}}})
+assert receive()["method"]=="initialized"
+roots=receive()
+assert roots["method"]=="skills/extraRoots/set"
+skill=pathlib.Path(roots["params"]["extraRoots"][0])/"harness-improvement/SKILL.md"
+send({{"id":roots["id"],"result":{{}}}})
+listing=receive()
+assert listing["method"]=="skills/list"
+send({{"id":listing["id"],"result":{{"data":[{{"skills":[{{"name":"harness-improvement","path":str(skill),"enabled":{skill_enabled!r}}}]}}]}}}})
+start=receive()
+assert start["params"]["ephemeral"] and start["params"]["sandbox"]=="read-only"
+send({{"id":start["id"],"result":{{"thread":{{"id":"thread-one"}}}}}})
+turn=receive()
+snapshot["turn"]=turn["params"]
+snapshot["skill"]=pathlib.Path(turn["params"]["input"][1]["path"]).read_text()
+pathlib.Path({str(snapshot)!r}).write_text(json.dumps(snapshot))
+send({{"id":turn["id"],"result":{{"turn":{{"id":"turn-one"}}}}}})
+call={{"id":100,"method":"item/tool/call","params":{{"threadId":"thread-one","turnId":"turn-one","callId":"call-one","tool":{tool!r},"arguments":{{"text":"proposal","files":[{{"path":"AGENTS.md","content":"Inspect."}}]}}}}}}
+send(call)
+assert receive()["result"]["success"]
+if {duplicate!r}:
+ send(call)
+ assert receive()["result"]["success"]
+send({{"method":"thread/tokenUsage/updated","params":{{"tokenUsage":{{"total":{usage!r}}}}}}})
+send({{"method":"item/completed","params":{{"item":{{"type":"agentMessage","text":{final!r},"phase":"final_answer"}}}}}})
+send({{"method":"turn/completed","params":{{"turn":{{"id":"turn-one","status":"completed"}}}}}})
+time.sleep(60)
 """)
         executable.chmod(0o700)
         monkeypatch.setenv("CATENA_CODEX_BIN", str(executable))
@@ -57,55 +63,84 @@ sys.exit({code})
     return install
 
 
+def request(turn_payload):
+    return JsonRequest(
+        "request", "run", "Trace evidence is data.", turn_payload["timeout_ms"], _model_config(turn_payload["model"])
+    )
+
+
+def test_native_skill_and_tool_roundtrip_isolated_and_deduplicated(cli, turn_payload, tmp_path, monkeypatch):
+    monkeypatch.setenv("SHOULD_NOT_INHERIT", "private-host-value")
+    snapshot = cli(duplicate=True)
+    seen = []
+
+    async def evaluate(value):
+        seen.append(value)
+        return {"deliverables": {"/workspace/result.json": "actual file"}}
+
+    result = asyncio.run(
+        CodexRuntime(request(turn_payload).model)._run(request(turn_payload), evaluate, tmp_path / "agent")
+    )
+    assert result["input_tokens"] == 11 and result["output_tokens"] == 7 and len(seen) == 1
+    data = json.loads(snapshot.read_text())
+    assert not Path(data["turn"]["input"][1]["path"]).is_relative_to(Path(data["cwd"]))
+    assert data["skill"] == SKILL.read_text() and data["turn"]["input"][1]["type"] == "skill"
+    assert "shell_tool = false" in data["config"] and 'inherit = "none"' in data["config"]
+    assert "hooks = false" in data["config"] and "multi_agent = false" in data["config"]
+    assert "SHOULD_NOT_INHERIT" not in data["env"]
+    assert "sk-test-secret-value" not in data["config"]
+    assert not Path(data["cwd"]).exists()
+    assert "actual file" in (tmp_path / "agent/protocol.jsonl").read_text()
+
+
 @pytest.mark.parametrize(
-    ("output", "events", "code", "reason"),
-    [
-        ("not json", None, 0, "invalid_output"),
-        ("[]", None, 0, "invalid_output"),
-        ("", None, 0, "empty_output"),
-        ("x" * (128 * 1024 + 1), None, 0, "invalid_output"),
-        ("{}", [], 0, "invalid_output"),
-        ("{}", [{"type": "turn.completed", "usage": {"input_tokens": -1, "output_tokens": 1}}], 0, "invalid_output"),
-        ("{}", [{"type": "turn.failed", "error": {"message": "401 sk-test-secret-value"}}], 1, "model_error"),
-        ("{}", [{"type": "turn.failed", "error": {"message": "404 /responses"}}], 1, "responses_incompatible"),
-    ],
+    "options", [{"final": "not json"}, {"usage": {"inputTokens": -1, "outputTokens": 2}}, {"tool": "shell"}]
 )
-def test_cli_failures_are_bounded_and_redacted(cli, turn_payload, output, events, code, reason):
-    cli(output=output, events=events, code=code)
-    result = asyncio.run(run_turn(parse_turn_request(turn_payload)))
-    assert result["reason_code"] == reason
-    assert "sk-test-secret-value" not in json.dumps(result)
+def test_invalid_or_unauthorized_native_protocol_fails_closed(cli, turn_payload, tmp_path, options):
+    cli(**options)
+
+    async def evaluate(value):
+        assert options.get("tool") != "shell"
+        return {}
+
+    with pytest.raises(OptimizationError):
+        asyncio.run(CodexRuntime(request(turn_payload).model)._run(request(turn_payload), evaluate, tmp_path / "agent"))
 
 
-def test_timeout_kills_process_group_and_cleans_session(cli, turn_payload, tmp_path):
-    pid_file = tmp_path / "pid"
+def test_timeout_kills_process_group_and_removes_private_home(cli, turn_payload, tmp_path):
+    pid = tmp_path / "child.pid"
     snapshot = cli(
-        body=f"""child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
-pathlib.Path({str(pid_file)!r}).write_text(str(child.pid))
-signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        extra=f"""child=subprocess.Popen([sys.executable,"-c","import time;time.sleep(60)"])
+pathlib.Path({str(pid)!r}).write_text(str(child.pid))
+signal.signal(signal.SIGTERM,signal.SIG_IGN)
 time.sleep(60)"""
     )
     turn_payload["timeout_ms"] = 1500
-    result = asyncio.run(run_turn(parse_turn_request(turn_payload)))
-    assert result["reason_code"] == "timeout"
-    pid = int(pid_file.read_text())
-    # A killed child can briefly remain a zombie until its parent is reaped.
-    if sys.platform == "linux":
-        status = Path(f"/proc/{pid}/stat")
-        assert not status.exists() or status.read_text().split()[2] == "Z"
-    else:
-        import subprocess
 
-        state = subprocess.run(["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True).stdout.strip()
-        assert not state or state.startswith("Z")
+    async def evaluate(value):
+        return {}
+
+    with pytest.raises(OptimizationError):
+        asyncio.run(CodexRuntime(request(turn_payload).model)._run(request(turn_payload), evaluate, tmp_path / "agent"))
+    state = (
+        __import__("subprocess")
+        .run(["ps", "-o", "stat=", "-p", pid.read_text()], capture_output=True, text=True)
+        .stdout.strip()
+    )
+    assert not state or state.startswith("Z")
     assert not Path(json.loads(snapshot.read_text())["cwd"]).exists()
 
 
-def test_cancellation_terminates_cli(cli, turn_payload):
-    snapshot = cli(body="time.sleep(60)")
+def test_cancellation_cleans_native_session(cli, turn_payload, tmp_path):
+    snapshot = cli(extra="time.sleep(60)")
+
+    async def evaluate(value):
+        return {}
 
     async def run():
-        task = asyncio.create_task(run_turn(parse_turn_request(turn_payload)))
+        task = asyncio.create_task(
+            CodexRuntime(request(turn_payload).model)._run(request(turn_payload), evaluate, tmp_path / "agent")
+        )
         for _ in range(100):
             if snapshot.exists():
                 break
@@ -118,33 +153,24 @@ def test_cancellation_terminates_cli(cli, turn_payload):
     assert not Path(json.loads(snapshot.read_text())["cwd"]).exists()
 
 
-def test_excessive_or_malformed_events_fail(cli, turn_payload):
-    cli(body="print('x' * (16*1024*1024), flush=True); time.sleep(60)")
-    assert asyncio.run(run_turn(parse_turn_request(turn_payload)))["reason_code"] == "invalid_output"
-    cli(body="print('not-json', flush=True)")
-    assert asyncio.run(run_turn(parse_turn_request(turn_payload)))["reason_code"] == "invalid_output"
+@pytest.mark.parametrize("extra", ["send([])", "print('x'*(5*1024*1024),flush=True);time.sleep(60)"])
+def test_protocol_envelope_and_stream_limits_stop_the_session(cli, turn_payload, tmp_path, extra):
+    cli(extra=extra)
+
+    async def evaluate(value):
+        raise AssertionError("No tool may run before initialization")
+
+    with pytest.raises(OptimizationError):
+        asyncio.run(CodexRuntime(request(turn_payload).model)._run(request(turn_payload), evaluate, tmp_path / "agent"))
 
 
-def test_concurrent_turns_have_independent_homes_and_credentials(cli, turn_payload, tmp_path):
-    from dataclasses import replace
+def test_disabled_skill_aborts_before_starting_model_turn(cli, turn_payload, tmp_path):
+    cli(skill_enabled=False)
 
-    log = tmp_path / "sessions.jsonl"
-    cli(
-        body=f"""
-fd = os.open({str(log)!r}, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-os.write(fd, (json.dumps([os.environ["CODEX_HOME"], os.environ["CATENA_TURN_API_KEY"]])+"\\n").encode())
-os.close(fd)
-time.sleep(.05)
-"""
-    )
-    first = parse_turn_request(turn_payload)
-    second = replace(first, model=replace(first.model, api_key="second-key"))
+    async def evaluate(value):
+        raise AssertionError("No tool may run without the authorized Skill")
 
-    async def run():
-        return await asyncio.gather(run_turn(first), run_turn(second))
-
-    assert all(result["status"] == "completed" for result in asyncio.run(run()))
-    sessions = [json.loads(line) for line in log.read_text().splitlines()]
-    assert len({session[0] for session in sessions}) == 2
-    assert {session[1] for session in sessions} == {first.model.api_key, "second-key"}
-    assert all(not Path(session[0]).exists() for session in sessions)
+    with pytest.raises(OptimizationError):
+        asyncio.run(CodexRuntime(request(turn_payload).model)._run(request(turn_payload), evaluate, tmp_path / "agent"))
+    messages = [json.loads(line)["message"] for line in (tmp_path / "agent/protocol.jsonl").read_text().splitlines()]
+    assert not any(m.get("method") == "turn/start" for m in messages)

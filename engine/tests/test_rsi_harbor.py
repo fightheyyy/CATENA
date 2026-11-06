@@ -9,10 +9,10 @@ import pytest
 
 pytest.importorskip("harbor")
 
+from catena_engine.contracts import Candidate, OptimizationError
 from catena_engine.evaluation.harbor import HarborCase, HarborEvaluator, task_digest
 from catena_engine.evaluation.harbor_agent import CREDENTIALS, RSICodex
 from catena_engine.protocol import ModelConfig
-from catena_engine.rsi.contracts import Candidate, OptimizationError
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ def test_real_harbor_config_keeps_credentials_out_and_reads_native_evidence(monk
                 from harbor.models.agent.context import AgentContext
                 from harbor.models.trial.result import TrialResult
                 from harbor.models.verifier.result import VerifierResult
-                from test_rsi import ATIF
+                from test_improvement import ATIF
 
                 directory = config.jobs_dir / config.job_name / "trial"
                 (directory / "agent").mkdir(parents=True)

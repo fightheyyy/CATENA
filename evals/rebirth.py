@@ -36,10 +36,9 @@ def main():
     if args.case_id not in {case["id"] for case in request("/v1/evaluation-cases")["cases"]}:
         raise RuntimeError("BLOCKED: register and human-confirm the Case first")
     payload = {
-        "pipeline": "rsi", "trace_id": args.trace_id,
+        "pipeline": "improve", "trace_id": args.trace_id,
         "options": {"case_id": args.case_id, "baseline": {"AGENTS.md": args.baseline.read_text(encoding="utf-8")},
-                    "harness2": {"k": 1, "mode": "parallel"},
-                    "budget": {"model_calls": 12, "trials": 8, "seconds": 900}},
+                    "budget": {"agent_turns": 1, "trials": 4, "seconds": 900}},
     }
     args.output.mkdir(parents=True, mode=0o700)  # Existing output must be inspected, never silently rerun.
     key = uuid.uuid4().hex

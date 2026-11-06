@@ -4,10 +4,10 @@ import pytest
 
 pytest.importorskip("harbor")
 
-from test_rsi import ATIF
+from test_improvement import ATIF
 
+from catena_engine.contracts import OptimizationError
 from catena_engine.evaluation.evidence import read_deliverables, read_trajectory, render_trajectory
-from catena_engine.rsi.contracts import OptimizationError
 
 
 def test_atif_preserves_custom_tool_data_and_observation_truncation(tmp_path):
@@ -35,11 +35,11 @@ def test_atif_preserves_custom_tool_data_and_observation_truncation(tmp_path):
 def test_declared_delivery_uses_collected_file_not_final_reply(tmp_path):
     root = tmp_path / "artifacts"
     root.mkdir()
-    (root / "result.json").write_text('{"actual":true}')
+    (root / "result.json").write_bytes(b'{"actual":true}\r\n')
     entry = {"source": "/workspace/result.json", "destination": "artifacts/result.json", "type": "file", "status": "ok"}
     manifest = root / "manifest.json"
     manifest.write_text(json.dumps([entry]))
-    assert read_deliverables(root, (entry["source"],)) == {entry["source"]: '{"actual":true}'}
+    assert read_deliverables(root, (entry["source"],)) == {entry["source"]: '{"actual":true}\r\n'}
     manifest.write_text(json.dumps([{**entry, "status": "failed"}]))
     assert read_deliverables(root, (entry["source"],)) == {}
     manifest.write_text(json.dumps([{**entry, "destination": "../secret"}]))

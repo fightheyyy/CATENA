@@ -20,7 +20,7 @@ func reviewContract(t *testing.T, store Store) {
 	ctx := context.Background()
 	job := seedQueueJob(t, store)
 	job.State = AnalysisJobCompleted
-	job.Artifacts = []Artifact{{ID: "artifact", JobID: job.ID, OwnerID: job.OwnerUserID, Type: "rsi_candidate", SchemaVersion: "catena.artifact.v1", EvidenceRefs: analysisJobTraceIDs(job), Payload: json.RawMessage(`{"id":"candidate-version"}`), Provenance: comparisonFixture(), ValidationStatus: "review_required", CreatedAt: time.Now()}}
+	job.Artifacts = []Artifact{{ID: "artifact", JobID: job.ID, OwnerID: job.OwnerUserID, Type: "improvement_candidate", SchemaVersion: "catena.artifact.v1", EvidenceRefs: analysisJobTraceIDs(job), Payload: json.RawMessage(`{"id":"candidate-version"}`), Provenance: comparisonFixture(), ValidationStatus: "review_required", CreatedAt: time.Now()}}
 	if err := store.UpdateAnalysisJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
@@ -49,6 +49,13 @@ func reviewContract(t *testing.T, store Store) {
 }
 
 func TestMemoryStoreHumanReview(t *testing.T) { reviewContract(t, NewMemoryStore()) }
+
+func TestHistoricalCandidateRemainsReviewable(t *testing.T) {
+	job := AnalysisJob{State: AnalysisJobCompleted, Artifacts: []Artifact{{ID: "artifact", Type: "rsi_candidate", ValidationStatus: "review_required", Payload: json.RawMessage(`{"id":"candidate-version"}`), Provenance: comparisonFixture()}}}
+	if err := appendReview(&job, HumanReview{"artifact", "reject", "Historical case-only candidate reviewed", "local", time.Now()}); err != nil || len(job.Reviews) != 1 {
+		t.Fatal("historical candidate review failed", err)
+	}
+}
 
 func TestPostgresHumanReview(t *testing.T) {
 	store, _ := isolatedQueuePostgres(t)
