@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -14,12 +15,14 @@ import (
 type analysisTraceFixture struct{ recordingTraceStore }
 
 func (s *analysisTraceFixture) GetTrace(ctx context.Context, owner, id string) (TraceDetail, error) {
-	return TraceDetail{Summary: TraceSummary{TraceID: id, SpanCount: 1, StartTime: time.Unix(1700000000, 0).UTC(), EndTime: time.Unix(1700000000, 0).UTC()}, Spans: []TraceSpan{{TraceID: id, SpanID: "1122334455667788", Name: "synthetic trace", StartTime: time.Unix(1700000000, 0).UTC(), EndTime: time.Unix(1700000000, 0).UTC()}}}, nil
+	return TraceDetail{Summary: TraceSummary{TraceID: id, SpanCount: 2, StartTime: time.Unix(1700000000, 0).UTC(), EndTime: time.Unix(1700000000, 0).UTC()}, Spans: []TraceSpan{{TraceID: id, SpanID: "1122334455667788", Name: "synthetic trace", StartTime: time.Unix(1700000000, 0).UTC(), EndTime: time.Unix(1700000000, 0).UTC()}, {TraceID: id, SpanID: "8877665544332211", Name: "later evidence", StartTime: time.Unix(1700000001, 0).UTC(), EndTime: time.Unix(1700000001, 0).UTC()}}}, nil
 }
 func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	store := NewMemoryStore()
 	seedTestAnalysisModelConfig(t, store, "local")
 	calls := 0
+	var controlURL string
+	var capability string
 	engine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v3/improve" && r.URL.Path != "/v3/analyze" {
 			writeProblem(w, 404, "unknown")
@@ -32,6 +35,45 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 		json.NewDecoder(r.Body).Decode(&payload)
 		calls++
 		if r.URL.Path == "/v3/analyze" {
+			if payload["schema"] != "catena.analysis_request.v2" || payload["evidence"] != nil {
+				t.Error("analysis must start without preloaded evidence")
+			}
+			query := payload["trace_query"].(map[string]any)
+			capability = query["token"].(string)
+			for _, queryCase := range []struct {
+				token, body string
+				status      int
+			}{
+				{"wrong", `{"tool":"list_traces","arguments":{}}`, 403},
+				{capability, `{"tool":"get_trace","arguments":{"trace_id":"00112233445566778899aabbccddeeff"}}`, 403},
+				{capability, `{"tool":"list_traces","arguments":{}}`, 200},
+				{capability, `{"tool":"get_trace","arguments":{"trace_id":"00112233445566778899aabbccddeeff"}}`, 200},
+				{capability, `{"tool":"get_trace","arguments":{"trace_id":"00112233445566778899aabbccddeeff","offset":1,"limit":1}}`, 200},
+				{capability, `{"tool":"get_trace","arguments":{"trace_id":"ffffffffffffffffffffffffffffffff"}}`, 403},
+				{capability, `{"tool":"list_traces","arguments":{"agent_id":"foreign"}}`, 400},
+			} {
+				req, _ := http.NewRequest("POST", controlURL+"/internal/analysis-jobs/"+payload["request_id"].(string)+"/trace-query", strings.NewReader(queryCase.body))
+				req.Header.Set("Authorization", "Bearer "+queryCase.token)
+				res, err := http.DefaultClient.Do(req)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				body, _ := io.ReadAll(res.Body)
+				res.Body.Close()
+				if strings.Contains(queryCase.body, `"offset":1`) {
+					var page struct {
+						Spans []AnalysisEvidenceSpan `json:"spans"`
+						Next  *int                   `json:"next_offset"`
+					}
+					if json.Unmarshal(body, &page) != nil || len(page.Spans) != 1 || page.Spans[0].SpanID != "8877665544332211" || page.Next != nil {
+						t.Error("later Trace page was not returned", string(body))
+					}
+				}
+				if res.StatusCode != queryCase.status {
+					t.Errorf("Trace query got %d want %d", res.StatusCode, queryCase.status)
+				}
+			}
 			writeJSON(w, 200, map[string]any{"request_id": payload["request_id"], "state": "completed", "output": map[string]any{"schema": "catena.analysis_result.v1", "status": "completed", "summary": "Fixture observations only", "problems": []any{}}})
 			return
 		}
@@ -50,6 +92,7 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	defer h.Close()
 	server := httptest.NewServer(h)
 	defer server.Close()
+	controlURL = server.URL
 	first := httptest.NewRequest("POST", "/v1/analysis-jobs", bytes.NewBufferString(`{"pipeline":"analyze","trace_id":"00112233445566778899aabbccddeeff"}`))
 	first.Header.Set("Idempotency-Key", "analysis-first")
 	firstResponse := httptest.NewRecorder()
@@ -66,6 +109,16 @@ func TestAnalysisWorkerPersistsCandidateAndEvaluationUnderLease(t *testing.T) {
 	analysis, _ = store.GetAnalysisJob(context.Background(), analysis.ID)
 	if analysis.State != AnalysisJobCompleted || calls != 1 {
 		t.Fatal("analysis must finish without optimization", analysis.Error)
+	}
+	revoked, _ := http.NewRequest("POST", controlURL+"/internal/analysis-jobs/"+analysis.ID+"/trace-query", strings.NewReader(`{"tool":"list_traces","arguments":{}}`))
+	revoked.Header.Set("Authorization", "Bearer "+capability)
+	revokedResponse, err := http.DefaultClient.Do(revoked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	revokedResponse.Body.Close()
+	if revokedResponse.StatusCode != 403 {
+		t.Fatal("completed task capability was not revoked")
 	}
 	foreign := analysis
 	foreign.ID = "foreign-analysis"

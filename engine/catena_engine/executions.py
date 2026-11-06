@@ -52,6 +52,8 @@ class Executions:
         sanitized = json.loads(json.dumps(payload))
         if isinstance(sanitized.get("model"), dict):
             sanitized["model"].pop("api_key", None)
+        if isinstance(sanitized.get("trace_query"), dict):
+            sanitized["trace_query"].pop("token", None)
         fingerprint = hashlib.sha256(json.dumps(sanitized, sort_keys=True).encode()).hexdigest()
         path = self._path(owner, identity)
         with self.lock:
@@ -74,6 +76,8 @@ class Executions:
         sanitized = json.loads(json.dumps(payload))
         if isinstance(sanitized.get("model"), dict):
             sanitized["model"].pop("api_key", None)
+        if isinstance(sanitized.get("trace_query"), dict):
+            sanitized["trace_query"].pop("token", None)
         fingerprint = hashlib.sha256(json.dumps(sanitized, sort_keys=True).encode()).hexdigest()
         path = self._path(owner, identity)
         with self.lock:

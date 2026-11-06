@@ -20,7 +20,7 @@ def test_receipts_deduplicate_cancel_and_isolate_owners(tmp_path):
     server = create_server("127.0.0.1:0", "private", execute, tmp_path)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{server.server_port}"
-    payload = {"request_id": "job-1", "model": {"api_key": "NEVER_PERSIST_THIS"}}
+    payload = {"request_id": "job-1", "model": {"api_key": "NEVER_PERSIST_THIS"}, "trace_query": {"job_id": "job-1", "token": "NEVER_PERSIST_QUERY_CAPABILITY"}}
     try:
         assert call(base + "/v3/improve", payload)[0] == 401
         with concurrent.futures.ThreadPoolExecutor() as pool:
@@ -33,6 +33,9 @@ def test_receipts_deduplicate_cancel_and_isolate_owners(tmp_path):
             assert first.result()[1]["state"] == "cancelled"
         assert ended.is_set() and calls == ["job-1"]
         assert call(base + "/v3/improve", payload, "private")[1]["state"] == "cancelled"
+        payload["trace_query"]["token"] = "rotated-capability"
+        assert call(base + "/v3/improve", payload, "private")[1]["state"] == "cancelled"
+        assert "NEVER_PERSIST_QUERY_CAPABILITY" not in "".join(p.read_text() for p in tmp_path.rglob("*.json"))
         assert "NEVER_PERSIST_THIS" not in "".join(p.read_text() for p in tmp_path.rglob("*.json"))
     finally:
         server.shutdown()

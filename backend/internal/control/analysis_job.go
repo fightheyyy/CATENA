@@ -199,7 +199,11 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	payload["schema"] = "catena.improvement_request.v1"
 	if job.Pipeline == "analyze" {
 		path = "/v3/analyze"
-		payload["schema"] = "catena.analysis_request.v1"
+		payload["schema"] = "catena.analysis_request.v2"
+		delete(payload, "evidence")
+		delete(payload, "evidence_refs")
+		payload["objective"] = job.Objective
+		payload["scope"] = map[string]any{"agent_id": job.SourceAgentID, "trace_id": job.SourceTraceID, "window_start": job.WindowStart, "window_end": job.WindowEnd}
 	}
 	payload["request_id"] = job.ID
 	payload["model"] = map[string]string{"provider": credentials.Provider, "base_url": credentials.BaseURL, "model": credentials.Model, "api_key": credentials.APIKey}
@@ -212,6 +216,11 @@ func (s *HTTPServer) executeAnalysisJob(ctx context.Context, lease AnalysisLease
 	owner := job.OwnerUserID
 	if owner == "" {
 		owner = "local"
+	}
+	if job.Pipeline == "analyze" {
+		query, closeQuery := s.openTraceInvestigation(ctx, lease, job)
+		defer closeQuery()
+		payload["trace_query"] = query
 	}
 	result, err := s.analysisRuntime.execute(ctx, owner, job.ID, payload, path)
 	if err != nil {

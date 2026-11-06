@@ -8,8 +8,29 @@ and verification. There is one concrete strategy, no algorithm/plugin registry.
 
 Create `POST /v1/analysis-jobs` with `{"pipeline":"analyze","trace_id":"<owned Trace>"}`.
 Analysis needs neither a Case nor Harbor. It loads trace-analysis in the same Codex
-Runtime, advertises no evaluation tools and persists summary/problems, evidence
-references, hypotheses and uncertainty. Reports remain unverified hypotheses.
+Runtime, receives only the objective and server-fixed scope, and investigates using
+`list_traces` / `get_trace`. Codex chooses subsequent queries in its native tool
+loop, then persists summary/problems, inspected Trace/Span references, hypotheses
+and uncertainty. No evaluation tools are available. Reports remain unverified hypotheses.
+
+The concrete read-only bridge reuses Go's `TraceStore.ListAgentTraces` / `GetTrace`
+and evidence sanitization. A per-execution capability is checked against the active
+Job lease and cancellation state; the owner, Agent and time window cannot be
+supplied or widened by the model. Detail reads require a Trace previously listed
+inside that scope. Tools have at most 20 calls, 300 seconds, 64 KiB per response
+and 512 KiB cumulative evidence. Lists scan at most 100 traces and return at most
+20 per page; details return at most 64 spans and expose `next_offset`. Bad tool
+arguments return a bounded error so the model can correct them; storage/network
+failures stop execution rather than inventing an empty result.
+
+Engine calls back to the operator-configured `CATENA_CONTROL_URL` (Compose:
+`http://catena-core:8787`) through the task-scoped private route
+`POST /internal/analysis-jobs/{job_id}/trace-query`. Credentials stay outside the
+model prompt, tool audit and receipt fingerprint. Actual tool arguments, redacted
+responses and response hashes are persisted in `tool_evidence`; citations must
+refer to Trace/Span identities actually returned by `get_trace`. Existing admission
+Evidence snapshots remain for compatibility/audit and are not preloaded into the
+analysis prompt. This is a bounded investigation, not a full-database scan.
 
 The report page lets the user keep the analysis or explicitly start improvement.
 Only an owned completed analysis can be used. A new improvement Job freezes its
@@ -97,7 +118,7 @@ turn: `agent_turns` is not an inference-request, token or money cap. Native tota
 input/output usage is recorded when available; missing usage/cost is unknown.
 Timeout and tool allowance bound the loop. There is no custom transport retry loop.
 
-Analysis uses private schema `catena.analysis_request.v1` and `/v3/analyze`. Improvement uses private schema: `catena.improvement_request.v1`; endpoint: `/v3/improve`.
+Analysis uses private schema `catena.analysis_request.v2` and `/v3/analyze`. Improvement uses private schema: `catena.improvement_request.v1`; endpoint: `/v3/improve`.
 New artifacts use `improvement_candidate`; internal executor is `codex-skill`.
 Old rsi/Harness² creation/options are explicitly rejected. Existing Jobs must never
 be relabeled or replayed as this new strategy.

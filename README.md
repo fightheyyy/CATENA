@@ -24,12 +24,12 @@ Agent Trace → Evidence → Codex Analysis → Problem / Evidence
 |---|---|
 | Tap + ClickHouse | 采集、存储和查询真实 Trace |
 | Go + PostgreSQL | 认证、Owner 隔离、Evidence、持久 Job Queue、Artifact、版本与人工决定 |
-| Codex App Server | 同一个 Runtime，运行 Analysis / Improvement 两种受控 Skill |
+| Codex App Server | 同一个 Runtime；Analysis 通过 Trace 工具自主多轮取证，Improvement 生成候选 |
 | CATENA Workflow | 明确阶段、预算、候选冻结与对照顺序 |
 | Harbor | 目标 Agent、Environment、Job、Trial、Verifier 与执行产物 |
 | React | Trace 浏览、报告、人工启动优化、Compare 和 Review |
 
-分析不会自动进入优化。候选当前支持 `AGENTS.md` 和 Skill 文本；采用只记录决定，不自动安装文件。
+分析先用 `list_traces` / `get_trace` 查询证据、检验假设，再输出问题报告；不会自动进入优化。候选当前支持 `AGENTS.md` 和 Skill 文本；采用只记录决定，不自动安装文件。
 Go 保留 Lease / Heartbeat / Fencing、幂等、重试、取消和超时。工程记忆目前是可追溯的 Evidence / Candidate / Compare / Review 记录，没有检索或自动回注。
 
 Harness² 只提供 Propose / Compose 方法启发，已不是运行依赖。OpenViking 和旧 Memory API/UI 已退役。
@@ -66,7 +66,7 @@ docs/      当前文档；archive/ 保存旧方案，refactors/ 保存迁移证�
 
 ## 验证状态
 
-- [真实 Trace 分析](docs/refactors/ANALYSIS_GATE.md)：报告已持久化，不自动启动优化。
+- [真实 Trace 调查](docs/refactors/TRACE_INVESTIGATION.md)：报告已持久化，不自动启动优化。
 - [真实候选与 Harbor 对比](docs/refactors/UNIFIED_RUNTIME.md)：工程链路已运行，该候选已由人工拒绝。
 - Fixture、协议测试、UI 测试和参考解不属于 Agent 质量证据。一次对照也不能证明普遍提升。
 - 当前目标薄适配为 Codex；组织共享权限、通用 Code Patch 和自动经验检索未交付。Docker socket 仅供可信部署者使用。

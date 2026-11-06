@@ -18,6 +18,8 @@
 
 ## 验证记录
 
+- [动态 Trace 调查](refactors/TRACE_INVESTIGATION.md)：真实模型自主查询、参数修正、分页取证与报告落库。
+
 - [分析与人工优化门](refactors/ANALYSIS_GATE.md)：真实 Trace 分析、五项问题、零自动评测。
 - [统一 Runtime](refactors/UNIFIED_RUNTIME.md)：真实候选和 Harbor 对比；该候选已由人工拒绝。
 - [Rebirth](refactors/REBIRTH.md)：删减、兼容与分阶段证据；描述其提交时的架构。

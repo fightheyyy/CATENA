@@ -1,0 +1,108 @@
+{
+  "job_id": "analysis-job-1793958673227-abedeee2d0d4e37c",
+  "state": "completed",
+  "source_trace_id": "89b6c10a758a66675fb5af3307972197",
+  "scope": "single real Trace, partial read",
+  "problems": 3,
+  "usage": {
+    "tool_calls": 7,
+    "agent_turns": 1,
+    "input_tokens": 221024,
+    "output_tokens": 1163,
+    "attempted_trials": 0
+  },
+  "inspected_unique_spans": 95,
+  "reported_total_spans": 145,
+  "automatically_created_improvement_jobs": 0,
+  "harbor_trials": 0,
+  "candidate_generated": false,
+  "queries": [
+    {
+      "tool": "list_traces",
+      "arguments": {
+        "limit": 20,
+        "offset": 0,
+        "status": "all"
+      },
+      "response_sha256": "077de303567ca0d7069609d56b011de90ea12677c708246714dcef77b5e21cef",
+      "error_status": null,
+      "returned_spans": 0,
+      "next_offset": 1
+    },
+    {
+      "tool": "get_trace",
+      "arguments": {
+        "limit": 100,
+        "offset": 0,
+        "trace_id": "89b6c10a758a66675fb5af3307972197"
+      },
+      "response_sha256": "bd753a853fa2c25d9894528594cb2a800d16c702d679d61563860b2e5e8c1dfc",
+      "error_status": 400,
+      "returned_spans": 0,
+      "next_offset": null
+    },
+    {
+      "tool": "get_trace",
+      "arguments": {
+        "limit": 64,
+        "offset": 0,
+        "trace_id": "89b6c10a758a66675fb5af3307972197"
+      },
+      "response_sha256": "44e3fcb1f19913a75c55b29a2870ff747fcd6fcafca2b12157dc314ddce1c9cb",
+      "error_status": null,
+      "returned_spans": 21,
+      "next_offset": 21
+    },
+    {
+      "tool": "get_trace",
+      "arguments": {
+        "limit": 64,
+        "offset": 21,
+        "trace_id": "89b6c10a758a66675fb5af3307972197"
+      },
+      "response_sha256": "e1e9b85c16c21d3a3790863d01d925981872b70eb4f273752654e77a7d372536",
+      "error_status": null,
+      "returned_spans": 20,
+      "next_offset": 41
+    },
+    {
+      "tool": "get_trace",
+      "arguments": {
+        "limit": 64,
+        "offset": 41,
+        "trace_id": "89b6c10a758a66675fb5af3307972197"
+      },
+      "response_sha256": "17b4f9d5ff83c96957faa9af55d286af16b06c957fa0fd911adf030c8fa014a1",
+      "error_status": null,
+      "returned_spans": 16,
+      "next_offset": 57
+    },
+    {
+      "tool": "get_trace",
+      "arguments": {
+        "limit": 64,
+        "offset": 57,
+        "trace_id": "89b6c10a758a66675fb5af3307972197"
+      },
+      "response_sha256": "ce132b60feb968dacba128a57bc27b2caaf98990c7f618850e14842fdc84b3b6",
+      "error_status": null,
+      "returned_spans": 17,
+      "next_offset": 74
+    },
+    {
+      "tool": "get_trace",
+      "arguments": {
+        "limit": 64,
+        "offset": 74,
+        "trace_id": "89b6c10a758a66675fb5af3307972197"
+      },
+      "response_sha256": "3e5070aa7badc1252214dea848a0ab813149a7421ae926b69941c54c35179425",
+      "error_status": null,
+      "returned_spans": 21,
+      "next_offset": 95
+    }
+  ],
+  "report_sha256": "c86d6a546882c2f47327dc15b0538fe2e5d7cff60948dbdea843664753bbde24",
+  "quality_claim": "Engineering smoke only; no validated causal attribution or improvement claim.",
+  "excluded_attempt": "analysis-job-1793958483537-f520aa5118db86b3 failed on an invalid tool argument before recovery handling was added; retained privately, not a successful run."
+}

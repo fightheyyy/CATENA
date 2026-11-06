@@ -9,15 +9,17 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 type HTTPServer struct {
-	store           Store
-	traces          TraceStore
-	analysisRuntime *EngineClient
-	auth            AuthConfig
-	jobs            *analysisWorker
-	ingestion       *traceAdmission
+	traceInvestigations sync.Map
+	store               Store
+	traces              TraceStore
+	analysisRuntime     *EngineClient
+	auth                AuthConfig
+	jobs                *analysisWorker
+	ingestion           *traceAdmission
 }
 
 //go:embed web/*
@@ -61,6 +63,7 @@ func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error)
 		server.jobs = pool
 	}
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /internal/analysis-jobs/{job_id}/trace-query", server.queryInvestigationTrace)
 	mux.HandleFunc("POST /v1/analysis-jobs", server.createAnalysisJob)
 	mux.HandleFunc("GET /v1/analysis-jobs", server.listAnalysisJobs)
 	mux.HandleFunc("GET /v1/analysis-jobs/queue", server.analysisQueueStatus)

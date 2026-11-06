@@ -9,7 +9,11 @@ flowchart TD
     CH --> Go[Go: owner-scoped frozen Evidence]
     Go --> Queue[(PostgreSQL: Job / lease / heartbeat / fencing)]
     Queue --> Receipt[Private Engine execution receipt]
-    Receipt --> Analyze[analysis.py + trace-analysis Skill / no tools]
+    Receipt --> Analyze[Codex + trace-analysis Skill / native investigation loop]
+    Analyze --> Query[list_traces / get_trace]
+    Query --> Gate[Go: live lease + fixed owner / Agent / time scope]
+    Gate --> CH
+    Gate -->|redacted pages / tool observations| Analyze
     Analyze --> Report[Problem / Evidence / hypotheses / uncertainty]
     Report --> Decision{Human decides whether to improve}
     Decision -->|keep report| Records
@@ -30,6 +34,7 @@ flowchart TD
 | Source | Responsibility |
 |---|---|
 | `backend/internal/control/analysis_job.go` | Evidence, Job admission, private invocation, persisted result/artifacts |
+| `backend/internal/control/trace_investigation.go` | Task-scoped read-only Trace tools, active-lease authorization, pagination and redaction |
 | `analysis_worker.go`, `postgres_analysis_queue.go` | Durable scheduling, retry/cancel/timeout, lease and fencing |
 | `review.go`, `artifact.go` | Independent Compare eligibility, immutable review, owner-scoped history |
 | `engine/catena_engine/analysis.py`, `skills/trace-analysis/SKILL.md` | Analysis-only report, validated evidence references, no Harbor tools |

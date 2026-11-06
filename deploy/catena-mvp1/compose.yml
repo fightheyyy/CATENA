@@ -61,6 +61,7 @@ services:
     mem_limit: 1g
     pids_limit: 128
     environment:
+      CATENA_CONTROL_URL: http://catena-core:8787
       CATENA_CODEX_REASONING_EFFORT: ${CATENA_CODEX_REASONING_EFFORT:-low}
       CATENA_ENGINE_EXECUTIONS_ROOT: /var/lib/catena-engine/executions
       CATENA_RUNS_ROOT: /var/lib/catena-engine/runs

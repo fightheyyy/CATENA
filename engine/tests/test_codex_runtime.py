@@ -20,6 +20,7 @@ def cli(tmp_path, monkeypatch):
         duplicate=False,
         skill_enabled=True,
         skill_name="harness-improvement",
+        trace_calls=False,
     ):
         if final is None:
             final = json.dumps({"text": "hypothesis", "files": [{"path": "AGENTS.md", "content": "Inspect."}]})
@@ -54,8 +55,14 @@ snapshot["skill"]=pathlib.Path(turn["params"]["input"][1]["path"]).read_text()
 pathlib.Path({str(snapshot)!r}).write_text(json.dumps(snapshot))
 send({{"id":turn["id"],"result":{{"turn":{{"id":"turn-one"}}}}}})
 call={{"id":100,"method":"item/tool/call","params":{{"threadId":"thread-one","turnId":"turn-one","callId":"call-one","tool":{tool!r},"arguments":{{"text":"proposal","files":[{{"path":"AGENTS.md","content":"Inspect."}}]}}}}}}
-send(call)
-assert receive()["result"]["success"]
+calls=[call]
+if {trace_calls!r}:
+ calls=[]
+ for i,(name,args) in enumerate([("list_traces",{{}}),("get_trace",{{"trace_id":"a"*32}}),("get_trace",{{"trace_id":"b"*32}})]):
+  entry=json.loads(json.dumps(call));entry["id"]=100+i;entry["params"].update(tool=name,arguments=args,callId="trace-"+str(i));calls.append(entry)
+for entry in calls:
+ send(entry)
+ assert receive()["result"]["success"]
 if {duplicate!r}:
  send(call)
  assert receive()["result"]["success"]
@@ -184,7 +191,7 @@ def test_disabled_skill_aborts_before_starting_model_turn(cli, turn_payload, tmp
     assert not any(m.get("method") == "turn/start" for m in messages)
 
 
-def test_analysis_mode_has_no_evaluation_tool(cli, turn_payload, tmp_path):
+def test_analysis_mode_has_read_only_trace_tools_not_evaluation(cli, turn_payload, tmp_path):
     cli(skill_name="trace-analysis")
 
     async def forbidden(value):
@@ -198,4 +205,17 @@ def test_analysis_mode_has_no_evaluation_tool(cli, turn_payload, tmp_path):
         )
     messages = [json.loads(line)["message"] for line in (tmp_path / "agent/protocol.jsonl").read_text().splitlines()]
     thread = next(m for m in messages if m.get("method") == "thread/start")
-    assert thread["params"]["dynamicTools"] == []
+    assert {t["name"] for t in thread["params"]["dynamicTools"]} == {"list_traces", "get_trace"}
+
+
+def test_native_analysis_continues_across_multiple_trace_tool_calls(cli, turn_payload, tmp_path):
+    cli(skill_name="trace-analysis", trace_calls=True, final=json.dumps({"summary": "Inspected two traces", "problems": []}))
+    seen = []
+
+    async def query(tool, arguments):
+        seen.append((tool, arguments))
+        return {"evidence": "server supplied observation"}
+
+    result = asyncio.run(CodexRuntime(request(turn_payload).model)._run(request(turn_payload), query, tmp_path / "agent", mode="analyze"))
+    assert [name for name, _ in seen] == ["list_traces", "get_trace", "get_trace"]
+    assert result["value"]["summary"] == "Inspected two traces"

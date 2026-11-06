@@ -39,3 +39,10 @@ Docker socket 具有宿主控制能力，不是安全的多租户沙箱；只允
 升级前必须停止旧 Worker。Memory API 和社区入口返回 404，pipeline=memory 返回 400。迁移 003 只退役活动 Memory Job，不删除表或历史文档。见 [导出/回滚边界](../../docs/OPENVIKING_INTEGRATION.md)。已有 Review 的 Job 不允许普通 API 删除。
 
 Apple Silicon 复跑现有冻结 amd64 Benchmark 时，构建和 Engine 均需 Docker 原生 `DOCKER_DEFAULT_PLATFORM=linux/amd64`；这会使用仿真，耗时不代表 Linux amd64 生产机器。
+
+## Trace 调查回调
+
+分析模式通过只读 `list_traces` / `get_trace` 自主取证。Compose 已为 Engine 设置
+`CATENA_CONTROL_URL=http://catena-core:8787`；分离部署时改为 Engine 可达的 Go 内网地址。
+每次执行使用短期任务能力凭证，不能用它查询其他 Job / Owner，也不会进入模型上下文。
+查询工具不授予 Docker 或 Harbor 权限；人工启动优化和最终 Review 仍是独立步骤。
