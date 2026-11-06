@@ -121,13 +121,14 @@ test("Trace mobile detail supports direct links, failures, retry and return to t
 test("Analysis polling publishes sourced unverified artifacts and cancellation retains acknowledgement", async (t) => {
  const {page,origin,state}=await setup(t);
  await page.goto(origin+"/evolution?job=job-fixture");
- await visible(page.getByRole("heading",{name:"分析任务与产物"}));
- await page.getByRole("button",{name:"Cancel",exact:true}).click();
- await page.getByRole("button",{name:"Cancel",exact:true}).waitFor();
+ await visible(page.getByRole("heading",{name:"从证据到改进"}));
+ await page.getByRole("button",{name:"取消任务",exact:true}).click();
+ await page.getByRole("button",{name:"取消任务",exact:true}).waitFor();
  state.jobComplete=true;
- await visible(page.getByRole("heading",{name:"improvement_candidate · unverified"}));
+ await visible(page.getByRole("heading",{name:"候选与验证"}));
+ await page.getByText("AGENTS.md", {exact:true}).click();
  await visible(page.getByText('Inspect evidence before acting.',{exact:false}));
- await page.getByText("Provenance / evaluation",{exact:true}).click();
+ await page.getByText("来源与执行详情",{exact:true}).click();
  await visible(page.getByText("No real verifier executed",{exact:false}));
  assert.equal(state.requests.some(r=>r.path==="/v1/analysis-jobs/job-fixture/cancel"),true);
  assert.equal(state.requests.some(r=>r.path.startsWith("/v1/experiments")||r.path.startsWith("/v1/evolution-jobs")),false);
@@ -193,7 +194,7 @@ test("Workspace retains exact recent evidence and analysis links", async (t) => 
   await page.goBack();
   await analyses.getByRole("button").first().click();
   await page.waitForURL(/job=job-fixture/);
-  await visible(page.getByRole("heading",{name:"分析任务与产物"}));
+  await visible(page.getByRole("heading",{name:"从证据到改进"}));
 });
 
 test("Workspace retains analyses when history fails and can retry the failed read", async (t) => {
@@ -241,16 +242,42 @@ test("Compare preserves unknown cost and Human Review records an explicit decisi
  const trial = { valid: true, rewards: { reward: 1 }, input_tokens: 10, output_tokens: 2, seconds: 1.5, cost_usd: null, tool_calls: 5, nonzero_command_exits: null };
  artifact.provenance = {compare: [{case_id: "protocol-fixture", held_out: false, baseline: trial, candidate: trial}]};
  await page.goto(origin + "/evolution?job=job-fixture");
- await visible(page.getByRole("heading", {name: "Baseline / Candidate Compare", exact: true}));
+ await visible(page.getByRole("heading", {name: "基线 / 候选对比", exact: true}));
  assert.match(await page.locator("table").innerText(), /1 \/ 1/);
  assert.match(await page.locator("table").innerText(), /\? \/ 5/);
  const form = page.getByRole("form", {name: "Human Review", exact: true});
- await form.getByLabel("Reason", {exact: true}).fill("Reviewed synthetic UI fixture only.");
- await form.getByRole("button", {name: "Record decision"}).click();
- await visible(page.getByRole("heading", {name: "Human Review · reject", exact: true}));
+ await form.getByLabel("决定理由", {exact: true}).fill("Reviewed synthetic UI fixture only.");
+ await form.getByRole("button", {name: "保存审阅决定"}).click();
+ await visible(page.getByRole("heading", {name: "人工审阅 · 已拒绝", exact: true}));
  assert.equal(state.completedJob.reviews.length, 1);
- assert.equal(await page.getByRole("button", {name: "Delete", exact: true}).isDisabled(), true);
+ assert.equal(await page.getByRole("button", {name: "删除任务", exact: true}).isDisabled(), true);
  await page.reload();
- await visible(page.getByRole("heading", {name: "Human Review · reject", exact: true}));
+ await visible(page.getByRole("heading", {name: "人工审阅 · 已拒绝", exact: true}));
  await noOverflow(page);
+});
+
+// Presentation fixture: verify reading order and the explicit human gate, not Agent quality.
+test("Analysis report is visible before collapsed history on narrow screens", async (t) => {
+ const {page, origin, state} = await setup(t, {viewport: {width: 765, height: 755}});
+ state.jobComplete = true;
+ state.completedJob.pipeline = "analyze";
+ state.completedJob.objective = "核对路径发现失败";
+ state.completedJob.artifacts[0].type = "analysis_report";
+ state.completedJob.artifacts[0].payload = {summary: "执行目录与预期不一致。", problems: [{title: "错误的路径假设", evidence: "工具报告路径不存在。", evidence_refs: ["trace-first:span-1"], hypothesis: "未先发现实际目录。", uncertainty: "尚未独立复现。"}]};
+ await page.goto(origin + "/evolution?job=job-fixture");
+ await visible(page.getByText("执行目录与预期不一致。", {exact: true}));
+ assert.equal(await page.locator("#analysis-job-list").isVisible(), false);
+ assert.ok((await page.locator(".analysis-summary").boundingBox()).y < 650);
+ assert.equal(state.requests.some(r=>r.path === "/v1/evaluation-cases"), false);
+ await page.getByRole("button", {name: "选择 Case，启动优化", exact: true}).click();
+ await page.getByLabel("Harbor Case", {exact: true}).selectOption("fixture-case");
+ await page.getByRole("button", {name: "暂不优化", exact: true}).click();
+ assert.equal(state.requests.some(r=>r.path === "/v1/analysis-jobs" && r.method === "POST"), false);
+ await page.getByRole("button", {name: /任务记录/}).click();
+ await visible(page.locator("#analysis-job-list"));
+ await page.locator(".analysis-job-row").click();
+ assert.equal(await page.locator("#analysis-job-list").isVisible(), false);
+ await page.setViewportSize({width:390,height:844});
+ await noOverflow(page);
+ await screenshot(page, "analysis-report-mobile");
 });
