@@ -1,0 +1,264 @@
+{
+  "date": "2026-11-08",
+  "timezone": "Asia/Shanghai",
+  "manifest": {
+    "old_commit": "7e6c8b386f780fa2c03c4792f953b9c82704123d",
+    "old_writer_sha256": "eb5a5604c07a9299747c523093cd87383ffcd9677c148bb7954a9061d0ccd52b",
+    "shared_harness_sha256": "77b38949db2dbe7536b02ee44b2226140c1b0302d7d22b04a55eabc80585a9fa"
+  },
+  "host_cpu_quota": 4,
+  "host_memory_gib": 32,
+  "order": [
+    "a1",
+    "b1",
+    "b2",
+    "a2"
+  ],
+  "steady": [
+    {
+      "ack_p95_ms": 146.8203067779541,
+      "batch_size": 100,
+      "e2e_p50_ms": 109.48801040649414,
+      "e2e_p95_ms": 300.9803295135498,
+      "e2e_p99_ms": 475.663423538208,
+      "effective_stored_spans_per_second": 999.4901952725825,
+      "http_attempt_statuses": {
+        "200": 600
+      },
+      "last_completion": 1794146161.322399,
+      "measurement_finished": 1794146161.3246279,
+      "measurement_started": 1794146101.291795,
+      "mode": "writer",
+      "payload_bytes": 202671600,
+      "payload_sha256": "9ebf8010bbc6afd299f597b7a4e2d38f44f3fc5e169377df19d0f9e2d9b54b3c",
+      "peak_go_heap_bytes": 424322344,
+      "rps": 10,
+      "run": "1794146080695271561-a1",
+      "seconds": 60,
+      "span_count": 60000,
+      "tenants": 20,
+      "verified_unique_spans": 60000,
+      "warmup_seconds": 10,
+      "trial": "a1",
+      "raw_result_sha256": "f2591d2a95828b6684368710762ef278f412430f9f66cb4fb7fa2aa6353de5db",
+      "resources": {
+        "sample_seconds": 59.10125470161438,
+        "mean_cpu_cores": 1.9982848857652766,
+        "mean_anon_gib": 1.345663038350768,
+        "peak_anon_gib": 1.496185302734375,
+        "peak_total_cgroup_gib": 18.316688537597656,
+        "mean_file_cache_gib": 15.951617709660935,
+        "cpu_ms_per_verified_span": 1.9683524000000001
+      }
+    },
+    {
+      "ack_p95_ms": 401.78751945495605,
+      "batch_size": 100,
+      "e2e_p50_ms": 918.23410987854,
+      "e2e_p95_ms": 1949.3346214294434,
+      "e2e_p99_ms": 2248.3742237091064,
+      "effective_stored_spans_per_second": 986.917734709834,
+      "http_attempt_statuses": {
+        "200": 600
+      },
+      "last_completion": 1794146291.6241071,
+      "measurement_finished": 1794146291.6454494,
+      "measurement_started": 1794146230.8287663,
+      "mode": "collector",
+      "payload_bytes": 202671600,
+      "payload_sha256": "9ebf8010bbc6afd299f597b7a4e2d38f44f3fc5e169377df19d0f9e2d9b54b3c",
+      "peak_go_heap_bytes": 440490912,
+      "rps": 10,
+      "run": "1794146080695271561-b1",
+      "seconds": 60,
+      "span_count": 60000,
+      "tenants": 20,
+      "verified_unique_spans": 60000,
+      "warmup_seconds": 10,
+      "trial": "b1",
+      "raw_result_sha256": "a3ada339b3907a4f4fc7950485b2c8fe8a7c33d0f5433ee0dcd61b213b666088",
+      "resources": {
+        "sample_seconds": 60.23621153831482,
+        "mean_cpu_cores": 3.7423477712673314,
+        "mean_anon_gib": 3.096149508158366,
+        "peak_anon_gib": 3.3818588256835938,
+        "peak_total_cgroup_gib": 19.300125122070312,
+        "mean_file_cache_gib": 14.916755231221517,
+        "cpu_ms_per_verified_span": 3.757080866666667
+      }
+    },
+    {
+      "ack_p95_ms": 263.02313804626465,
+      "batch_size": 100,
+      "e2e_p50_ms": 481.6446304321289,
+      "e2e_p95_ms": 1650.620937347412,
+      "e2e_p99_ms": 2063.8821125030518,
+      "effective_stored_spans_per_second": 993.6049862941882,
+      "http_attempt_statuses": {
+        "200": 600
+      },
+      "last_completion": 1794146374.2169328,
+      "measurement_finished": 1794146374.235011,
+      "measurement_started": 1794146313.8307624,
+      "mode": "collector",
+      "payload_bytes": 202671600,
+      "payload_sha256": "9ebf8010bbc6afd299f597b7a4e2d38f44f3fc5e169377df19d0f9e2d9b54b3c",
+      "peak_go_heap_bytes": 417307728,
+      "rps": 10,
+      "run": "1794146080695271561-b2",
+      "seconds": 60,
+      "span_count": 60000,
+      "tenants": 20,
+      "verified_unique_spans": 60000,
+      "warmup_seconds": 10,
+      "trial": "b2",
+      "raw_result_sha256": "42b1d6d91f2b8aa077162925c6661e297a61cc8aaa6e9dcd7981b8852b2f8829",
+      "resources": {
+        "sample_seconds": 59.99108004570007,
+        "mean_cpu_cores": 3.553365664322278,
+        "mean_anon_gib": 3.18155460357666,
+        "peak_anon_gib": 3.533130645751953,
+        "peak_total_cgroup_gib": 19.701213836669922,
+        "mean_file_cache_gib": 15.231898593902589,
+        "cpu_ms_per_verified_span": 3.5528374
+      }
+    },
+    {
+      "ack_p95_ms": 159.01780128479004,
+      "batch_size": 100,
+      "e2e_p50_ms": 111.24038696289062,
+      "e2e_p95_ms": 290.8298969268799,
+      "e2e_p99_ms": 455.92713356018066,
+      "effective_stored_spans_per_second": 999.4365848326006,
+      "http_attempt_statuses": {
+        "200": 600
+      },
+      "last_completion": 1794146458.7953055,
+      "measurement_finished": 1794146458.812659,
+      "measurement_started": 1794146398.7614815,
+      "mode": "writer",
+      "payload_bytes": 202671600,
+      "payload_sha256": "9ebf8010bbc6afd299f597b7a4e2d38f44f3fc5e169377df19d0f9e2d9b54b3c",
+      "peak_go_heap_bytes": 423331048,
+      "rps": 10,
+      "run": "1794146080695271561-a2",
+      "seconds": 60,
+      "span_count": 60000,
+      "tenants": 20,
+      "verified_unique_spans": 60000,
+      "warmup_seconds": 10,
+      "trial": "a2",
+      "raw_result_sha256": "6801c26e9b738855c02a14fbb8f979606ba17fa73be9a622762a175eec3f6960",
+      "resources": {
+        "sample_seconds": 59.86990022659302,
+        "mean_cpu_cores": 2.0371041297614734,
+        "mean_anon_gib": 1.8147274653116863,
+        "peak_anon_gib": 1.9874267578125,
+        "peak_total_cgroup_gib": 18.305591583251953,
+        "mean_file_cache_gib": 15.297688293457032,
+        "cpu_ms_per_verified_span": 2.032687016666667
+      }
+    }
+  ],
+  "faults": [
+    {
+      "ack_p95_ms": 17020.02787590027,
+      "batch_size": 100,
+      "e2e_p50_ms": 7647.1428871154785,
+      "e2e_p95_ms": 17593.85061264038,
+      "e2e_p99_ms": 21417.713403701782,
+      "effective_stored_spans_per_second": 999.1716893731602,
+      "http_attempt_statuses": {
+        "200": 300,
+        "429": 102,
+        "503": 305
+      },
+      "last_completion": 1794146501.81201,
+      "measurement_finished": 1794146501.823097,
+      "measurement_started": 1794146471.7871401,
+      "mode": "writer",
+      "payload_bytes": 101335800,
+      "payload_sha256": "27e7bba700ccfcabba9393531b50bab73b5d9474fa453b178f79802b228492f0",
+      "peak_go_heap_bytes": 284351752,
+      "rps": 10,
+      "run": "1794146080695271561-a_fault",
+      "seconds": 30,
+      "span_count": 30000,
+      "tenants": 20,
+      "verified_unique_spans": 30000,
+      "warmup_seconds": 10,
+      "trial": "a_fault",
+      "raw_result_sha256": "10ba5a130da0ced086a8530aec6d7c2f47a38ee3adf13c9a52051a647f71f8ba",
+      "resources": {
+        "sample_seconds": 29.79418134689331,
+        "mean_cpu_cores": 1.9318329418036386,
+        "mean_anon_gib": 0.9324280420939127,
+        "peak_anon_gib": 1.7823677062988281,
+        "peak_total_cgroup_gib": 18.177444458007812,
+        "mean_file_cache_gib": 15.413556671142578,
+        "cpu_ms_per_verified_span": 1.9185793666666666
+      },
+      "fault": {
+        "down_at": 1794146478.3175004,
+        "restore_command_at": 1794146488.3176184,
+        "outage_arrivals_spans": 10000,
+        "outage_arrivals_acknowledged_before_restore": 0,
+        "backlog_recovery_seconds": 13.01470685005188,
+        "total_http_acks_during_outage": 0
+      }
+    },
+    {
+      "ack_p95_ms": 316.6325092315674,
+      "batch_size": 100,
+      "e2e_p50_ms": 15518.74041557312,
+      "e2e_p95_ms": 27377.405405044556,
+      "e2e_p99_ms": 28775.964975357056,
+      "effective_stored_spans_per_second": 784.7465654686807,
+      "http_attempt_statuses": {
+        "200": 300
+      },
+      "last_completion": 1794146605.643258,
+      "measurement_finished": 1794146605.6492865,
+      "measurement_started": 1794146567.4143555,
+      "mode": "collector",
+      "payload_bytes": 101335800,
+      "payload_sha256": "27e7bba700ccfcabba9393531b50bab73b5d9474fa453b178f79802b228492f0",
+      "peak_go_heap_bytes": 212556216,
+      "rps": 10,
+      "run": "1794146080695271561-b_fault",
+      "seconds": 30,
+      "span_count": 30000,
+      "tenants": 20,
+      "verified_unique_spans": 30000,
+      "warmup_seconds": 10,
+      "trial": "b_fault",
+      "raw_result_sha256": "37b4f4553c4f3d3823d280702a063f6e28881508fb01cf30431cd8d32517ee81",
+      "resources": {
+        "sample_seconds": 37.37674856185913,
+        "mean_cpu_cores": 2.97239233680614,
+        "mean_anon_gib": 2.486525675455729,
+        "peak_anon_gib": 3.8258590698242188,
+        "peak_total_cgroup_gib": 20.279685974121094,
+        "mean_file_cache_gib": 15.438099619547526,
+        "cpu_ms_per_verified_span": 3.7032787000000003
+      },
+      "fault": {
+        "down_at": 1794146574.0554008,
+        "restore_command_at": 1794146584.055501,
+        "outage_arrivals_spans": 10000,
+        "outage_arrivals_acknowledged_before_restore": 10000,
+        "backlog_recovery_seconds": 20.478764057159424,
+        "total_http_acks_during_outage": 10100
+      }
+    }
+  ],
+  "notes": [
+    "whole-environment CPU and anonymous memory include generator, Go ingress, PostgreSQL, ClickHouse and monitoring; Collector path also includes 3 brokers and 1 Gateway/Consumer",
+    "Docker per-container resource attribution is unavailable in this environment",
+    "visibility polling every 50ms plus query time gives an observed upper bound, not a pure exporter commit timestamp",
+    "10s warmup; ABBA order; separate fresh ClickHouse database for every trial; OS caches and ClickHouse process caches not cleared",
+    "CPU is host-cgroup usage; Go heap includes the common prebuilt payload array and client; memory is not per-service RSS",
+    "fault clients stay alive with bounded in-memory retry; no client-process crash tested",
+    "fixed offered 1000Span/s; no saturation ceiling measured"
+  ]
+}

@@ -38,7 +38,7 @@ Agent Trace → Evidence → Codex Analysis → Problem / Evidence
 
 | 模块 | 职责 |
 |---|---|
-| Tap + ClickHouse | 采集、存储和查询真实 Trace |
+| Tap + Go Ingress + Collector + Kafka + ClickHouse | 可信身份接入、持久缓冲、官方 Exporter 写入与租户隔离查询 |
 | Go + PostgreSQL | 认证、Owner 隔离、Evidence、持久 Job Queue、Artifact、版本与人工决定 |
 | Codex App Server | 同一个 Runtime；Analysis 通过 Trace 工具自主多轮取证，Improvement 生成候选 |
 | CATENA Workflow | 明确阶段、预算、候选冻结与对照顺序 |
@@ -52,7 +52,7 @@ Harness² 只提供 Propose / Compose 方法启发，已不是运行依赖。Ope
 
 ## 启动
 
-需要 Docker Engine / Docker Desktop 和 Compose v2。常驻服务为 Go + React、Python Engine、PostgreSQL、ClickHouse。
+需要 Docker Engine / Docker Desktop 和 Compose v2.20+。常驻服务为 Go + React、Python Engine、PostgreSQL、ClickHouse、Collector Gateway/Consumer 与 Kafka；不引入 Redis。[Trace 数据面与迁移](docs/TRACE_DATA_PLANE.md)。
 
 ```sh
 cp deploy/catena-mvp1/.env.example deploy/catena-mvp1/.env

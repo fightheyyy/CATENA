@@ -9,6 +9,7 @@ on:
       - "engine/**"
       - "evals/**"
       - "deploy/catena-mvp1/**"
+      - "scripts/benchmark_trace_pipeline.py"
       - ".github/workflows/catena-mvp1-ci.yml"
   push:
     branches: [main]
@@ -19,12 +20,47 @@ on:
       - "engine/**"
       - "evals/**"
       - "deploy/catena-mvp1/**"
+      - "scripts/benchmark_trace_pipeline.py"
       - ".github/workflows/catena-mvp1-ci.yml"
 
 permissions:
   contents: read
 
 jobs:
+  trace-data-plane:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.x"
+          cache-dependency-path: backend/go.sum
+      - name: Start pinned official Trace pipeline (isolated local fixtures)
+        run: |
+          docker compose -p catena-trace-ci -f deploy/catena-mvp1/compose.yml -f deploy/catena-mvp1/compose.telemetry-test.yml up -d --scale otel-gateway=2 --scale otel-consumer=2 clickhouse postgres otel-gateway otel-consumer
+          docker compose -p catena-trace-ci -f deploy/catena-mvp1/compose.yml -f deploy/catena-mvp1/compose.telemetry-test.yml run --rm --no-deps clickhouse-migrate
+      - name: Export local fixture endpoints
+        run: |
+          urls=$(docker compose -p catena-trace-ci -f deploy/catena-mvp1/compose.yml -f deploy/catena-mvp1/compose.telemetry-test.yml ps -q otel-gateway | while read -r id; do docker port "$id" 4318/tcp; done | sed 's|^|http://|' | paste -sd, -)
+          echo "CATENA_OTEL_TEST_GATEWAYS=$urls" >> "$GITHUB_ENV"
+      - name: Official exporter parity, replay idempotency and identity boundary
+        working-directory: backend
+        env:
+          CATENA_OTEL_TEST_DSN: http://default:catena@127.0.0.1:8123/catena?dial_timeout=5s
+        run: go test -count=1 -v -run 'TestCollector|TestOTelExporter|TestOTelAuthenticated|TestOTelReplay' ./internal/control
+      - name: Real PostgreSQL auth and end-to-end data-plane smoke
+        working-directory: backend
+        env:
+          BARENA_TEST_DATABASE_URL: postgres://catena_core:catena-core-local@127.0.0.1:54329/catena_core?sslmode=disable
+          CATENA_OTEL_TEST_DSN: http://default:catena@127.0.0.1:8123/catena?dial_timeout=5s
+          CATENA_OTEL_LOAD: "1"
+          CATENA_OTEL_LOAD_RUN: ci-${{ github.run_id }}-${{ github.run_attempt }}
+          CATENA_OTEL_LOAD_SECONDS: "3"
+        run: go test -count=1 -v -run '^TestOTelDataPlaneLoad$' ./internal/control
+      - name: Trace pipeline logs
+        if: always()
+        run: docker compose -p catena-trace-ci -f deploy/catena-mvp1/compose.yml -f deploy/catena-mvp1/compose.telemetry-test.yml logs --no-color --tail=100
+
   engine:
     runs-on: ubuntu-latest
     defaults:

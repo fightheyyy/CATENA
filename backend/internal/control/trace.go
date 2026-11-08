@@ -24,9 +24,12 @@ import (
 
 const maxOTLPRequestBytes = 16 * 1024 * 1024
 
+type TraceSink interface {
+	InsertSpans(context.Context, string, []TraceSpan) error
+}
+
 type TraceStore interface {
 	Ping(context.Context) error
-	InsertSpans(context.Context, string, []TraceSpan) error
 	ListTraces(context.Context, string, int) ([]TraceSummary, error)
 	ListAgentTraces(context.Context, string, string, time.Time, time.Time, int) ([]TraceSummary, error)
 	GetTrace(context.Context, string, string) (TraceDetail, error)
@@ -125,7 +128,11 @@ type decodedOTLP struct {
 }
 
 func (s *HTTPServer) ingestOTLPTraces(w http.ResponseWriter, r *http.Request) {
-	if s.traces == nil {
+	sink := s.traceSink
+	if sink == nil {
+		sink, _ = s.traces.(TraceSink)
+	} // Direct handler fixtures.
+	if sink == nil {
 		writeProblem(w, http.StatusServiceUnavailable, "Trace storage is not configured")
 		return
 	}
@@ -167,17 +174,18 @@ func (s *HTTPServer) ingestOTLPTraces(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(decoded.Spans) > 0 {
+		agentID, agentName := "", ""
 		if principal.Agent != nil {
-			for index := range decoded.Spans {
-				decoded.Spans[index].AgentID = principal.Agent.ID
-				if decoded.Spans[index].ResourceAttributes == nil {
-					decoded.Spans[index].ResourceAttributes = make(map[string]any)
-				}
-				decoded.Spans[index].ResourceAttributes["catena.agent.id"] = principal.Agent.ID
-				decoded.Spans[index].ResourceAttributes["catena.agent.name"] = principal.Agent.DisplayName
-			}
+			agentID, agentName = principal.Agent.ID, principal.Agent.DisplayName
 		}
-		if err := s.traces.InsertSpans(r.Context(), principal.User.ID, decoded.Spans); err != nil {
+		for index := range decoded.Spans {
+			bindTraceIdentity(&decoded.Spans[index], principal.User.ID, agentID, agentName)
+		}
+		if err := sink.InsertSpans(r.Context(), principal.User.ID, decoded.Spans); err != nil {
+			if errors.Is(err, ErrCollectorBatchTooLarge) {
+				writeProblem(w, http.StatusRequestEntityTooLarge, err.Error())
+				return
+			}
 			writeProblem(w, http.StatusServiceUnavailable, "Trace storage failed")
 			return
 		}

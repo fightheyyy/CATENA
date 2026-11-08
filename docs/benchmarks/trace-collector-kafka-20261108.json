@@ -1,0 +1,462 @@
+{
+  "date": "2026-11-08",
+  "timezone": "Asia/Shanghai",
+  "base_commit": "7e6c8b386f780fa2c03c4792f953b9c82704123d",
+  "status": "working tree; not deployed or published",
+  "versions": {
+    "collector_contrib": "0.137.0",
+    "kafka": "3.9.1",
+    "clickhouse": "25.10.2.65",
+    "postgresql": "17",
+    "go": "1.25.11"
+  },
+  "host": {
+    "cpu_quota_cores": 4,
+    "memory_gib": 32
+  },
+  "baseline_cases": [
+    {
+      "acknowledged_spans_per_second": 999.387591107806,
+      "auth_backend": "postgresql",
+      "batch_size": 100,
+      "elapsed_seconds": 60.03676705,
+      "expected_unique_spans": 60000,
+      "gateways": 1,
+      "http_statuses": {
+        "200": 600
+      },
+      "ingress_concurrency_per_process": 16,
+      "ingress_kafka_ack_p95_seconds": 0.060344783,
+      "ingress_kafka_ack_p99_seconds": 0.077129082,
+      "offered_rps": 10,
+      "owner_list_p95_seconds": 0.079306275,
+      "owner_list_p99_seconds": 0.111796937,
+      "requests": 600,
+      "run": "1794134530325181416-p6-g1-c1",
+      "scheduled_seconds": 60,
+      "storage_p95_seconds": 0.064871196,
+      "storage_p99_seconds": 0.091055258,
+      "tenants": 20,
+      "transport_errors": [],
+      "verified_unique_spans": 60000,
+      "resources": {
+        "samples": 13,
+        "mean_cgroup_cpu_cores": 2.3312466222155357,
+        "max_cgroup_memory_gib": 18.14397430419922,
+        "scope": "whole cgroup including generator, Go ingress, databases, collectors, monitoring and verification queries",
+        "per_container_metrics": "unreliable in this managed Docker environment: multiple containers report nearly identical parent-scale usage and 32GiB limits despite different declared limits; raw samples retained, not attributed or summed"
+      }
+    },
+    {
+      "acknowledged_spans_per_second": 904.4309772049423,
+      "auth_backend": "postgresql",
+      "batch_size": 100,
+      "elapsed_seconds": 66.340054147,
+      "expected_unique_spans": 60000,
+      "gateways": 2,
+      "http_statuses": {
+        "200": 600
+      },
+      "ingress_concurrency_per_process": 16,
+      "ingress_kafka_ack_p95_seconds": 0.644276869,
+      "ingress_kafka_ack_p99_seconds": 4.035509872,
+      "offered_rps": 10,
+      "owner_list_p95_seconds": 0.086107043,
+      "owner_list_p99_seconds": 0.139555614,
+      "requests": 600,
+      "run": "1794134530325181416-p6-g2-c1",
+      "scheduled_seconds": 60,
+      "storage_p95_seconds": 1.745514518,
+      "storage_p99_seconds": 4.107952218,
+      "tenants": 20,
+      "transport_errors": [],
+      "verified_unique_spans": 60000,
+      "resources": {
+        "samples": 14,
+        "mean_cgroup_cpu_cores": 2.4598361196999345,
+        "max_cgroup_memory_gib": 19.318523406982422,
+        "scope": "whole cgroup including generator, Go ingress, databases, collectors, monitoring and verification queries",
+        "per_container_metrics": "unreliable in this managed Docker environment: multiple containers report nearly identical parent-scale usage and 32GiB limits despite different declared limits; raw samples retained, not attributed or summed"
+      }
+    },
+    {
+      "acknowledged_spans_per_second": 988.199385400391,
+      "auth_backend": "postgresql",
+      "batch_size": 100,
+      "elapsed_seconds": 60.716491921,
+      "expected_unique_spans": 60000,
+      "gateways": 2,
+      "http_statuses": {
+        "200": 600
+      },
+      "ingress_concurrency_per_process": 16,
+      "ingress_kafka_ack_p95_seconds": 0.190434729,
+      "ingress_kafka_ack_p99_seconds": 0.346682415,
+      "offered_rps": 10,
+      "owner_list_p95_seconds": 0.173486558,
+      "owner_list_p99_seconds": 0.270260679,
+      "requests": 600,
+      "run": "1794134530325181416-p6-g2-c2",
+      "scheduled_seconds": 60,
+      "storage_p95_seconds": 0.27407145,
+      "storage_p99_seconds": 0.524705915,
+      "tenants": 20,
+      "transport_errors": [],
+      "verified_unique_spans": 60000,
+      "resources": {
+        "samples": 14,
+        "mean_cgroup_cpu_cores": 2.763426789278302,
+        "max_cgroup_memory_gib": 20.412853240966797,
+        "scope": "whole cgroup including generator, Go ingress, databases, collectors, monitoring and verification queries",
+        "per_container_metrics": "unreliable in this managed Docker environment: multiple containers report nearly identical parent-scale usage and 32GiB limits despite different declared limits; raw samples retained, not attributed or summed"
+      }
+    },
+    {
+      "acknowledged_spans_per_second": 992.999501553722,
+      "auth_backend": "postgresql",
+      "batch_size": 100,
+      "elapsed_seconds": 60.422991055,
+      "expected_unique_spans": 60000,
+      "gateways": 2,
+      "http_statuses": {
+        "200": 600
+      },
+      "ingress_concurrency_per_process": 16,
+      "ingress_kafka_ack_p95_seconds": 0.073636173,
+      "ingress_kafka_ack_p99_seconds": 0.106938135,
+      "offered_rps": 10,
+      "owner_list_p95_seconds": 0.09111663,
+      "owner_list_p99_seconds": 0.114764441,
+      "requests": 600,
+      "run": "1794135233911944922-p12-g2-c2",
+      "scheduled_seconds": 60,
+      "storage_p95_seconds": 0.075860804,
+      "storage_p99_seconds": 0.106315508,
+      "tenants": 20,
+      "transport_errors": [],
+      "verified_unique_spans": 60000,
+      "resources": {
+        "samples": 14,
+        "mean_cgroup_cpu_cores": 2.3993561491939954,
+        "max_cgroup_memory_gib": 20.71828842163086,
+        "scope": "whole cgroup including generator, Go ingress, databases, collectors, monitoring and verification queries",
+        "per_container_metrics": "unreliable in this managed Docker environment: multiple containers report nearly identical parent-scale usage and 32GiB limits despite different declared limits; raw samples retained, not attributed or summed"
+      }
+    }
+  ],
+  "tenant_cardinality": {
+    "acknowledged_spans_per_second": 44.74361128214314,
+    "auth_backend": "postgresql",
+    "batch_size": 1,
+    "elapsed_seconds": 22.349559442,
+    "expected_unique_spans": 1000,
+    "gateways": 2,
+    "http_attempt_statuses": {
+      "200": 1000
+    },
+    "http_statuses": {
+      "200": 1000
+    },
+    "ingress_concurrency_per_process": 16,
+    "ingress_kafka_ack_p95_seconds": 0.448645221,
+    "ingress_kafka_ack_p99_seconds": 0.654834447,
+    "offered_rps": 50,
+    "owner_list_p95_seconds": 0.157825855,
+    "owner_list_p99_seconds": 0.1866643,
+    "requests": 1000,
+    "retry_limit": 0,
+    "run": "1794136614224566283-tenant-cardinality",
+    "scheduled_seconds": 20,
+    "storage_p95_seconds": 9.138838486,
+    "storage_p99_seconds": 9.571338751999999,
+    "tenants": 1000,
+    "transport_errors": [],
+    "verified_unique_spans": 1000
+  },
+  "broker_fault": {
+    "acknowledged_spans_per_second": 853.4242813980746,
+    "auth_backend": "postgresql",
+    "batch_size": 100,
+    "elapsed_seconds": 23.435002303,
+    "expected_unique_spans": 20000,
+    "gateways": 2,
+    "http_attempt_statuses": {
+      "200": 200,
+      "429": 25
+    },
+    "http_statuses": {
+      "200": 200
+    },
+    "ingress_concurrency_per_process": 16,
+    "ingress_kafka_ack_p95_seconds": 7.804916304,
+    "ingress_kafka_ack_p99_seconds": 9.145623146,
+    "offered_rps": 10,
+    "owner_list_p95_seconds": 0.076124526,
+    "owner_list_p99_seconds": 0.114183317,
+    "requests": 200,
+    "retry_limit": 8,
+    "run": "1794136614224566283-broker-unavailable",
+    "scheduled_seconds": 20,
+    "storage_p95_seconds": 7.520272342,
+    "storage_p99_seconds": 8.747672889,
+    "tenants": 20,
+    "transport_errors": [],
+    "verified_unique_spans": 20000
+  },
+  "reliability": {
+    "clickhouse_recovery_wall_seconds": 9.429220914840698,
+    "pending_messages": 100,
+    "commits_held_while_down": true,
+    "consumer_killed_while_pending": true
+  },
+  "offset_checks": {
+    "before": {
+      "7": {
+        "committed": 291,
+        "end": 291
+      },
+      "8": {
+        "committed": 296,
+        "end": 296
+      },
+      "3": {
+        "committed": 846,
+        "end": 846
+      },
+      "4": {
+        "committed": 698,
+        "end": 698
+      },
+      "0": {
+        "committed": 755,
+        "end": 755
+      },
+      "11": {
+        "committed": 290,
+        "end": 290
+      },
+      "5": {
+        "committed": 706,
+        "end": 706
+      },
+      "6": {
+        "committed": 297,
+        "end": 297
+      },
+      "1": {
+        "committed": 762,
+        "end": 762
+      },
+      "2": {
+        "committed": 750,
+        "end": 750
+      },
+      "9": {
+        "committed": 293,
+        "end": 293
+      },
+      "10": {
+        "committed": 309,
+        "end": 309
+      }
+    },
+    "clickhouse_down": {
+      "7": {
+        "committed": 291,
+        "end": 301
+      },
+      "8": {
+        "committed": 296,
+        "end": 304
+      },
+      "3": {
+        "committed": 846,
+        "end": 854
+      },
+      "4": {
+        "committed": 698,
+        "end": 707
+      },
+      "0": {
+        "committed": 755,
+        "end": 763
+      },
+      "11": {
+        "committed": 290,
+        "end": 294
+      },
+      "5": {
+        "committed": 706,
+        "end": 716
+      },
+      "6": {
+        "committed": 297,
+        "end": 302
+      },
+      "1": {
+        "committed": 762,
+        "end": 771
+      },
+      "2": {
+        "committed": 750,
+        "end": 762
+      },
+      "9": {
+        "committed": 293,
+        "end": 304
+      },
+      "10": {
+        "committed": 309,
+        "end": 315
+      }
+    },
+    "consumer_restarted_while_down": {
+      "5": {
+        "committed": 706,
+        "end": 716
+      },
+      "6": {
+        "committed": 297,
+        "end": 302
+      },
+      "7": {
+        "committed": 291,
+        "end": 301
+      },
+      "8": {
+        "committed": 296,
+        "end": 304
+      },
+      "1": {
+        "committed": 762,
+        "end": 771
+      },
+      "2": {
+        "committed": 750,
+        "end": 762
+      },
+      "3": {
+        "committed": 846,
+        "end": 854
+      },
+      "4": {
+        "committed": 698,
+        "end": 707
+      },
+      "0": {
+        "committed": 755,
+        "end": 763
+      },
+      "9": {
+        "committed": 293,
+        "end": 304
+      },
+      "10": {
+        "committed": 309,
+        "end": 315
+      },
+      "11": {
+        "committed": 290,
+        "end": 294
+      }
+    },
+    "final": {
+      "7": {
+        "committed": 319,
+        "end": 319
+      },
+      "8": {
+        "committed": 315,
+        "end": 315
+      },
+      "3": {
+        "committed": 877,
+        "end": 877
+      },
+      "4": {
+        "committed": 723,
+        "end": 723
+      },
+      "0": {
+        "committed": 783,
+        "end": 783
+      },
+      "11": {
+        "committed": 311,
+        "end": 311
+      },
+      "5": {
+        "committed": 727,
+        "end": 727
+      },
+      "6": {
+        "committed": 323,
+        "end": 323
+      },
+      "1": {
+        "committed": 781,
+        "end": 781
+      },
+      "2": {
+        "committed": 781,
+        "end": 781
+      },
+      "9": {
+        "committed": 318,
+        "end": 318
+      },
+      "10": {
+        "committed": 335,
+        "end": 335
+      }
+    }
+  },
+  "go_regression": {
+    "passed_including_subtests": 102,
+    "skipped": [
+      "TestOTelDataPlaneLoad",
+      "TestTraceBackendLoadStudy"
+    ],
+    "additional_test": "unmerged replay and same IDs across owners passed"
+  },
+  "failed_trials": [
+    {
+      "file": "p12-initial-config-reload-failure.log",
+      "reason": "existing Consumer had not reloaded mounted metadata-refresh config; 43800/60000 present at timeout, all 60000 later verified by full identity set",
+      "lost_spans": 0
+    },
+    {
+      "file": "p12-stale-local-test-ports-failure.log",
+      "reason": "test helper used pre-restart random loopback ports; all 600 requests returned 503, none acknowledged"
+    },
+    {
+      "file": "broker-unavailable-load.log",
+      "reason": "no retry in initial generator: 198 HTTP 200, 2 HTTP 429; rerun with bounded retries and retained admission limits"
+    }
+  ],
+  "source_sha256": {
+    "backend/cmd/catena-trace-replay/main.go": "9e62852505ba2cfd4932e87ee0111efd602a787ff860841dbd73d4fe1fb62015",
+    "backend/internal/control/collector_trace.go": "c8f8ef0fed84a286b1da0af1aa635376fec05729308ee34eaf51e2fc678e06b7",
+    "backend/internal/control/collector_trace_test.go": "72f3addfd411382dda737153ab53c31bd06e1bd9e7423f7404981d1062a29532",
+    "backend/internal/control/legacy_trace_replay.go": "7e8feba605a486f1f127b35aed5a26895d42eaa6756f271ce569ebe1785f3a9e",
+    "backend/internal/control/legacy_trace_writer_test.go": "6cb95069eda5e87eef912e8a943eb1ca24c84242289a37caa0c82aaf2d7d1d97",
+    "backend/internal/control/otel_trace_integration_test.go": "a64cfbf20d81c0f172d2a2dac3e2d81a32b7e39639458fab0f2758d5360062f2",
+    "backend/internal/control/otel_trace_load_test.go": "b7436ef0429f6a899120f4d15b9c65e5fb4b8655c1adfb2daab5bc7b27724f40",
+    "deploy/catena-mvp1/compose.telemetry-test.yml": "6c767748ef9cf43f8106617362fb011baa40101dee076ae61614a956176e5bb3",
+    "deploy/catena-mvp1/compose.telemetry.yml": "3f78f05d09135cc988385b75b6427ef60a7e2d11633808f09d895aeec6dca34f",
+    "deploy/catena-mvp1/telemetry/consumer.yaml": "058edce06b44485f79b31e912d229c80d36cd847656d7f7733f1be191eedf39a",
+    "deploy/catena-mvp1/telemetry/gateway.yaml": "6a3a07694578f62dda378c757351b04b5226fc48b8037af3fc7f289b17d49db6",
+    "deploy/catena-mvp1/telemetry/migrate.sh": "6a7323e09213e08e4e4b41beff5ca14d6778958e6016cab099b06608c2c598c3",
+    "deploy/catena-mvp1/telemetry/migrations/001_otel_traces.sql": "f0f5764d1e9c2b85ac3cb9e7215eb9e48e91459b130ad7e04e9b2d2bb96a2b39",
+    "deploy/catena-mvp1/telemetry/migrations/002_query_view.sql": "c36a9d1010a96be28096e36c433f2695cf8e62a44dffb012a59bcce74a2b2941",
+    "scripts/benchmark_trace_pipeline.py": "e73394f92baf05e264984b84a4005e26275ba5b9602647a55512f8a88be92db3",
+    "backend/cmd/catena-server/main.go": "e7a4282e075bae3590d80d8878a060f2990ed3588967d7ca5007976e99d89ebc",
+    "backend/internal/control/clickhouse_trace.go": "293737e98adad8ffbcc86e915e5cc0018a1dc3f6899541ebb3a70712b1470617",
+    "backend/internal/control/http.go": "96214650b1eb33bedc2d99d70e0c5c667176d87ccf5d3ebddd031e1811a06958",
+    "backend/internal/control/trace.go": "53b4a1bf29b71ad475dacf12c776108145416aa3074ae2adb9dc75d12d8abea3",
+    "deploy/catena-mvp1/.env.example": "a1cedfc36b05a3b21dbea01c0c8e696a479da31eb9a2f87fa9ec53c0be56bddf",
+    "deploy/catena-mvp1/README.md": "6ab29ad1261caf2853dd8993d1f23603402380e8dc29f263d060cbbabdf8049d",
+    "deploy/catena-mvp1/compose.yml": "7efae09c01719e4b7d546d793c9849d3ca761c5d65ef87ad6277b56d87775eab",
+    ".github/workflows/catena-mvp1-ci.yml": "ede3eef639348036d36c582c4b0886e4d66e430db793d11f1bd3a98a0a57038f"
+  }
+}

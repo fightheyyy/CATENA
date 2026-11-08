@@ -61,13 +61,31 @@ func run() error {
 	}
 	defer store.Close()
 	var traceStore control.TraceStore
+	var traceIngress control.TraceSink
 	if clickHouseDSN := os.Getenv("CATENA_CLICKHOUSE_DSN"); clickHouseDSN != "" {
-		clickHouse, err := control.OpenClickHouseTraceStore(ctx, clickHouseDSN)
+		var clickHouse *control.ClickHouseTraceStore
+		// Existing deployments must explicitly opt in after real-trace parity.
+		switch env("CATENA_TRACE_BACKEND", "legacy") {
+		case "otel":
+			clickHouse, err = control.OpenOTelTraceStore(ctx, clickHouseDSN)
+		case "legacy": // Read rollback only; never ALTER or drop the old table.
+			clickHouse, err = control.OpenLegacyTraceReader(ctx, clickHouseDSN)
+		default:
+			return errors.New("CATENA_TRACE_BACKEND must be otel or legacy")
+		}
 		if err != nil {
 			return err
 		}
 		defer func() { _ = clickHouse.Close() }()
 		traceStore = clickHouse
+	}
+	if endpoint := os.Getenv("CATENA_COLLECTOR_URL"); endpoint != "" {
+		traceIngress, err = control.NewCollectorTraceSink(endpoint)
+		if err != nil {
+			return err
+		}
+	} else if traceStore != nil {
+		return errors.New("CATENA_COLLECTOR_URL is required for Trace ingestion")
 	}
 	turnTimeout, err := time.ParseDuration(env("CATENA_ENGINE_REQUEST_TIMEOUT", "20m"))
 	if err != nil {
@@ -97,7 +115,7 @@ func run() error {
 		SecureCookies:         strings.HasPrefix(redirectURL, "https://"),
 		GatewaySecret:         gatewaySecret,
 		APITokenEncryptionKey: apiTokenEncryptionKey,
-	}, Engine: analysisRuntime, Traces: traceStore, Workers: workerConfig, Ingestion: ingestConfig})
+	}, Engine: analysisRuntime, Traces: traceStore, Ingress: traceIngress, Workers: workerConfig, Ingestion: ingestConfig})
 	if err != nil {
 		return err
 	}

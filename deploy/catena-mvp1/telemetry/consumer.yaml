@@ -1,0 +1,51 @@
+receivers:
+  kafka:
+    brokers: [kafka:9092, kafka-2:9092, kafka-3:9092]
+    metadata:
+      refresh_interval: 5s
+    group_id: catena-clickhouse-v1
+    initial_offset: earliest
+    max_fetch_size: 67108864
+    max_partition_fetch_size: 33554432
+    traces:
+      topic: catena-traces-v1
+      encoding: otlp_proto
+    autocommit:
+      enable: true
+      interval: 1s
+    message_marking:
+      after: true
+      on_error: false
+      on_permanent_error: false
+    error_backoff:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 10s
+      max_elapsed_time: 0s
+exporters:
+  clickhouse:
+    endpoint: tcp://clickhouse:9000
+    database: catena
+    username: default
+    password: ${env:CATENA_CLICKHOUSE_PASSWORD}
+    traces_table_name: otel_traces
+    create_schema: false
+    async_insert: false
+    timeout: 5s
+    sending_queue:
+      enabled: false
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 10s
+      max_elapsed_time: 0s
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [kafka]
+      # No asynchronous batch processor or queue before durable insertion.
+      exporters: [clickhouse]

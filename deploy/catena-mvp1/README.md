@@ -1,6 +1,8 @@
 # Catena Docker 部署
 
-默认只启动 catena-core（Go+嵌入 React）、catena-engine、PostgreSQL 17、ClickHouse 25.10。无旧 Runner/XiaoBaOS/GauzMem/MySQL/Neo4j/Qdrant 运行依赖。
+默认启动 catena-core（Go+嵌入 React）、catena-engine、PostgreSQL 17、ClickHouse 25.10，以及 Collector Contrib 0.137.0 Gateway/Consumer 和三节点 Kafka 3.9.1。需要 Compose 2.20+。不引入 Redis。
+
+Trace 经 Go 鉴权后转发 Collector → Kafka → Collector → 官方 ClickHouse Exporter；版本化迁移创建 `otel_traces`，保留 `catena_spans`。已有部署必须先按 [Trace 迁移与回滚流程](../../docs/TRACE_DATA_PLANE.md) 完成历史数据和真实 Trace 对照，不能直接依赖新部署默认读取切换。
 
 ```sh
 cp deploy/catena-mvp1/.env.example deploy/catena-mvp1/.env
