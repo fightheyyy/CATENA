@@ -16,6 +16,7 @@ type HTTPServer struct {
 	traceInvestigations sync.Map
 	store               Store
 	traces              TraceStore
+	traceSink           TraceSink
 	analysisRuntime     *EngineClient
 	auth                AuthConfig
 	jobs                *analysisWorker
@@ -26,9 +27,11 @@ type HTTPServer struct {
 var webAssets embed.FS
 
 type HTTPConfig struct {
-	Auth      AuthConfig
-	Engine    *EngineClient
-	Traces    TraceStore
+	Auth   AuthConfig
+	Engine *EngineClient
+	Traces TraceStore
+	// Ingress is independent of query storage. Production uses Collector OTLP.
+	Ingress   TraceSink
 	Workers   AnalysisWorkerConfig
 	Ingestion TraceIngestConfig
 }
@@ -54,6 +57,10 @@ func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error)
 		analysisRuntime: analysisRuntime,
 		auth:            auth.normalized(),
 		ingestion:       &traceAdmission{config: ingestion, owners: make(map[string]int)},
+	}
+	server.traceSink = config.Ingress
+	if server.traceSink == nil {
+		server.traceSink, _ = traces.(TraceSink) // Test fallback; production readers do not implement TraceSink.
 	}
 	if analysisRuntime != nil {
 		pool, err := newAnalysisWorker(store, workers, server.executeAnalysisJob)

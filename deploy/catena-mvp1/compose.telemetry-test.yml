@@ -1,0 +1,4 @@
+# Local test access only; random loopback ports allow Gateway scaling.
+services:
+  otel-gateway:
+    ports: ["127.0.0.1::4318"]

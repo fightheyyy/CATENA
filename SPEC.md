@@ -8,7 +8,7 @@ CATENA 管理 Trace、脱敏且固定来源的 Evidence、已审核 Case 的注�
 
 | 边界 | 实现职责 |
 |---|---|
-| Tap / Go / ClickHouse | OTLP 持久化、背压、身份隔离、可追溯的原始经历 |
+| Tap / Go Ingress / Collector / Kafka / ClickHouse | 可信身份接入、持久缓冲、官方 Exporter 写入、幂等且按 Owner 隔离读取 |
 | Go / PostgreSQL | Auth、Agent、加密模型配置、Evidence、Lease / Heartbeat / Fencing、幂等 / Retry / Timeout / Cancel、Artifact、Review |
 | Codex App Server + Skill | 归因、候选提出与整理；原生 Skill 输入和受控工具调用 |
 | Improvement Workflow | 固定 Probe / Freeze / Compare，保留预算、取消与失败记录 |
@@ -27,13 +27,13 @@ Go 只有一套持久队列。Engine receipt 是付费操作去重记录；Engin
 
 工程记忆复用 Evidence、候选版本、实验、Artifact 和 Review 的持久记录。Memory / OpenViking、Memory API/UI、Embedding 和社区功能退役。历史数据不清空，旧终态 Job / Artifact 和会话读取兼容保留。未来 Context 仅预留经过授权的 Markdown / AGENTS.md 文本输入，不实现检索、Embedding、知识图谱或长期记忆引擎。
 
-部署四个服务，无 Redis、Kafka、Kubernetes。Harbor Docker socket 由可信部署者显式授权；不承诺安全的恶意多租户 Docker 沙箱。Owner 隔离保留，组织成员与共享权限未交付。
+Trace 数据面采用 Collector Contrib + Kafka + ClickHouse；Go 只做入口鉴权/身份绑定、必要保护与查询，生产不再调用自研 ClickHouse Writer。新建官方 Exporter 兼容的 `otel_traces`，保留旧表供迁移对照和读回滚。交付语义为 At-least-once + Owner/TraceId/SpanId 幂等读取，不承诺 Exactly-once。不引入 Redis、Kubernetes。PostgreSQL Job Queue 和 RSI 不变。Harbor Docker socket 由可信部署者显式授权；不承诺安全的恶意多租户 Docker 沙箱。Owner 隔离保留，组织成员与共享权限未交付。见 [Trace 数据面](docs/TRACE_DATA_PLANE.md)。
 
 [当前 Workflow 与边界](docs/IMPROVEMENT_WORKFLOW.md) · [分析门验收](docs/refactors/ANALYSIS_GATE.md) · [改进实测](docs/refactors/UNIFIED_RUNTIME.md) · [历史重构报告](docs/refactors/REBIRTH.md)。历史研究文档不代表当前执行架构。
 
 ## 收敛边界与下一验收
 
-当前冻结 Go / PostgreSQL / ClickHouse、统一 Codex Runtime 和 Harbor 的职责边界。新增策略优先复用现有 Skill / Tool / Workflow；不为尚不存在的第二实现增加框架。
+当前冻结 Go / Collector Contrib / Kafka / ClickHouse / PostgreSQL、统一 Codex Runtime 和 Harbor 的职责边界。新增策略优先复用现有 Skill / Tool / Workflow；不为尚不存在的第二实现增加框架。
 
 近期工作仅限核心接入、报告可读性、证据可信度、实验操作和真实案例验证。组织共享、通用 Code Patch、经验检索、插件市场与自动采用不属于本轮交付；版本化工程记录继续保留。
 

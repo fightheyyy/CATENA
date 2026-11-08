@@ -1,5 +1,8 @@
 name: catena
 
+include:
+  - compose.telemetry.yml
+
 services:
   catena-core:
     build:
@@ -17,6 +20,11 @@ services:
       BARENA_GITHUB_REDIRECT_URL: ${CATENA_GITHUB_REDIRECT_URL:-}
       BARENA_DATABASE_URL: postgresql://catena_core:${CATENA_CORE_DB_PASSWORD:-catena-core-local}@postgres:5432/catena_core?sslmode=disable
       CATENA_CLICKHOUSE_DSN: ${CATENA_CLICKHOUSE_DSN:-http://default:catena@clickhouse:8123/catena?dial_timeout=5s}
+      # Existing env files stay on historical reads until explicit cutover.
+      CATENA_TRACE_BACKEND: ${CATENA_TRACE_BACKEND:-legacy}
+      CATENA_COLLECTOR_URL: http://otel-gateway:4318
+      NO_PROXY: localhost,127.0.0.1,otel-gateway,catena-engine,clickhouse,postgres
+      no_proxy: localhost,127.0.0.1,otel-gateway,catena-engine,clickhouse,postgres
       # Private analysis engine; never published outside the Compose network.
       CATENA_ENGINE_URL: http://catena-engine:8790
       CATENA_ENGINE_REQUEST_TIMEOUT: ${CATENA_ENGINE_REQUEST_TIMEOUT:-20m}
@@ -44,6 +52,10 @@ services:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
+      clickhouse-migrate:
+        condition: service_completed_successfully
+      otel-gateway:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8787/readyz >/dev/null"]
       interval: 5s
@@ -109,7 +121,7 @@ services:
     volumes:
       - clickhouse-data:/var/lib/clickhouse
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping >/dev/null"]
+      test: ["CMD-SHELL", "clickhouse-client --password \"$$CLICKHOUSE_PASSWORD\" --query 'SELECT 1' >/dev/null"]
       interval: 5s
       timeout: 5s
       retries: 30

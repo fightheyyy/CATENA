@@ -5,7 +5,11 @@ CATENA = attribution, orchestration and engineering records.
 
 ```mermaid
 flowchart TD
-    Trace[Tap / OTLP] --> CH[(ClickHouse)]
+    Trace[Tap / OTLP] --> Ingress[Go: API Key / trusted Owner + Agent]
+    Ingress --> Gateway[Collector Gateway]
+    Gateway --> Kafka[(Kafka)]
+    Kafka --> Consumer[Collector Consumer / official ClickHouse Exporter]
+    Consumer --> CH[(ClickHouse otel_traces)]
     CH --> Go[Go: owner-scoped frozen Evidence]
     Go --> Queue[(PostgreSQL: Job / lease / heartbeat / fencing)]
     Queue --> Receipt[Private Engine execution receipt]
@@ -49,9 +53,11 @@ custom optimizer Host/Bench/Proposer, universal Plugin SDK or second durable que
 remains. Internal analysis Runtime is separate from the evaluated target; the
 current target adapter is Codex, not a universal harness format.
 
-The four permanent services remain Go+React, Python Engine, PostgreSQL and
-ClickHouse. Codex analysis is an Engine child process. Harbor creates disposable
-target containers. No new service or middleware was added.
+Go+React, Python Engine and PostgreSQL retain their control-plane roles. The Trace
+data plane adds Collector Contrib Gateway/Consumer and Kafka before ClickHouse.
+Go no longer writes ClickHouse in production. Redis is not introduced. See
+[delivery, schema, migration and acceptance](TRACE_DATA_PLANE.md). Codex analysis
+is an Engine child process; Harbor creates disposable target containers.
 
 Engineering memory reuses versioned Evidence/Candidate/Compare/Review. OpenViking
 and automatic retrieval remain retired. Historical terminal Jobs are unchanged.
