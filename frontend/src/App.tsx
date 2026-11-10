@@ -6,6 +6,7 @@ import { useWorkspace } from "./useWorkspace";
 import { Icon, type IconName } from "./Icons";
 import type { AnalysisJob, Session, WorkspaceData } from "./types";
 
+const ManagedWorkspace = lazy(() => import("./ManagedWorkspace").then((module) => ({ default: module.ManagedWorkspace })));
 const AgentWorkspace = lazy(() => import("./AgentWorkspace").then((module) => ({ default: module.AgentWorkspace })));
 const ApiManagementPage = lazy(() => import("./ApiManagementPage").then((module) => ({ default: module.ApiManagementPage })));
 const WorkbenchWorkspace = lazy(() => import("./WorkbenchWorkspace").then((module) => ({ default: module.WorkbenchWorkspace })));
@@ -17,7 +18,7 @@ type Theme = "system" | "light" | "dark";
 
 const copy = {
   zh: {
-    nav: { home: "工作台", assistant: "工作台", cases: "实验", agents: "Agent", apiKeys: "连接", conversations: "对话", traces: "经历", evolution: "产出", settings: "设置" },
+    nav: { sessions: "托管会话", runDetail: "运行详情", sandboxMonitor: "Sandbox", resources: "资源配额", home: "工作台", assistant: "工作台", cases: "实验", agents: "Agent", apiKeys: "连接", conversations: "对话", traces: "经历", evolution: "产出", settings: "设置" },
     signIn: "使用 GitHub 登录",
     oauthFlowExpired: "登录流程已过期或从另一个地址发起。请重新登录，Catena 会自动使用正确的回调地址。",
     oauthUpstreamUnavailable: "GitHub 连接暂时超时，请重新登录。Catena 不会保留失败的授权流程。",
@@ -79,7 +80,7 @@ const copy = {
     latest: "最近更新",
   },
   en: {
-    nav: { home: "Workspace", assistant: "Workspace", cases: "Experiments", agents: "Agents", apiKeys: "Connections", conversations: "Conversations", traces: "History", evolution: "Outputs", settings: "Settings" },
+    nav: { sessions: "Sessions", runDetail: "Run detail", sandboxMonitor: "Sandboxes", resources: "Resources", home: "Workspace", assistant: "Workspace", cases: "Experiments", agents: "Agents", apiKeys: "Connections", conversations: "Conversations", traces: "History", evolution: "Outputs", settings: "Settings" },
     signIn: "Continue with GitHub",
     oauthFlowExpired: "This sign-in flow expired or started on another address. Restart it and Catena will use the canonical callback origin.",
     oauthUpstreamUnavailable: "GitHub temporarily timed out. Restart sign-in; Catena does not retain the failed authorization flow.",
@@ -488,7 +489,7 @@ function Sidebar({
   refreshing: boolean;
 }) {
   const t = copy[locale];
-  const icons: Record<Route, IconName> = { home: "home", assistant: "assistant", traces: "history", evolution: "outputs", agents: "agents", apiKeys: "plug", settings: "settings" };
+  const icons: Record<Route, IconName> = { sessions: "agents", runDetail: "history", sandboxMonitor: "plug", resources: "settings", home: "home", assistant: "assistant", traces: "history", evolution: "outputs", agents: "agents", apiKeys: "plug", settings: "settings" };
   return (
     <aside className="sidebar">
       <div className="sidebar-brand"><Brand />{onRefresh && <button className="text-button icon-button" type="button" aria-label={locale === "zh" ? "刷新" : "Refresh"} title={locale === "zh" ? "刷新" : "Refresh"} disabled={refreshing} onClick={() => void onRefresh()}><Icon name="refresh" /></button>}</div>
@@ -507,7 +508,7 @@ function Sidebar({
       </nav>
       <div className="sidebar-footer">
         <div className="sidebar-utilities">
-          {(["agents", "apiKeys", "settings"] as const).map((item) => <button key={item} className={route === item ? "nav-item active" : "nav-item"} type="button" aria-current={route === item ? "page" : undefined} onClick={() => onNavigate(item)}><Icon name={icons[item]} /><span>{t.nav[item]}</span></button>)}
+          {(["sandboxMonitor", "resources", "agents", "apiKeys", "settings"] as const).map((item) => <button key={item} className={route === item ? "nav-item active" : "nav-item"} type="button" aria-current={route === item ? "page" : undefined} onClick={() => onNavigate(item)}><Icon name={icons[item]} /><span>{t.nav[item]}</span></button>)}
         </div>
         <AccountMenu
           locale={locale}
@@ -572,7 +573,8 @@ function RouteView({
   onLogout: () => void;
 }) {
   let content: React.ReactNode;
-  if (route === "home" && !selectedAnalysisJobID) content = <WorkbenchWorkspace key={session.user?.id ?? "local"} locale={locale} workspace={workspace} ownerID={session.user?.id ?? "local"} initialAgentID={selectedAgentID} onOpenTrace={onOpenAgentTraces} onOpenJob={onOpenAnalysisJob} onConnectAgent={onConnectAgent} onRefresh={onRefresh} />;
+  if (["sessions", "runDetail", "sandboxMonitor", "resources"].includes(route)) content = <ManagedWorkspace route={route} workspace={workspace} />;
+  else if (route === "home" && !selectedAnalysisJobID) content = <WorkbenchWorkspace key={session.user?.id ?? "local"} locale={locale} workspace={workspace} ownerID={session.user?.id ?? "local"} initialAgentID={selectedAgentID} onOpenTrace={onOpenAgentTraces} onOpenJob={onOpenAnalysisJob} onConnectAgent={onConnectAgent} onRefresh={onRefresh} />;
   else if (route === "agents") content = <AgentWorkspace locale={locale} workspace={workspace} initialAgentID={selectedAgentID} onSelectAgent={onOpenAgent} onAnalyze={onAnalyzeAgent} onOpenTraces={onOpenAgentTraces} onConnect={onConnectAgent} />;
   else if (route === "apiKeys") content = <ApiManagementPage locale={locale} workspace={workspace} onRefresh={onRefresh} onOpenAgent={onOpenAgent} />;
   else if (route === "traces") content = <TraceExplorer locale={locale} workspace={workspace} initialAgentID={selectedTraceAgentID} initialTraceID={selectedTraceID} onSelectTrace={onOpenAgentTraces} refreshVersion={refreshVersion} />;

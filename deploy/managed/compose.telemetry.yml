@@ -1,0 +1,91 @@
+name: catena-managed-telemetry
+services:
+  kafka:
+    image: apache/kafka:3.9.1
+    hostname: kafka
+    mem_limit: 512m
+    cpus: "1"
+    environment:
+      CLUSTER_ID: Q2F0ZW5hTWFuYWdlZExvYw
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_HEAP_OPTS: -Xms128m -Xmx256m
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_MESSAGE_MAX_BYTES: 33554432
+      KAFKA_REPLICA_FETCH_MAX_BYTES: 33554432
+    volumes: [kafka-data:/var/lib/kafka/data]
+    networks:
+      default:
+        # Reuse the existing collectors verbatim; these aliases are one local broker, not HA.
+        aliases: [kafka-2, kafka-3]
+    healthcheck:
+      test: [CMD-SHELL, /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+  kafka-init:
+    image: apache/kafka:3.9.1
+    mem_limit: 256m
+    depends_on:
+      kafka: {condition: service_healthy}
+    entrypoint: [/opt/kafka/bin/kafka-topics.sh]
+    command: [--bootstrap-server, kafka:9092, --create, --if-not-exists, --topic, catena-traces-v1, --partitions, "3", --replication-factor, "1", --config, min.insync.replicas=1, --config, retention.ms=86400000]
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.10.2.65-alpine
+    mem_limit: 1g
+    cpus: "1"
+    environment:
+      CLICKHOUSE_DB: catena
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: managed-local-traces
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ports: ["127.0.0.1:18125:8123"]
+    volumes: [clickhouse-data:/var/lib/clickhouse]
+    healthcheck:
+      test: [CMD-SHELL, "clickhouse-client --password managed-local-traces --query 'SELECT 1' >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  clickhouse-migrate:
+    image: clickhouse/clickhouse-server:25.10.2.65-alpine
+    mem_limit: 256m
+    depends_on:
+      clickhouse: {condition: service_healthy}
+    environment:
+      CLICKHOUSE_PASSWORD: managed-local-traces
+    volumes:
+      - ../catena-mvp1/telemetry/migrations:/migrations:ro
+      - ../catena-mvp1/telemetry/migrate.sh:/migrate.sh:ro
+    entrypoint: [/bin/sh, /migrate.sh]
+  otel-gateway:
+    image: otel/opentelemetry-collector-contrib:0.137.0
+    mem_limit: 256m
+    command: [--config=/etc/otelcol/config.yaml]
+    volumes: ["../catena-mvp1/telemetry/gateway.yaml:/etc/otelcol/config.yaml:ro"]
+    ports: ["127.0.0.1:14318:4318"]
+    depends_on:
+      kafka-init: {condition: service_completed_successfully}
+  otel-consumer:
+    image: otel/opentelemetry-collector-contrib:0.137.0
+    mem_limit: 512m
+    command: [--config=/etc/otelcol/config.yaml]
+    environment:
+      CATENA_CLICKHOUSE_PASSWORD: managed-local-traces
+    volumes: ["../catena-mvp1/telemetry/consumer.yaml:/etc/otelcol/config.yaml:ro"]
+    depends_on:
+      kafka-init: {condition: service_completed_successfully}
+      clickhouse-migrate: {condition: service_completed_successfully}
+volumes:
+  kafka-data:
+  clickhouse-data:

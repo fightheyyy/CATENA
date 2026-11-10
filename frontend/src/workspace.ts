@@ -9,6 +9,7 @@ export const workspaceResources = {
 } as const;
 
 export const routeResources: Record<Route, Array<keyof typeof workspaceResources>> = {
+  sessions: ["agents"], runDetail: [], sandboxMonitor: [], resources: [],
   home: ["agents", "traces", "analysisJobs"],
   assistant: ["agents", "traces", "analysisJobs"],
   agents: ["agents"], apiKeys: ["agents"], traces: ["agents", "traces"],

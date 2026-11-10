@@ -1,0 +1,12 @@
+{
+  "run_id": "run-1794319727516-91397029d451315e",
+  "session_id": "session-1794319689325-f68f620fe0e8a886",
+  "state": "COMPLETED",
+  "trace_id": "14b9ba4d24a3b1390fabe4b4464ddffd",
+  "model_requests": 2,
+  "input_tokens": 15192,
+  "output_tokens": 165,
+  "result_ref": "checkpoint-1794319745713-5ed40f8748c35e0d",
+  "artifact_verified": true,
+  "content": "managed UI verified\n"
+}

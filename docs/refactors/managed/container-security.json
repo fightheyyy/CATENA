@@ -1,0 +1,26 @@
+{
+  "Privileged": false,
+  "CapAdd": null,
+  "CapDrop": [
+    "SYS_TIME",
+    "SYS_TTY_CONFIG",
+    "SYS_MODULE",
+    "AUDIT_WRITE",
+    "MKNOD",
+    "SYS_PTRACE",
+    "NET_ADMIN",
+    "NET_RAW",
+    "SYS_ADMIN"
+  ],
+  "SecurityOpt": [
+    "no-new-privileges=true"
+  ],
+  "Binds": [
+    "opensandbox-runtime-e485ebff-7dbc-42a3-b95b-8cfca883780e:/opt/opensandbox:rw"
+  ],
+  "Memory": 1073741824,
+  "NanoCpus": 1000000000,
+  "PidsLimit": 128,
+  "sandbox_id": "sandbox-1794319727817-33700af5f772b9d8",
+  "provider_id": "e485ebff-7dbc-42a3-b95b-8cfca883780e"
+}
