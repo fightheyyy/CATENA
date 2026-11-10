@@ -21,15 +21,17 @@ type HTTPServer struct {
 	auth                AuthConfig
 	jobs                *analysisWorker
 	ingestion           *traceAdmission
+	managed             *managedPlatform
 }
 
 //go:embed web/*
 var webAssets embed.FS
 
 type HTTPConfig struct {
-	Auth   AuthConfig
-	Engine *EngineClient
-	Traces TraceStore
+	Managed ManagedConfig
+	Auth    AuthConfig
+	Engine  *EngineClient
+	Traces  TraceStore
 	// Ingress is independent of query storage. Production uses Collector OTLP.
 	Ingress   TraceSink
 	Workers   AnalysisWorkerConfig
@@ -69,7 +71,14 @@ func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error)
 		}
 		server.jobs = pool
 	}
+	var managedErr error
+	server.managed, managedErr = startManaged(server, config.Managed)
+	if managedErr != nil {
+		server.jobs.close()
+		return nil, managedErr
+	}
 	mux := http.NewServeMux()
+	server.registerManaged(mux)
 	mux.HandleFunc("POST /internal/analysis-jobs/{job_id}/trace-query", server.queryInvestigationTrace)
 	mux.HandleFunc("POST /v1/analysis-jobs", server.createAnalysisJob)
 	mux.HandleFunc("GET /v1/analysis-jobs", server.listAnalysisJobs)
@@ -119,7 +128,8 @@ func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error)
 		panic(err)
 	}
 	mux.Handle("GET /", newSPAHandler(webRoot))
-	return &ManagedHTTPHandler{Handler: requestMiddleware(mux), workers: server.jobs}, nil
+	server.managed.start()
+	return &ManagedHTTPHandler{Handler: requestMiddleware(mux), workers: server.jobs, managed: server.managed}, nil
 }
 
 type spaHandler struct {
@@ -180,12 +190,13 @@ func (s *HTTPServer) systemStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":            "ready",
-		"auth_mode":         map[bool]string{true: "github", false: "local"}[s.auth.Enabled()],
-		"edge_ingest":       "available",
-		"analysis_protocol": engineTurnRequestSchema,
-		"analysis_engine":   analysisRuntime.Status,
-		"trace_store":       traceStore,
+		"status":                    "ready",
+		"auth_mode":                 map[bool]string{true: "github", false: "local"}[s.auth.Enabled()],
+		"edge_ingest":               "available",
+		"analysis_protocol":         engineTurnRequestSchema,
+		"analysis_engine":           analysisRuntime.Status,
+		"trace_store":               traceStore,
+		"managed_execution_enabled": s.managed != nil,
 	})
 }
 
@@ -193,7 +204,7 @@ func (s *HTTPServer) runtimes(w http.ResponseWriter, r *http.Request) {
 	runtime := s.analysisRuntime.Probe(r.Context())
 	writeJSON(w, http.StatusOK, map[string]any{
 		"runtimes":              []EngineManifest{runtime},
-		"target_runtime_hosted": false,
+		"target_runtime_hosted": s.managed != nil,
 	})
 }
 

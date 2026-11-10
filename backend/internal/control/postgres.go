@@ -58,7 +58,7 @@ func (s *PostgresStore) migrate(ctx context.Context) error {
 	if _, err = tx.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS catena_schema_migrations(version INTEGER PRIMARY KEY,applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`); err != nil {
 		return err
 	}
-	for _, version := range []int{2, 3} {
+	for _, version := range []int{2, 3, 4} {
 		var applied bool
 		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM catena_schema_migrations WHERE version=$1)`, version).Scan(&applied); err != nil {
 			return err
@@ -66,7 +66,7 @@ func (s *PostgresStore) migrate(ctx context.Context) error {
 		if applied {
 			continue
 		}
-		name := map[int]string{2: "002_v2.sql", 3: "003_rebirth.sql"}[version]
+		name := map[int]string{2: "002_v2.sql", 3: "003_rebirth.sql", 4: "004_managed.sql"}[version]
 		sql, readErr := migrationFiles.ReadFile("migrations/" + name)
 		if readErr != nil {
 			return fmt.Errorf("migration %d: %w", version, readErr)
