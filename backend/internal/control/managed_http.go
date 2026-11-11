@@ -50,17 +50,19 @@ func (s *HTTPServer) managedAgents(w http.ResponseWriter, r *http.Request) {
 	}
 	db := s.managed.store.db
 	if r.Method == "GET" {
-		v, err := managedRows(r.Context(), db, `SELECT to_jsonb(a) FROM managed_agents a WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 100`, owner)
+		v, err := managedRows(r.Context(), db, `SELECT to_jsonb(a) FROM managed_agents a WHERE tenant_id=$1 AND profile_kind='managed' ORDER BY created_at DESC LIMIT 100`, owner)
 		managedReply(w, 200, map[string]any{"agents": v}, err)
 		return
 	}
 	var in struct {
-		AgentID        string `json:"agent_id"`
-		Instructions   string `json:"instructions"`
-		Timeout        int    `json:"timeout_seconds"`
-		ToolPolicy     string `json:"tool_policy"`
-		Runtime        string `json:"runtime_type"`
-		RuntimeVersion string `json:"runtime_version"`
+		AgentID        string         `json:"agent_id"`
+		Instructions   string         `json:"instructions"`
+		Timeout        int            `json:"timeout_seconds"`
+		ToolPolicy     string         `json:"tool_policy"`
+		Runtime        string         `json:"runtime_type"`
+		RuntimeVersion string         `json:"runtime_version"`
+		Skills         []harnessSkill `json:"skills"`
+		Knowledge      []string       `json:"knowledge_refs"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
 		writeProblem(w, 400, err.Error())
@@ -78,8 +80,8 @@ func (s *HTTPServer) managedAgents(w http.ResponseWriter, r *http.Request) {
 	if in.ToolPolicy == "" {
 		in.ToolPolicy = "sandbox-write"
 	}
-	if len(in.Instructions) > 32768 || in.Timeout < 10 || in.Timeout > 1800 || in.Runtime != "codex" || in.RuntimeVersion != "0.160.0" || in.ToolPolicy != "sandbox-write" {
-		writeProblem(w, 400, "supported: Codex 0.160.0, sandbox-write, timeout 10..1800 seconds, instructions <=32 KiB")
+	if len(in.Instructions) > 32768 || in.Timeout < 10 || in.Timeout > 1800 || in.Runtime != "codex" || in.RuntimeVersion != "0.160.0" || (in.ToolPolicy != "sandbox-write" && in.ToolPolicy != "read-only") || !validManagedProfile(in.Skills, in.Knowledge) {
+		writeProblem(w, 400, "invalid Managed Profile: check Codex version, tool policy, timeout, Skill limits and workspace references")
 		return
 	}
 	// A managed definition references an existing observed Agent; old registration APIs retain their schema.
@@ -91,7 +93,7 @@ func (s *HTTPServer) managedAgents(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, 400, err.Error())
 		return
 	}
-	tx, err := managedTx(r.Context(), db)
+	tx, err := db.BeginTx(r.Context(), nil)
 	if err != nil {
 		managedReply(w, 0, nil, err)
 		return
@@ -99,9 +101,17 @@ func (s *HTTPServer) managedAgents(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 	_, err = tx.ExecContext(r.Context(), `INSERT INTO tenant_quotas(tenant_id) VALUES($1) ON CONFLICT DO NOTHING`, owner)
 	var agent managedAgent
+	if in.Skills == nil {
+		in.Skills = []harnessSkill{}
+	}
+	if in.Knowledge == nil {
+		in.Knowledge = []string{}
+	}
+	skills, _ := json.Marshal(in.Skills)
+	knowledge, _ := json.Marshal(in.Knowledge)
 	if err == nil {
-		err = managedJSON(tx.QueryRowContext(r.Context(), `INSERT INTO managed_agents(agent_id,tenant_id,runtime_type,runtime_version,model_config_ref,instructions,tool_policy,cpu,memory,timeout_seconds)
- SELECT $1,$2,'codex','0.160.0',$2,$3,'sandbox-write',cpu,memory,$4 FROM tenant_quotas WHERE tenant_id=$2 RETURNING to_jsonb(managed_agents)`, in.AgentID, owner, in.Instructions, in.Timeout), &agent)
+		err = managedJSON(tx.QueryRowContext(r.Context(), `INSERT INTO managed_agents(agent_id,tenant_id,runtime_type,runtime_version,model_config_ref,instructions,tool_policy,cpu,memory,timeout_seconds,skills,knowledge_refs)
+ SELECT $1,$2,'codex','0.160.0',$2,$3,$5,cpu,memory,$4,$6,$7 FROM tenant_quotas WHERE tenant_id=$2 RETURNING to_jsonb(managed_agents)`, in.AgentID, owner, in.Instructions, in.Timeout, in.ToolPolicy, skills, knowledge), &agent)
 	}
 	if err == nil {
 		err = tx.Commit()
@@ -131,22 +141,22 @@ func (s *HTTPServer) managedSessions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var out json.RawMessage
-		err := managedJSONRaw(db.QueryRowContext(ctx, `INSERT INTO agent_sessions(session_id,tenant_id,agent_id) SELECT $1,$2,agent_id FROM managed_agents WHERE agent_id=$3 AND tenant_id=$2 RETURNING to_jsonb(agent_sessions)`, newID("session"), owner, in.Agent), &out)
+		err := managedJSONRaw(db.QueryRowContext(ctx, `INSERT INTO agent_sessions(session_id,tenant_id,agent_id) SELECT $1,$2,agent_id FROM managed_agents WHERE agent_id=$3 AND tenant_id=$2 AND profile_kind='managed' RETURNING to_jsonb(agent_sessions)-ARRAY['workflow_job_id','workflow_worker_id','workflow_fence']`, newID("session"), owner, in.Agent), &out)
 		managedReply(w, 201, out, err)
 		return
 	}
 	if id := r.PathValue("session_id"); id != "" {
 		var out json.RawMessage
-		err := managedJSONRaw(db.QueryRowContext(ctx, `SELECT to_jsonb(s) FROM agent_sessions s WHERE tenant_id=$1 AND session_id=$2`, owner, id), &out)
+		err := managedJSONRaw(db.QueryRowContext(ctx, `SELECT to_jsonb(s)-ARRAY['workflow_job_id','workflow_worker_id','workflow_fence'] FROM agent_sessions s WHERE tenant_id=$1 AND session_id=$2 AND workflow_job_id IS NULL`, owner, id), &out)
 		if err != nil {
 			managedReply(w, 0, nil, err)
 			return
 		}
-		runs, err := managedRows(ctx, db, `SELECT to_jsonb(r)-'credential_hash' FROM agent_runs r WHERE tenant_id=$1 AND session_id=$2 ORDER BY created_at DESC LIMIT 100`, owner, id)
+		runs, err := managedRows(ctx, db, `SELECT to_jsonb(r)-'credential_hash' FROM agent_runs r WHERE tenant_id=$1 AND session_id=$2 AND EXISTS(SELECT 1 FROM agent_sessions s WHERE s.session_id=r.session_id AND s.workflow_job_id IS NULL) ORDER BY created_at DESC LIMIT 100`, owner, id)
 		managedReply(w, 200, map[string]any{"session": out, "runs": runs}, err)
 		return
 	}
-	v, err := managedRows(ctx, db, `SELECT to_jsonb(s) FROM agent_sessions s WHERE tenant_id=$1 AND state<>'DELETED' ORDER BY created_at DESC LIMIT 100`, owner)
+	v, err := managedRows(ctx, db, `SELECT to_jsonb(s)-ARRAY['workflow_job_id','workflow_worker_id','workflow_fence'] FROM agent_sessions s WHERE tenant_id=$1 AND workflow_job_id IS NULL AND state<>'DELETED' ORDER BY created_at DESC LIMIT 100`, owner)
 	managedReply(w, 200, map[string]any{"sessions": v}, err)
 }
 func managedJSONRaw(row *sql.Row, out *json.RawMessage) error {
@@ -186,7 +196,7 @@ func (s *HTTPServer) managedRunDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var out json.RawMessage
-	err := managedJSONRaw(s.managed.store.db.QueryRowContext(r.Context(), `SELECT to_jsonb(r)-'credential_hash' FROM agent_runs r WHERE tenant_id=$1 AND run_id=$2`, owner, r.PathValue("run_id")), &out)
+	err := managedJSONRaw(s.managed.store.db.QueryRowContext(r.Context(), `SELECT to_jsonb(r)-'credential_hash' FROM agent_runs r WHERE tenant_id=$1 AND run_id=$2 AND EXISTS(SELECT 1 FROM agent_sessions s WHERE s.session_id=r.session_id AND s.workflow_job_id IS NULL)`, owner, r.PathValue("run_id")), &out)
 	managedReply(w, 200, out, err)
 }
 func (s *HTTPServer) managedCancel(w http.ResponseWriter, r *http.Request) {
@@ -196,7 +206,7 @@ func (s *HTTPServer) managedCancel(w http.ResponseWriter, r *http.Request) {
 	}
 	var out json.RawMessage
 	// Running cancellation retains ownership until reconciliation has isolated its environment.
-	err := managedJSONRaw(s.managed.store.db.QueryRowContext(r.Context(), `UPDATE agent_runs SET cancel_requested=CASE WHEN state IN ('QUEUED','RUNNING','STOPPING') THEN true ELSE cancel_requested END,credential_hash=NULL,finished_at=CASE WHEN state='QUEUED' THEN now() ELSE finished_at END,state=CASE WHEN state='QUEUED' THEN 'CANCELLED' ELSE state END,updated_at=now() WHERE tenant_id=$1 AND run_id=$2 RETURNING to_jsonb(agent_runs)-'credential_hash'`, owner, r.PathValue("run_id")), &out)
+	err := managedJSONRaw(s.managed.store.db.QueryRowContext(r.Context(), `UPDATE agent_runs SET cancel_requested=CASE WHEN state IN ('QUEUED','RUNNING','STOPPING') THEN true ELSE cancel_requested END,credential_hash=NULL,finished_at=CASE WHEN state='QUEUED' THEN now() ELSE finished_at END,state=CASE WHEN state='QUEUED' THEN 'CANCELLED' ELSE state END,updated_at=now() WHERE tenant_id=$1 AND run_id=$2 AND EXISTS(SELECT 1 FROM agent_sessions s WHERE s.session_id=agent_runs.session_id AND s.workflow_job_id IS NULL) RETURNING to_jsonb(agent_runs)-'credential_hash'`, owner, r.PathValue("run_id")), &out)
 	managedReply(w, 200, out, err)
 }
 func (s *HTTPServer) managedSessionAction(w http.ResponseWriter, r *http.Request) {
@@ -218,14 +228,14 @@ func (s *HTTPServer) managedSessionAction(w http.ResponseWriter, r *http.Request
 	}
 	defer tx.Rollback()
 	var active bool
-	err = tx.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM agent_runs WHERE session_id=$1 AND tenant_id=$2 AND state IN ('RUNNING','STOPPING'))`, r.PathValue("session_id"), owner).Scan(&active)
+	err = tx.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM agent_runs WHERE session_id=$1 AND tenant_id=$2 AND state IN ('RUNNING','STOPPING') AND EXISTS(SELECT 1 FROM agent_sessions s WHERE s.session_id=agent_runs.session_id AND s.workflow_job_id IS NULL))`, r.PathValue("session_id"), owner).Scan(&active)
 	if err == nil && active {
 		writeProblem(w, 409, "cancel the active run and wait for resource cleanup first")
 		return
 	}
 	var out json.RawMessage
 	if err == nil {
-		err = managedJSONRaw(tx.QueryRowContext(r.Context(), `UPDATE agent_sessions SET state=CASE WHEN state='DELETED' THEN state ELSE $3 END,updated_at=now() WHERE tenant_id=$1 AND session_id=$2 AND ($3='DELETING' OR state NOT IN ('DELETED','DELETING','NEEDS_REVIEW')) RETURNING to_jsonb(agent_sessions)`, owner, r.PathValue("session_id"), target), &out)
+		err = managedJSONRaw(tx.QueryRowContext(r.Context(), `UPDATE agent_sessions SET state=CASE WHEN state='DELETED' THEN state ELSE $3 END,updated_at=now() WHERE tenant_id=$1 AND session_id=$2 AND workflow_job_id IS NULL AND ($3='DELETING' OR state NOT IN ('DELETED','DELETING','NEEDS_REVIEW')) RETURNING to_jsonb(agent_sessions)-ARRAY['workflow_job_id','workflow_worker_id','workflow_fence']`, owner, r.PathValue("session_id"), target), &out)
 	}
 	if err == nil {
 		_, err = tx.ExecContext(r.Context(), `UPDATE agent_runs SET state='CANCELLED',cancel_requested=true WHERE session_id=$1 AND state='QUEUED' AND $2='DELETING'`, r.PathValue("session_id"), target)
@@ -241,13 +251,13 @@ func (s *HTTPServer) managedResources(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	db := s.managed.store.db
-	boxes, err := managedRows(r.Context(), db, `SELECT to_jsonb(b) FROM managed_sandboxes b WHERE tenant_id=$1 ORDER BY (state='TERMINATED'),created_at DESC LIMIT 100`, owner)
+	boxes, err := managedRows(r.Context(), db, `SELECT to_jsonb(b) FROM managed_sandboxes b WHERE tenant_id=$1 AND EXISTS(SELECT 1 FROM agent_sessions s WHERE s.session_id=b.session_id AND s.workflow_job_id IS NULL) ORDER BY (state='TERMINATED'),created_at DESC LIMIT 100`, owner)
 	if err != nil {
 		managedReply(w, 0, nil, err)
 		return
 	}
 	var quota json.RawMessage
-	err = managedJSONRaw(db.QueryRowContext(r.Context(), `SELECT to_jsonb(q)||jsonb_build_object('reserved_sandboxes',(SELECT count(*) FROM resource_reservations WHERE tenant_id=$1 AND released_at IS NULL),'running',(SELECT count(*) FROM agent_runs WHERE tenant_id=$1 AND state IN ('RUNNING','STOPPING')),'queued',(SELECT count(*) FROM agent_runs WHERE tenant_id=$1 AND state='QUEUED'),'global_capacity',$2::int,'metrics_supported',false,'network_isolation','trusted-local-only') FROM tenant_quotas q WHERE tenant_id=$1`, owner, s.managed.config.Capacity), &quota)
+	err = managedJSONRaw(db.QueryRowContext(r.Context(), `SELECT to_jsonb(q)||jsonb_build_object('reserved_sandboxes',(SELECT count(*) FROM resource_reservations z JOIN managed_sandboxes b USING(sandbox_id) JOIN agent_sessions s USING(session_id) WHERE z.tenant_id=$1 AND s.workflow_job_id IS NULL AND z.released_at IS NULL),'running',(SELECT count(*) FROM agent_runs r JOIN agent_sessions s USING(session_id) WHERE r.tenant_id=$1 AND s.workflow_job_id IS NULL AND r.state IN ('RUNNING','STOPPING')),'queued',(SELECT count(*) FROM agent_runs r JOIN agent_sessions s USING(session_id) WHERE r.tenant_id=$1 AND s.workflow_job_id IS NULL AND r.state='QUEUED'),'global_capacity',$2::int,'metrics_supported',false,'network_isolation','trusted-local-only') FROM tenant_quotas q WHERE tenant_id=$1`, owner, s.managed.config.Capacity), &quota)
 	if errors.Is(err, ErrNotFound) {
 		quota = json.RawMessage(`null`)
 		err = nil
@@ -272,7 +282,7 @@ func (s *HTTPServer) managedEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var exists bool
-	err = s.managed.store.db.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM agent_runs WHERE tenant_id=$1 AND run_id=$2)`, owner, r.PathValue("run_id")).Scan(&exists)
+	err = s.managed.store.db.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM agent_runs WHERE tenant_id=$1 AND run_id=$2 AND EXISTS(SELECT 1 FROM agent_sessions s WHERE s.session_id=agent_runs.session_id AND s.workflow_job_id IS NULL))`, owner, r.PathValue("run_id")).Scan(&exists)
 	if err != nil {
 		managedReply(w, 0, nil, err)
 		return
@@ -332,7 +342,7 @@ func (s *HTTPServer) managedArtifact(w http.ResponseWriter, r *http.Request) {
 	}
 	var snapshot []byte
 	var hash string
-	err := s.managed.store.db.QueryRowContext(r.Context(), `SELECT c.snapshot,c.sha256 FROM managed_checkpoints c JOIN agent_runs r ON r.result_ref=c.checkpoint_id WHERE r.tenant_id=$1 AND r.run_id=$2`, owner, r.PathValue("run_id")).Scan(&snapshot, &hash)
+	err := s.managed.store.db.QueryRowContext(r.Context(), `SELECT c.snapshot,c.sha256 FROM managed_checkpoints c JOIN agent_runs r ON r.result_ref=c.checkpoint_id WHERE r.tenant_id=$1 AND r.run_id=$2 AND EXISTS(SELECT 1 FROM agent_sessions s WHERE s.session_id=r.session_id AND s.workflow_job_id IS NULL)`, owner, r.PathValue("run_id")).Scan(&snapshot, &hash)
 	if errors.Is(err, sql.ErrNoRows) {
 		writeProblem(w, 404, "checkpoint not found")
 		return
@@ -351,7 +361,7 @@ func (s *HTTPServer) managedArtifact(w http.ResponseWriter, r *http.Request) {
 // Local-mode user APIs must never be reachable through this listener.
 func (h *ManagedHTTPHandler) ModelGateway() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" || r.URL.Path != "/internal/managed/model/responses" {
+		if r.Method != "POST" || (r.URL.Path != "/internal/managed/model/responses" && r.URL.Path != "/internal/harness/tool") {
 			http.NotFound(w, r)
 			return
 		}

@@ -1,0 +1,16 @@
+{
+  "tool_evidence": {
+    "job_id": "analysis-job-1794371627854-003b13d11f3ae8df",
+    "mode": "real Codex, fixture response, no Harbor evaluation",
+    "tool": "evaluate_candidate",
+    "candidate_scope_verified": true,
+    "structured_reply_verified": true,
+    "input_tokens": 7605,
+    "output_tokens": 196
+  },
+  "business_receipt": {
+    "job_id": "analysis-job-1794371627854-003b13d11f3ae8df",
+    "state": "failed",
+    "artifacts": 0
+  }
+}

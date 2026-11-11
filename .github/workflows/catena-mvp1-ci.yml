@@ -156,8 +156,9 @@ jobs:
       - name: Build and smoke pinned Engine image (no model calls)
         run: |
           docker build -f ../deploy/catena-mvp1/Dockerfile.engine -t catena-engine-v2 ..
-          docker run --rm catena-engine-v2 codex --version
-          docker run --rm -v "$PWD/../engine/tests:/checks:ro" catena-engine-v2 python /checks/native_skill_probe.py
+          docker run --rm catena-engine-v2 sh -c '! command -v codex'
+          docker build -f ../deploy/managed/Dockerfile.codex -t catena-harness-ci ..
+          docker run --rm catena-harness-ci codex --version
           docker run --rm catena-engine-v2 docker compose version
           docker run --rm catena-engine-v2 sh -c 'test -d "$HOME" && test -w "$HOME"'
           docker run -d --name catena-engine-v2-smoke -e CATENA_ENGINE_TOKEN=fixture-private -p 18790:8790 catena-engine-v2

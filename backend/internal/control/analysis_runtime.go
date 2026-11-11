@@ -46,9 +46,12 @@ func NewEngineClient(c EngineConfig) (*EngineClient, error) {
 	if e != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
 		return nil, errors.New("invalid private Engine URL")
 	}
-	if c.Client == nil {
-		c.Client = &http.Client{}
+	client := http.Client{}
+	if c.Client != nil {
+		client = *c.Client
 	}
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	c.Client = &client
 	if c.ProbeTimeout <= 0 {
 		c.ProbeTimeout = 3 * time.Second
 	}
@@ -121,4 +124,35 @@ func (m *EngineClient) cancelExecution(owner, id string) {
 	ctx, c := context.WithTimeout(context.Background(), 5*time.Second)
 	defer c()
 	_, _ = m.call(ctx, owner, http.MethodDelete, "/v2/executions/"+id, nil, nil)
+}
+
+func (m *EngineClient) execute(ctx context.Context, owner, id string, payload any, path string) (json.RawMessage, error) {
+	ctx, cancel := context.WithTimeout(ctx, m.config.RequestTimeout)
+	defer cancel()
+	type receipt struct {
+		RequestID string          `json:"request_id"`
+		State     string          `json:"state"`
+		Output    json.RawMessage `json:"output"`
+	}
+	var out receipt
+	status, err := m.call(ctx, owner, http.MethodPost, path, payload, &out)
+	for err == nil && status == 202 {
+		select {
+		case <-ctx.Done():
+			m.cancelExecution(owner, id)
+			return nil, ctx.Err()
+		case <-time.After(time.Second):
+		}
+		status, err = m.call(ctx, owner, http.MethodGet, "/v2/executions/"+id, nil, &out)
+	}
+	if err != nil {
+		if ctx.Err() != nil {
+			m.cancelExecution(owner, id)
+		}
+		return nil, err
+	}
+	if out.RequestID != id || out.State != "completed" {
+		return nil, errors.New("invalid or failed Engine receipt")
+	}
+	return out.Output, nil
 }

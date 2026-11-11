@@ -1,12 +1,6 @@
 package control
 
-import (
-	"context"
-	"errors"
-	"fmt"
-	"net/http"
-	"time"
-)
+import "net/http"
 
 func (s *HTTPServer) listAnalysisJobs(w http.ResponseWriter, r *http.Request) {
 	user, ok := s.requireUser(w, r)
@@ -70,16 +64,6 @@ func (s *HTTPServer) deleteAnalysisJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func (s *HTTPServer) saveAnalysisProgress(ctx context.Context, lease AnalysisLease, job AnalysisJob) error {
-	call, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	err := s.store.SaveLeasedAnalysisJob(call, lease, job)
-	if err == nil || errors.Is(err, ErrLeaseLost) || ctx.Err() != nil {
-		return err
-	}
-	return fmt.Errorf("%w: stage persistence unavailable", errAnalysisTemporary)
 }
 
 func (s *HTTPServer) cancelAnalysisJob(w http.ResponseWriter, r *http.Request) {

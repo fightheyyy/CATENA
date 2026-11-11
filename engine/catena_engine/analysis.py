@@ -11,8 +11,9 @@ import uuid
 from pathlib import Path
 
 from .contracts import OptimizationError, safe_id
-from .protocol import _model_config
-from .runtime.codex import SKILL, CodexRuntime
+from .protocol import ModelConfig
+from .runtime.codex import SKILL
+from .workflow_harness import WorkflowHarness
 
 
 def validate_report(value, refs):
@@ -107,7 +108,10 @@ def run_payload(payload, cancelled=None):
         raise OptimizationError("CATENA_RUNS_ROOT is required")
     output = Path(root) / (request_id + "-" + uuid.uuid4().hex)
     output.mkdir(parents=True, mode=0o700)
-    runtime = CodexRuntime(_model_config(payload.get("model")))
+    model = payload["model"]
+    if not isinstance(model, dict) or not all(isinstance(model.get(k), str) and model[k] for k in ("provider", "model")):
+        raise OptimizationError("invalid Analysis model reference")
+    runtime = WorkflowHarness(ModelConfig(model["provider"], "", model["model"], ""))
     runtime.preflight()
     reply = runtime.run(json.dumps({"objective": payload["objective"], "scope": payload["scope"], "query_budget": 20, "instruction": "Investigate with list_traces and get_trace. No trace content has been supplied. Return problems and evidence in Chinese; do not generate improvements."}, ensure_ascii=False), 300, queries, output / "agent", cancelled, mode="analyze")
     if not queries.calls or queries.calls[0]["tool"] != "list_traces":

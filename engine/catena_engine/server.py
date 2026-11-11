@@ -9,8 +9,9 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from .contracts import OptimizationError
+from .contracts import OptimizationError, safe_id
 from .executions import Executions
+from .workflow_harness import dispatch_tool, execution
 
 MAX_BODY_BYTES = 2 * 1024 * 1024
 
@@ -92,7 +93,13 @@ def create_server(address, token="", improvement_handler=None, receipt_root=None
                 payload = json.loads(self.rfile.read(length))
                 if not isinstance(payload, dict):
                     raise OptimizationError("request must be an object")
-                if self.path in ("/v3/analyze", "/v3/improve"):
+                if self.path.startswith("/internal/harness/tool/"):
+                    job, callback = self.path.removeprefix("/internal/harness/tool/").split("/")
+                    self._json(200, dispatch_tool(owner, safe_id(job), safe_id(callback), payload))
+                elif self.path in ("/v3/analyze", "/v3/improve"):
+                    capability = payload.pop("harness_capability", "")
+                    if not isinstance(capability, str):
+                        raise OptimizationError("invalid Harness capability")
                     handler = improvement_handler
                     if handler is None:
                         if self.path == "/v3/analyze":
@@ -109,10 +116,17 @@ def create_server(address, token="", improvement_handler=None, receipt_root=None
                         self._json(429, {"error": "analysis capacity is full"})
                         return
                     try:
+                        def run(event):
+                            binding = execution.set((owner, payload["request_id"], capability))
+                            try:
+                                return handler(payload, event)
+                            finally:
+                                execution.reset(binding)
+
                         status, result = executions.execute(
                             owner,
                             payload,
-                            lambda event: handler(payload, event),
+                            run,
                         )
                         self._json(status, result)
                     finally:

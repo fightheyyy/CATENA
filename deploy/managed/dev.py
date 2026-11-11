@@ -54,6 +54,8 @@ def setup():
             str(ROOT / "deploy/managed/requirements.txt"),
         ]
     )
+    if os.environ.get("CATENA_CASES_MANIFEST"):
+        run([str(STATE / "venv/bin/pip"), "install", "./engine[evaluation]"])
     for image in (
         "opensandbox/execd:release-1.2.0",
         "opensandbox/egress:release-1.2.0",
@@ -122,6 +124,16 @@ def setup():
         env_path.write_text(json.dumps(env))
         env_path.chmod(0o600)
     env = json.loads(env_path.read_text())
+    if "CATENA_ENGINE_TOKEN" not in env:
+        env.update(
+            CATENA_ENGINE_TOKEN=secrets.token_urlsafe(32),
+            CATENA_ENGINE_URL="http://127.0.0.1:18790",
+            CATENA_ENGINE_ADDR="127.0.0.1:18790",
+            CATENA_CONTROL_URL=API,
+            CATENA_ENGINE_EXECUTIONS_ROOT=str(STATE / "executions"),
+            CATENA_RUNS_ROOT=str(STATE / "runs"),
+        )
+        env_path.write_text(json.dumps(env))
     config = f'''[server]
 host = "127.0.0.1"
 port = 18080
@@ -217,6 +229,7 @@ def start():
             "runner",
             [str(STATE / "venv/bin/python"), "-m", "catena_engine.managed.server"],
         ),
+        ("engine", [str(STATE / "venv/bin/python"), "-m", "catena_engine.server"]),
         ("core", [str(STATE / "catena-server")]),
     ]
     for name, command in processes:
@@ -248,7 +261,7 @@ def start():
 
 
 def stop():
-    for name in ("core", "runner", "opensandbox"):
+    for name in ("core", "engine", "runner", "opensandbox"):
         path = STATE / f"{name}.pid"
         if path.exists():
             pid = int(path.read_text())
@@ -258,6 +271,8 @@ def stop():
             ).stdout
             if str(STATE) in command or (
                 name == "runner" and "catena_engine.managed.server" in command
+            ) or (
+                name == "engine" and "catena_engine.server" in command
             ):
                 os.kill(pid, signal.SIGTERM)
             path.unlink()
@@ -266,7 +281,15 @@ def stop():
     print("Stopped services; database volume and checkpoints preserved.")
 
 
+def local_database(query):
+    return subprocess.check_output(
+        ["docker", "exec", DB, "psql", "-U", "postgres", "-At", "-c", query], text=True
+    ).splitlines()
+
+
 def cleanup():
+    for job in local_database("SELECT job_id FROM spiral_evolution_jobs WHERE state IN ('queued','running')"):
+        request(f"/v1/analysis-jobs/{job}/cancel", "POST", {})
     sessions = request("/v1/agent-sessions")["sessions"]
     for session in sessions:
         if session["state"] != "DELETED":
@@ -308,8 +331,11 @@ def main():
     elif args.action == "down":
         cleanup()
         for _ in range(60):
-            resources = request("/v1/me/resources")
-            if not resources["quota"] or resources["quota"]["reserved_sandboxes"] == 0:
+            drained = local_database(
+                "SELECT NOT EXISTS(SELECT 1 FROM resource_reservations WHERE released_at IS NULL)"
+                " AND NOT EXISTS(SELECT 1 FROM spiral_evolution_jobs WHERE state IN ('queued','running'))"
+            )
+            if drained == ["t"]:
                 stop()
                 break
             time.sleep(0.5)

@@ -30,7 +30,7 @@ func (s *HTTPServer) managedAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var valid bool
-	err := s.managed.store.db.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM agent_runs r JOIN managed_sandboxes b ON b.session_id=r.session_id WHERE r.run_id=$1 AND b.sandbox_id=$2 AND b.generation=$3 AND r.credential_hash=$4 AND r.fencing_token=$5 AND r.state='RUNNING' AND r.lease_until>now() AND NOT r.cancel_requested AND b.state IN ('PENDING','CREATING','READY','BUSY') AND (r.execution_started_at IS NULL OR r.execution_started_at+r.execution_timeout*interval '1 second'>now()))`, in.Run, in.Sandbox, in.Generation, sessionTokenHash(in.Token), in.Fence).Scan(&valid)
+	err := s.managed.store.db.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM agent_runs r JOIN managed_sandboxes b ON b.session_id=r.session_id WHERE r.run_id=$1 AND EXISTS(SELECT 1 FROM active_harness_sessions live WHERE live.session_id=r.session_id) AND b.sandbox_id=$2 AND b.generation=$3 AND r.credential_hash=$4 AND r.fencing_token=$5 AND r.state='RUNNING' AND r.lease_until>now() AND NOT r.cancel_requested AND b.state IN ('PENDING','CREATING','READY','BUSY') AND (r.execution_started_at IS NULL OR r.execution_started_at+r.execution_timeout*interval '1 second'>now()))`, in.Run, in.Sandbox, in.Generation, sessionTokenHash(in.Token), in.Fence).Scan(&valid)
 	if err != nil || !valid {
 		writeProblem(w, 403, "execution lease revoked")
 		return
@@ -42,8 +42,8 @@ func (s *HTTPServer) managedModel(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, 503, "managed runtime disabled")
 		return
 	}
-	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if !ok || len(token) != 43 || strings.ContainsAny(token, " \t\r\n") {
+	token := bearerCapability(r)
+	if token == "" {
 		writeProblem(w, 401, "run capability required")
 		return
 	}
@@ -71,7 +71,7 @@ func (s *HTTPServer) managedModel(w http.ResponseWriter, r *http.Request) {
 				return
 			case <-ticker.C:
 				var valid bool
-				e := s.managed.store.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM agent_runs WHERE credential_hash=$1 AND state='RUNNING' AND lease_until>now() AND NOT cancel_requested)`, sessionTokenHash(token)).Scan(&valid)
+				e := s.managed.store.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM agent_runs WHERE credential_hash=$1 AND state='RUNNING' AND lease_until>now() AND NOT cancel_requested AND EXISTS(SELECT 1 FROM active_harness_sessions live WHERE live.session_id=agent_runs.session_id))`, sessionTokenHash(token)).Scan(&valid)
 				if e != nil || !valid {
 					cancel()
 					return
@@ -126,7 +126,7 @@ func (s *HTTPServer) managedModel(w http.ResponseWriter, r *http.Request) {
 		_, _ = s.managed.store.db.ExecContext(ctx, `UPDATE managed_model_requests SET status=$2,latency_ms=$3 WHERE request_id=$1`, requestID, resp.StatusCode, time.Since(started).Milliseconds())
 		if (resp.StatusCode == 429 || resp.StatusCode >= 500) && attempt < 2 {
 			resp.Body.Close()
-			if !waitAnalysisBackoff(ctx, time.Duration(1<<attempt)*time.Second) {
+			if !waitScheduler(ctx, time.Duration(1<<attempt)*time.Second, nil) {
 				return
 			}
 			continue
@@ -166,15 +166,24 @@ func (s *HTTPServer) managedModel(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (s *HTTPServer) reserveManagedModel(ctx context.Context, hash string) (tenant, run, trace string, maxTokens int, requestID int64, err error) {
-	tx, e := managedTx(ctx, s.managed.store.db)
+	tx, e := s.managed.store.db.BeginTx(ctx, nil)
 	if e != nil {
 		err = e
 		return
 	}
 	defer tx.Rollback()
 	var used, limit, rate, recent int
-	e = tx.QueryRowContext(ctx, `SELECT r.tenant_id,r.run_id,r.trace_id,q.max_output_tokens,r.model_requests,q.max_model_requests,q.requests_per_minute,(SELECT count(*) FROM managed_model_requests m WHERE m.tenant_id=r.tenant_id AND m.created_at>now()-interval '1 minute') FROM agent_runs r JOIN tenant_quotas q USING(tenant_id) WHERE r.credential_hash=$1 AND r.state='RUNNING' AND r.lease_until>now() AND NOT r.cancel_requested AND r.execution_started_at+r.execution_timeout*interval '1 second'>now() FOR UPDATE OF r`, hash).Scan(&tenant, &run, &trace, &maxTokens, &used, &limit, &rate, &recent)
+	e = tx.QueryRowContext(ctx, `SELECT r.tenant_id,r.run_id,r.trace_id,q.max_output_tokens,r.model_requests,q.max_model_requests,q.requests_per_minute FROM agent_runs r JOIN tenant_quotas q USING(tenant_id) WHERE r.credential_hash=$1 AND r.state='RUNNING' AND r.lease_until>now() AND NOT r.cancel_requested AND r.execution_started_at+r.execution_timeout*interval '1 second'>now() AND EXISTS(SELECT 1 FROM active_harness_sessions live WHERE live.session_id=r.session_id) FOR UPDATE OF r`, hash).Scan(&tenant, &run, &trace, &maxTokens, &used, &limit, &rate)
 	if e != nil {
+		err = e
+		return
+	}
+	// Lock this tenant's rate counter, not the scheduler's capacity lock.
+	if e = tx.QueryRowContext(ctx, `SELECT requests_per_minute FROM tenant_quotas WHERE tenant_id=$1 FOR UPDATE`, tenant).Scan(&rate); e != nil {
+		err = e
+		return
+	}
+	if e = tx.QueryRowContext(ctx, `SELECT count(*) FROM managed_model_requests WHERE tenant_id=$1 AND created_at>clock_timestamp()-interval '1 minute'`, tenant).Scan(&recent); e != nil {
 		err = e
 		return
 	}

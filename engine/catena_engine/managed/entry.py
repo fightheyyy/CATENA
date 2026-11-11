@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import json
-import os
-import signal
-import subprocess
 import sys
 import tarfile
-import threading
+import tempfile
 from pathlib import Path
+
+from ..contracts import OptimizationError
+from ..harness_transport import private_post
+from ..protocol import JsonRequest, ModelConfig
+from ..runtime.codex import CodexRuntime, agent_profile
 
 MAX_SNAPSHOT = 16 * 1024 * 1024
 MAX_EXPANDED = 64 * 1024 * 1024
@@ -77,37 +80,6 @@ def snapshot(workspace, home):
     return base64.b64encode(data).decode()
 
 
-def config(request):
-    q = json.dumps
-    return f"""model = {q(request["model"])}
-model_provider = "catena"
-developer_instructions = {q(request["instructions"])}
-approval_policy = "never"
-sandbox_mode = "danger-full-access"
-web_search = "disabled"
-[features]
-apps = false
-multi_agent = false
-plugins = false
-remote_plugin = false
-hooks = false
-workspace_dependencies = false
-browser_use = false
-computer_use = false
-enable_request_compression = false
-[shell_environment_policy]
-inherit = "none"
-set = {{ PATH = "/usr/local/bin:/usr/bin:/bin", HOME = "/home/agent" }}
-[model_providers.catena]
-name = "CATENA scoped gateway"
-base_url = {q(request["gateway"])}
-env_key = "CATENA_RUN_TOKEN"
-wire_api = "responses"
-request_max_retries = 0
-stream_max_retries = 0
-supports_websockets = false
-"""
-
 
 def main():
     request_path = Path(sys.argv[1])
@@ -116,85 +88,42 @@ def main():
     workspace, home = Path("/workspace"), Path("/home/agent/.codex")
     workspace.mkdir(exist_ok=True)
     home.mkdir(parents=True, exist_ok=True)
-    restore(request.get("checkpoint"), workspace, home)
-    # The outer OpenSandbox container and non-root uid own the tool boundary.
-    (home / "config.toml").write_text(config(request))
-    version = subprocess.check_output(["codex", "--version"], text=True).strip()
-    if version != "codex-cli 0.160.0":
-        raise RuntimeError("unsupported Codex version")
+    profile = agent_profile(request["profile"], request["profile_version"], request["instructions"],
+                            request["tool_policy"], request["skills"] or (), request["knowledge_refs"] or ())
+    if profile.persistent:
+        restore(request.get("checkpoint"), workspace, home)
+    runtime = CodexRuntime(ModelConfig("catena", request["gateway"], request["model"], request["token"]))
+    runtime.preflight()
+    emit("runtime", data={"type": "runtime.started", "run_id": request["run_id"], "generation": request["generation"],
+                          "protocol": "codex-app-server", "profile": profile.kind, "profile_version": profile.version})
+    turn = JsonRequest(request["run_id"], request["run_id"], request["input"], request["timeout"] * 1000, runtime.model)
+
+    async def tool(name, arguments):
+        return await asyncio.to_thread(private_post, request["tool_gateway"], request["token"],
+                                       {"tool": name, "arguments": arguments}, request["timeout"], 128 * 1024)
+
+    async def evaluate(arguments):
+        return await tool("evaluate_candidate", arguments)
+
     thread = home / "thread-id"
-    command = ["codex", "-C", str(workspace), "exec"]
-    if thread.exists():
-        command += ["resume", thread.read_text().strip()]
-    command += ["--json", "--skip-git-repo-check", "-"]
-    env = {
-        "PATH": os.environ["PATH"],
-        "HOME": "/home/agent",
-        "CODEX_HOME": str(home),
-        "CATENA_RUN_TOKEN": request["token"],
-    }
-    emit(
-        "runtime",
-        data={
-            "type": "runtime.started",
-            "run_id": request["run_id"],
-            "generation": request["generation"],
-            "version": version,
-        },
-    )
-    process = subprocess.Popen(
-        command,
-        cwd=workspace,
-        env=env,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
-    )
-
-    def stop():
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-
-    timer = threading.Timer(request["timeout"], stop)
-    timer.start()
-    result, completed, size, error = "", False, 0, ""
     try:
-        process.stdin.write(request["input"].encode())
-        process.stdin.close()
-        while line := process.stdout.readline(65537):
-            size += len(line)
-            if len(line) > 65536 or size > 4 * 1024 * 1024:
-                raise ValueError("Codex event output exceeds limit")
-            try:
-                event = json.loads(line)
-            except ValueError:
-                emit("runtime", data={"type": "runtime.diagnostic", "text": line.decode(errors="replace")[:4096]})
-                continue
-            if event.get("type") == "thread.started":
-                thread.write_text(event["thread_id"])
-            if event.get("type") == "turn.failed":
-                error = str(event.get("error", {}).get("message", "Codex turn failed"))[:1000]
-            if event.get("type") == "turn.completed":
-                completed = True
-            item = event.get("item", {})
-            if item.get("type") == "agent_message":
-                result = item.get("text", "")[:131072]
-            emit("runtime", data=event)
-        code = process.wait()
-        emit(
-            "result",
-            success=code == 0 and completed,
-            result=result,
-            error=error if code == 0 and completed else error or "Codex turn did not complete",
-            snapshot=snapshot(workspace, home),
-        )
-    finally:
-        timer.cancel()
-        stop()
-        process.wait()
+        with tempfile.TemporaryDirectory(prefix="catena-turn-") as directory:
+            reply = asyncio.run(runtime._run(
+                turn, tool if profile.kind == "analyze" else evaluate, Path(directory) / "agent",
+                profile=profile, workspace=workspace, codex_home=home if profile.persistent else None,
+                thread=thread.read_text().strip() if profile.persistent and thread.exists() else None,
+                event=lambda item: emit("runtime", data=item),
+            ))
+    except OptimizationError as error:
+        # A failed protocol does not prove that the Sandbox has stopped.
+        emit("runtime", data={"type": "runtime.failed", "error": str(error)})
+        raise SystemExit(1) from None
+    if profile.persistent:
+        thread.write_text(reply["thread_id"])
+        result, checkpoint = reply["value"], snapshot(workspace, home)
+    else:
+        result, checkpoint = json.dumps(reply, ensure_ascii=False), ""
+    emit("result", success=True, result=result, snapshot=checkpoint)
 
 
 if __name__ == "__main__":

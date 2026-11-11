@@ -12,7 +12,7 @@ python3.12 -m venv .venv
 (cd frontend && pnpm install --frozen-lockfile --ignore-workspace)
 ```
 
-Engine 基础安装不需要 Harbor；只做分析可省略 `evaluation` extra。真实运行还需要固定的 Codex 二进制与私有模型配置，部署镜像已固定其版本。
+Engine 基础安装不需要 Harbor；只做分析可省略 `evaluation` extra。真实运行需要配置 OpenSandbox 与模型；固定版本的 Codex 在 Sandbox 镜像内安装。
 
 前端开发用 `(cd frontend && pnpm dev)`；Vite 将 API 代理到 `127.0.0.1:8787`，需先启动同地址的 Go 服务。API 密钥保存在本机受限配置或 Connections 中，不放进 Git、截图或测试产物。
 

@@ -7,8 +7,8 @@ and verification. There is one concrete strategy, no algorithm/plugin registry.
 ## Analysis and the first human decision
 
 Create `POST /v1/analysis-jobs` with `{"pipeline":"analyze","trace_id":"<owned Trace>"}`.
-Analysis needs neither a Case nor Harbor. It loads trace-analysis in the same Codex
-Runtime, receives only the objective and server-fixed scope, and investigates using
+Analysis starts an ephemeral OpenSandbox Turn with the trace-analysis Profile. It receives
+the objective and server-fixed scope, and investigates using
 `list_traces` / `get_trace`. Codex chooses subsequent queries in its native tool
 loop, then persists summary/problems, inspected Trace/Span references, hypotheses
 and uncertainty. No evaluation tools are available. Reports remain unverified hypotheses.
@@ -23,7 +23,7 @@ and 512 KiB cumulative evidence. Lists scan at most 100 traces and return at mos
 arguments return a bounded error so the model can correct them; storage/network
 failures stop execution rather than inventing an empty result.
 
-Engine calls back to the operator-configured `CATENA_CONTROL_URL` (Compose:
+The Sandbox calls Go’s capability-only Tool Gateway. The trusted Engine then calls back to the operator-configured `CATENA_CONTROL_URL` (Compose:
 `http://catena-core:8787`) through the task-scoped private route
 `POST /internal/analysis-jobs/{job_id}/trace-query`. Credentials stay outside the
 model prompt, tool audit and receipt fingerprint. Actual tool arguments, redacted
@@ -125,10 +125,10 @@ be relabeled or replayed as this new strategy.
 
 ## Permissions and records
 
-Codex has a private temporary HOME/CODEX_HOME, empty workspace and explicit Skill
-input. Shell, MCP, plugins, hooks, subagents and host Skill discovery are disabled;
-the sandbox is read-only. Dynamic requests are restricted to the active thread/turn
-and single tool. Arguments cannot select a Case, owner, executor or host path.
+Codex runs in OpenSandbox with a private HOME/CODEX_HOME, an empty Workspace and an
+explicit Skill. The read-only Profile disables Shell, MCP, plugins, hooks, subagents
+and host Skill discovery. Dynamic requests are bound to the active thread, turn,
+Job lease and Profile. Arguments cannot select a Case, owner, executor or host path.
 Candidate files are limited to AGENTS.md and `.agents/skills/<name>/SKILL.md` with
 byte/file bounds; the internal analysis Skill path/content is reserved. Unknown
 requests fail closed. Identical repeated tool-call IDs reuse results; conflicting
@@ -140,8 +140,9 @@ and cancellation remain. Engine receipts deduplicate external operations; uncert
 running receipts after restart require inspection. Cancellation awaits Harbor
 cleanup before releasing the operation. One Engine owns each receipt root.
 
-Raw Harbor TrialResult, ATIF, collected files, `candidate.json`, bounded key-redacted
-native protocol and `result.json` stay under the private run volume. Go retains
+Raw Harbor TrialResult, ATIF, collected files, `candidate.json` and validated
+`result.json` stay under the private run volume. Sandbox protocol scratch files are
+temporary. Durable evidence includes the retained tool results and Run events. Go retains
 Compare, hashes, Evidence references, Skill hash, candidate lineage and immutable
 Review. Historical rsi candidates remain readable/reviewable; no completed records
 or experiment directories are deleted. Stop old Workers and back up volumes before

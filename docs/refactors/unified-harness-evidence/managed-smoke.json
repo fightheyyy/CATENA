@@ -1,0 +1,64 @@
+{
+  "agent_id": "agent-1794370288896-bf586e3eb2699206",
+  "session_id": "session-1794370288908-b9a91c03c4cddd67",
+  "model": "gpt-5.6-luna",
+  "runs": [
+    {
+      "run_id": "run-1794370288912-d932bee432c9eb12",
+      "state": "COMPLETED",
+      "attempt": 1,
+      "trace_id": "8d1a666b1e49342d287bc3bd45563947",
+      "model_requests": 2,
+      "input_tokens": 7175,
+      "output_tokens": 118,
+      "result_ref": "checkpoint-1794370300426-9cac799e975f4e03",
+      "created_at": "2026-11-11T04:11:28.910407+00:00",
+      "finished_at": "2026-11-11T04:11:40.424945+00:00",
+      "sandbox_id": "sandbox-1794370288980-6ad6f9855ba47f0f",
+      "workspace_hashes": {
+        "workspace/hello.py": "d4a1c0256b854ff22579d9aaeecd89193b5803eadaadebb5fe1bf8366aca5b21",
+        "workspace/run-output.txt": "8249fbff66469cc6bacdc9faa12b13e9b54cde9663c902a485e77d938f4bdbcf"
+      }
+    },
+    {
+      "run_id": "run-1794370301006-d35fbdbeb05bda50",
+      "state": "COMPLETED",
+      "attempt": 1,
+      "trace_id": "c9d12baaf9a5c34e3736230be9a08a94",
+      "model_requests": 2,
+      "input_tokens": 7550,
+      "output_tokens": 124,
+      "result_ref": "checkpoint-1794370310539-43830c7d3fc01583",
+      "created_at": "2026-11-11T04:11:41.005769+00:00",
+      "finished_at": "2026-11-11T04:11:50.537812+00:00",
+      "sandbox_id": "sandbox-1794370288980-6ad6f9855ba47f0f",
+      "workspace_hashes": {
+        "workspace/hello.py": "feae35f0e124df4eada2b2729a23d6a1d7eca43e2243e97764adb6370e1185e4",
+        "workspace/run-output.txt": "8249fbff66469cc6bacdc9faa12b13e9b54cde9663c902a485e77d938f4bdbcf",
+        "workspace/second-output.txt": "af4cd7ba988ab5db8e3aeedd10db850fe0cf8c7f33792bc95f38c628cc286c89"
+      }
+    },
+    {
+      "run_id": "run-1794370315162-285b61ddc8cee17f",
+      "state": "COMPLETED",
+      "attempt": 1,
+      "trace_id": "92e6c6e94820a604419d0acb686fa5eb",
+      "model_requests": 2,
+      "input_tokens": 7881,
+      "output_tokens": 90,
+      "result_ref": "checkpoint-1794370328635-426ff7801549d535",
+      "created_at": "2026-11-11T04:11:55.159745+00:00",
+      "finished_at": "2026-11-11T04:12:08.63264+00:00",
+      "sandbox_id": "sandbox-1794370315552-75cc419eb0db3e1c",
+      "workspace_hashes": {
+        "workspace/hello.py": "feae35f0e124df4eada2b2729a23d6a1d7eca43e2243e97764adb6370e1185e4",
+        "workspace/recovered-output.txt": "af4cd7ba988ab5db8e3aeedd10db850fe0cf8c7f33792bc95f38c628cc286c89",
+        "workspace/run-output.txt": "8249fbff66469cc6bacdc9faa12b13e9b54cde9663c902a485e77d938f4bdbcf",
+        "workspace/second-output.txt": "af4cd7ba988ab5db8e3aeedd10db850fe0cf8c7f33792bc95f38c628cc286c89"
+      }
+    }
+  ],
+  "pause_resume_verified": true,
+  "rebuild_verified": true,
+  "cleanup_verified": true
+}

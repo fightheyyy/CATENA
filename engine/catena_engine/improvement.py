@@ -16,7 +16,8 @@ from .contracts import RESULT_SCHEMA, SCHEMA, Budget, Candidate, Context, Optimi
 from .evaluation.evidence import render_trajectory
 from .evaluation.harbor import HarborCase, HarborEvaluator
 from .protocol import InvalidRequest, _model_config
-from .runtime.codex import SKILL, CodexRuntime
+from .runtime.codex import SKILL
+from .workflow_harness import WorkflowHarness
 
 
 def trial_summary(trial):
@@ -274,7 +275,7 @@ def run_payload(payload: dict, cancelled=None) -> dict:
     reserved = 2 * (1 + len(validation))
     if budget.trials < 2 + reserved:
         raise OptimizationError("trial budget must cover two probes and every independent comparison")
-    runtime = CodexRuntime(model)
+    runtime = WorkflowHarness(model)
     runtime.preflight()
     output = Path(runs_root) / (context.request_id + "-" + uuid.uuid4().hex)
     output.mkdir(parents=True, mode=0o700)

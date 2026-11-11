@@ -78,11 +78,11 @@ def test_dev_stop_does_not_signal_reused_pid(tmp_path, monkeypatch):
 def test_codex_tools_keep_a_path_without_inheriting_platform_secrets():
     import tomllib
 
-    from catena_engine.managed.entry import config
+    from catena_engine.protocol import JsonRequest, ModelConfig
+    from catena_engine.runtime.codex import _config, agent_profile
 
-    value = tomllib.loads(
-        config({"model": "test", "instructions": "test", "gateway": "http://192.0.2.1:18788/internal/managed/model"})
-    )
+    request = JsonRequest("run", "run", "", 1, ModelConfig("catena", "http://192.0.2.1:18788/internal/managed/model", "test", "token"))
+    value = tomllib.loads(_config(request, agent_profile("managed")))
     assert value["shell_environment_policy"]["inherit"] == "none"
     assert "/usr/bin" in value["shell_environment_policy"]["set"]["PATH"].split(":")
-    assert value["model_providers"]["catena"]["env_key"] == "CATENA_RUN_TOKEN"
+    assert value["model_providers"]["catena"]["env_key"] == "CATENA_TURN_API_KEY"

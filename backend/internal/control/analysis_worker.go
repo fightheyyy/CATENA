@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand/v2"
 	"net/http"
 	"strconv"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -71,9 +69,8 @@ type analysisWorker struct {
 	store    Store
 	config   AnalysisWorkerConfig
 	run      func(context.Context, AnalysisLease, AnalysisJob) error
-	cancel   context.CancelFunc
+	pool     schedulerWorkers
 	wake     chan struct{}
-	wg       sync.WaitGroup
 	counters AnalysisWorkerCounters
 }
 
@@ -81,11 +78,10 @@ func newAnalysisWorker(store Store, config AnalysisWorkerConfig, run func(contex
 	if err := config.validate(); err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	w := &analysisWorker{store: store, config: config, run: run, cancel: cancel, wake: make(chan struct{}, config.Workers)}
+	w := &analysisWorker{store: store, config: config, run: run, wake: make(chan struct{}, config.Workers)}
+	w.pool.start()
 	for i := 0; i < config.Workers; i++ {
-		w.wg.Add(1)
-		go w.loop(ctx, newID("job-worker"))
+		w.pool.launch(func(ctx context.Context) { w.loop(ctx, newID("job-worker")) })
 	}
 	return w, nil
 }
@@ -103,126 +99,51 @@ func (w *analysisWorker) notify() {
 }
 func (w *analysisWorker) close() {
 	if w != nil {
-		w.cancel()
-		w.wg.Wait()
-	}
-}
-
-func (w *analysisWorker) wait(ctx context.Context, delay time.Duration) bool {
-	t := time.NewTimer(delay)
-	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		return false
-	case <-w.wake:
-		return true
-	case <-t.C:
-		return true
-	}
-}
-
-func waitAnalysisBackoff(ctx context.Context, delay time.Duration) bool {
-	t := time.NewTimer(delay)
-	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		return false
-	case <-t.C:
-		return true
+		w.pool.close()
 	}
 }
 
 func (w *analysisWorker) loop(ctx context.Context, id string) {
-	defer w.wg.Done()
-	failures := 0
-	for ctx.Err() == nil {
-		call, cancel := context.WithTimeout(ctx, 5*time.Second)
-		j, l, err := w.store.ClaimAnalysisJob(call, id, w.config.LeaseTTL, w.config.MaxAttempts)
-		cancel()
-		if err != nil {
-			delay := w.config.PollInterval
-			storeUnavailable := !errors.Is(err, ErrNotFound) && ctx.Err() == nil
-			if storeUnavailable {
-				failures++
-				w.counters.StoreErrors.Add(1)
-				delay = w.backoff(failures)
-				if failures == 1 || failures%10 == 0 {
-					slog.Warn("Analysis queue claim unavailable", "worker", id, "consecutive_failures", failures)
-				}
-			} else {
-				failures = 0
+	pollScheduler(ctx, w.config.PollInterval, w.config.RetryBase, w.config.RetryMax, w.wake,
+		func(call context.Context) (func(context.Context), error) {
+			j, l, err := w.store.ClaimAnalysisJob(call, id, w.config.LeaseTTL, w.config.MaxAttempts)
+			if err != nil {
+				return nil, err
 			}
-			// New HTTP submissions must not bypass database-outage backoff.
-			keepRunning := false
-			if storeUnavailable {
-				keepRunning = waitAnalysisBackoff(ctx, delay)
-			} else {
-				keepRunning = w.wait(ctx, delay)
+			return func(ctx context.Context) {
+				w.counters.Claims.Add(1)
+				slog.Info("Analysis job claimed", "job_id", j.ID, "attempt", j.Attempt, "fence", l.Fence, "age_seconds", time.Since(j.CreatedAt).Seconds())
+				w.attempt(ctx, l, j)
+			}, nil
+		}, func(_ error, failures int) {
+			w.counters.StoreErrors.Add(1)
+			if failures == 1 || failures%10 == 0 {
+				slog.Warn("Analysis queue claim unavailable", "worker", id, "consecutive_failures", failures)
 			}
-			if !keepRunning {
-				return
-			}
-			continue
-		}
-		failures = 0
-		w.counters.Claims.Add(1)
-		slog.Info("Analysis job claimed", "job_id", j.ID, "attempt", j.Attempt, "fence", l.Fence, "age_seconds", time.Since(j.CreatedAt).Seconds())
-		w.attempt(ctx, l, j)
-	}
-}
-
-func (w *analysisWorker) backoff(attempt int) time.Duration {
-	d := w.config.RetryBase
-	for i := 1; i < attempt && d < w.config.RetryMax; i++ {
-		d *= 2
-	}
-	if d > w.config.RetryMax {
-		d = w.config.RetryMax
-	}
-	// Half-to-full jitter keeps the configured maximum a hard upper bound.
-	return d/2 + time.Duration(rand.Int64N(max(int64(d-d/2), 1)))
+		})
 }
 
 func (w *analysisWorker) attempt(parent context.Context, l AnalysisLease, j AnalysisJob) {
 	started := time.Now()
-	ctx, cancel := context.WithTimeout(parent, w.config.JobTimeout)
 	w.counters.Active.Add(1)
 	defer w.counters.Active.Add(-1)
-	done := make(chan struct{})
 	var heartbeatFailed atomic.Bool
-	go func() {
-		defer close(done)
-		ticker := time.NewTicker(w.config.HeartbeatInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				call, stop := context.WithTimeout(ctx, min(5*time.Second, w.config.HeartbeatInterval))
-				requested, err := w.store.HeartbeatAnalysisJob(call, l, w.config.LeaseTTL)
-				stop()
-				if err != nil || requested {
-					if err != nil {
-						w.counters.LeaseLosses.Add(1)
-						heartbeatFailed.Store(true)
-					}
-					cancel()
-					return
+	err := runWithLease(parent, w.config.JobTimeout, w.config.HeartbeatInterval,
+		func(ctx context.Context) bool {
+			requested, err := w.store.HeartbeatAnalysisJob(ctx, l, w.config.LeaseTTL)
+			if err != nil {
+				w.counters.LeaseLosses.Add(1)
+				heartbeatFailed.Store(true)
+			}
+			return err == nil && !requested
+		}, func(ctx context.Context) (err error) {
+			defer func() {
+				if recover() != nil {
+					err = errors.New("Analysis execution panicked")
 				}
-			}
-		}
-	}()
-	err := func() (err error) {
-		defer func() {
-			if recover() != nil {
-				err = errors.New("Analysis execution panicked")
-			}
-		}()
-		return w.run(ctx, l, j)
-	}()
-	cancel()
-	<-done
+			}()
+			return w.run(ctx, l, j)
+		})
 	if err == nil {
 		w.counters.Completed.Add(1)
 		slog.Info("Analysis job completed", "job_id", j.ID, "attempt", j.Attempt, "execution_seconds", time.Since(started).Seconds())
@@ -237,7 +158,7 @@ func (w *analysisWorker) attempt(parent context.Context, l AnalysisLease, j Anal
 	retry := heartbeatFailed.Load() || errors.Is(err, errAnalysisTemporary) || errors.Is(err, context.DeadlineExceeded)
 	call, stop := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stop()
-	if releaseErr := w.store.ReleaseAnalysisJob(call, l, err.Error(), retry, w.backoff(j.Attempt), w.config.MaxAttempts); releaseErr != nil {
+	if releaseErr := w.store.ReleaseAnalysisJob(call, l, err.Error(), retry, schedulerBackoff(j.Attempt, w.config.RetryBase, w.config.RetryMax), w.config.MaxAttempts); releaseErr != nil {
 		if !errors.Is(releaseErr, ErrLeaseLost) {
 			w.counters.StoreErrors.Add(1)
 		}

@@ -182,8 +182,13 @@ func (s *HTTPServer) queryInvestigationTrace(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func (s *HTTPServer) openTraceInvestigation(ctx context.Context, lease AnalysisLease, job AnalysisJob) (map[string]string, func()) {
+type traceQueryCapability struct {
+	Job   string `json:"job_id"`
+	Token string `json:"token"`
+}
+
+func (s *HTTPServer) openTraceInvestigation(ctx context.Context, lease AnalysisLease, job AnalysisJob) (traceQueryCapability, func()) {
 	q := &traceInvestigation{ctx: ctx, job: job, lease: lease, token: rand.Text(), listed: map[string]bool{}}
 	s.traceInvestigations.Store(job.ID, q)
-	return map[string]string{"job_id": job.ID, "token": q.token}, func() { s.traceInvestigations.CompareAndDelete(job.ID, q) }
+	return traceQueryCapability{Job: job.ID, Token: q.token}, func() { s.traceInvestigations.CompareAndDelete(job.ID, q) }
 }

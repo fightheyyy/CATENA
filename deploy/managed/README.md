@@ -2,7 +2,7 @@
 
 这个独立本机配置保留原部署，使用自己的数据库容器 / 卷与端口，不修改已有生产配置。固定 OpenSandbox SDK / Server `1.2.0`、execd / egress `release-1.2.0`、Codex `0.160.0`。完整 Python 依赖固定在 `requirements.txt`；镜像版本和 Node 基础镜像摘要固定。
 
-需要 macOS、运行中的 Docker Desktop、Python 3.12+、Go 1.25+、Node 24 / pnpm 10.24。Docker 建议至少 8 GiB；默认最多 2 个用户 Sandbox，每个 1 CPU / 1 GiB，另有 Provider sidecar 和数据面开销。不要同时启动 100 个容器；10 / 50 / 100 指排队测试档位。
+需要 macOS、运行中的 Docker Desktop、Python 3.12+、Go 1.25+、Node 24 / pnpm 10.24。Docker 建议至少 8 GiB；默认最多 2 个 Managed Sandbox，另预留 1 个 Analysis / Improvement Sandbox。每个实例 1 CPU / 1 GiB，另有 Provider sidecar 和数据面开销。
 
 ```sh
 python3.12 deploy/managed/dev.py setup
@@ -13,7 +13,7 @@ python3.12 deploy/managed/dev.py status
 
 setup 构建前端、同步 Go 嵌入资源、构建 Go / Codex 镜像，生成 `.local/managed-dev/` 下权限受限的随机密钥、配置和环境。OpenSandbox Server / SDK adapter 在宿主机独立运行；用户 Agent 代码只在 Sandbox 内执行。Server 自身需要 Docker 权限，用户实例不挂载 Docker Socket、宿主目录或数据库密钥。
 
-up 启动隔离 PostgreSQL、原 Collector → Kafka → ClickHouse 数据面、官方 OpenSandbox Server、私有 adapter 和 Go Worker。Kafka 在本机配置只有一个 Broker，别名用于原 Collector 配置兼容，**没有 HA 承诺**。完整旧生产部署的 3 Broker 配置不变。
+up 启动隔离 PostgreSQL、原 Collector → Kafka → ClickHouse 数据面、官方 OpenSandbox Server、私有 adapter、可信 Workflow Engine 和 Go Worker。Kafka 在本机配置只有一个 Broker，别名用于原 Collector 配置兼容，**没有 HA 承诺**。完整旧生产部署的 3 Broker 配置不变。
 
 | 端口 | 用途 |
 |---|---|
@@ -45,7 +45,7 @@ down 先请求回收并等待预留清零，然后停止服务；保留数据库
 
 模型网关出站 IP 由 Docker 内 `getent host.docker.internal` 实测，每次 up 重新校准；Sandbox 只允许这个 IP / 模型端口，默认不允许 DNS、互联网和外部包下载。不要把 `CATENA_MANAGED_CONTROL_URL` 配成无法在该策略下解析的主机名。
 
-旧 Analysis / Improvement / Harbor 仍使用原 Engine 配置。需要在此 Go 实例运行分析时，按原部署指南配置 `CATENA_ENGINE_URL` / `CATENA_ENGINE_TOKEN` 和 Engine 的 Control URL；脚本不会给分析 Engine 自动授予 Docker 权限，也不会将 Harbor Trial 复用为 Session Sandbox。
+Analysis 直接使用本机启动的可信 Workflow Engine。需要启用 Improvement 时，先设置经人工确认的 `CATENA_CASES_MANIFEST`，在同一环境执行 setup 和 up，并配置可信 Harbor Docker 访问。已有实例升级前按[迁移步骤](../../docs/refactors/UNIFIED_HARNESS.md#升级)排空旧任务。
 
 验证：
 
@@ -88,3 +88,12 @@ BARENA_TEST_DATABASE_URL='你的独立测试 PostgreSQL URL' \
 ```
 
 分级脚本临时限制本机 local 租户为 2 Sandbox / 2 Run、每 Run 最多 4 次模型请求、每次至多 1024 output tokens、每分钟 30 次请求，结束后恢复原配额。每 Run 必须通过实际代码文件 / Python 工具执行 / JSON 产物校验；失败与取消不算成功，不自动重试不确定执行。首次出现失败时不会盲目扩大下一档。最多 80 个正式 Run、320 次上游尝试；模型自身失败和网络故障会如实降低成功率。CPU / memory 采样由 Docker stats 提供，API 仍明确不支持通用实时利用率监控。
+
+
+```sh
+# 使用真实现有 Trace 验证 Analysis 的 Sandbox Turn 与工具调用。
+.local/managed-dev/venv/bin/python scripts/harness_smoke.py --environment .local/managed-dev/env.json \
+  --trace "$TRACE_ID" --output .local/managed-dev/harness-analysis.json
+```
+
+Improvement 协议探针只在独立测试环境运行：使用 `scripts/harness_smoke.py --contract-engine` 启动回环端口上的测试 Engine，让独立 Core 指向该 Engine，再用 `--analysis-job "$ANALYSIS_JOB_ID"` 提交基于真实已完成 Analysis 的探针。两次调用都需 `--environment` 和各自的 `--output`。探针使用真实 Codex、真实授权与候选路径校验，返回明确标记的工具测试回执，故意拒绝提交业务 Artifact。

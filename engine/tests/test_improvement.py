@@ -221,7 +221,7 @@ def test_private_api_runs_new_workflow_and_persists_only_safe_report(monkeypatch
     from catena_engine.evaluation.harbor import task_digest
     from catena_engine.server import create_server
 
-    monkeypatch.setattr(improvement, "CodexRuntime", Runtime)
+    monkeypatch.setattr(improvement, "WorkflowHarness", Runtime)
     monkeypatch.setattr(improvement, "HarborEvaluator", Evaluator)
     task = tmp_path / "task"
     task.mkdir()

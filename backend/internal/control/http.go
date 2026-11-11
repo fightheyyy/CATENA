@@ -14,6 +14,7 @@ import (
 
 type HTTPServer struct {
 	traceInvestigations sync.Map
+	workflowAccess      sync.Map
 	store               Store
 	traces              TraceStore
 	traceSink           TraceSink
@@ -64,21 +65,28 @@ func NewHTTPHandler(store Store, config HTTPConfig) (*ManagedHTTPHandler, error)
 	if server.traceSink == nil {
 		server.traceSink, _ = traces.(TraceSink) // Test fallback; production readers do not implement TraceSink.
 	}
+	var managedErr error
+	server.managed, managedErr = startManaged(server, config.Managed)
+	if managedErr != nil {
+		return nil, managedErr
+	}
 	if analysisRuntime != nil {
-		pool, err := newAnalysisWorker(store, workers, server.executeAnalysisJob)
+		workflow := analysisWorkflow{store: store, engine: analysisRuntime,
+			credentials: server.analysisModelCredentials, openQuery: server.openTraceInvestigation}
+		if server.managed != nil {
+			workflow.openTurn = server.openWorkflow
+		}
+		pool, err := newAnalysisWorker(store, workers, workflow.execute)
 		if err != nil {
+			server.managed.close()
 			return nil, err
 		}
 		server.jobs = pool
 	}
-	var managedErr error
-	server.managed, managedErr = startManaged(server, config.Managed)
-	if managedErr != nil {
-		server.jobs.close()
-		return nil, managedErr
-	}
 	mux := http.NewServeMux()
 	server.registerManaged(mux)
+	mux.HandleFunc("POST /internal/harness/turn", server.startWorkflowTurn)
+	mux.HandleFunc("POST /internal/harness/tool", server.workflowTool)
 	mux.HandleFunc("POST /internal/analysis-jobs/{job_id}/trace-query", server.queryInvestigationTrace)
 	mux.HandleFunc("POST /v1/analysis-jobs", server.createAnalysisJob)
 	mux.HandleFunc("GET /v1/analysis-jobs", server.listAnalysisJobs)

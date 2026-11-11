@@ -1,0 +1,18 @@
+{
+  "job_id": "analysis-job-1794371502011-5ae0c1eae98f46cf",
+  "state": "completed",
+  "artifacts": 1,
+  "trace": "4efb92147b8833542be169310c7c7c58",
+  "tools": [
+    "list_traces",
+    "get_trace"
+  ],
+  "evidence_refs": [
+    "4efb92147b8833542be169310c7c7c58",
+    "4efb92147b8833542be169310c7c7c58/0f8864d75276c406",
+    "4efb92147b8833542be169310c7c7c58/179ad2bb67cf5de2",
+    "4efb92147b8833542be169310c7c7c58/4efb92147b883354",
+    "4efb92147b8833542be169310c7c7c58/b372ffdff6cc7e03",
+    "4efb92147b8833542be169310c7c7c58/f44fe96ff9d56d10"
+  ]
+}

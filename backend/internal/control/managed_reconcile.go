@@ -22,7 +22,7 @@ func (p *managedPlatform) recoverManagedRuns(ctx context.Context) error {
 		return err
 	}
 	defer tx.Rollback()
-	rows, err := tx.QueryContext(ctx, `SELECT run_id,session_id,execution_started_at IS NOT NULL,cancel_requested FROM agent_runs WHERE state='RUNNING' AND (lease_until<=now() OR cancel_requested OR execution_started_at+execution_timeout*interval '1 second'<=now()) FOR UPDATE`)
+	rows, err := tx.QueryContext(ctx, `SELECT run_id,session_id,execution_started_at IS NOT NULL,cancel_requested FROM agent_runs WHERE state='RUNNING' AND (lease_until<=now() OR cancel_requested OR NOT EXISTS(SELECT 1 FROM active_harness_sessions live WHERE live.session_id=agent_runs.session_id) OR execution_started_at+execution_timeout*interval '1 second'<=now()) FOR UPDATE`)
 	if err != nil {
 		return err
 	}
@@ -71,6 +71,15 @@ func (p *managedPlatform) recoverManagedRuns(ctx context.Context) error {
 			return err
 		}
 	}
+	// A queued workflow whose Job lease died never acquires a Sandbox.
+	if _, err = tx.ExecContext(ctx, `UPDATE agent_runs SET state='CANCELLED',finished_at=now(),updated_at=now()
+	WHERE state='QUEUED' AND NOT EXISTS(SELECT 1 FROM active_harness_sessions live WHERE live.session_id=agent_runs.session_id)`); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE agent_sessions SET state='DELETING',updated_at=now() WHERE workflow_job_id IS NOT NULL AND state<>'DELETED'
+	AND NOT EXISTS(SELECT 1 FROM agent_runs r WHERE r.session_id=agent_sessions.session_id AND r.state IN ('QUEUED','RUNNING','STOPPING'))`); err != nil {
+		return err
+	}
 	if err = tx.Commit(); err != nil {
 		return err
 	}
@@ -84,15 +93,15 @@ type managedBinding struct {
 	CreateRecorded bool
 }
 type managedOperation struct {
-	ID        string   `json:"operation_id"`
-	Box       string   `json:"sandbox_id"`
-	Kind      string   `json:"kind"`
-	State     string   `json:"state"`
-	Worker    string   `json:"worker_id"`
-	Fence     int64    `json:"fencing_token"`
-	LeaseLive bool     `json:"lease_live"`
-	Revision  int64    `json:"expected_revision"`
-	Targets   []string `json:"provider_ids"`
+	ID        string        `json:"operation_id"`
+	Box       string        `json:"sandbox_id"`
+	Kind      sandboxAction `json:"kind"`
+	State     string        `json:"state"`
+	Worker    string        `json:"worker_id"`
+	Fence     int64         `json:"fencing_token"`
+	LeaseLive bool          `json:"lease_live"`
+	Revision  int64         `json:"expected_revision"`
+	Targets   []string      `json:"provider_ids"`
 }
 
 func (p *managedPlatform) providerTimeout() time.Duration {
@@ -107,7 +116,7 @@ func (p *managedPlatform) operationLease() time.Duration {
 	}
 	return 30 * time.Second
 }
-func (p *managedPlatform) providerCall(ctx context.Context, action string, data, out any) error {
+func (p *managedPlatform) providerCall(ctx context.Context, action sandboxAction, data, out any) error {
 	callCtx, stop := context.WithTimeout(ctx, p.providerTimeout())
 	defer stop()
 	return p.call(callCtx, action, data, out)
@@ -142,7 +151,7 @@ func (p *managedPlatform) reconcile(ctx context.Context) error {
 	}
 	var remotes []managedRemote
 	// Provider I/O never runs while holding a transaction or connection lock.
-	if err = p.providerCall(ctx, "list", map[string]any{"namespace": p.config.Namespace}, &remotes); err != nil {
+	if err = p.providerCall(ctx, sandboxList, sandboxNamespace{p.config.Namespace}, &remotes); err != nil {
 		return err
 	}
 	byBox := map[string][]managedRemote{}
@@ -216,19 +225,19 @@ func (p *managedPlatform) planManagedOperation(ctx context.Context, b managedBin
 	if err == nil && old.LeaseLive {
 		return nil, nil
 	}
-	kind := ""
+	var kind sandboxAction
 	if err == nil {
-		if old.Kind == "terminate" {
-			kind = "terminate"
+		if old.Kind == sandboxTerminate {
+			kind = sandboxTerminate
 		} else {
 			// A timed-out pause/resume can still arrive late. Never reuse this instance.
 			if _, err = tx.ExecContext(ctx, `UPDATE sandbox_operations SET state='ABANDONED',error='operation outcome uncertain; quarantine instance',lease_until=NULL WHERE operation_id=$1`, old.ID); err != nil {
 				return nil, err
 			}
-			kind = "terminate"
+			kind = sandboxTerminate
 		}
 	}
-	terminate := kind == "terminate" || b.Box.State == "TERMINATING" || sessionState == "DELETING" || sessionState == "NEEDS_REVIEW" || expired || idle || len(found) == 0 || len(found) > 1
+	terminate := kind == sandboxTerminate || b.Box.State == "TERMINATING" || sessionState == "DELETING" || sessionState == "NEEDS_REVIEW" || expired || idle || len(found) == 0 || len(found) > 1
 	if len(found) == 1 && found[0].State != "Running" && found[0].State != "RUNNING" && found[0].State != "Paused" && found[0].State != "PAUSED" {
 		terminate = true
 	}
@@ -240,11 +249,11 @@ func (p *managedPlatform) planManagedOperation(ctx context.Context, b managedBin
 		return nil, err
 	}
 	if terminate {
-		kind = "terminate"
+		kind = sandboxTerminate
 	} else if sessionState == "PAUSING" {
-		kind = "pause"
+		kind = sandboxPause
 	} else if sessionState == "READY" && (b.Box.State == "PAUSED" || found[0].State == "Paused" || found[0].State == "PAUSED") {
-		kind = "resume"
+		kind = sandboxResume
 	}
 	if kind == "" {
 		return nil, nil
@@ -271,7 +280,7 @@ func (p *managedPlatform) planManagedOperation(ctx context.Context, b managedBin
 		return nil, err
 	}
 	opID := newID("operation")
-	if old.ID != "" && old.Kind == "terminate" {
+	if old.ID != "" && old.Kind == sandboxTerminate {
 		opID = old.ID
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE managed_sandboxes SET revision=revision+1,state=CASE WHEN $2='terminate' THEN 'TERMINATING' ELSE state END WHERE sandbox_id=$1`, b.Box.ID, kind)
@@ -318,7 +327,7 @@ func (p *managedPlatform) planManagedOrphan(ctx context.Context, r managedRemote
 func (p *managedPlatform) performManagedOperation(ctx context.Context, op managedOperation) error {
 	for _, id := range op.Targets {
 		var out map[string]any
-		if err := p.providerCall(ctx, op.Kind, map[string]any{"provider_id": id}, &out); err != nil {
+		if err := p.providerCall(ctx, op.Kind, sandboxRef{id}, &out); err != nil {
 			recordCtx, stop := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 			defer stop()
 			// Unknown results keep the reservation and block session reuse.
@@ -344,18 +353,18 @@ func (p *managedPlatform) finalizeManagedOperation(ctx context.Context, op manag
 	}
 	if op.Box != "" {
 		state := "IDLE"
-		if op.Kind == "pause" {
+		if op.Kind == sandboxPause {
 			state = "PAUSED"
 		}
-		if op.Kind == "terminate" {
+		if op.Kind == sandboxTerminate {
 			state = "TERMINATED"
 		}
 		err = managedCAS(tx.ExecContext(ctx, `UPDATE managed_sandboxes SET state=$3,revision=revision+1,error='',last_activity_at=now() WHERE sandbox_id=$1 AND revision=$2 AND NOT EXISTS(SELECT 1 FROM agent_runs WHERE session_id=managed_sandboxes.session_id AND state='RUNNING')`, op.Box, op.Revision, state))
 		if err != nil {
 			return err
 		}
-		if op.Kind == "terminate" {
-			_, err = tx.ExecContext(ctx, `UPDATE agent_runs SET state=CASE WHEN cancel_requested THEN 'CANCELLED' WHEN execution_started_at IS NOT NULL THEN 'NEEDS_REVIEW' WHEN attempt>=3 THEN 'FAILED' ELSE 'QUEUED' END,finished_at=CASE WHEN cancel_requested OR execution_started_at IS NOT NULL OR attempt>=3 THEN now() ELSE NULL END,isolation_confirmed_at=now(),updated_at=now() WHERE sandbox_id=$1 AND state='STOPPING'`, op.Box)
+		if op.Kind == sandboxTerminate {
+			_, err = tx.ExecContext(ctx, `UPDATE agent_runs SET state=CASE WHEN cancel_requested THEN 'CANCELLED' WHEN execution_started_at IS NOT NULL THEN 'NEEDS_REVIEW' WHEN attempt>=3 OR EXISTS(SELECT 1 FROM agent_sessions s WHERE s.session_id=agent_runs.session_id AND s.workflow_job_id IS NOT NULL) THEN 'FAILED' ELSE 'QUEUED' END,finished_at=CASE WHEN cancel_requested OR execution_started_at IS NOT NULL OR attempt>=3 OR EXISTS(SELECT 1 FROM agent_sessions s WHERE s.session_id=agent_runs.session_id AND s.workflow_job_id IS NOT NULL) THEN now() ELSE NULL END,isolation_confirmed_at=now(),updated_at=now() WHERE sandbox_id=$1 AND state='STOPPING'`, op.Box)
 			if err != nil {
 				return err
 			}
@@ -367,7 +376,7 @@ func (p *managedPlatform) finalizeManagedOperation(ctx context.Context, op manag
 				return err
 			}
 			_, err = tx.ExecContext(ctx, `UPDATE agent_sessions SET sandbox_binding=NULL,state=CASE WHEN state='DELETING' THEN 'DELETED' WHEN state='PAUSING' THEN 'PAUSED' ELSE state END,updated_at=now() WHERE session_id=(SELECT session_id FROM managed_sandboxes WHERE sandbox_id=$1)`, op.Box)
-		} else if op.Kind == "pause" {
+		} else if op.Kind == sandboxPause {
 			_, err = tx.ExecContext(ctx, `UPDATE agent_sessions SET state='PAUSED',updated_at=now() WHERE state='PAUSING' AND session_id=(SELECT session_id FROM managed_sandboxes WHERE sandbox_id=$1)`, op.Box)
 		}
 		if err != nil {

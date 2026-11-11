@@ -16,7 +16,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -83,8 +82,7 @@ type managedPlatform struct {
 	server *HTTPServer
 	config ManagedConfig
 	client *http.Client
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	pool   schedulerWorkers
 }
 
 func startManaged(s *HTTPServer, c ManagedConfig) (*managedPlatform, error) {
@@ -113,22 +111,21 @@ func startManaged(s *HTTPServer, c ManagedConfig) (*managedPlatform, error) {
 		cancel()
 		return nil, err
 	}
-	p := &managedPlatform{store: store, server: s, config: c, cancel: cancel, client: &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
+	p := &managedPlatform{store: store, server: s, config: c, client: &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 	return p, nil
 }
 func (p *managedPlatform) start() {
 	if p == nil {
 		return
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	p.cancel = cancel
+	p.pool.start()
 	for i := 0; i < p.config.Workers; i++ {
-		p.wg.Add(1)
-		go p.loop(ctx, newID("managed-worker"))
+		p.pool.launch(func(ctx context.Context) { p.loop(ctx, newID("managed-worker"), p.config.Capacity, false) })
 	}
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
+	if p.server.analysisRuntime != nil {
+		p.pool.launch(func(ctx context.Context) { p.loop(ctx, newID("workflow-worker"), 1, true) })
+	}
+	p.pool.launch(func(ctx context.Context) {
 		for {
 			opctx, stop := context.WithTimeout(ctx, 45*time.Second)
 			if e := p.reconcile(opctx); e != nil && ctx.Err() == nil {
@@ -140,24 +137,23 @@ func (p *managedPlatform) start() {
 				slog.Warn("managed trace export", "error", e)
 			}
 			traceStop()
-			if !waitAnalysisBackoff(ctx, time.Second) {
+			if !waitScheduler(ctx, time.Second, nil) {
 				return
 			}
 		}
-	}()
+	})
 }
 func (p *managedPlatform) close() {
 	if p != nil {
-		p.cancel()
-		p.wg.Wait()
+		p.pool.close()
 	}
 }
-func (p *managedPlatform) request(ctx context.Context, action string, payload any) (*http.Response, error) {
+func (p *managedPlatform) request(ctx context.Context, action sandboxAction, payload any) (*http.Response, error) {
 	raw, e := json.Marshal(payload)
 	if e != nil {
 		return nil, e
 	}
-	req, e := http.NewRequestWithContext(ctx, "POST", strings.TrimRight(p.config.URL, "/")+"/v1/"+action, bytes.NewReader(raw))
+	req, e := http.NewRequestWithContext(ctx, "POST", strings.TrimRight(p.config.URL, "/")+"/v1/"+string(action), bytes.NewReader(raw))
 	if e != nil {
 		return nil, e
 	}
@@ -173,7 +169,7 @@ func (p *managedPlatform) request(ctx context.Context, action string, payload an
 	}
 	return res, nil
 }
-func (p *managedPlatform) call(ctx context.Context, action string, payload, out any) error {
+func (p *managedPlatform) call(ctx context.Context, action sandboxAction, payload, out any) error {
 	res, e := p.request(ctx, action, payload)
 	if e != nil {
 		return e
@@ -181,53 +177,32 @@ func (p *managedPlatform) call(ctx context.Context, action string, payload, out 
 	defer res.Body.Close()
 	return json.NewDecoder(io.LimitReader(res.Body, 24*1024*1024)).Decode(out)
 }
-func (p *managedPlatform) payload(l *managedLease) map[string]any {
-	return map[string]any{"run_id": l.Run.ID, "sandbox_id": l.Box.ID, "provider_id": l.Box.Provider, "session_id": l.Run.Session, "tenant_id": l.Run.Tenant, "generation": l.Box.Generation, "fencing_token": l.Run.Fence, "token": l.Token, "namespace": p.config.Namespace}
-}
-func (p *managedPlatform) loop(ctx context.Context, id string) {
-	defer p.wg.Done()
-	for {
-		opctx, stop := context.WithTimeout(ctx, 5*time.Second)
-		l, e := p.store.claimManaged(opctx, id, p.config.Lease, p.config.Capacity)
-		stop()
-		if e != nil && ctx.Err() == nil {
-			slog.Warn("managed claim", "error", e)
-		}
-		if l != nil {
-			p.execute(ctx, l)
-		} else if !waitAnalysisBackoff(ctx, 500*time.Millisecond) {
-			return
-		}
-		if ctx.Err() != nil {
-			return
-		}
-	}
-}
-func (p *managedPlatform) execute(parent context.Context, l *managedLease) {
-	allocatedAt := time.Now()
-	ctx, cancel := context.WithTimeout(parent, time.Duration(l.Run.Timeout)*time.Second)
-	defer cancel()
-	done := make(chan struct{})
-	defer func() { cancel(); <-done }()
-	go func() {
-		defer close(done)
-		ticker := time.NewTicker(p.config.Lease / 4)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				hb, stop := context.WithTimeout(ctx, p.config.Lease/4)
-				e := p.store.heartbeatManaged(hb, l, p.config.Lease)
-				stop()
-				if e != nil {
-					cancel()
-					return
-				}
+func (p *managedPlatform) loop(ctx context.Context, id string, capacity int, ephemeral bool) {
+	pollScheduler(ctx, 500*time.Millisecond, time.Second, 30*time.Second, nil,
+		func(call context.Context) (func(context.Context), error) {
+			l, err := p.store.claimHarness(call, id, p.config.Lease, capacity, ephemeral)
+			if err != nil || l == nil {
+				return nil, err
 			}
-		}
-	}()
+			return func(ctx context.Context) { p.execute(ctx, l) }, nil
+		}, func(err error, failures int) {
+			if failures == 1 || failures%10 == 0 {
+				slog.Warn("managed claim", "error", err, "consecutive_failures", failures)
+			}
+		})
+}
+
+func (p *managedPlatform) execute(parent context.Context, l *managedLease) {
+	_ = runWithLease(parent, time.Duration(l.Run.Timeout)*time.Second, p.config.Lease/4,
+		func(ctx context.Context) bool { return p.store.heartbeatManaged(ctx, l, p.config.Lease) == nil },
+		func(ctx context.Context) error {
+			p.executeLeased(ctx, l)
+			return nil
+		})
+}
+
+func (p *managedPlatform) executeLeased(ctx context.Context, l *managedLease) {
+	allocatedAt := time.Now()
 	fail := func(e error) {
 		failureCtx, stop := context.WithTimeout(context.Background(), 5*time.Second)
 		defer stop()
@@ -250,21 +225,20 @@ func (p *managedPlatform) execute(parent context.Context, l *managedLease) {
 			fail(e)
 			return
 		}
-		payload := p.payload(l)
-		payload["cpu"] = l.Box.CPU
-		payload["memory"] = l.Box.Memory
-		var box struct {
-			ID string `json:"provider_id"`
-		}
-		if e = p.call(ctx, "create", payload, &box); e != nil {
+		payload := sandboxCreateRequest{sandboxBinding: p.binding(l), CPU: l.Box.CPU, Memory: l.Box.Memory}
+		var box sandboxRef
+		if e = p.call(ctx, sandboxCreate, payload, &box); e != nil || box.ProviderID == "" {
+			if e == nil {
+				e = errors.New("sandbox create returned an empty provider ID")
+			}
 			writeCtx, stop := context.WithTimeout(context.Background(), 5*time.Second)
 			_, _ = p.store.db.ExecContext(writeCtx, `UPDATE sandbox_operations SET state='UNKNOWN',error='create outcome unknown',updated_at=now() WHERE operation_id=$1`, l.Box.ID)
 			stop()
 			fail(e)
 			return
 		}
-		l.Box.Provider = box.ID
-		e = managedCAS(p.store.db.ExecContext(ctx, `UPDATE managed_sandboxes SET provider_sandbox_id=$2,state='BUSY' WHERE sandbox_id=$1 AND state='CREATING' AND EXISTS(SELECT 1 FROM agent_runs WHERE run_id=$3 AND fencing_token=$4 AND state='RUNNING' AND lease_until>now() AND NOT cancel_requested)`, l.Box.ID, box.ID, l.Run.ID, l.Run.Fence))
+		l.Box.Provider = box.ProviderID
+		e = managedCAS(p.store.db.ExecContext(ctx, `UPDATE managed_sandboxes SET provider_sandbox_id=$2,state='BUSY' WHERE sandbox_id=$1 AND state='CREATING' AND EXISTS(SELECT 1 FROM agent_runs WHERE run_id=$3 AND fencing_token=$4 AND state='RUNNING' AND lease_until>now() AND NOT cancel_requested AND EXISTS(SELECT 1 FROM active_harness_sessions live WHERE live.session_id=agent_runs.session_id))`, l.Box.ID, box.ProviderID, l.Run.ID, l.Run.Fence))
 		if e != nil {
 			fail(e)
 			return
@@ -289,22 +263,22 @@ func (p *managedPlatform) execute(parent context.Context, l *managedLease) {
 		fail(e)
 		return
 	}
-	payload := p.payload(l)
-	payload["input"] = l.Run.Input
-	payload["instructions"] = l.Agent.Instructions
-	payload["model"] = credentials.Model
-	payload["timeout"] = l.Run.Timeout
-	payload["gateway"] = strings.TrimRight(p.config.ControlURL, "/") + "/internal/managed/model"
-	payload["checkpoint"] = ""
-	if rebuild {
-		payload["checkpoint"] = base64.StdEncoding.EncodeToString(l.Checkpoint)
+	base := strings.TrimRight(p.config.ControlURL, "/")
+	payload := sandboxTurn{
+		sandboxBinding: p.binding(l), Input: l.Run.Input, Profile: l.Agent.Profile, ProfileVersion: l.Agent.Version,
+		Instructions: l.Agent.Instructions, ToolPolicy: l.Agent.ToolPolicy, Skills: l.Agent.Skills, Knowledge: l.Agent.Knowledge,
+		Model: credentials.Model, Timeout: l.Run.Timeout, Gateway: base + "/internal/managed/model",
+		ToolGateway: base + "/internal/harness/tool",
 	}
-	e = managedCAS(p.store.db.ExecContext(ctx, `UPDATE agent_runs SET execution_started_at=now() WHERE run_id=$1 AND worker_id=$2 AND fencing_token=$3 AND state='RUNNING' AND lease_until>now() AND NOT cancel_requested AND execution_started_at IS NULL`, l.Run.ID, l.Run.Worker, l.Run.Fence))
+	if rebuild {
+		payload.Checkpoint = base64.StdEncoding.EncodeToString(l.Checkpoint)
+	}
+	e = managedCAS(p.store.db.ExecContext(ctx, `UPDATE agent_runs SET execution_started_at=now() WHERE run_id=$1 AND worker_id=$2 AND fencing_token=$3 AND state='RUNNING' AND lease_until>now() AND NOT cancel_requested AND EXISTS(SELECT 1 FROM active_harness_sessions live WHERE live.session_id=agent_runs.session_id) AND execution_started_at IS NULL`, l.Run.ID, l.Run.Worker, l.Run.Fence))
 	if e != nil {
 		fail(e)
 		return
 	}
-	res, e := p.request(ctx, "execute", payload)
+	res, e := p.request(ctx, sandboxExecute, payload)
 	if e != nil {
 		fail(e)
 		return
@@ -366,12 +340,20 @@ func (p *managedPlatform) consumeManagedExecution(ctx context.Context, l *manage
 	if final == nil {
 		return errors.New("runtime disconnected without confirmed command exit")
 	}
-	snapshot, e := base64.StdEncoding.DecodeString(final.Snapshot)
-	if e != nil || len(snapshot) == 0 || len(snapshot) > 16*1024*1024 {
-		return errors.New("checkpoint missing or invalid")
+	var snapshot []byte
+	if l.Ephemeral {
+		if final.Snapshot != "" || len(final.Result) > 256*1024 || !json.Valid([]byte(final.Result)) {
+			return errors.New("invalid ephemeral turn result")
+		}
+	} else {
+		var err error
+		snapshot, err = base64.StdEncoding.DecodeString(final.Snapshot)
+		if err != nil || len(snapshot) == 0 || len(snapshot) > 16*1024*1024 {
+			return errors.New("checkpoint missing or invalid")
+		}
 	}
 	// EOF and the adapter's SDK exit acknowledgement precede every terminal write.
-	e = managedCAS(p.store.db.ExecContext(ctx, `UPDATE agent_runs SET command_exited_at=now() WHERE run_id=$1 AND worker_id=$2 AND fencing_token=$3 AND state='RUNNING' AND lease_until>now() AND NOT cancel_requested`, l.Run.ID, l.Run.Worker, l.Run.Fence))
+	e := managedCAS(p.store.db.ExecContext(ctx, `UPDATE agent_runs SET command_exited_at=now() WHERE run_id=$1 AND worker_id=$2 AND fencing_token=$3 AND state='RUNNING' AND lease_until>now() AND NOT cancel_requested AND EXISTS(SELECT 1 FROM active_harness_sessions live WHERE live.session_id=agent_runs.session_id)`, l.Run.ID, l.Run.Worker, l.Run.Fence))
 	if e != nil {
 		return e
 	}

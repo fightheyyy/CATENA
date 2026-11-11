@@ -75,7 +75,8 @@ func TestPostgresAnalysisQueueUpgradesLegacyRows(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Reconstruct the pre-lease table shape while preserving real job rows.
-	_, err := s.db.ExecContext(ctx, `ALTER TABLE spiral_evolution_jobs
+	_, err := s.db.ExecContext(ctx, `DROP VIEW active_harness_sessions;
+ALTER TABLE spiral_evolution_jobs
  DROP COLUMN worker_id, DROP COLUMN fencing_token, DROP COLUMN lease_until,
  DROP COLUMN attempt, DROP COLUMN next_attempt_at, DROP COLUMN cancel_requested;
 ALTER TABLE spiral_evolution_jobs DROP CONSTRAINT spiral_evolution_jobs_state_check;
