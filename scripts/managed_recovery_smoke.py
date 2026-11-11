@@ -53,7 +53,14 @@ def main():
             line = response.readline(65536).decode()
             if not line:
                 break
-            if "command_execution" in line and "in_progress" in line:
+            if not line.startswith("data: "):
+                continue
+            item = json.loads(line.removeprefix("data: ")).get("item") or {}
+            if (
+                item.get("type") == "command_execution"
+                and item.get("status") == "in_progress"
+                and "time.sleep(90)" in item.get("command", "")
+            ):
                 started = True
                 break
     assert started, "no real tool execution observed; worker was not killed"
@@ -109,6 +116,7 @@ def main():
     )
     record = {
         "run_id": final["run_id"],
+        "trace_id": final["trace_id"],
         "session_id": session,
         "sandbox_id": box["sandbox_id"],
         "provider_id": box["provider_sandbox_id"],
@@ -121,6 +129,7 @@ def main():
         "sandbox_terminated": True,
         "automatic_replay": False,
         "isolation_confirmed_at": final.get("isolation_confirmed_at"),
+        "finished_at": final["finished_at"],
         "terminal_after_isolation": final.get("isolation_confirmed_at") is not None,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

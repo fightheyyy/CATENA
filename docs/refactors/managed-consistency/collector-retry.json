@@ -1,0 +1,70 @@
+{
+  "started_at": "2026-11-10T15:41:40.521552+00:00",
+  "service": "catena-managed-telemetry-otel-gateway-1",
+  "real_run_evidence": [
+    {
+      "run_id": "run-1794325294277-9f668bdba0b47096",
+      "trace_id": "6f4fc2f9d87ac768933c4a7d62180052",
+      "expected_events": 12,
+      "observed_events": 12,
+      "span_count": 5,
+      "exact_event_id_match": true
+    },
+    {
+      "run_id": "run-1794325294283-fbbeef02c42762ae",
+      "trace_id": "e88666759df28a7703e4dff46f3f9634",
+      "expected_events": 12,
+      "observed_events": 12,
+      "span_count": 5,
+      "exact_event_id_match": true
+    },
+    {
+      "run_id": "run-1794325294260-a096027eb8a49673",
+      "trace_id": "e31b65fe73243a5e58cd91d61560e60d",
+      "expected_events": 12,
+      "observed_events": 12,
+      "span_count": 5,
+      "exact_event_id_match": true
+    },
+    {
+      "run_id": "run-1794325294271-39a04c73ebdd61e3",
+      "trace_id": "5efbb6b39a4133d2baeb55f3c6ce5842",
+      "expected_events": 12,
+      "observed_events": 12,
+      "span_count": 5,
+      "exact_event_id_match": true
+    }
+  ],
+  "pending_before_resume": [
+    {
+      "run_id": "run-1794325294277-9f668bdba0b47096",
+      "trace_id": "6f4fc2f9d87ac768933c4a7d62180052",
+      "trace_event_cursor": 0,
+      "trace_base_exported": false,
+      "state": "COMPLETED"
+    },
+    {
+      "run_id": "run-1794325294283-fbbeef02c42762ae",
+      "trace_id": "e88666759df28a7703e4dff46f3f9634",
+      "trace_event_cursor": 0,
+      "trace_base_exported": false,
+      "state": "COMPLETED"
+    },
+    {
+      "run_id": "run-1794325294260-a096027eb8a49673",
+      "trace_id": "e31b65fe73243a5e58cd91d61560e60d",
+      "trace_event_cursor": 0,
+      "trace_base_exported": false,
+      "state": "COMPLETED"
+    },
+    {
+      "run_id": "run-1794325294271-39a04c73ebdd61e3",
+      "trace_id": "5efbb6b39a4133d2baeb55f3c6ce5842",
+      "trace_event_cursor": 0,
+      "trace_base_exported": false,
+      "state": "COMPLETED"
+    }
+  ],
+  "resumed_at": "2026-11-10T15:42:15.868766+00:00",
+  "recovery_verified": true
+}

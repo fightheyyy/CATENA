@@ -1,0 +1,18 @@
+{
+  "run_id": "run-1794369001576-2cd2c5f87ccb4cdd",
+  "trace_id": "362b048198e4f53895f603db9140530e",
+  "session_id": "session-1794369001571-c452605ea9cf7bcb",
+  "sandbox_id": "sandbox-1794369001763-53c05dcb4fbf811b",
+  "provider_id": "a3471458-988b-42bb-a2c5-6629b75c699a",
+  "before_fence": 1,
+  "after_fence": 2,
+  "state": "NEEDS_REVIEW",
+  "attempt": 1,
+  "crash_to_quarantine_seconds": 28.474,
+  "real_tool_execution_observed": true,
+  "sandbox_terminated": true,
+  "automatic_replay": false,
+  "isolation_confirmed_at": "2026-11-11T03:50:40.042742+00:00",
+  "finished_at": "2026-11-11T03:50:40.042742+00:00",
+  "terminal_after_isolation": true
+}

@@ -1,0 +1,5420 @@
+{
+  "started_at": "2026-11-10T15:36:54.252229+00:00",
+  "hardware": [
+    "Mac17,3",
+    "17179869184",
+    "10",
+    "Apple M5"
+  ],
+  "model": "gpt-5.6-luna",
+  "agent_id": "agent-1794325014242-28b20b6a70703da1",
+  "sandbox_capacity": 2,
+  "per_run_model_request_limit": 4,
+  "per_request_output_token_limit": 1024,
+  "total_run_limit": 80,
+  "total_model_attempt_limit": 320,
+  "grades": [
+    {
+      "concurrent_submissions": 10,
+      "sessions": [
+        "session-1794325014253-5ac7a96cb018cc01",
+        "session-1794325014254-6728f1fb12d9eca5"
+      ],
+      "submission_seconds": 0.074,
+      "runs": [
+        {
+          "run_id": "run-1794325014269-4be541e160ee0484",
+          "session_id": "session-1794325014253-5ac7a96cb018cc01",
+          "sandbox_id": "sandbox-1794325014494-bd1935d39e7ab724",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "861e107e327dc118e572a8605c0932aa",
+          "model_requests": 2,
+          "input_tokens": 15771,
+          "output_tokens": 427,
+          "error": "",
+          "queue_wait_ms": 230.932,
+          "execution_ms": 14260.204,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": false,
+            "sandbox_id": "sandbox-1794325014494-bd1935d39e7ab724",
+            "allocation_ms": 1991
+          },
+          "artifact_verified": true,
+          "source_sha256": "f0e038963b9aa54c6a502a8f5aef62eb16ae799be01d2a3e6150004f9197624f"
+        },
+        {
+          "run_id": "run-1794325014262-349a81018479e823",
+          "session_id": "session-1794325014254-6728f1fb12d9eca5",
+          "sandbox_id": "sandbox-1794325014505-d9c11aa89c835b45",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "1ed9afc30468ca0a3b2f2e83b44b7d1b",
+          "model_requests": 2,
+          "input_tokens": 15825,
+          "output_tokens": 561,
+          "error": "",
+          "queue_wait_ms": 231.932,
+          "execution_ms": 16222.336,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": false,
+            "sandbox_id": "sandbox-1794325014505-d9c11aa89c835b45",
+            "allocation_ms": 1981
+          },
+          "artifact_verified": true,
+          "source_sha256": "fd2feb228e2077237173d523bab6783c299d184d70701a5061165dc2e3411512"
+        },
+        {
+          "run_id": "run-1794325014301-1a52c67c07491ee3",
+          "session_id": "session-1794325014253-5ac7a96cb018cc01",
+          "sandbox_id": "sandbox-1794325014494-bd1935d39e7ab724",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "5ac69ad11133b1b81d9e171413b978bf",
+          "model_requests": 2,
+          "input_tokens": 17028,
+          "output_tokens": 359,
+          "error": "",
+          "queue_wait_ms": 16501.485,
+          "execution_ms": 13974.858,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325014494-bd1935d39e7ab724",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "97993c52e282492e70eb3abd772a7500743c4407af44feda5440b280180e6ab5"
+        },
+        {
+          "run_id": "run-1794325014273-72ed7b0f800f43b9",
+          "session_id": "session-1794325014254-6728f1fb12d9eca5",
+          "sandbox_id": "sandbox-1794325014505-d9c11aa89c835b45",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "ad8483c3d3cd391ac38f0a5e8fe3f7d8",
+          "model_requests": 2,
+          "input_tokens": 17351,
+          "output_tokens": 429,
+          "error": "",
+          "queue_wait_ms": 18463.841,
+          "execution_ms": 18553.184999999998,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325014505-d9c11aa89c835b45",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "a70be63f8623b04a788964450dd0b9c1539fc3297f144ec40c35b04334d72e19"
+        },
+        {
+          "run_id": "run-1794325014280-c5402629e9c16f5b",
+          "session_id": "session-1794325014253-5ac7a96cb018cc01",
+          "sandbox_id": "sandbox-1794325014494-bd1935d39e7ab724",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "3b7dd2008f011d9a44a60fc83413f2b5",
+          "model_requests": 2,
+          "input_tokens": 18175,
+          "output_tokens": 351,
+          "error": "",
+          "queue_wait_ms": 30499.463,
+          "execution_ms": 15452.218,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325014494-bd1935d39e7ab724",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "7bd9b9a4d1ebf68956a50074c96099127c0109583764d624e88dbe07b531d6ec"
+        },
+        {
+          "run_id": "run-1794325014286-405f783817921f6a",
+          "session_id": "session-1794325014254-6728f1fb12d9eca5",
+          "sandbox_id": "sandbox-1794325014505-d9c11aa89c835b45",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "63f1860a5613f6c5afb33ebc4ab85705",
+          "model_requests": 2,
+          "input_tokens": 18628,
+          "output_tokens": 400,
+          "error": "",
+          "queue_wait_ms": 37026.369000000006,
+          "execution_ms": 15766.85,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325014505-d9c11aa89c835b45",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "bd7c25ad2f49dbfdf5c4399733f3bf5db63cd739d88cb662443dbb307f9db1a7"
+        },
+        {
+          "run_id": "run-1794325014315-f722872500f6870c",
+          "session_id": "session-1794325014253-5ac7a96cb018cc01",
+          "sandbox_id": "sandbox-1794325014494-bd1935d39e7ab724",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "9db9d6194f4b256a974a226860b48bc3",
+          "model_requests": 2,
+          "input_tokens": 19302,
+          "output_tokens": 346,
+          "error": "",
+          "queue_wait_ms": 45970.852,
+          "execution_ms": 16983.844,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325014494-bd1935d39e7ab724",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "ae580b515226900c4116e4a8c0a5cdf28009c247024b8adf6f0c844763cbba7f"
+        },
+        {
+          "run_id": "run-1794325014309-80520108ba002435",
+          "session_id": "session-1794325014254-6728f1fb12d9eca5",
+          "sandbox_id": "sandbox-1794325014505-d9c11aa89c835b45",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "4e83e2c79c72fd3360ce7532126eb8bb",
+          "model_requests": 2,
+          "input_tokens": 19874,
+          "output_tokens": 408,
+          "error": "",
+          "queue_wait_ms": 52808.339,
+          "execution_ms": 15003.817,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325014505-d9c11aa89c835b45",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "32aa184081ccb35c2daf14b67dd15169a0cba1427f8d47a18634e70008d9bb36"
+        },
+        {
+          "run_id": "run-1794325014320-750686f6594dd0cd",
+          "session_id": "session-1794325014253-5ac7a96cb018cc01",
+          "sandbox_id": "sandbox-1794325014494-bd1935d39e7ab724",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "6be798342c4e3cab5027a15b01dfdd09",
+          "model_requests": 2,
+          "input_tokens": 20423,
+          "output_tokens": 347,
+          "error": "",
+          "queue_wait_ms": 62975.918999999994,
+          "execution_ms": 15057.325,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325014494-bd1935d39e7ab724",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "346142598b8b34688d9ff8edaf1019724a1192d7fdd7a52bf63981f9199f4b60"
+        },
+        {
+          "run_id": "run-1794325014326-64389dec8c7c4a91",
+          "session_id": "session-1794325014254-6728f1fb12d9eca5",
+          "sandbox_id": "sandbox-1794325014505-d9c11aa89c835b45",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "c3ee9484a78cf74724b4386171e10d51",
+          "model_requests": 2,
+          "input_tokens": 21132,
+          "output_tokens": 408,
+          "error": "",
+          "queue_wait_ms": 67823.509,
+          "execution_ms": 15735.997,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325014505-d9c11aa89c835b45",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "53e19c79a8dde96d44aa6ab1e59ac84e2d1e6b80d22725aeaab1e4c215b84d99"
+        }
+      ],
+      "samples": [
+        {
+          "elapsed_seconds": 0.078,
+          "running": 0,
+          "queued": 10,
+          "reserved_sandboxes": 0
+        },
+        {
+          "elapsed_seconds": 5.112,
+          "running": 2,
+          "queued": 8,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 11.2,
+          "running": 2,
+          "queued": 8,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 17.825,
+          "running": 2,
+          "queued": 7,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 23.918,
+          "running": 2,
+          "queued": 6,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 30.001,
+          "running": 2,
+          "queued": 6,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 36.799,
+          "running": 2,
+          "queued": 5,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 43.886,
+          "running": 2,
+          "queued": 4,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 50.967,
+          "running": 2,
+          "queued": 3,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 57.792,
+          "running": 2,
+          "queued": 2,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 64.884,
+          "running": 2,
+          "queued": 1,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 71.946,
+          "running": 2,
+          "queued": 0,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 78.818,
+          "running": 1,
+          "queued": 0,
+          "reserved_sandboxes": 2
+        }
+      ],
+      "elapsed_seconds": 83.906,
+      "success_rate": 1.0,
+      "queue_wait_ms": {
+        "samples": 10,
+        "p50": 30499.463,
+        "p95": 67823.509,
+        "max": 67823.509
+      },
+      "execution_ms": {
+        "samples": 10,
+        "p50": 15452.218,
+        "p95": 18553.185,
+        "max": 18553.184999999998
+      },
+      "cold_allocation_ms": {
+        "samples": 2,
+        "p50": 1981,
+        "p95": 1991,
+        "max": 1991
+      },
+      "model_usage": {
+        "model_requests": 20,
+        "input_tokens": 183509,
+        "output_tokens": 4036
+      },
+      "cleanup_verified": true
+    },
+    {
+      "concurrent_submissions": 20,
+      "sessions": [
+        "session-1794325100206-bbe9c5bbcbdfdb11",
+        "session-1794325100208-f683e64cbcffe015"
+      ],
+      "submission_seconds": 0.108,
+      "runs": [
+        {
+          "run_id": "run-1794325100220-e152e7879e9f0c79",
+          "session_id": "session-1794325100206-bbe9c5bbcbdfdb11",
+          "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "fd8ad674b0f9342b820f17528afb122d",
+          "model_requests": 2,
+          "input_tokens": 15818,
+          "output_tokens": 507,
+          "error": "",
+          "queue_wait_ms": 151.474,
+          "execution_ms": 18154.158,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": false,
+            "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+            "allocation_ms": 2013
+          },
+          "artifact_verified": true,
+          "source_sha256": "82aa6570b5fc28186594b889eee32d67aaaeb6db700166a39add0a2b0b333b61"
+        },
+        {
+          "run_id": "run-1794325100226-12be3b0e6e5c2bbe",
+          "session_id": "session-1794325100208-f683e64cbcffe015",
+          "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "392b01af73defae7deebcea5cf3fa1f0",
+          "model_requests": 2,
+          "input_tokens": 15771,
+          "output_tokens": 441,
+          "error": "",
+          "queue_wait_ms": 172.05599999999998,
+          "execution_ms": 17412.969,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": false,
+            "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+            "allocation_ms": 2014
+          },
+          "artifact_verified": true,
+          "source_sha256": "410f8ebb90f106cccddb269acc3b68693c10483163e442ca3ca60334fa066135"
+        },
+        {
+          "run_id": "run-1794325100252-1095765468253ca3",
+          "session_id": "session-1794325100208-f683e64cbcffe015",
+          "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "6a069c45b0da1905bd0e178009139cbc",
+          "model_requests": 2,
+          "input_tokens": 17035,
+          "output_tokens": 385,
+          "error": "",
+          "queue_wait_ms": 19605.352,
+          "execution_ms": 17998.501,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "8bed559379a3d14583cb72f844a1d9396c5e231c9fd0f683c707e518a7f5d7ce"
+        },
+        {
+          "run_id": "run-1794325100232-32946ae0430c1b84",
+          "session_id": "session-1794325100206-bbe9c5bbcbdfdb11",
+          "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "28e21261ae66d49de721f89cdc5ade4f",
+          "model_requests": 2,
+          "input_tokens": 17167,
+          "output_tokens": 397,
+          "error": "",
+          "queue_wait_ms": 20331.133,
+          "execution_ms": 18258.991,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "a57d8dd9404979ead0e5f0243d9c422be837c93fcc024319450d0bc4cd7c614d"
+        },
+        {
+          "run_id": "run-1794325100246-451d392361731c83",
+          "session_id": "session-1794325100208-f683e64cbcffe015",
+          "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "2bf65133fe6bd81ce8acd7f4b507c2b1",
+          "model_requests": 2,
+          "input_tokens": 18237,
+          "output_tokens": 383,
+          "error": "",
+          "queue_wait_ms": 37625.386,
+          "execution_ms": 17403.287,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "0cb147be90cfaaa99983a8456a05ba48a78fdae47e72b46754a2671a35483390"
+        },
+        {
+          "run_id": "run-1794325100257-5708f00013d301f7",
+          "session_id": "session-1794325100206-bbe9c5bbcbdfdb11",
+          "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "45aeb3dc66b34310ae97aaf0be6c5dfe",
+          "model_requests": 2,
+          "input_tokens": 18385,
+          "output_tokens": 393,
+          "error": "",
+          "queue_wait_ms": 38608.833,
+          "execution_ms": 17331.061999999998,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "881d6f45962297deb057d470abd352b1723be4c7667b4f3c67d3d2488cc17de8"
+        },
+        {
+          "run_id": "run-1794325100262-cfbaec4feaafb63f",
+          "session_id": "session-1794325100206-bbe9c5bbcbdfdb11",
+          "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "ddad730d947a8bb3ff55a6f9198cecdf",
+          "model_requests": 2,
+          "input_tokens": 19617,
+          "output_tokens": 399,
+          "error": "",
+          "queue_wait_ms": 55956.549,
+          "execution_ms": 17486.492,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "97345359441906ec71c00db03ed3a64129035e08cb26b897c28cc4570bade495"
+        },
+        {
+          "run_id": "run-1794325100238-07a06de9deac8f39",
+          "session_id": "session-1794325100208-f683e64cbcffe015",
+          "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "6eea9aff637522bbff79f7d93423287c",
+          "model_requests": 2,
+          "input_tokens": 19436,
+          "output_tokens": 380,
+          "error": "",
+          "queue_wait_ms": 55049.31,
+          "execution_ms": 21294.28,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "25399282a662943d49480fe2b0cfa7590e66a06928d1b632bfc858345e723b5b"
+        },
+        {
+          "run_id": "run-1794325100287-47d851679607e94a",
+          "session_id": "session-1794325100206-bbe9c5bbcbdfdb11",
+          "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "c1e5324bead07e80f5bfc6a5d07d7531",
+          "model_requests": 2,
+          "input_tokens": 20832,
+          "output_tokens": 384,
+          "error": "",
+          "queue_wait_ms": 73461.128,
+          "execution_ms": 19262.475,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "20d0376ad6a9b976bd83c4816345b2102bf4893641ae712388d3088122365fc5"
+        },
+        {
+          "run_id": "run-1794325100267-c0f45b8c89e221f2",
+          "session_id": "session-1794325100208-f683e64cbcffe015",
+          "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "e7f0b3ed566cbbe77f5b5642b15e096c",
+          "model_requests": 2,
+          "input_tokens": 20619,
+          "output_tokens": 375,
+          "error": "",
+          "queue_wait_ms": 76365.083,
+          "execution_ms": 16605.902000000002,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "a7c89fe385fbf1c95cec3eb0f35788683ac4db3a8b889200716b92627e506612"
+        },
+        {
+          "run_id": "run-1794325100272-3e65ec0b5fd43dac",
+          "session_id": "session-1794325100208-f683e64cbcffe015",
+          "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "7bfa272ca4f1a76532706ec259bf9885",
+          "model_requests": 2,
+          "input_tokens": 21800,
+          "output_tokens": 380,
+          "error": "",
+          "queue_wait_ms": 92986.492,
+          "execution_ms": 16141.027999999998,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "851e49e5a4ce7cbcf447367825da7141de208ec5129be32b602a2660731b7752"
+        },
+        {
+          "run_id": "run-1794325100282-d8371e029877d04a",
+          "session_id": "session-1794325100206-bbe9c5bbcbdfdb11",
+          "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "7fb1e61052abc84a04573ee6b32f4b6a",
+          "model_requests": 2,
+          "input_tokens": 22043,
+          "output_tokens": 397,
+          "error": "",
+          "queue_wait_ms": 92739.026,
+          "execution_ms": 20117.218,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "d12ce53e433e4a97e149c1e3ed678bedb0201e9e3bf2b030510a3aaaf21decad"
+        },
+        {
+          "run_id": "run-1794325100298-dad6574da156e266",
+          "session_id": "session-1794325100208-f683e64cbcffe015",
+          "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "f3127d5c4dec2c3fa6aef1437228c8b5",
+          "model_requests": 2,
+          "input_tokens": 22988,
+          "output_tokens": 378,
+          "error": "",
+          "queue_wait_ms": 109139.443,
+          "execution_ms": 16634.226000000002,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "ab8ba9d6e267d1431ee0bccf066a9c66dc336591b998b65f52efaf818d0df890"
+        },
+        {
+          "run_id": "run-1794325100277-ba4da78de5ba3d91",
+          "session_id": "session-1794325100206-bbe9c5bbcbdfdb11",
+          "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "f205356005cb39cdac54ab52f8ffa119",
+          "model_requests": 2,
+          "input_tokens": 23263,
+          "output_tokens": 389,
+          "error": "",
+          "queue_wait_ms": 112868.966,
+          "execution_ms": 18783.713,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "e3f2d3eda2065c34d30e1ad4481c7190c0f2b86c1a7ac6a94464814a37a27039"
+        },
+        {
+          "run_id": "run-1794325100292-a6fb33bade2b161a",
+          "session_id": "session-1794325100208-f683e64cbcffe015",
+          "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "61ab2fb62148b828dfefbe72a6d16c66",
+          "model_requests": 2,
+          "input_tokens": 24179,
+          "output_tokens": 381,
+          "error": "",
+          "queue_wait_ms": 125782.67599999999,
+          "execution_ms": 16294.153999999999,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "9ef6d06b0de6256663774eb28b01d957d5d66d18e915ace89ca6be96ca5ceb52"
+        },
+        {
+          "run_id": "run-1794325100304-8d20b503f618fa0a",
+          "session_id": "session-1794325100206-bbe9c5bbcbdfdb11",
+          "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "23948c6c13f50ed9411067d4250f77a0",
+          "model_requests": 2,
+          "input_tokens": 24470,
+          "output_tokens": 390,
+          "error": "",
+          "queue_wait_ms": 131669.12199999997,
+          "execution_ms": 16287.655,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "2741964dc625e00fdd48b8dc22d4c9c66a1c35dfd421e87d6e641cebd54b48f2"
+        },
+        {
+          "run_id": "run-1794325100307-4a6888068e3f2eda",
+          "session_id": "session-1794325100208-f683e64cbcffe015",
+          "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "ed3bdf4f887bd0951688112800bb5a74",
+          "model_requests": 2,
+          "input_tokens": 25374,
+          "output_tokens": 382,
+          "error": "",
+          "queue_wait_ms": 142085.16,
+          "execution_ms": 15727.142,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "693983df62a9446a9b24f0de1ceee85994f446ee8c423b4c96eb4ba3f369eea6"
+        },
+        {
+          "run_id": "run-1794325100310-95b90c07526b429e",
+          "session_id": "session-1794325100206-bbe9c5bbcbdfdb11",
+          "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "ea32488b3eaa8e59347c25571062ab2c",
+          "model_requests": 2,
+          "input_tokens": 25677,
+          "output_tokens": 389,
+          "error": "",
+          "queue_wait_ms": 147967.558,
+          "execution_ms": 23421.857,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "f74e71c0d0ba9321ae5a1d89e022aab0be23749410abdfb57a5f34866c66b3a0"
+        },
+        {
+          "run_id": "run-1794325100315-7f97cbf277b568d8",
+          "session_id": "session-1794325100208-f683e64cbcffe015",
+          "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "ca7f50d1ee751f9f8bdc9f76b830ee36",
+          "model_requests": 2,
+          "input_tokens": 26555,
+          "output_tokens": 373,
+          "error": "",
+          "queue_wait_ms": 157806.145,
+          "execution_ms": 17239.535,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100385-61bbd138354a4552",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "2220ef50b02658a2aa12e7030372b0796f9a5b50753e5f2e06c2f83da29d6313"
+        },
+        {
+          "run_id": "run-1794325100313-093f6be05a7175a5",
+          "session_id": "session-1794325100206-bbe9c5bbcbdfdb11",
+          "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "62cb3a3ea3d510e9999d13c5b0360cbd",
+          "model_requests": 2,
+          "input_tokens": 26881,
+          "output_tokens": 389,
+          "error": "",
+          "queue_wait_ms": 171394.949,
+          "execution_ms": 20461.287,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325100366-ac1b91cfe485251c",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "cc48d382a868e0eef64608105122e8a946391c08e033ddf27f5d215adc23f65a"
+        }
+      ],
+      "samples": [
+        {
+          "elapsed_seconds": 0.114,
+          "running": 0,
+          "queued": 20,
+          "reserved_sandboxes": 0
+        },
+        {
+          "elapsed_seconds": 5.159,
+          "running": 2,
+          "queued": 18,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 11.82,
+          "running": 2,
+          "queued": 18,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 18.895,
+          "running": 2,
+          "queued": 18,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 25.006,
+          "running": 2,
+          "queued": 16,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 31.87,
+          "running": 2,
+          "queued": 16,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 38.955,
+          "running": 2,
+          "queued": 14,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 46.04,
+          "running": 2,
+          "queued": 14,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 52.871,
+          "running": 2,
+          "queued": 14,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 59.962,
+          "running": 2,
+          "queued": 12,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 67.046,
+          "running": 2,
+          "queued": 12,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 73.122,
+          "running": 2,
+          "queued": 12,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 80.227,
+          "running": 2,
+          "queued": 10,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 86.301,
+          "running": 2,
+          "queued": 10,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 92.889,
+          "running": 2,
+          "queued": 9,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 99.976,
+          "running": 2,
+          "queued": 8,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 106.066,
+          "running": 2,
+          "queued": 8,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 112.912,
+          "running": 2,
+          "queued": 6,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 119.994,
+          "running": 2,
+          "queued": 6,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 127.09,
+          "running": 2,
+          "queued": 5,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 134.172,
+          "running": 2,
+          "queued": 4,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 140.873,
+          "running": 2,
+          "queued": 4,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 146.948,
+          "running": 2,
+          "queued": 3,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 154.028,
+          "running": 2,
+          "queued": 2,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 160.881,
+          "running": 2,
+          "queued": 1,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 167.971,
+          "running": 2,
+          "queued": 1,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 174.069,
+          "running": 2,
+          "queued": 0,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 180.889,
+          "running": 1,
+          "queued": 0,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 187.955,
+          "running": 1,
+          "queued": 0,
+          "reserved_sandboxes": 2
+        }
+      ],
+      "elapsed_seconds": 192.02,
+      "success_rate": 1.0,
+      "queue_wait_ms": {
+        "samples": 20,
+        "p50": 76365.083,
+        "p95": 157806.145,
+        "max": 171394.949
+      },
+      "execution_ms": {
+        "samples": 20,
+        "p50": 17412.969,
+        "p95": 21294.28,
+        "max": 23421.857
+      },
+      "cold_allocation_ms": {
+        "samples": 2,
+        "p50": 2013,
+        "p95": 2014,
+        "max": 2014
+      },
+      "model_usage": {
+        "model_requests": 40,
+        "input_tokens": 426147,
+        "output_tokens": 7892
+      },
+      "cleanup_verified": true
+    },
+    {
+      "concurrent_submissions": 50,
+      "sessions": [
+        "session-1794325294245-88b28d3fa6e3c129",
+        "session-1794325294246-78907291a4d44d1f"
+      ],
+      "submission_seconds": 0.154,
+      "runs": [
+        {
+          "run_id": "run-1794325294260-a096027eb8a49673",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "e31b65fe73243a5e58cd91d61560e60d",
+          "model_requests": 2,
+          "input_tokens": 15799,
+          "output_tokens": 499,
+          "error": "",
+          "queue_wait_ms": 187.138,
+          "execution_ms": 15834.364000000001,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": false,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1845
+          },
+          "artifact_verified": true,
+          "source_sha256": "a5b92fa605a14b4400c408679dfe602e9dba045f6192d9240a9c678399e90b4d"
+        },
+        {
+          "run_id": "run-1794325294271-39a04c73ebdd61e3",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "5efbb6b39a4133d2baeb55f3c6ce5842",
+          "model_requests": 2,
+          "input_tokens": 15796,
+          "output_tokens": 487,
+          "error": "",
+          "queue_wait_ms": 370.59799999999996,
+          "execution_ms": 15721.511,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": false,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1839
+          },
+          "artifact_verified": true,
+          "source_sha256": "59e8940f6e2325dc2b60f7ef1b59cfb8f5aab66610e2c674432d82d57b09b9a4"
+        },
+        {
+          "run_id": "run-1794325294277-9f668bdba0b47096",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "6f4fc2f9d87ac768933c4a7d62180052",
+          "model_requests": 2,
+          "input_tokens": 17104,
+          "output_tokens": 403,
+          "error": "",
+          "queue_wait_ms": 17929.298,
+          "execution_ms": 15587.617,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "188d2828246d44763aeb2feae0dc02a997fb0684b753a5d98046ab79af163ba4"
+        },
+        {
+          "run_id": "run-1794325294283-fbbeef02c42762ae",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "e88666759df28a7703e4dff46f3f9634",
+          "model_requests": 2,
+          "input_tokens": 17119,
+          "output_tokens": 390,
+          "error": "",
+          "queue_wait_ms": 17873.469,
+          "execution_ms": 15406.926,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "3e51d06decce18e987a433323026e8107ac96155e57218bcddb29828cded88cb"
+        },
+        {
+          "run_id": "run-1794325294294-c0a87a35d78e6562",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "0b16d34b022da6f1523aedde44e05da8",
+          "model_requests": 2,
+          "input_tokens": 18303,
+          "output_tokens": 380,
+          "error": "",
+          "queue_wait_ms": 33297.562,
+          "execution_ms": 17239.681999999997,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "52b98551fea65c34772ba3126b2cd51329c1188947d27d336119231c30f8c6c2"
+        },
+        {
+          "run_id": "run-1794325294288-a975959419e6348d",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "393b33d2cbd7a9f5fa3b4b4a32b0ce67",
+          "model_requests": 2,
+          "input_tokens": 18340,
+          "output_tokens": 407,
+          "error": "",
+          "queue_wait_ms": 33527.933,
+          "execution_ms": 17411.055,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "a839b7150a8bd6cd9f7760d3b87f64a28cfcc83b3dc4b7a9a83009a81b29fde8"
+        },
+        {
+          "run_id": "run-1794325294313-fd3e490730a77e5f",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "aa6aa0fc2ff4b8a1752fd8eaf57ddbd7",
+          "model_requests": 2,
+          "input_tokens": 19576,
+          "output_tokens": 399,
+          "error": "",
+          "queue_wait_ms": 50952.916000000005,
+          "execution_ms": 17720.677,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "a8a7df8ef6e74be32890bc0ae733824d477aa0584efbb4631917c6393336d936"
+        },
+        {
+          "run_id": "run-1794325294328-1e34ee033f02349f",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "3443dea8418daded361039e33feaa9e8",
+          "model_requests": 2,
+          "input_tokens": 19503,
+          "output_tokens": 394,
+          "error": "",
+          "queue_wait_ms": 50555.401000000005,
+          "execution_ms": 22909.772,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "19d1df5976cdb17926a7b883f170f4f437410d0e14064e0afabe1ac4c6b145fe"
+        },
+        {
+          "run_id": "run-1794325294299-43d969c1e5d2446e",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "a7efc9fbffe87e04261c6ead99037411",
+          "model_requests": 2,
+          "input_tokens": 20802,
+          "output_tokens": 401,
+          "error": "",
+          "queue_wait_ms": 68695.30399999999,
+          "execution_ms": 16501.628,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "b7c762144ee8a37976bbb6878bfe8652a691f86ffc65566a6f8cc4d52f22b095"
+        },
+        {
+          "run_id": "run-1794325294323-5e07b0eea1b37fa4",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "e22419fc22ad5757038129f7f6cdb9b2",
+          "model_requests": 2,
+          "input_tokens": 20712,
+          "output_tokens": 385,
+          "error": "",
+          "queue_wait_ms": 73481.864,
+          "execution_ms": 22409.558,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "f1ad2362b3315183f7253953949dfd8f9f0ed330d1e3dc79e161ca41459f47f3"
+        },
+        {
+          "run_id": "run-1794325294309-ca7183e26d24861e",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "0b240af28f44411ae259d19703921262",
+          "model_requests": 2,
+          "input_tokens": 22025,
+          "output_tokens": 398,
+          "error": "",
+          "queue_wait_ms": 85215.56099999999,
+          "execution_ms": 17165.787,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "47b07c1422383ba4c8225e2ca13c822f374e18e6cba3fb1cafad97516826a282"
+        },
+        {
+          "run_id": "run-1794325294318-b49ffb7085b31e6c",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "7a32cc58c98eacd4157578a4ba7e256c",
+          "model_requests": 2,
+          "input_tokens": 21913,
+          "output_tokens": 390,
+          "error": "",
+          "queue_wait_ms": 95903.786,
+          "execution_ms": 17146.737,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "bfb29921e3fdfde26f611b7b229c1d50dfbd1e9d1980c1f48465688b149e5e42"
+        },
+        {
+          "run_id": "run-1794325294304-a539acb02e553f55",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "d7b3c00c459d4566cfdc43d9fbf75d9d",
+          "model_requests": 2,
+          "input_tokens": 23244,
+          "output_tokens": 399,
+          "error": "",
+          "queue_wait_ms": 102394.69099999999,
+          "execution_ms": 20553.406,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "1e93041a92dbe6f178578f99c49dcd60318c237e48de2e4f80f1516b5a0fb9f7"
+        },
+        {
+          "run_id": "run-1794325294333-45052bc5706820e7",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "0db318b39e351933a9b84ab33591feed",
+          "model_requests": 2,
+          "input_tokens": 23108,
+          "output_tokens": 381,
+          "error": "",
+          "queue_wait_ms": 113065.783,
+          "execution_ms": 20808.986999999997,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "fbaba5034645986946667d06008d20f1a81d83ca712db55e7888136a3fca51cd"
+        },
+        {
+          "run_id": "run-1794325294350-5ba9b200643cc192",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "1a8ce9289599c46892d283080a6743ac",
+          "model_requests": 2,
+          "input_tokens": 24451,
+          "output_tokens": 392,
+          "error": "",
+          "queue_wait_ms": 122948.918,
+          "execution_ms": 15768.874,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 2
+          },
+          "artifact_verified": true,
+          "source_sha256": "19d4313eecf43d0ec30df0da8662a9beb70ce6f386b1a782aa2b220b71e6bd68"
+        },
+        {
+          "run_id": "run-1794325294345-63182dbf69d9ac07",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "ecd5730834734a83754b4bcc3623ad51",
+          "model_requests": 2,
+          "input_tokens": 24300,
+          "output_tokens": 389,
+          "error": "",
+          "queue_wait_ms": 133887.767,
+          "execution_ms": 16365.376999999999,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "6febaa4bcbde788158eda8bb445490509362c851ceacd6b1c738901ed9a14fc0"
+        },
+        {
+          "run_id": "run-1794325294352-772ab22563ef10ff",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "a83703871226f968f9968ab19ae86947",
+          "model_requests": 2,
+          "input_tokens": 25661,
+          "output_tokens": 400,
+          "error": "",
+          "queue_wait_ms": 138731.84699999998,
+          "execution_ms": 15471.339,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "1b28cddc341569de71ac6a0419802322fed22cf2e6368b1790c1811abd06e645"
+        },
+        {
+          "run_id": "run-1794325294340-9a605e3d7ab3b213",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "69fb7a6aa5cf3e0fd44616737fcca6c7",
+          "model_requests": 2,
+          "input_tokens": 25505,
+          "output_tokens": 388,
+          "error": "",
+          "queue_wait_ms": 150268.15600000002,
+          "execution_ms": 16752.542999999998,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "34418b64d7f3eb890b31c165cc36e3fb0b0e0905fe6fecd7f2b7e6fa55e4adf5"
+        },
+        {
+          "run_id": "run-1794325294354-ace41966b2b13288",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "4ed456c12224ffa4165f1023841d88b8",
+          "model_requests": 2,
+          "input_tokens": 26890,
+          "output_tokens": 401,
+          "error": "",
+          "queue_wait_ms": 154208.514,
+          "execution_ms": 18950.918999999998,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "a138f2a02cf75da97b3fdada759b645e6a3f6fc6de0a6a332efa66dee3edca18"
+        },
+        {
+          "run_id": "run-1794325294335-955141ec19359fbb",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "c1499f9f8ffaed6be727dad2671ecaf0",
+          "model_requests": 2,
+          "input_tokens": 26702,
+          "output_tokens": 385,
+          "error": "",
+          "queue_wait_ms": 167032.20200000002,
+          "execution_ms": 17541.81,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "e89c9d7da50ce1eee7fb9d6dc3eb99245ca2f7b424228c827c7d4b27a521a51e"
+        },
+        {
+          "run_id": "run-1794325294358-e28c85ae26b07fa6",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "8e11cae46b0cbe073330d5cba5f241e2",
+          "model_requests": 2,
+          "input_tokens": 28110,
+          "output_tokens": 397,
+          "error": "",
+          "queue_wait_ms": 173158.037,
+          "execution_ms": 22226.274,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "cece52b01ed76bfde2353496e496415f7671379cc0912855e4c90a702ea6ce92"
+        },
+        {
+          "run_id": "run-1794325294347-1884fd52990a4315",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "40d9e02d576845d25f3786f85008d2ee",
+          "model_requests": 2,
+          "input_tokens": 27881,
+          "output_tokens": 380,
+          "error": "",
+          "queue_wait_ms": 184581.822,
+          "execution_ms": 17647.264,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "91ac87325cecbd854085acd761e94f62c3dfa658192f38f7d4e14febd915bbc1"
+        },
+        {
+          "run_id": "run-1794325294360-45dbe83bdaca6d49",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "4bfa62fc948a745b77ea5b9a629e720a",
+          "model_requests": 2,
+          "input_tokens": 29340,
+          "output_tokens": 407,
+          "error": "",
+          "queue_wait_ms": 195393.336,
+          "execution_ms": 17933.140000000003,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "3fd09550b2f623c3c0a3da22dfe6b5649bb2287276ac5955730f06a37b493766"
+        },
+        {
+          "run_id": "run-1794325294349-b3637a7f763c73c8",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "81f2aba999471e3f72ae4141d8fadc87",
+          "model_requests": 2,
+          "input_tokens": 29062,
+          "output_tokens": 385,
+          "error": "",
+          "queue_wait_ms": 202235.225,
+          "execution_ms": 16889.365,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "7b447e80850d90db1cf0fbe7471a6841739bf95d6ba7b2c69bf71211826c676a"
+        },
+        {
+          "run_id": "run-1794325294362-b042ef9fd407ef45",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "95ddcabbd6bf4a6680d3606bf3b78b88",
+          "model_requests": 2,
+          "input_tokens": 30559,
+          "output_tokens": 390,
+          "error": "",
+          "queue_wait_ms": 213335.032,
+          "execution_ms": 16694.313000000002,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "029d8cf0a33b14bd38d45d4a44301ca57daa3303c0781427c7554477d0ccdb99"
+        },
+        {
+          "run_id": "run-1794325294355-83535d3fc4193dcb",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "256272966b559c0b7d64cf7d7a7ce0a5",
+          "model_requests": 2,
+          "input_tokens": 30257,
+          "output_tokens": 386,
+          "error": "",
+          "queue_wait_ms": 219113.69400000002,
+          "execution_ms": 17148.306,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "d0d3be3b1b78b634c1272c341fd1247f8df93575298ad708f44bd8613428a8b4"
+        },
+        {
+          "run_id": "run-1794325294364-cc0c823da0766543",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "2bef3f2fd6af3ba3871a01f8146e0a6f",
+          "model_requests": 2,
+          "input_tokens": 31773,
+          "output_tokens": 404,
+          "error": "",
+          "queue_wait_ms": 230034.649,
+          "execution_ms": 17352.341,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "9080b1de6799539e4a8961fb67eabe1d678eaa1823ebc218fac03a3d40f3ee3a"
+        },
+        {
+          "run_id": "run-1794325294357-7d7dd513da823466",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "55a3638ba6cb7c3d0208098dcfb83063",
+          "model_requests": 2,
+          "input_tokens": 31450,
+          "output_tokens": 385,
+          "error": "",
+          "queue_wait_ms": 236271.02,
+          "execution_ms": 14831.982999999998,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "c5472d2c59f482471b3425153410e83200f0345def527353a9ce756e0a95103a"
+        },
+        {
+          "run_id": "run-1794325294365-0c5e7aec264c84b6",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "65d54879754a655d72fcabc57678759b",
+          "model_requests": 2,
+          "input_tokens": 32643,
+          "output_tokens": 386,
+          "error": "",
+          "queue_wait_ms": 251089.74599999998,
+          "execution_ms": 17197.105,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "f3b30a46f337dda00b7eb372757c1aa3e2cf3d9393ea7c3daaa1c60ecfcb8b4c"
+        },
+        {
+          "run_id": "run-1794325294367-8b32994d2791cc96",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "b6b19ada317aec70f5d2b86c37db28e8",
+          "model_requests": 2,
+          "input_tokens": 32992,
+          "output_tokens": 393,
+          "error": "",
+          "queue_wait_ms": 247386.76200000002,
+          "execution_ms": 26301.122,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "9a2902ecce574a850e0df4c25473fabd64f401fb5cbd70fa026719df04c185db"
+        },
+        {
+          "run_id": "run-1794325294369-836232973ab96ee8",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "2f8de1ac450ee52aff52fb3ed8525257",
+          "model_requests": 2,
+          "input_tokens": 33851,
+          "output_tokens": 392,
+          "error": "",
+          "queue_wait_ms": 268290.774,
+          "execution_ms": 20908.564,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "bb4c5ab0440cd599bfb263226f0275898666bbdd1cfd0bf79497d78a8b024058"
+        },
+        {
+          "run_id": "run-1794325294372-896714214962876e",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "6f8b91cd3b28bb456869874e2bf7d64f",
+          "model_requests": 2,
+          "input_tokens": 34194,
+          "output_tokens": 395,
+          "error": "",
+          "queue_wait_ms": 273686.88800000004,
+          "execution_ms": 22230.101000000002,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "1b3324a74e9eb04996d0eb63896231d0185f9d1a4f44a7f8c11727b8de558b8d"
+        },
+        {
+          "run_id": "run-1794325294370-b7b258c2116a2042",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "0f00c3ab53ab2aa298f50e09899882f1",
+          "model_requests": 2,
+          "input_tokens": 35071,
+          "output_tokens": 392,
+          "error": "",
+          "queue_wait_ms": 289210.673,
+          "execution_ms": 18791.941000000003,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "7a9f6237420dfb80db2594e2d65e6853c3fb4e8a7286636c9aef6874e5d11e59"
+        },
+        {
+          "run_id": "run-1794325294374-c84e6d063fa62d15",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "c4a23f6b218476994a93b1c07f32c0ff",
+          "model_requests": 2,
+          "input_tokens": 35408,
+          "output_tokens": 399,
+          "error": "",
+          "queue_wait_ms": 295926.584,
+          "execution_ms": 16345.642999999998,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "c0829e34cbadeb71c7f224ab24d8f0b87383adc41a06c4685f0922a9f2ffe20c"
+        },
+        {
+          "run_id": "run-1794325294377-c0cc4ad7907cf1d0",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "8cadbbbd97a6a8c460363c02924b4b18",
+          "model_requests": 2,
+          "input_tokens": 36283,
+          "output_tokens": 388,
+          "error": "",
+          "queue_wait_ms": 308006.04,
+          "execution_ms": 15564.263,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "cfe4c5e0fb90c2ca97cc6cc0a85183b9269e25cf66dcff520799ccc0287ea790"
+        },
+        {
+          "run_id": "run-1794325294375-a3a4aea549d39c9c",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "bcef5922bc3246b6016a68204af1d303",
+          "model_requests": 2,
+          "input_tokens": 36629,
+          "output_tokens": 398,
+          "error": "",
+          "queue_wait_ms": 312282.34500000003,
+          "execution_ms": 16681.262,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "723e7250d9014a476bfe663491d7005466c639559bb5746b5a33a9f1d1654b4f"
+        },
+        {
+          "run_id": "run-1794325294378-109b862065ee7655",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "a7720fd2d5bcefaa3b20040ecac2002f",
+          "model_requests": 2,
+          "input_tokens": 37475,
+          "output_tokens": 382,
+          "error": "",
+          "queue_wait_ms": 323580.807,
+          "execution_ms": 15160.327000000001,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "1eab17694c934ccb38f6e8ba537dbdd8ce6ca885612af21925a5acca9c638381"
+        },
+        {
+          "run_id": "run-1794325294383-0ef818f60bf62b5e",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "d49f808124b38635037ccada25234bf2",
+          "model_requests": 2,
+          "input_tokens": 37843,
+          "output_tokens": 396,
+          "error": "",
+          "queue_wait_ms": 328968.369,
+          "execution_ms": 16158.327,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "35de469fcd7d72facaff63fca0695b55cd5b6d2a0968cefb7523caaa909ccdae"
+        },
+        {
+          "run_id": "run-1794325294380-5df9adb2894d25bb",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "fe71c59d93a9335bb40ebaa26db903d4",
+          "model_requests": 2,
+          "input_tokens": 38686,
+          "output_tokens": 397,
+          "error": "",
+          "queue_wait_ms": 338750.119,
+          "execution_ms": 28813.568,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "74e595bec037acf04373f3baf33542a8c2d771ab8d3836d43110df40fcb6a32d"
+        },
+        {
+          "run_id": "run-1794325294385-fba00940acc64d84",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "286ee2c45fb3ec93ebbf8e0912c1f8e8",
+          "model_requests": 2,
+          "input_tokens": 39050,
+          "output_tokens": 395,
+          "error": "",
+          "queue_wait_ms": 345137.799,
+          "execution_ms": 22869.089,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 3
+          },
+          "artifact_verified": true,
+          "source_sha256": "cdd5f0714e59d7c19f6d734ff86c8a376818d0247708a3fe4852a904ba9f7432"
+        },
+        {
+          "run_id": "run-1794325294382-640187a74cf8fc5c",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "2bd0c8d6b8b543030867352a15641d35",
+          "model_requests": 2,
+          "input_tokens": 39902,
+          "output_tokens": 385,
+          "error": "",
+          "queue_wait_ms": 367573.527,
+          "execution_ms": 15079.588,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "f3cfb2dc35b0cf7a15736b729ed799e640df88f08bf16ed39fff7cefc084622b"
+        },
+        {
+          "run_id": "run-1794325294386-73c599185db562bb",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "216c32bdfe48619c5d392dff98e87db6",
+          "model_requests": 2,
+          "input_tokens": 40265,
+          "output_tokens": 400,
+          "error": "",
+          "queue_wait_ms": 368023.206,
+          "execution_ms": 15813.618999999999,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "9ea606413664af29727669042fcd81de754d23cf1a23fd13a87f07442b7618ac"
+        },
+        {
+          "run_id": "run-1794325294388-2f933bc69534f3bd",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "f16931a730051915be7b68d0ddf301fa",
+          "model_requests": 2,
+          "input_tokens": 41484,
+          "output_tokens": 397,
+          "error": "",
+          "queue_wait_ms": 383855.409,
+          "execution_ms": 14724.339,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "f0d432860ecce3cff1aef71333b02b5f86c440b01dd33d19186d9189fc1c4b72"
+        },
+        {
+          "run_id": "run-1794325294391-0df8811e0912388b",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "6521adedbb30476a609346a2536a6f90",
+          "model_requests": 2,
+          "input_tokens": 41095,
+          "output_tokens": 386,
+          "error": "",
+          "queue_wait_ms": 382658.057,
+          "execution_ms": 16898.405,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "7509afc32dc5aa1010025e5e4a5d736b000395caccea4ecb3dab53e9f2618114"
+        },
+        {
+          "run_id": "run-1794325294395-4d0b834536bcf3c1",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": null,
+          "state": "CANCELLED",
+          "attempt": 0,
+          "trace_id": "fa30d4a7f9433e39c841479a9fe899d1",
+          "model_requests": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "error": "",
+          "queue_wait_ms": null,
+          "execution_ms": null,
+          "command_exited_before_finalization": false,
+          "allocation": null
+        },
+        {
+          "run_id": "run-1794325294400-41beb0d0e9200496",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": null,
+          "state": "CANCELLED",
+          "attempt": 0,
+          "trace_id": "d411f0ba5baab82e76c75a3675175381",
+          "model_requests": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "error": "",
+          "queue_wait_ms": null,
+          "execution_ms": null,
+          "command_exited_before_finalization": false,
+          "allocation": null
+        },
+        {
+          "run_id": "run-1794325294390-65e81e5db2b62ce3",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+          "state": "CANCELLED",
+          "attempt": 1,
+          "trace_id": "fc122663fa60e8382a228fa374aac102",
+          "model_requests": 1,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "error": "execution outcome uncertain; old sandbox quarantined; no automatic replay",
+          "queue_wait_ms": 398593.442,
+          "execution_ms": 11183.795,
+          "command_exited_before_finalization": false,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294623-23f572e5fb7280b0",
+            "allocation_ms": 0
+          }
+        },
+        {
+          "run_id": "run-1794325294396-946d7d7f5d933f9c",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": null,
+          "state": "CANCELLED",
+          "attempt": 0,
+          "trace_id": "6f7580016fa057cfc3d5fef4f6314eb8",
+          "model_requests": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "error": "",
+          "queue_wait_ms": null,
+          "execution_ms": null,
+          "command_exited_before_finalization": false,
+          "allocation": null
+        },
+        {
+          "run_id": "run-1794325294398-f76018ea1fcbc9c8",
+          "session_id": "session-1794325294245-88b28d3fa6e3c129",
+          "sandbox_id": null,
+          "state": "CANCELLED",
+          "attempt": 0,
+          "trace_id": "a8342c6b5ce19e46fb21dff1e01ee3d3",
+          "model_requests": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "error": "",
+          "queue_wait_ms": null,
+          "execution_ms": null,
+          "command_exited_before_finalization": false,
+          "allocation": null
+        },
+        {
+          "run_id": "run-1794325294393-3a6c8b1a8ada2123",
+          "session_id": "session-1794325294246-78907291a4d44d1f",
+          "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+          "state": "CANCELLED",
+          "attempt": 1,
+          "trace_id": "914f5aa2ca9fdc12ad71c0a523b7695f",
+          "model_requests": 1,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "error": "execution outcome uncertain; old sandbox quarantined; no automatic replay",
+          "queue_wait_ms": 399565.69,
+          "execution_ms": 10722.015000000001,
+          "command_exited_before_finalization": false,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794325294441-6efe1540d7453074",
+            "allocation_ms": 0
+          }
+        }
+      ],
+      "samples": [
+        {
+          "elapsed_seconds": 0.158,
+          "running": 0,
+          "queued": 50,
+          "reserved_sandboxes": 0
+        },
+        {
+          "elapsed_seconds": 5.2,
+          "running": 2,
+          "queued": 48,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 12.291,
+          "running": 2,
+          "queued": 48,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 18.852,
+          "running": 2,
+          "queued": 46,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 25.971,
+          "running": 2,
+          "queued": 46,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 33.062,
+          "running": 2,
+          "queued": 46,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 39.16,
+          "running": 2,
+          "queued": 44,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 45.251,
+          "running": 2,
+          "queued": 44,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 51.349,
+          "running": 2,
+          "queued": 42,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 57.851,
+          "running": 2,
+          "queued": 42,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 63.94,
+          "running": 2,
+          "queued": 42,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 71.036,
+          "running": 2,
+          "queued": 41,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 77.853,
+          "running": 2,
+          "queued": 40,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 84.929,
+          "running": 2,
+          "queued": 40,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 92.009,
+          "running": 2,
+          "queued": 39,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 98.855,
+          "running": 2,
+          "queued": 38,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 105.973,
+          "running": 2,
+          "queued": 37,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 113.052,
+          "running": 2,
+          "queued": 37,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 120.149,
+          "running": 2,
+          "queued": 36,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 126.847,
+          "running": 2,
+          "queued": 35,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 132.973,
+          "running": 2,
+          "queued": 35,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 139.068,
+          "running": 2,
+          "queued": 33,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 146.173,
+          "running": 2,
+          "queued": 33,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 153.274,
+          "running": 2,
+          "queued": 32,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 159.366,
+          "running": 2,
+          "queued": 31,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 165.471,
+          "running": 2,
+          "queued": 31,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 171.582,
+          "running": 2,
+          "queued": 30,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 177.889,
+          "running": 2,
+          "queued": 29,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 185.005,
+          "running": 2,
+          "queued": 28,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 192.103,
+          "running": 2,
+          "queued": 28,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 198.878,
+          "running": 2,
+          "queued": 27,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 206.0,
+          "running": 2,
+          "queued": 26,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 213.075,
+          "running": 2,
+          "queued": 26,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 220.215,
+          "running": 2,
+          "queued": 24,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 226.857,
+          "running": 2,
+          "queued": 24,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 232.963,
+          "running": 2,
+          "queued": 23,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 240.06,
+          "running": 2,
+          "queued": 22,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 246.862,
+          "running": 2,
+          "queued": 22,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 253.964,
+          "running": 2,
+          "queued": 20,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 261.041,
+          "running": 2,
+          "queued": 20,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 267.849,
+          "running": 2,
+          "queued": 20,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 274.944,
+          "running": 2,
+          "queued": 18,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 282.028,
+          "running": 2,
+          "queued": 18,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 288.867,
+          "running": 2,
+          "queued": 18,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 295.98,
+          "running": 2,
+          "queued": 17,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 303.077,
+          "running": 2,
+          "queued": 16,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 309.174,
+          "running": 2,
+          "queued": 15,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 316.293,
+          "running": 2,
+          "queued": 14,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 322.374,
+          "running": 2,
+          "queued": 14,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 328.872,
+          "running": 2,
+          "queued": 13,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 335.97,
+          "running": 2,
+          "queued": 12,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 342.06,
+          "running": 2,
+          "queued": 11,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 348.879,
+          "running": 2,
+          "queued": 10,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 355.963,
+          "running": 2,
+          "queued": 10,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 363.031,
+          "running": 2,
+          "queued": 10,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 369.135,
+          "running": 2,
+          "queued": 8,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 376.23,
+          "running": 2,
+          "queued": 8,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 383.322,
+          "running": 2,
+          "queued": 7,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 389.411,
+          "running": 2,
+          "queued": 6,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 395.513,
+          "running": 2,
+          "queued": 6,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 401.632,
+          "running": 2,
+          "queued": 4,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 407.91,
+          "running": 2,
+          "queued": 4,
+          "reserved_sandboxes": 2
+        }
+      ],
+      "elapsed_seconds": 411.057,
+      "success_rate": 0.88,
+      "queue_wait_ms": {
+        "samples": 46,
+        "p50": 195393.336,
+        "p95": 383855.409,
+        "max": 399565.69
+      },
+      "execution_ms": {
+        "samples": 46,
+        "p50": 16898.405,
+        "p95": 22909.772,
+        "max": 28813.568
+      },
+      "cold_allocation_ms": {
+        "samples": 2,
+        "p50": 1839,
+        "p95": 1845,
+        "max": 1845
+      },
+      "model_usage": {
+        "model_requests": 90,
+        "input_tokens": 1258156,
+        "output_tokens": 17483
+      },
+      "cleanup_verified": true
+    }
+  ],
+  "resource_samples": [
+    {
+      "grade": 10,
+      "elapsed_seconds": 5.112,
+      "stats": [
+        {
+          "BlockIO": "0B / 324kB",
+          "CPUPerc": "0.30%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "4.05%",
+          "MemUsage": "41.51MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "41.2kB / 42.9kB",
+          "PIDs": "48"
+        },
+        {
+          "BlockIO": "0B / 324kB",
+          "CPUPerc": "0.59%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "4.30%",
+          "MemUsage": "43.99MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "54kB / 44.3kB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 10,
+      "elapsed_seconds": 11.2,
+      "stats": [
+        {
+          "BlockIO": "0B / 324kB",
+          "CPUPerc": "4.66%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "4.57%",
+          "MemUsage": "46.76MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "184kB / 102kB",
+          "PIDs": "61"
+        },
+        {
+          "BlockIO": "0B / 324kB",
+          "CPUPerc": "0.40%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "4.68%",
+          "MemUsage": "47.88MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "174kB / 107kB",
+          "PIDs": "65"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 10,
+      "elapsed_seconds": 17.825,
+      "stats": [
+        {
+          "BlockIO": "0B / 3.33MB",
+          "CPUPerc": "16.89%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "4.44%",
+          "MemUsage": "45.45MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "294kB / 182kB",
+          "PIDs": "47"
+        },
+        {
+          "BlockIO": "0B / 3.9MB",
+          "CPUPerc": "0.21%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "4.48%",
+          "MemUsage": "45.88MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "251kB / 178kB",
+          "PIDs": "53"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 10,
+      "elapsed_seconds": 23.918,
+      "stats": [
+        {
+          "BlockIO": "0B / 3.33MB",
+          "CPUPerc": "0.46%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "4.54%",
+          "MemUsage": "46.53MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "294kB / 182kB",
+          "PIDs": "47"
+        },
+        {
+          "BlockIO": "0B / 3.9MB",
+          "CPUPerc": "1.20%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "4.44%",
+          "MemUsage": "45.43MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "360kB / 187kB",
+          "PIDs": "54"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 10,
+      "elapsed_seconds": 30.001,
+      "stats": [
+        {
+          "BlockIO": "0B / 3.33MB",
+          "CPUPerc": "0.42%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "4.46%",
+          "MemUsage": "45.68MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "439kB / 195kB",
+          "PIDs": "48"
+        },
+        {
+          "BlockIO": "0B / 4.8MB",
+          "CPUPerc": "0.15%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "4.41%",
+          "MemUsage": "45.13MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "484kB / 320kB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 10,
+      "elapsed_seconds": 36.799,
+      "stats": [
+        {
+          "BlockIO": "0B / 5.3MB",
+          "CPUPerc": "0.20%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "4.78%",
+          "MemUsage": "48.9MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "557kB / 337kB",
+          "PIDs": "54"
+        },
+        {
+          "BlockIO": "0B / 5.28MB",
+          "CPUPerc": "0.45%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "4.47%",
+          "MemUsage": "45.8MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "562kB / 327kB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 10,
+      "elapsed_seconds": 43.886,
+      "stats": [
+        {
+          "BlockIO": "0B / 5.3MB",
+          "CPUPerc": "0.67%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "4.77%",
+          "MemUsage": "48.84MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "697kB / 355kB",
+          "PIDs": "54"
+        },
+        {
+          "BlockIO": "0B / 5.28MB",
+          "CPUPerc": "0.52%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "4.70%",
+          "MemUsage": "48.09MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "674kB / 394kB",
+          "PIDs": "65"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 10,
+      "elapsed_seconds": 50.967,
+      "stats": [
+        {
+          "BlockIO": "0B / 6.18MB",
+          "CPUPerc": "6.44%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "0.93%",
+          "MemUsage": "9.531MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "815kB / 453kB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "0B / 5.62MB",
+          "CPUPerc": "1.65%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "4.45%",
+          "MemUsage": "45.53MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "777kB / 484kB",
+          "PIDs": "50"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 10,
+      "elapsed_seconds": 57.792,
+      "stats": [
+        {
+          "BlockIO": "0B / 6.21MB",
+          "CPUPerc": "1.64%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "4.79%",
+          "MemUsage": "49.06MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "941kB / 527kB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 5.62MB",
+          "CPUPerc": "1.29%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "4.79%",
+          "MemUsage": "49.03MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "903kB / 560kB",
+          "PIDs": "63"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 10,
+      "elapsed_seconds": 64.884,
+      "stats": [
+        {
+          "BlockIO": "0B / 6.21MB",
+          "CPUPerc": "0.71%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "5.06%",
+          "MemUsage": "51.77MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "1.05MB / 599kB",
+          "PIDs": "72"
+        },
+        {
+          "BlockIO": "0B / 7.01MB",
+          "CPUPerc": "0.72%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "4.89%",
+          "MemUsage": "50.1MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "1MB / 656kB",
+          "PIDs": "73"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 10,
+      "elapsed_seconds": 71.946,
+      "stats": [
+        {
+          "BlockIO": "0B / 7.11MB",
+          "CPUPerc": "0.98%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "4.41%",
+          "MemUsage": "45.16MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "1.17MB / 708kB",
+          "PIDs": "48"
+        },
+        {
+          "BlockIO": "0B / 7.01MB",
+          "CPUPerc": "0.41%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "5.31%",
+          "MemUsage": "54.36MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "1.15MB / 737kB",
+          "PIDs": "86"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 10,
+      "elapsed_seconds": 78.818,
+      "stats": [
+        {
+          "BlockIO": "0B / 7.17MB",
+          "CPUPerc": "0.29%",
+          "Container": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "ID": "d9d005304305",
+          "MemPerc": "4.76%",
+          "MemUsage": "48.7MiB / 1GiB",
+          "Name": "sandbox-2381f167-4dcd-4b11-b246-f2d7d09d4da7",
+          "NetIO": "1.27MB / 788kB",
+          "PIDs": "61"
+        },
+        {
+          "BlockIO": "0B / 7.94MB",
+          "CPUPerc": "0.01%",
+          "Container": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "ID": "be4a07c0e37a",
+          "MemPerc": "1.12%",
+          "MemUsage": "11.42MiB / 1GiB",
+          "Name": "sandbox-de10cf7d-bafc-4377-aad0-d35b51cb23e1",
+          "NetIO": "1.21MB / 776kB",
+          "PIDs": "11"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 5.159,
+      "stats": [
+        {
+          "BlockIO": "0B / 324kB",
+          "CPUPerc": "0.40%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.13%",
+          "MemUsage": "42.27MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "39.2kB / 42.9kB",
+          "PIDs": "47"
+        },
+        {
+          "BlockIO": "0B / 324kB",
+          "CPUPerc": "0.33%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.65%",
+          "MemUsage": "47.61MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "39.1kB / 42.8kB",
+          "PIDs": "56"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 11.82,
+      "stats": [
+        {
+          "BlockIO": "0B / 324kB",
+          "CPUPerc": "0.57%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.21%",
+          "MemUsage": "43.12MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "137kB / 59.1kB",
+          "PIDs": "47"
+        },
+        {
+          "BlockIO": "0B / 324kB",
+          "CPUPerc": "1.16%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.65%",
+          "MemUsage": "47.59MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "140kB / 59.7kB",
+          "PIDs": "56"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 18.895,
+      "stats": [
+        {
+          "BlockIO": "0B / 3.24MB",
+          "CPUPerc": "17.64%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.68%",
+          "MemUsage": "47.91MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "263kB / 181kB",
+          "PIDs": "50"
+        },
+        {
+          "BlockIO": "0B / 324kB",
+          "CPUPerc": "0.88%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.09%",
+          "MemUsage": "52.16MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "248kB / 115kB",
+          "PIDs": "69"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 25.006,
+      "stats": [
+        {
+          "BlockIO": "0B / 3.24MB",
+          "CPUPerc": "1.07%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.64%",
+          "MemUsage": "47.55MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "334kB / 188kB",
+          "PIDs": "50"
+        },
+        {
+          "BlockIO": "0B / 3.94MB",
+          "CPUPerc": "1.69%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.86%",
+          "MemUsage": "49.77MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "350kB / 193kB",
+          "PIDs": "51"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 31.87,
+      "stats": [
+        {
+          "BlockIO": "0B / 4.53MB",
+          "CPUPerc": "0.25%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "5.01%",
+          "MemUsage": "51.35MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "436kB / 251kB",
+          "PIDs": "64"
+        },
+        {
+          "BlockIO": "0B / 4.42MB",
+          "CPUPerc": "0.42%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.21%",
+          "MemUsage": "53.31MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "446kB / 255kB",
+          "PIDs": "64"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 38.955,
+      "stats": [
+        {
+          "BlockIO": "0B / 4.55MB",
+          "CPUPerc": "0.56%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.67%",
+          "MemUsage": "47.8MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "517kB / 333kB",
+          "PIDs": "47"
+        },
+        {
+          "BlockIO": "0B / 5.32MB",
+          "CPUPerc": "0.71%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.62%",
+          "MemUsage": "47.32MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "528kB / 338kB",
+          "PIDs": "56"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 46.04,
+      "stats": [
+        {
+          "BlockIO": "0B / 5.81MB",
+          "CPUPerc": "5.75%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "5.00%",
+          "MemUsage": "51.25MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "688kB / 405kB",
+          "PIDs": "60"
+        },
+        {
+          "BlockIO": "0B / 5.99MB",
+          "CPUPerc": "0.95%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.64%",
+          "MemUsage": "47.54MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "661kB / 353kB",
+          "PIDs": "56"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 52.871,
+      "stats": [
+        {
+          "BlockIO": "0B / 5.81MB",
+          "CPUPerc": "0.25%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.96%",
+          "MemUsage": "50.81MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "689kB / 406kB",
+          "PIDs": "60"
+        },
+        {
+          "BlockIO": "0B / 5.99MB",
+          "CPUPerc": "0.49%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.83%",
+          "MemUsage": "49.5MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "745kB / 414kB",
+          "PIDs": "69"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 59.962,
+      "stats": [
+        {
+          "BlockIO": "0B / 6.07MB",
+          "CPUPerc": "0.47%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.58%",
+          "MemUsage": "46.93MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "807kB / 496kB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 6.45MB",
+          "CPUPerc": "0.63%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.57%",
+          "MemUsage": "46.8MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "852kB / 510kB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 67.046,
+      "stats": [
+        {
+          "BlockIO": "0B / 6.07MB",
+          "CPUPerc": "0.57%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.59%",
+          "MemUsage": "47.04MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "822kB / 499kB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 6.45MB",
+          "CPUPerc": "0.48%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.97%",
+          "MemUsage": "50.88MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "964kB / 583kB",
+          "PIDs": "65"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 73.122,
+      "stats": [
+        {
+          "BlockIO": "0B / 6.07MB",
+          "CPUPerc": "0.16%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.89%",
+          "MemUsage": "50.04MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "937kB / 567kB",
+          "PIDs": "72"
+        },
+        {
+          "BlockIO": "0B / 7.34MB",
+          "CPUPerc": "0.33%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.29%",
+          "MemUsage": "54.16MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "1.05MB / 684kB",
+          "PIDs": "57"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 80.227,
+      "stats": [
+        {
+          "BlockIO": "0B / 7.14MB",
+          "CPUPerc": "0.89%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.84%",
+          "MemUsage": "49.61MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "1.07MB / 669kB",
+          "PIDs": "56"
+        },
+        {
+          "BlockIO": "0B / 7.39MB",
+          "CPUPerc": "0.88%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.31%",
+          "MemUsage": "54.35MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "1.09MB / 686kB",
+          "PIDs": "57"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 86.301,
+      "stats": [
+        {
+          "BlockIO": "0B / 7.73MB",
+          "CPUPerc": "0.28%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "5.16%",
+          "MemUsage": "52.87MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "1.19MB / 746kB",
+          "PIDs": "69"
+        },
+        {
+          "BlockIO": "0B / 8.03MB",
+          "CPUPerc": "0.28%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.63%",
+          "MemUsage": "57.64MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "1.23MB / 766kB",
+          "PIDs": "70"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 92.889,
+      "stats": [
+        {
+          "BlockIO": "0B / 8.19MB",
+          "CPUPerc": "0.20%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "5.79%",
+          "MemUsage": "59.28MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "1.27MB / 852kB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "0B / 8.25MB",
+          "CPUPerc": "1.14%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.82%",
+          "MemUsage": "49.33MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "1.31MB / 874kB",
+          "PIDs": "53"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 99.976,
+      "stats": [
+        {
+          "BlockIO": "0B / 8.19MB",
+          "CPUPerc": "1.52%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "5.80%",
+          "MemUsage": "59.44MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "1.39MB / 865kB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "0B / 8.25MB",
+          "CPUPerc": "1.27%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.85%",
+          "MemUsage": "49.66MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "1.41MB / 885kB",
+          "PIDs": "53"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 106.066,
+      "stats": [
+        {
+          "BlockIO": "0B / 8.19MB",
+          "CPUPerc": "1.24%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "6.07%",
+          "MemUsage": "62.21MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "1.48MB / 941kB",
+          "PIDs": "66"
+        },
+        {
+          "BlockIO": "0B / 8.25MB",
+          "CPUPerc": "0.94%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.21%",
+          "MemUsage": "53.33MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "1.49MB / 964kB",
+          "PIDs": "66"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 112.912,
+      "stats": [
+        {
+          "BlockIO": "0B / 8.78MB",
+          "CPUPerc": "0.52%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.88%",
+          "MemUsage": "49.98MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "1.58MB / 1.06MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "0B / 8.61MB",
+          "CPUPerc": "11.12%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.98%",
+          "MemUsage": "50.95MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "1.58MB / 1.08MB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 119.994,
+      "stats": [
+        {
+          "BlockIO": "0B / 9.76MB",
+          "CPUPerc": "0.24%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "5.21%",
+          "MemUsage": "53.39MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "1.71MB / 1.15MB",
+          "PIDs": "68"
+        },
+        {
+          "BlockIO": "0B / 9.92MB",
+          "CPUPerc": "1.69%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.97%",
+          "MemUsage": "50.86MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "1.64MB / 1.09MB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 127.09,
+      "stats": [
+        {
+          "BlockIO": "0B / 9.96MB",
+          "CPUPerc": "0.51%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.65%",
+          "MemUsage": "47.57MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "1.8MB / 1.27MB",
+          "PIDs": "50"
+        },
+        {
+          "BlockIO": "0B / 9.92MB",
+          "CPUPerc": "0.40%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.28%",
+          "MemUsage": "54.09MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "1.76MB / 1.18MB",
+          "PIDs": "65"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 134.172,
+      "stats": [
+        {
+          "BlockIO": "0B / 9.96MB",
+          "CPUPerc": "1.65%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.64%",
+          "MemUsage": "47.52MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "1.95MB / 1.29MB",
+          "PIDs": "50"
+        },
+        {
+          "BlockIO": "0B / 10.2MB",
+          "CPUPerc": "1.70%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.99%",
+          "MemUsage": "51.12MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "1.89MB / 1.3MB",
+          "PIDs": "55"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 140.873,
+      "stats": [
+        {
+          "BlockIO": "36.9kB / 11MB",
+          "CPUPerc": "7.42%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "1.12%",
+          "MemUsage": "11.43MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "2.06MB / 1.42MB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "28.7kB / 10.2MB",
+          "CPUPerc": "6.75%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.31%",
+          "MemUsage": "54.38MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "2.03MB / 1.4MB",
+          "PIDs": "68"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 146.948,
+      "stats": [
+        {
+          "BlockIO": "156kB / 11.1MB",
+          "CPUPerc": "1.13%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.87%",
+          "MemUsage": "49.87MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "2.17MB / 1.51MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "28.7kB / 11.3MB",
+          "CPUPerc": "7.75%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "1.20%",
+          "MemUsage": "12.28MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "2.12MB / 1.45MB",
+          "PIDs": "11"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 154.028,
+      "stats": [
+        {
+          "BlockIO": "156kB / 11.1MB",
+          "CPUPerc": "0.20%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "5.20%",
+          "MemUsage": "53.2MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "2.25MB / 1.6MB",
+          "PIDs": "71"
+        },
+        {
+          "BlockIO": "49.2kB / 11.4MB",
+          "CPUPerc": "0.25%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "4.85%",
+          "MemUsage": "49.61MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "2.2MB / 1.54MB",
+          "PIDs": "50"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 160.881,
+      "stats": [
+        {
+          "BlockIO": "156kB / 12MB",
+          "CPUPerc": "0.43%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.92%",
+          "MemUsage": "50.35MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "2.33MB / 1.74MB",
+          "PIDs": "60"
+        },
+        {
+          "BlockIO": "324kB / 11.4MB",
+          "CPUPerc": "1.04%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.25%",
+          "MemUsage": "53.73MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "2.31MB / 1.64MB",
+          "PIDs": "63"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 167.971,
+      "stats": [
+        {
+          "BlockIO": "156kB / 12.1MB",
+          "CPUPerc": "1.69%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "4.90%",
+          "MemUsage": "50.16MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "2.48MB / 1.76MB",
+          "PIDs": "60"
+        },
+        {
+          "BlockIO": "324kB / 11.4MB",
+          "CPUPerc": "0.41%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.18%",
+          "MemUsage": "53.06MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "2.31MB / 1.64MB",
+          "PIDs": "63"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 174.069,
+      "stats": [
+        {
+          "BlockIO": "225kB / 13MB",
+          "CPUPerc": "7.84%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "1.18%",
+          "MemUsage": "12.05MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "2.6MB / 1.91MB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "1.43MB / 12MB",
+          "CPUPerc": "0.15%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.46%",
+          "MemUsage": "55.93MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "2.4MB / 1.78MB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 180.889,
+      "stats": [
+        {
+          "BlockIO": "225kB / 13MB",
+          "CPUPerc": "0.00%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "1.10%",
+          "MemUsage": "11.24MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "2.6MB / 1.91MB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "1.43MB / 12.4MB",
+          "CPUPerc": "0.82%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.42%",
+          "MemUsage": "55.49MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "2.49MB / 1.79MB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 20,
+      "elapsed_seconds": 187.955,
+      "stats": [
+        {
+          "BlockIO": "225kB / 13MB",
+          "CPUPerc": "0.00%",
+          "Container": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "ID": "9e7163e30593",
+          "MemPerc": "1.09%",
+          "MemUsage": "11.16MiB / 1GiB",
+          "Name": "sandbox-0b97f7db-955b-46be-839d-93e0fea79113",
+          "NetIO": "2.6MB / 1.91MB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "1.43MB / 12.4MB",
+          "CPUPerc": "0.84%",
+          "Container": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "ID": "f6f81654be7e",
+          "MemPerc": "5.72%",
+          "MemUsage": "58.56MiB / 1GiB",
+          "Name": "sandbox-da559191-e6ca-4769-9494-26ef6430075b",
+          "NetIO": "2.61MB / 1.89MB",
+          "PIDs": "65"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 5.2,
+      "stats": [
+        {
+          "BlockIO": "0B / 3.71MB",
+          "CPUPerc": "0.25%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.19%",
+          "MemUsage": "42.88MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "41.2kB / 43.1kB",
+          "PIDs": "65"
+        },
+        {
+          "BlockIO": "61.4kB / 328kB",
+          "CPUPerc": "0.29%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "4.28%",
+          "MemUsage": "43.8MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "41.2kB / 43kB",
+          "PIDs": "57"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 12.291,
+      "stats": [
+        {
+          "BlockIO": "0B / 3.71MB",
+          "CPUPerc": "6.87%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.73%",
+          "MemUsage": "48.46MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "187kB / 109kB",
+          "PIDs": "78"
+        },
+        {
+          "BlockIO": "61.4kB / 3.71MB",
+          "CPUPerc": "5.10%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "4.75%",
+          "MemUsage": "48.68MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "180kB / 108kB",
+          "PIDs": "70"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 18.852,
+      "stats": [
+        {
+          "BlockIO": "0B / 4.56MB",
+          "CPUPerc": "0.27%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.35%",
+          "MemUsage": "44.54MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "271kB / 183kB",
+          "PIDs": "52"
+        },
+        {
+          "BlockIO": "61.4kB / 4.13MB",
+          "CPUPerc": "0.42%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "4.46%",
+          "MemUsage": "45.65MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "268kB / 184kB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 25.971,
+      "stats": [
+        {
+          "BlockIO": "0B / 4.56MB",
+          "CPUPerc": "0.66%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.31%",
+          "MemUsage": "44.17MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "392kB / 199kB",
+          "PIDs": "52"
+        },
+        {
+          "BlockIO": "61.4kB / 4.13MB",
+          "CPUPerc": "6.24%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "4.80%",
+          "MemUsage": "49.12MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "437kB / 254kB",
+          "PIDs": "65"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 33.062,
+      "stats": [
+        {
+          "BlockIO": "0B / 5.48MB",
+          "CPUPerc": "16.22%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.40%",
+          "MemUsage": "45.09MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "531kB / 338kB",
+          "PIDs": "51"
+        },
+        {
+          "BlockIO": "61.4kB / 5.1MB",
+          "CPUPerc": "12.53%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "4.99%",
+          "MemUsage": "51.11MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "521kB / 338kB",
+          "PIDs": "50"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 39.16,
+      "stats": [
+        {
+          "BlockIO": "0B / 5.52MB",
+          "CPUPerc": "1.21%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.44%",
+          "MemUsage": "45.49MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "607kB / 345kB",
+          "PIDs": "51"
+        },
+        {
+          "BlockIO": "61.4kB / 5.14MB",
+          "CPUPerc": "1.30%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.07%",
+          "MemUsage": "51.92MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "598kB / 345kB",
+          "PIDs": "50"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 45.251,
+      "stats": [
+        {
+          "BlockIO": "0B / 5.52MB",
+          "CPUPerc": "0.46%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.72%",
+          "MemUsage": "48.29MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "707kB / 413kB",
+          "PIDs": "64"
+        },
+        {
+          "BlockIO": "61.4kB / 5.14MB",
+          "CPUPerc": "0.59%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.36%",
+          "MemUsage": "54.9MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "693kB / 413kB",
+          "PIDs": "63"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 51.349,
+      "stats": [
+        {
+          "BlockIO": "0B / 6.41MB",
+          "CPUPerc": "0.53%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.42%",
+          "MemUsage": "45.3MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "794kB / 505kB",
+          "PIDs": "50"
+        },
+        {
+          "BlockIO": "61.4kB / 6.31MB",
+          "CPUPerc": "0.51%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "4.81%",
+          "MemUsage": "49.22MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "777kB / 504kB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 57.851,
+      "stats": [
+        {
+          "BlockIO": "0B / 6.45MB",
+          "CPUPerc": "0.60%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.59%",
+          "MemUsage": "46.96MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "884kB / 513kB",
+          "PIDs": "50"
+        },
+        {
+          "BlockIO": "61.4kB / 6.35MB",
+          "CPUPerc": "0.98%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.02%",
+          "MemUsage": "51.36MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "837kB / 509kB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 63.94,
+      "stats": [
+        {
+          "BlockIO": "0B / 6.45MB",
+          "CPUPerc": "0.31%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.86%",
+          "MemUsage": "49.75MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "965kB / 585kB",
+          "PIDs": "63"
+        },
+        {
+          "BlockIO": "61.4kB / 6.35MB",
+          "CPUPerc": "0.42%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.32%",
+          "MemUsage": "54.53MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "946kB / 577kB",
+          "PIDs": "65"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 71.036,
+      "stats": [
+        {
+          "BlockIO": "0B / 6.54MB",
+          "CPUPerc": "0.97%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.78%",
+          "MemUsage": "48.96MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "1.1MB / 688kB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "61.4kB / 6.46MB",
+          "CPUPerc": "0.83%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.00%",
+          "MemUsage": "51.2MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "1MB / 581kB",
+          "PIDs": "51"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 77.853,
+      "stats": [
+        {
+          "BlockIO": "0B / 7.97MB",
+          "CPUPerc": "3.92%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.10%",
+          "MemUsage": "52.25MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "1.23MB / 764kB",
+          "PIDs": "70"
+        },
+        {
+          "BlockIO": "61.4kB / 7.96MB",
+          "CPUPerc": "0.39%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.06%",
+          "MemUsage": "51.77MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "1.04MB / 678kB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 84.929,
+      "stats": [
+        {
+          "BlockIO": "0B / 8.47MB",
+          "CPUPerc": "20.09%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "6.83%",
+          "MemUsage": "69.97MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "1.32MB / 872kB",
+          "PIDs": "51"
+        },
+        {
+          "BlockIO": "61.4kB / 7.96MB",
+          "CPUPerc": "0.63%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.01%",
+          "MemUsage": "51.29MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "1.15MB / 689kB",
+          "PIDs": "52"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 92.009,
+      "stats": [
+        {
+          "BlockIO": "0B / 8.47MB",
+          "CPUPerc": "7.47%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "7.13%",
+          "MemUsage": "73.05MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "1.49MB / 954kB",
+          "PIDs": "64"
+        },
+        {
+          "BlockIO": "61.4kB / 7.96MB",
+          "CPUPerc": "0.47%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.27%",
+          "MemUsage": "54.01MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "1.22MB / 760kB",
+          "PIDs": "66"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 98.855,
+      "stats": [
+        {
+          "BlockIO": "0B / 8.47MB",
+          "CPUPerc": "0.46%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "7.05%",
+          "MemUsage": "72.19MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "1.5MB / 954kB",
+          "PIDs": "64"
+        },
+        {
+          "BlockIO": "61.4kB / 8.23MB",
+          "CPUPerc": "0.96%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "4.70%",
+          "MemUsage": "48.17MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "1.37MB / 873kB",
+          "PIDs": "48"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 105.973,
+      "stats": [
+        {
+          "BlockIO": "0B / 8.81MB",
+          "CPUPerc": "0.37%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "6.47%",
+          "MemUsage": "66.26MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "1.58MB / 1.07MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "61.4kB / 8.23MB",
+          "CPUPerc": "0.51%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.02%",
+          "MemUsage": "51.4MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "1.47MB / 954kB",
+          "PIDs": "61"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 113.052,
+      "stats": [
+        {
+          "BlockIO": "0B / 10MB",
+          "CPUPerc": "0.47%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "6.40%",
+          "MemUsage": "65.55MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "1.7MB / 1.08MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "61.4kB / 9.61MB",
+          "CPUPerc": "12.57%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "4.72%",
+          "MemUsage": "48.38MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "1.56MB / 1.07MB",
+          "PIDs": "51"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 120.149,
+      "stats": [
+        {
+          "BlockIO": "0B / 10.2MB",
+          "CPUPerc": "1.70%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "6.68%",
+          "MemUsage": "68.39MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "1.8MB / 1.16MB",
+          "PIDs": "71"
+        },
+        {
+          "BlockIO": "61.4kB / 10.3MB",
+          "CPUPerc": "0.51%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "4.69%",
+          "MemUsage": "47.99MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "1.7MB / 1.09MB",
+          "PIDs": "51"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 126.847,
+      "stats": [
+        {
+          "BlockIO": "0B / 10.4MB",
+          "CPUPerc": "0.89%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.09%",
+          "MemUsage": "52.17MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "1.92MB / 1.29MB",
+          "PIDs": "54"
+        },
+        {
+          "BlockIO": "61.4kB / 10.3MB",
+          "CPUPerc": "0.24%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.04%",
+          "MemUsage": "51.61MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "1.73MB / 1.16MB",
+          "PIDs": "64"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 132.973,
+      "stats": [
+        {
+          "BlockIO": "0B / 10.4MB",
+          "CPUPerc": "0.31%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.40%",
+          "MemUsage": "55.32MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "2.03MB / 1.38MB",
+          "PIDs": "67"
+        },
+        {
+          "BlockIO": "61.4kB / 10.5MB",
+          "CPUPerc": "10.49%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "1.99%",
+          "MemUsage": "20.35MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "1.83MB / 1.21MB",
+          "PIDs": "14"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 139.068,
+      "stats": [
+        {
+          "BlockIO": "0B / 11.4MB",
+          "CPUPerc": "0.15%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.96%",
+          "MemUsage": "50.79MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "2.12MB / 1.52MB",
+          "PIDs": "51"
+        },
+        {
+          "BlockIO": "61.4kB / 10.5MB",
+          "CPUPerc": "1.61%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "4.70%",
+          "MemUsage": "48.1MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "1.95MB / 1.3MB",
+          "PIDs": "46"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 146.173,
+      "stats": [
+        {
+          "BlockIO": "0B / 11.4MB",
+          "CPUPerc": "1.02%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.98%",
+          "MemUsage": "51.02MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "2.25MB / 1.54MB",
+          "PIDs": "51"
+        },
+        {
+          "BlockIO": "61.4kB / 10.5MB",
+          "CPUPerc": "0.48%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.19%",
+          "MemUsage": "53.12MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "2.03MB / 1.39MB",
+          "PIDs": "59"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 153.274,
+      "stats": [
+        {
+          "BlockIO": "0B / 11.8MB",
+          "CPUPerc": "6.10%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "1.16%",
+          "MemUsage": "11.89MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "2.4MB / 1.68MB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "61.4kB / 11.6MB",
+          "CPUPerc": "0.96%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "4.97%",
+          "MemUsage": "50.86MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "2.14MB / 1.52MB",
+          "PIDs": "48"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 159.366,
+      "stats": [
+        {
+          "BlockIO": "0B / 11.8MB",
+          "CPUPerc": "1.21%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "4.92%",
+          "MemUsage": "50.33MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "2.45MB / 1.77MB",
+          "PIDs": "51"
+        },
+        {
+          "BlockIO": "61.4kB / 11.6MB",
+          "CPUPerc": "4.80%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.27%",
+          "MemUsage": "54.01MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "2.28MB / 1.63MB",
+          "PIDs": "61"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 165.471,
+      "stats": [
+        {
+          "BlockIO": "0B / 11.8MB",
+          "CPUPerc": "5.60%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.24%",
+          "MemUsage": "53.65MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "2.58MB / 1.87MB",
+          "PIDs": "64"
+        },
+        {
+          "BlockIO": "61.4kB / 11.6MB",
+          "CPUPerc": "1.63%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.22%",
+          "MemUsage": "53.48MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "2.34MB / 1.63MB",
+          "PIDs": "61"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 171.582,
+      "stats": [
+        {
+          "BlockIO": "0B / 11.8MB",
+          "CPUPerc": "1.65%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.22%",
+          "MemUsage": "53.45MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "2.64MB / 1.88MB",
+          "PIDs": "64"
+        },
+        {
+          "BlockIO": "61.4kB / 12MB",
+          "CPUPerc": "1.44%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.14%",
+          "MemUsage": "52.64MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "2.43MB / 1.77MB",
+          "PIDs": "49"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 177.889,
+      "stats": [
+        {
+          "BlockIO": "0B / 13.3MB",
+          "CPUPerc": "2.85%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.29%",
+          "MemUsage": "54.15MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "2.72MB / 2.03MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "61.4kB / 12MB",
+          "CPUPerc": "0.32%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.48%",
+          "MemUsage": "56.16MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "2.55MB / 1.88MB",
+          "PIDs": "62"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 185.005,
+      "stats": [
+        {
+          "BlockIO": "0B / 13.3MB",
+          "CPUPerc": "0.65%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.21%",
+          "MemUsage": "53.39MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "2.79MB / 2.04MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "61.4kB / 13.4MB",
+          "CPUPerc": "0.41%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.08%",
+          "MemUsage": "51.99MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "2.65MB / 2.03MB",
+          "PIDs": "56"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 192.103,
+      "stats": [
+        {
+          "BlockIO": "0B / 14MB",
+          "CPUPerc": "0.45%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.26%",
+          "MemUsage": "53.91MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "2.9MB / 2.14MB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "61.4kB / 13.9MB",
+          "CPUPerc": "0.59%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.11%",
+          "MemUsage": "52.35MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "2.78MB / 2.05MB",
+          "PIDs": "56"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 198.878,
+      "stats": [
+        {
+          "BlockIO": "0B / 14.4MB",
+          "CPUPerc": "0.32%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.12%",
+          "MemUsage": "52.41MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "2.99MB / 2.3MB",
+          "PIDs": "64"
+        },
+        {
+          "BlockIO": "61.4kB / 13.9MB",
+          "CPUPerc": "0.61%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.44%",
+          "MemUsage": "55.68MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "2.86MB / 2.14MB",
+          "PIDs": "69"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 206.0,
+      "stats": [
+        {
+          "BlockIO": "0B / 14.4MB",
+          "CPUPerc": "5.01%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.65%",
+          "MemUsage": "57.84MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "3.15MB / 2.41MB",
+          "PIDs": "77"
+        },
+        {
+          "BlockIO": "61.4kB / 14.5MB",
+          "CPUPerc": "1.83%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.50%",
+          "MemUsage": "56.32MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "3MB / 2.31MB",
+          "PIDs": "65"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 213.075,
+      "stats": [
+        {
+          "BlockIO": "0B / 14.4MB",
+          "CPUPerc": "0.98%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "7.61%",
+          "MemUsage": "77.91MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "3.25MB / 2.58MB",
+          "PIDs": "54"
+        },
+        {
+          "BlockIO": "61.4kB / 14.5MB",
+          "CPUPerc": "0.92%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "6.03%",
+          "MemUsage": "61.76MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "3.1MB / 2.42MB",
+          "PIDs": "78"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 220.215,
+      "stats": [
+        {
+          "BlockIO": "0B / 14.5MB",
+          "CPUPerc": "1.43%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "7.59%",
+          "MemUsage": "77.76MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "3.38MB / 2.6MB",
+          "PIDs": "54"
+        },
+        {
+          "BlockIO": "61.4kB / 15.1MB",
+          "CPUPerc": "0.43%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.65%",
+          "MemUsage": "57.89MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "3.2MB / 2.59MB",
+          "PIDs": "67"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 226.857,
+      "stats": [
+        {
+          "BlockIO": "0B / 14.5MB",
+          "CPUPerc": "0.68%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "7.91%",
+          "MemUsage": "81MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "3.44MB / 2.71MB",
+          "PIDs": "68"
+        },
+        {
+          "BlockIO": "61.4kB / 15.1MB",
+          "CPUPerc": "2.06%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.64%",
+          "MemUsage": "57.75MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "3.3MB / 2.6MB",
+          "PIDs": "67"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 232.963,
+      "stats": [
+        {
+          "BlockIO": "0B / 15.6MB",
+          "CPUPerc": "0.28%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.97%",
+          "MemUsage": "61.11MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "3.57MB / 2.88MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "61.4kB / 15.1MB",
+          "CPUPerc": "2.15%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.91%",
+          "MemUsage": "60.53MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "3.43MB / 2.71MB",
+          "PIDs": "80"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 240.06,
+      "stats": [
+        {
+          "BlockIO": "0B / 16.3MB",
+          "CPUPerc": "0.23%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "6.38%",
+          "MemUsage": "65.32MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "3.72MB / 3.01MB",
+          "PIDs": "70"
+        },
+        {
+          "BlockIO": "61.4kB / 16.4MB",
+          "CPUPerc": "0.81%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.67%",
+          "MemUsage": "58.05MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "3.57MB / 2.9MB",
+          "PIDs": "48"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 246.862,
+      "stats": [
+        {
+          "BlockIO": "0B / 17.1MB",
+          "CPUPerc": "0.26%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.23%",
+          "MemUsage": "53.52MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "3.83MB / 3.19MB",
+          "PIDs": "63"
+        },
+        {
+          "BlockIO": "61.4kB / 16.4MB",
+          "CPUPerc": "0.26%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "6.02%",
+          "MemUsage": "61.61MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "3.67MB / 3.01MB",
+          "PIDs": "61"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 253.964,
+      "stats": [
+        {
+          "BlockIO": "0B / 17.1MB",
+          "CPUPerc": "0.67%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.18%",
+          "MemUsage": "53.03MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "3.86MB / 3.19MB",
+          "PIDs": "63"
+        },
+        {
+          "BlockIO": "61.4kB / 17MB",
+          "CPUPerc": "1.47%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.98%",
+          "MemUsage": "61.19MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "3.83MB / 3.2MB",
+          "PIDs": "53"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 261.041,
+      "stats": [
+        {
+          "BlockIO": "0B / 17.1MB",
+          "CPUPerc": "0.55%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.61%",
+          "MemUsage": "57.45MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "4.02MB / 3.32MB",
+          "PIDs": "76"
+        },
+        {
+          "BlockIO": "61.4kB / 17MB",
+          "CPUPerc": "0.62%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "6.31%",
+          "MemUsage": "64.61MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "3.95MB / 3.33MB",
+          "PIDs": "66"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 267.849,
+      "stats": [
+        {
+          "BlockIO": "0B / 17.2MB",
+          "CPUPerc": "0.25%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.61%",
+          "MemUsage": "57.48MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "4.02MB / 3.32MB",
+          "PIDs": "76"
+        },
+        {
+          "BlockIO": "201kB / 18.2MB",
+          "CPUPerc": "22.48%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.19%",
+          "MemUsage": "53.16MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "4.05MB / 3.52MB",
+          "PIDs": "45"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 274.944,
+      "stats": [
+        {
+          "BlockIO": "8.19kB / 17.8MB",
+          "CPUPerc": "0.33%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.54%",
+          "MemUsage": "56.71MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "4.12MB / 3.51MB",
+          "PIDs": "54"
+        },
+        {
+          "BlockIO": "201kB / 18.2MB",
+          "CPUPerc": "0.47%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.20%",
+          "MemUsage": "53.28MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "4.08MB / 3.52MB",
+          "PIDs": "45"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 282.028,
+      "stats": [
+        {
+          "BlockIO": "8.19kB / 18.1MB",
+          "CPUPerc": "0.33%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.43%",
+          "MemUsage": "55.64MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "4.15MB / 3.51MB",
+          "PIDs": "54"
+        },
+        {
+          "BlockIO": "217kB / 18.2MB",
+          "CPUPerc": "0.48%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.73%",
+          "MemUsage": "58.7MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "4.23MB / 3.65MB",
+          "PIDs": "58"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 288.867,
+      "stats": [
+        {
+          "BlockIO": "8.19kB / 18.1MB",
+          "CPUPerc": "0.23%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.75%",
+          "MemUsage": "58.9MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "4.31MB / 3.65MB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "225kB / 19.2MB",
+          "CPUPerc": "22.31%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.55%",
+          "MemUsage": "56.8MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "4.34MB / 3.85MB",
+          "PIDs": "55"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 295.98,
+      "stats": [
+        {
+          "BlockIO": "8.19kB / 19MB",
+          "CPUPerc": "0.50%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.36%",
+          "MemUsage": "54.88MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "4.41MB / 3.85MB",
+          "PIDs": "68"
+        },
+        {
+          "BlockIO": "225kB / 19.2MB",
+          "CPUPerc": "0.60%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.56%",
+          "MemUsage": "56.98MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "4.41MB / 3.86MB",
+          "PIDs": "55"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 303.077,
+      "stats": [
+        {
+          "BlockIO": "8.19kB / 19MB",
+          "CPUPerc": "1.15%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.36%",
+          "MemUsage": "54.88MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "4.5MB / 3.86MB",
+          "PIDs": "68"
+        },
+        {
+          "BlockIO": "225kB / 19.2MB",
+          "CPUPerc": "0.40%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.90%",
+          "MemUsage": "60.38MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "4.52MB / 3.99MB",
+          "PIDs": "68"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 309.174,
+      "stats": [
+        {
+          "BlockIO": "8.19kB / 19MB",
+          "CPUPerc": "2.25%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.66%",
+          "MemUsage": "57.93MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "4.65MB / 3.99MB",
+          "PIDs": "81"
+        },
+        {
+          "BlockIO": "225kB / 20.1MB",
+          "CPUPerc": "0.20%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.25%",
+          "MemUsage": "53.75MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "4.63MB / 4.2MB",
+          "PIDs": "55"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 316.293,
+      "stats": [
+        {
+          "BlockIO": "8.19kB / 19.1MB",
+          "CPUPerc": "1.01%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.38%",
+          "MemUsage": "55.06MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "4.75MB / 4.2MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "225kB / 20.2MB",
+          "CPUPerc": "7.35%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.69%",
+          "MemUsage": "58.22MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "4.82MB / 4.35MB",
+          "PIDs": "68"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 322.374,
+      "stats": [
+        {
+          "BlockIO": "8.19kB / 19.1MB",
+          "CPUPerc": "0.33%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.33%",
+          "MemUsage": "54.57MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "4.85MB / 4.21MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "225kB / 21.2MB",
+          "CPUPerc": "13.45%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "2.85%",
+          "MemUsage": "29.22MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "4.92MB / 4.44MB",
+          "PIDs": "20"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 328.872,
+      "stats": [
+        {
+          "BlockIO": "8.19kB / 20.9MB",
+          "CPUPerc": "0.36%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.46%",
+          "MemUsage": "55.88MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "5.01MB / 4.56MB",
+          "PIDs": "64"
+        },
+        {
+          "BlockIO": "225kB / 21.2MB",
+          "CPUPerc": "0.49%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.30%",
+          "MemUsage": "54.31MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "5.01MB / 4.58MB",
+          "PIDs": "58"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 335.97,
+      "stats": [
+        {
+          "BlockIO": "16.4kB / 20.9MB",
+          "CPUPerc": "1.35%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.39%",
+          "MemUsage": "55.18MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "5.14MB / 4.58MB",
+          "PIDs": "64"
+        },
+        {
+          "BlockIO": "225kB / 21.2MB",
+          "CPUPerc": "0.70%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.70%",
+          "MemUsage": "58.39MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "5.15MB / 4.72MB",
+          "PIDs": "71"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 342.06,
+      "stats": [
+        {
+          "BlockIO": "16.4kB / 21.8MB",
+          "CPUPerc": "1.12%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.91%",
+          "MemUsage": "60.57MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "5.24MB / 4.71MB",
+          "PIDs": "77"
+        },
+        {
+          "BlockIO": "295kB / 22.7MB",
+          "CPUPerc": "0.41%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.65%",
+          "MemUsage": "57.91MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "5.22MB / 4.94MB",
+          "PIDs": "69"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 348.879,
+      "stats": [
+        {
+          "BlockIO": "73.7kB / 22.1MB",
+          "CPUPerc": "0.12%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.34%",
+          "MemUsage": "54.64MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "5.31MB / 4.94MB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "295kB / 22.7MB",
+          "CPUPerc": "0.30%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.56%",
+          "MemUsage": "56.89MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "5.31MB / 4.95MB",
+          "PIDs": "69"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 355.963,
+      "stats": [
+        {
+          "BlockIO": "73.7kB / 22.1MB",
+          "CPUPerc": "0.35%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.42%",
+          "MemUsage": "55.54MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "5.41MB / 4.95MB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "295kB / 22.7MB",
+          "CPUPerc": "0.54%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.25%",
+          "MemUsage": "53.77MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "5.35MB / 4.96MB",
+          "PIDs": "39"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 363.031,
+      "stats": [
+        {
+          "BlockIO": "73.7kB / 22.1MB",
+          "CPUPerc": "0.27%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "6.00%",
+          "MemUsage": "61.4MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "5.51MB / 5.16MB",
+          "PIDs": "66"
+        },
+        {
+          "BlockIO": "295kB / 22.7MB",
+          "CPUPerc": "0.25%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.92%",
+          "MemUsage": "60.61MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "5.42MB / 5.17MB",
+          "PIDs": "53"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 369.135,
+      "stats": [
+        {
+          "BlockIO": "73.7kB / 23.2MB",
+          "CPUPerc": "0.16%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.20%",
+          "MemUsage": "53.21MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "5.61MB / 5.39MB",
+          "PIDs": "47"
+        },
+        {
+          "BlockIO": "295kB / 23.1MB",
+          "CPUPerc": "0.18%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.60%",
+          "MemUsage": "57.34MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "5.52MB / 5.4MB",
+          "PIDs": "63"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 376.23,
+      "stats": [
+        {
+          "BlockIO": "73.7kB / 23.2MB",
+          "CPUPerc": "7.21%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.65%",
+          "MemUsage": "57.81MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "5.81MB / 5.56MB",
+          "PIDs": "60"
+        },
+        {
+          "BlockIO": "295kB / 23.5MB",
+          "CPUPerc": "5.76%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.98%",
+          "MemUsage": "61.27MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "5.72MB / 5.56MB",
+          "PIDs": "76"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 383.322,
+      "stats": [
+        {
+          "BlockIO": "73.7kB / 23.2MB",
+          "CPUPerc": "16.13%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.47%",
+          "MemUsage": "56.01MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "5.92MB / 5.8MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "295kB / 24MB",
+          "CPUPerc": "0.14%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.54%",
+          "MemUsage": "56.7MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "5.83MB / 5.8MB",
+          "PIDs": "46"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 389.411,
+      "stats": [
+        {
+          "BlockIO": "73.7kB / 23.2MB",
+          "CPUPerc": "0.65%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.51%",
+          "MemUsage": "56.47MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "6MB / 5.81MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "295kB / 24MB",
+          "CPUPerc": "0.68%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.54%",
+          "MemUsage": "56.76MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "5.93MB / 5.82MB",
+          "PIDs": "46"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 395.513,
+      "stats": [
+        {
+          "BlockIO": "73.7kB / 23.2MB",
+          "CPUPerc": "0.84%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.86%",
+          "MemUsage": "60.01MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "6.15MB / 5.96MB",
+          "PIDs": "72"
+        },
+        {
+          "BlockIO": "295kB / 24.1MB",
+          "CPUPerc": "0.50%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.94%",
+          "MemUsage": "60.8MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "6.02MB / 5.97MB",
+          "PIDs": "59"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 401.632,
+      "stats": [
+        {
+          "BlockIO": "73.7kB / 24.9MB",
+          "CPUPerc": "1.66%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "5.57%",
+          "MemUsage": "57.04MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "6.27MB / 6.22MB",
+          "PIDs": "60"
+        },
+        {
+          "BlockIO": "295kB / 24.6MB",
+          "CPUPerc": "3.47%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "5.74%",
+          "MemUsage": "58.73MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "6.17MB / 6.22MB",
+          "PIDs": "54"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 407.91,
+      "stats": [
+        {
+          "BlockIO": "73.7kB / 24.9MB",
+          "CPUPerc": "7.73%",
+          "Container": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "ID": "026b0b10827e",
+          "MemPerc": "1.65%",
+          "MemUsage": "16.94MiB / 1GiB",
+          "Name": "sandbox-a875669f-e780-4350-b05a-231a51cb0036",
+          "NetIO": "6.36MB / 6.23MB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "295kB / 25.3MB",
+          "CPUPerc": "23.28%",
+          "Container": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "ID": "926af6961f4b",
+          "MemPerc": "1.71%",
+          "MemUsage": "17.47MiB / 1GiB",
+          "Name": "sandbox-ce900c43-d60d-4b78-94f8-1dcb3f335f60",
+          "NetIO": "6.26MB / 6.24MB",
+          "PIDs": "11"
+        }
+      ],
+      "observer_status": 0
+    }
+  ],
+  "scope": "real coding runs; concurrent submission is not concurrent sandbox count"
+}
