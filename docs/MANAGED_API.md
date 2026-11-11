@@ -44,3 +44,8 @@ Run input 1–65536 bytes；必须传 1–200 bytes `Idempotency-Key`。同租�
 SSE 事件按 event_id 递增，单次每批 200 条；连接 25 秒轮换，标准 EventSource 会自动带最后游标重连。每 Run 最多 10000 个持久事件，单事件 ≤64 KiB，浏览器保留最近 500 条显示。历史游标按 Run 过滤，不泄露其他租户数据。POST 的 HTTP 生命周期不等待模型执行完成。
 
 私有接口 `/internal/managed/authorize` 仅接受 SDK adapter secret；`/internal/managed/model/responses` 仅接受活动 Run capability。独立模型 listener 不提供任何其他路径。不要发布 SDK adapter 或 OpenSandbox Server 到公网。
+
+
+### Managed Profile
+
+`POST /v1/managed-agents` 可附带 `skills`（最多 8 个含 `name`、`description`、`content` 的定义）和 `knowledge_refs`（最多 16 个 Sandbox Workspace 内相对路径）。Profile 由 Go 验证并持久化，Sandbox App Server 将已选 Skill 装入当前 Turn。`tool_policy` 支持 `sandbox-write`（默认）和 `read-only`。Managed Profile 没有内部 Trace 或 Harbor 工具权限。文件引用不读取宿主文件，也不授予新的外部能力。现有定义保持版本与默认权限。

@@ -13,6 +13,10 @@ cp deploy/catena-mvp1/.env.example deploy/catena-mvp1/.env
 
 默认 Web 仅监听 127.0.0.1:5570，Engine 不发布端口。远程服务使用现有 compose.public.yml、GitHub OAuth、独立强随机 secret；本任务不自动发布公网。`public.sh` 保留现有 Caddy 部署入口。`Dockerfile.core.prebuilt` 用于已生成 Web dist 的离线构建。
 
+## OpenSandbox 执行配置
+
+新版 Engine 镜像只运行可信 Workflow 和 Harbor。Analysis、Improvement 与 Managed 的 Codex 都由同一个 OpenSandbox adapter 启动。Mac 本机可用[独立部署脚本](../managed/README.md)。在现有 Compose 部署中，先部署官方 OpenSandbox 与私有 SDK adapter，再配置 `CATENA_MANAGED_RUNNER_URL`、`CATENA_MANAGED_RUNNER_TOKEN` 和 Sandbox 可达的 `CATENA_MANAGED_CONTROL_URL`。通过受限网络把后者路由至 Core 的 capability listener（容器端口 18788）；普通 API 与 Engine 不应进入 Sandbox 出站规则。没有配置 Provider 时，服务继续提供历史查询，新执行入口不可用。升级步骤见[统一 Harness 迁移](../../docs/refactors/UNIFIED_HARNESS.md#升级)。
+
 ## Codex / Harbor 显式配置
 
 1. 创建 operator-owned 绝对目录，如 `/srv/catena-evaluation`，里面放已审核 Harbor task、cases.json、runs/。目录让 Engine UID 1001 可访问，receipt volume 仅 Engine 使用。

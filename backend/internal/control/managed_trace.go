@@ -20,7 +20,7 @@ func (p *managedPlatform) exportManagedTraces(ctx context.Context) error {
 	if p.server.traceSink == nil {
 		return nil
 	}
-	rows, err := p.store.db.QueryContext(ctx, `SELECT to_jsonb(r)-'credential_hash',s.agent_id,COALESCE(r.sandbox_id,'') FROM agent_runs r JOIN agent_sessions s USING(session_id) WHERE r.state IN ('COMPLETED','FAILED','CANCELLED','NEEDS_REVIEW') AND NOT r.trace_exported ORDER BY r.created_at LIMIT 20`)
+	rows, err := p.store.db.QueryContext(ctx, `SELECT to_jsonb(r)-'credential_hash',s.agent_id,COALESCE(r.sandbox_id,'') FROM agent_runs r JOIN agent_sessions s USING(session_id) WHERE s.workflow_job_id IS NULL AND r.state IN ('COMPLETED','FAILED','CANCELLED','NEEDS_REVIEW') AND NOT r.trace_exported ORDER BY r.created_at LIMIT 20`)
 	if err != nil {
 		return err
 	}

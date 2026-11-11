@@ -112,6 +112,10 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	if analysisRuntime != nil && managedConfig.URL == "" {
+		slog.Warn("Analysis and Improvement require the OpenSandbox runner; historical results remain available")
+		analysisRuntime = nil
+	}
 	handler, err := control.NewHTTPHandler(store, control.HTTPConfig{Managed: managedConfig, Auth: control.AuthConfig{
 		GitHubClientID:        githubClientID,
 		GitHubClientSecret:    githubClientSecret,

@@ -9,11 +9,12 @@ import shutil
 import signal
 import subprocess
 import tempfile
+from contextlib import ExitStack
+from dataclasses import dataclass
 from pathlib import Path
 
 from ..contracts import OptimizationError
 from ..protocol import JsonRequest
-from .cancellation import cancellable
 
 _MAX_STREAM_BYTES = 4 * 1024 * 1024
 _MAX_OUTPUT_BYTES = 128 * 1024
@@ -77,7 +78,40 @@ TRACE_TOOLS = [
 ]
 
 
-def _config(request: JsonRequest, instructions: str) -> str:
+IMPROVEMENT_TOOLS = [{
+    "type": "function",
+    "name": "evaluate_candidate",
+    "description": "Replace AGENTS.md or .agents/skills/<name>/SKILL.md only. Probe once on the fixed Case. Returns score-free evidence.",
+    "inputSchema": EDIT_SCHEMA,
+}]
+
+
+@dataclass(frozen=True)
+class AgentProfile:
+    kind: str
+    version: int
+    instructions: str
+    skill: str | None
+    knowledge: tuple[str, ...]
+    tools: tuple[dict, ...]
+    output_schema: dict | None
+    persistent: bool
+    shell: bool = False
+    user_skills: tuple[dict, ...] = ()
+
+
+def agent_profile(kind, version=1, instructions="", tool_policy="sandbox-write", skills=(), knowledge=()):
+    if kind == "analyze":
+        return AgentProfile(kind, version, ANALYSIS_INSTRUCTIONS, "trace-analysis", ("trace-evidence",), tuple(TRACE_TOOLS), ANALYSIS_SCHEMA, False)
+    if kind == "improve":
+        return AgentProfile(kind, version, INSTRUCTIONS, "harness-improvement", ("report", "baseline", "candidate"), tuple(IMPROVEMENT_TOOLS), EDIT_SCHEMA, False)
+    if kind == "managed" and version >= 1:
+        return AgentProfile(kind, version, instructions, None, tuple(knowledge), (), None, True,
+                            tool_policy == "sandbox-write", tuple(skills))
+    raise OptimizationError("unknown Agent Profile")
+
+
+def _config(request: JsonRequest, profile: AgentProfile) -> str:
     # JSON strings are TOML basic strings for these validated text values.
     def q(value):
         return json.dumps(value, ensure_ascii=False)
@@ -85,9 +119,9 @@ def _config(request: JsonRequest, instructions: str) -> str:
     return f"""model = {q(request.model.model)}
 model_provider = "catena"
 model_reasoning_effort = {q(os.environ.get("CATENA_CODEX_REASONING_EFFORT", "low"))}
-developer_instructions = {q(instructions)}
+developer_instructions = {q(profile.instructions)}
 approval_policy = "never"
-sandbox_mode = "read-only"
+sandbox_mode = {q("danger-full-access" if profile.shell else "read-only")}
 project_doc_max_bytes = 0
 web_search = "disabled"
 [skills]
@@ -95,7 +129,7 @@ include_instructions = true
 [skills.bundled]
 enabled = false
 [features]
-shell_tool = false
+shell_tool = {"true" if profile.shell else "false"}
 enable_request_compression = false
 apps = false
 multi_agent = false
@@ -109,6 +143,7 @@ browser_use = false
 computer_use = false
 [shell_environment_policy]
 inherit = "none"
+set = {{ PATH = "/usr/local/bin:/usr/bin:/bin", HOME = "/home/agent" }}
 [model_providers.catena]
 name = "Catena owner model"
 base_url = {q(request.model.base_url.rstrip("/"))}
@@ -170,38 +205,45 @@ class CodexRuntime:
         if version.strip() != "codex-cli 0.160.0":
             raise OptimizationError("Improvement requires pinned Codex CLI 0.160.0")
 
-    def run(self, prompt, timeout, evaluate_candidate, output, cancelled, mode="improve"):
-        request = JsonRequest("improvement", output.parent.name, prompt, max(1, int(timeout * 1000)), self.model)
-        return asyncio.run(cancellable(self._run(request, evaluate_candidate, output, mode), cancelled))
-
-    async def _run(self, request, evaluate_candidate, output, mode="improve"):
-        if mode not in ("analyze", "improve"):
-            raise OptimizationError("unknown Agent task mode")
-        name = "trace-analysis" if mode == "analyze" else "harness-improvement"
-        instructions = ANALYSIS_INSTRUCTIONS if mode == "analyze" else INSTRUCTIONS
-        schema = ANALYSIS_SCHEMA if mode == "analyze" else EDIT_SCHEMA
-        source_skill = SKILL.parent.parent / name / "SKILL.md"
+    async def _run(self, request, evaluate_candidate, output, mode="improve", *, profile=None,
+                   workspace=None, codex_home=None, thread=None, event=None):
+        profile = profile or agent_profile(mode)
+        name = profile.skill
         binary = shutil.which(os.environ.get("CATENA_CODEX_BIN", "codex"))
         if not binary:
             raise OptimizationError("Codex runtime is unavailable")
         output.mkdir(mode=0o700)
         process, stderr_task = None, None
-        with (
-            tempfile.TemporaryDirectory(prefix="catena-agent-") as directory,
-            (output / "protocol.jsonl").open("w", encoding="utf-8") as audit,
-        ):
-            root = Path(directory)
-            home, codex_home, workspace = (root / name for name in ("home", "codex", "workspace"))
-            for path in (home, codex_home, workspace):
-                path.mkdir(mode=0o700)
-            (codex_home / "config.toml").write_text(_config(request, instructions), encoding="utf-8")
-            skill_root = root / "analysis-skills"
-            skill = skill_root / name / "SKILL.md"
-            skill.parent.mkdir(parents=True)
-            skill.write_bytes(source_skill.read_bytes())
+        with ExitStack() as stack:
+            root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="catena-agent-")))
+            audit = stack.enter_context((output / "protocol.jsonl").open("w", encoding="utf-8"))
+            home = root / "home"
+            home.mkdir(mode=0o700)
+            codex_home = codex_home or root / "codex"
+            workspace = workspace or root / "workspace"
+            for path in (codex_home, workspace):
+                path.mkdir(mode=0o700, exist_ok=True)
+            (codex_home / "config.toml").write_text(_config(request, profile), encoding="utf-8")
+            skill_root = root / "skills"
+            selected = {}
+            if name:
+                source_skill = SKILL.parent.parent / name / "SKILL.md"
+                skill = skill_root / name / "SKILL.md"
+                skill.parent.mkdir(parents=True)
+                skill.write_bytes(source_skill.read_bytes())
+                selected[name] = skill
+            for definition in profile.user_skills:
+                skill_name = definition["name"]
+                skill = skill_root / skill_name / "SKILL.md"
+                if not skill.resolve().is_relative_to(skill_root.resolve()) or skill_name in selected:
+                    raise OptimizationError("invalid managed Skill")
+                skill.parent.mkdir(parents=True)
+                description = json.dumps(definition["description"], ensure_ascii=False)
+                skill.write_text(f"---\nname: {skill_name}\ndescription: {description}\n---\n{definition['content']}")
+                selected[skill_name] = skill
             env = {
                 "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
-                "HOME": str(home),
+                "HOME": "/home/agent" if profile.persistent else str(home),
                 "CODEX_HOME": str(codex_home),
                 "XDG_CONFIG_HOME": str(home / ".config"),
                 "TMPDIR": str(root),
@@ -222,6 +264,19 @@ class CodexRuntime:
                 record("client", message)
                 process.stdin.write((json.dumps(message) + "\n").encode())
                 await process.stdin.drain()
+
+            async def start_thread():
+                params = {
+                    "cwd": str(workspace),
+                    "sandbox": "danger-full-access" if profile.shell else "read-only",
+                    "approvalPolicy": "never",
+                    "baseInstructions": profile.instructions,
+                }
+                if thread:
+                    params["threadId"] = thread
+                else:
+                    params.update(ephemeral=not profile.persistent, dynamicTools=list(profile.tools))
+                await send({"id": 2, "method": "thread/resume" if thread else "thread/start", "params": params})
 
             try:
                 async with asyncio.timeout(request.timeout_ms / 1000):
@@ -250,6 +305,8 @@ class CodexRuntime:
                         }
                     )
                     thread_id, turn_id, final, usage, tools = None, None, None, None, {}
+                    allowed = {tool["name"] for tool in profile.tools}
+                    commands = set()
                     while raw := await process.stdout.readline():
                         if stderr_task.done():
                             stderr_task.result()
@@ -261,6 +318,9 @@ class CodexRuntime:
                             raise OptimizationError("Codex app-server rejected the operation; inspect private protocol")
                         if message.get("id") == 1 and "result" in message:
                             await send({"method": "initialized"})
+                            if not selected:
+                                await start_thread()
+                                continue
                             await send(
                                 {
                                     "id": 4,
@@ -278,54 +338,31 @@ class CodexRuntime:
                             )
                         elif message.get("id") == 5 and "result" in message:
                             skills = [s for row in message["result"]["data"] for s in row["skills"]]
-                            if not any(s["name"] == name and s["path"] == str(skill) and s["enabled"] for s in skills):
+                            if any(not any(s["name"] == label and s["path"] == str(path) and s["enabled"] for s in skills)
+                                   for label, path in selected.items()):
                                 raise OptimizationError("Codex did not load the authorized analysis Skill")
-                            await send(
-                                {
-                                    "id": 2,
-                                    "method": "thread/start",
-                                    "params": {
-                                        "cwd": str(workspace),
-                                        "ephemeral": True,
-                                        "sandbox": "read-only",
-                                        "approvalPolicy": "never",
-                                        "baseInstructions": instructions,
-                                        "dynamicTools": TRACE_TOOLS
-                                        if mode == "analyze"
-                                        else [
-                                            {
-                                                "type": "function",
-                                                "name": "evaluate_candidate",
-                                                "description": "Improve target instructions, not task outputs: only replace AGENTS.md or .agents/skills/<name>/SKILL.md, never result.json. Probe once on the fixed Case; omitted files inherit the baseline. Returns score-free evidence.",
-                                                "inputSchema": EDIT_SCHEMA,
-                                            }
-                                        ],
-                                    },
-                                }
-                            )
+                            await start_thread()
                         elif message.get("id") == 2 and "result" in message:
                             thread_id = message["result"]["thread"]["id"]
-                            await send(
-                                {
-                                    "id": 3,
-                                    "method": "turn/start",
-                                    "params": {
-                                        "threadId": thread_id,
-                                        "input": [
-                                            {"type": "text", "text": "$" + name + "\n" + request.prompt},
-                                            {"type": "skill", "name": name, "path": str(skill)},
-                                        ],
-                                        "outputSchema": schema,
-                                    },
-                                }
-                            )
+                            if thread and thread != thread_id:
+                                raise OptimizationError("Codex resumed the wrong thread")
+                            if event:
+                                event({"type": "thread.started", "thread_id": thread_id})
+                            inputs = [{"type": "text", "text": ("$" + name + "\n" if name else "") + request.prompt}]
+                            if profile.persistent and profile.knowledge:
+                                inputs[0]["text"] += "\nAuthorized workspace references: " + json.dumps(profile.knowledge)
+                            inputs.extend({"type": "skill", "name": label, "path": str(path)} for label, path in selected.items())
+                            params = {"threadId": thread_id, "input": inputs}
+                            if profile.output_schema:
+                                params["outputSchema"] = profile.output_schema
+                            await send({"id": 3, "method": "turn/start", "params": params})
                         elif message.get("id") == 3 and "result" in message:
                             turn_id = message["result"]["turn"]["id"]
                         elif "id" in message and "method" in message:
                             params = message.get("params", {})
                             if (
                                 message["method"] != "item/tool/call"
-                                or params.get("tool") not in ({"list_traces", "get_trace"} if mode == "analyze" else {"evaluate_candidate"})
+                                or params.get("tool") not in allowed
                                 or params.get("threadId") != thread_id
                                 or params.get("turnId") != turn_id
                                 or params.get("namespace") not in (None, "")
@@ -337,8 +374,10 @@ class CodexRuntime:
                                 if arguments != (params.get("tool"), params["arguments"]):
                                     raise OptimizationError("Codex reused a tool call id for different inputs")
                             else:
-                                result = await evaluate_candidate(params["tool"], params["arguments"]) if mode == "analyze" else await evaluate_candidate(params["arguments"])
+                                result = await evaluate_candidate(params["tool"], params["arguments"]) if profile.kind == "analyze" else await evaluate_candidate(params["arguments"])
                                 tools[call_id] = ((params["tool"], params["arguments"]), result)
+                                if event:
+                                    event({"type": "tool.completed", "tool": params["tool"], "call_id": call_id})
                             await send(
                                 {
                                     "id": message["id"],
@@ -352,21 +391,42 @@ class CodexRuntime:
                             )
                         elif message.get("method") == "thread/tokenUsage/updated":
                             usage = message["params"]["tokenUsage"]["total"]
-                        elif message.get("method") == "item/completed":
+                        elif message.get("method") in ("item/started", "item/completed"):
                             item = message["params"]["item"]
-                            if item["type"] == "agentMessage" and item.get("phase") != "commentary":
+                            complete = message["method"] == "item/completed"
+                            if item["type"] == "agentMessage" and complete and item.get("phase") != "commentary":
                                 final = item["text"]
-                            elif item["type"] in ("commandExecution", "fileChange", "mcpToolCall"):
+                            elif item["type"] in ("commandExecution", "fileChange", "mcpToolCall") and not profile.shell:
                                 raise OptimizationError("Codex used a forbidden execution capability")
+                            if item["type"] == "commandExecution":
+                                if complete:
+                                    commands.discard(item["id"])
+                                else:
+                                    commands.add(item["id"])
+                                if event:
+                                    event({"type": "item.completed" if complete else "item.started", "item": {
+                                        "id": item["id"], "type": "command_execution", "command": item["command"][:4096],
+                                        "status": "completed" if complete else "in_progress",
+                                        "exit_code": item.get("exitCode"), "aggregated_output": (item.get("aggregatedOutput") or "")[:8192],
+                                    }})
+                            elif event and item["type"] == "agentMessage" and complete:
+                                event({"type": "item.completed", "item": {"id": item["id"], "type": "agent_message", "text": item["text"][:8192]}})
                         elif message.get("method") == "turn/completed":
-                            if message["params"]["turn"]["status"] != "completed":
-                                raise OptimizationError("Codex turn did not complete; inspect private protocol")
+                            completed = message["params"]["turn"]
+                            if (completed["id"] != turn_id or message["params"].get("threadId", thread_id) != thread_id
+                                    or completed["status"] != "completed" or commands):
+                                raise OptimizationError("Codex turn did not reach confirmed quiescence")
                             if final is None or len(final.encode()) > _MAX_OUTPUT_BYTES or usage is None:
                                 raise OptimizationError("Codex final output or token usage is missing or oversized")
                             counts = [usage.get(k) for k in ("inputTokens", "outputTokens")]
                             if any(type(n) is not int or n < 0 for n in counts):
                                 raise OptimizationError("Codex returned invalid token usage")
-                            return {"value": json.loads(final), "input_tokens": counts[0], "output_tokens": counts[1]}
+                            result = {"value": final if profile.persistent else json.loads(final), "input_tokens": counts[0], "output_tokens": counts[1]}
+                            if profile.persistent:
+                                result["thread_id"] = thread_id
+                            if event:
+                                event({"type": "turn.completed"})
+                            return result
                     raise OptimizationError("Codex app-server exited without completing the turn")
             except (ValueError, KeyError, TypeError, OSError, TimeoutError):
                 raise OptimizationError("Codex runtime failed; inspect retained private protocol") from None

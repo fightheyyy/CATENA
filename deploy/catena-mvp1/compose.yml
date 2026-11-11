@@ -25,8 +25,13 @@ services:
       CATENA_COLLECTOR_URL: http://otel-gateway:4318
       NO_PROXY: localhost,127.0.0.1,otel-gateway,catena-engine,clickhouse,postgres
       no_proxy: localhost,127.0.0.1,otel-gateway,catena-engine,clickhouse,postgres
-      # Private analysis engine; never published outside the Compose network.
+      # Trusted workflow and provider services. The Sandbox gateway exposes only capability routes.
       CATENA_ENGINE_URL: http://catena-engine:8790
+      CATENA_MANAGED_RUNNER_URL: ${CATENA_MANAGED_RUNNER_URL:-}
+      CATENA_MANAGED_RUNNER_TOKEN: ${CATENA_MANAGED_RUNNER_TOKEN:-}
+      CATENA_MANAGED_CONTROL_URL: ${CATENA_MANAGED_CONTROL_URL:-}
+      CATENA_MANAGED_CAPACITY: ${CATENA_MANAGED_CAPACITY:-4}
+      CATENA_MANAGED_GATEWAY_ADDR: 0.0.0.0:18788
       CATENA_ENGINE_REQUEST_TIMEOUT: ${CATENA_ENGINE_REQUEST_TIMEOUT:-20m}
       CATENA_ENGINE_TOKEN: ${CATENA_ENGINE_TOKEN:-catena-local-engine-token-change-me}
       CATENA_JOB_WORKERS: ${CATENA_JOB_WORKERS:-1}

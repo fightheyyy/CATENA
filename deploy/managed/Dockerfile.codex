@@ -4,6 +4,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 git ca-
  && npm install -g @openai/codex@0.160.0 \
  && userdel node && useradd -m -u 1000 agent \
  && mkdir -p /workspace /opt/catena && chown agent:agent /workspace
-COPY engine/catena_engine/managed/entry.py /opt/catena/entry.py
+COPY engine/catena_engine/contracts.py engine/catena_engine/protocol.py engine/catena_engine/harness_transport.py /opt/catena/catena_engine/
+COPY engine/catena_engine/runtime/codex.py /opt/catena/catena_engine/runtime/
+COPY engine/catena_engine/skills/ /opt/catena/catena_engine/skills/
+COPY engine/catena_engine/managed/entry.py /opt/catena/catena_engine/managed/
+COPY engine/catena_engine/managed/foreground.py /opt/catena/foreground.py
 # execd starts as root; each user command is explicitly launched as uid/gid 1000.
 WORKDIR /workspace

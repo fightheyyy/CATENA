@@ -4,7 +4,7 @@
 
 **Multi-tenant Managed Agent Infrastructure & Reliability Platform**
 
-新增可信本地 Docker / OpenSandbox 托管执行；保留 Trace 驱动的分析、Harbor 评测与人工 Review。生产恶意多租户强隔离尚未交付。
+Analysis、Improvement 与 Managed 使用统一 Codex Agent Harness，在 OpenSandbox 内执行。Harbor 评测和人工 Review 由可信工作流管理。
 
 CATENA 从真实 Agent Trace 中定位问题，由人工决定是否生成候选，再通过 Harbor 独立验证并记录改进决策。
 
@@ -33,7 +33,7 @@ Agent Trace → Evidence → Codex Analysis → Problem / Evidence
 
 调查报告和改进实验目前共用产出页，不是三个独立工作台。连接、Agent 和设置只提供必要的接入与配置。
 
-当前采用 **Go 控制面 + OpenSandbox 用户 Codex + Codex 内部分析 Agent + Harbor 独立评测**。Skill 是内部策略扩展手段，不建设插件市场；工程记忆先保留版本化记录。暂不扩展新的 Runtime、Memory 检索、自动采用或通用 Code Patch。
+当前采用 **Go 控制面 + OpenSandbox Codex App Server + 可信 Workflow Engine + 独立 Harbor**。Skill 是内部策略扩展手段，不建设插件市场；工程记忆先保留版本化记录。暂不扩展新的 Runtime、Memory 检索、自动采用或通用 Code Patch。
 
 原工程工作流的下一验收仍是：让一位外部开发者在没有作者陪同的情况下，完成一次 Trace → 调查 → 人工选择优化 → 评测 → Review。这个目标尚未验收。
 
@@ -62,7 +62,7 @@ python3.12 deploy/managed/dev.py setup
 python3.12 deploy/managed/dev.py up
 ```
 
-打开 [本地托管会话](http://127.0.0.1:18789/agent-sessions)。先在连接页注册 Agent 和配置模型，再创建托管定义、Session 与 Run。新任务全部在 Sandbox 内执行，旧分析 Runtime 保持兼容。
+打开 [本地托管会话](http://127.0.0.1:18789/agent-sessions)。先在连接页注册 Agent 和配置模型，再创建托管定义、Session 与 Run。Analysis、Improvement、Managed 的 Codex Turn 共用 Sandbox；历史报告、Artifact 与 Review 仍可查询。
 
 [部署与清理](deploy/managed/README.md) · [实际架构与安全边界](docs/MANAGED_INFRASTRUCTURE.md) · [API](docs/MANAGED_API.md) · [首轮执行验收](docs/refactors/MANAGED_ACCEPTANCE.md) · [一致性与分级并发](docs/refactors/MANAGED_CONSISTENCY.md)
 
@@ -94,7 +94,7 @@ scripts/   维护工具
 docs/      当前文档；archive/ 保存旧方案，refactors/ 保存迁移证据
 ```
 
-[文档索引](docs/README.md) · [当前规格](SPEC.md) · [架构与源码](docs/ARCHITECTURE.md) · [Workflow](docs/IMPROVEMENT_WORKFLOW.md) · [开发与维护](CONTRIBUTING.md)
+[文档索引](docs/README.md) · [当前规格](SPEC.md) · [架构与源码](docs/ARCHITECTURE.md) · [统一 Harness 决策与迁移](docs/refactors/UNIFIED_HARNESS.md) · [Workflow](docs/IMPROVEMENT_WORKFLOW.md) · [开发与维护](CONTRIBUTING.md)
 
 ## 验证状态
 

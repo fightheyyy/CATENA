@@ -2,7 +2,7 @@
 
 CATENA = Multi-tenant Managed Agent Infrastructure & Reliability Platform（当前为可信本地开发实现）。
 
-托管用户 Agent 规格见 [Managed Infrastructure](docs/MANAGED_INFRASTRUCTURE.md) 和 [Managed API](docs/MANAGED_API.md)：独立 Agent Definition / Session / Run / Sandbox、PostgreSQL 持久调度与配额、官方 OpenSandbox + Codex 执行、fenced 事件 / 结果、checkpoint / rebuild、租约能力模型网关和原 Trace 数据面。以下保留原内部分析 / Improvement / Harbor 的兼容契约。
+托管用户 Agent 规格见 [Managed Infrastructure](docs/MANAGED_INFRASTRUCTURE.md) 和 [Managed API](docs/MANAGED_API.md)：独立 Agent Definition / Session / Run / Sandbox、PostgreSQL 持久调度与配额、官方 OpenSandbox + Codex 执行、fenced 事件 / 结果、checkpoint / rebuild、租约能力模型网关和原 Trace 数据面。Analysis、Improvement 和 Managed 的 Codex Turn 共用 [统一 Harness](docs/refactors/UNIFIED_HARNESS.md) 与 OpenSandbox。内部工作流保留独立业务 Job、Evidence 和 Harbor Trial。
 
 Agent Trace → Codex 工具调查 → Problem / Evidence → 人工决定是否优化 → 冻结 Candidate → Harbor Compare → Human Review。
 

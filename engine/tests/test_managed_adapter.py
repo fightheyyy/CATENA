@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from catena_engine.managed import server
+from catena_engine.managed.contracts import Turn
 
 
 @pytest.mark.parametrize("crash", [False, True])
@@ -12,15 +13,13 @@ def test_adapter_does_not_publish_result_before_command_exit(monkeypatch, crash)
     async def scenario():
         result_written, permit_exit = asyncio.Event(), asyncio.Event()
         written = []
-        data = {
-            "run_id": "run-test",
-            "sandbox_id": "box",
-            "provider_id": "provider",
-            "session_id": "session",
-            "tenant_id": "tenant",
-            "namespace": "deployment",
-            "timeout": 10,
-        }
+        data = Turn(
+            run_id="run-test", sandbox_id="box", provider_id="provider", session_id="session",
+            tenant_id="tenant", namespace="deployment", generation=1, fencing_token=1, token="a"*43,
+            input="run", profile="managed", profile_version=1, instructions="", tool_policy="sandbox-write",
+            skills=[], knowledge_refs=[], model="test", timeout=10, gateway="http://test",
+            tool_gateway="http://test/tools", checkpoint="",
+        )
 
         async def run(_command, *, opts, handlers):
             await handlers.on_stdout(SimpleNamespace(text=json.dumps({"kind": "result", "success": True}) + "\n"))

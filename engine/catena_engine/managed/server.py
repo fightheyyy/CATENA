@@ -9,7 +9,9 @@ import json
 import os
 import re
 import shlex
+import urllib.error
 import urllib.request
+from dataclasses import asdict
 from datetime import timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
@@ -22,6 +24,9 @@ from opensandbox.models.filesystem import WriteEntry
 from opensandbox.models.sandboxes import NetworkPolicy, NetworkRule, SandboxFilter
 from opensandbox.sandbox import Sandbox
 from opensandbox.transport import RetryPolicy
+
+from ..harness_transport import NoRedirect
+from .contracts import Create, Namespace, SandboxBinding, SandboxRef, Turn
 
 TOKEN = os.environ.get("CATENA_MANAGED_RUNNER_TOKEN", "")
 CONTROL = os.environ.get("CATENA_MANAGED_AUTH_URL", "http://127.0.0.1:8787/internal/managed/authorize")
@@ -38,19 +43,24 @@ def connection():
     )
 
 
-def authorize(data):
-    payload = {k: data[k] for k in ("run_id", "sandbox_id", "generation", "token", "fencing_token")}
+def authorize(data: SandboxBinding):
+    payload = {k: getattr(data, k) for k in ("run_id", "sandbox_id", "generation", "token", "fencing_token")}
     request = urllib.request.Request(
         CONTROL,
         data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {TOKEN}"},
     )
-    with urllib.request.urlopen(request, timeout=5) as response:
-        if response.status != 200:
-            raise PermissionError("execution lease revoked")
+    try:
+        with urllib.request.build_opener(NoRedirect).open(request, timeout=5) as response:
+            if response.status == 200:
+                return
+    except urllib.error.HTTPError as error:
+        if error.code != 403:
+            raise
+    raise PermissionError("execution lease revoked")
 
 
-async def lifecycle(action, data):
+async def lifecycle(action: str, data: Create | Namespace | SandboxRef):
     config = connection()
     if action == "create":
         authorize(data)
@@ -59,7 +69,7 @@ async def lifecycle(action, data):
             connection_config=config,
             timeout=timedelta(hours=1),
             ready_timeout=timedelta(seconds=90),
-            resource={"cpu": data["cpu"], "memory": data["memory"]},
+            resource={"cpu": data.cpu, "memory": data.memory},
             network_policy=NetworkPolicy(
                 default_action="deny",
                 egress=[
@@ -71,10 +81,10 @@ async def lifecycle(action, data):
                 ],
             ),
             metadata={
-                "catena.namespace": data["namespace"],
-                "catena.sandbox": data["sandbox_id"],
-                "catena.session": data["session_id"],
-                "catena.tenant": data["tenant_id"],
+                "catena.namespace": data.namespace,
+                "catena.sandbox": data.sandbox_id,
+                "catena.session": data.session_id,
+                "catena.tenant": data.tenant_id,
             },
         )
         try:
@@ -87,7 +97,7 @@ async def lifecycle(action, data):
             result, page = [], 1
             while True:
                 found = await manager.list_sandbox_infos(
-                    SandboxFilter(metadata={"catena.namespace": data["namespace"]}, page=page, page_size=100)
+                    SandboxFilter(metadata={"catena.namespace": data.namespace}, page=page, page_size=100)
                 )
                 for item in found.sandbox_infos:
                     result.append(
@@ -103,16 +113,14 @@ async def lifecycle(action, data):
                 page += 1
                 if page > 100:
                     raise RuntimeError("provider listing exceeds controller bound")
-        if action == "inspect":
-            return (await manager.get_sandbox_info(data["provider_id"])).model_dump(mode="json")
         if action == "pause":
-            await manager.pause_sandbox(data["provider_id"])
+            await manager.pause_sandbox(data.provider_id)
         elif action == "resume":
-            await manager.resume_sandbox(data["provider_id"])
+            await manager.resume_sandbox(data.provider_id)
         elif action == "terminate":
             try:
-                await manager.kill_sandbox(data["provider_id"])
-                await manager.get_sandbox_info(data["provider_id"])
+                await manager.kill_sandbox(data.provider_id)
+                await manager.get_sandbox_info(data.provider_id)
                 raise RuntimeError("termination not yet confirmed")
             except SandboxApiException as error:
                 if error.status_code != 404:
@@ -124,16 +132,16 @@ async def lifecycle(action, data):
         await manager.close()
 
 
-async def execute(data, write):
+async def execute(data: Turn, write):
     authorize(data)
-    if not re.fullmatch(r"run-[a-zA-Z0-9_-]+", data["run_id"]):
+    if not re.fullmatch(r"run-[a-zA-Z0-9_-]+", data.run_id):
         raise ValueError("invalid run identity")
-    sandbox = await Sandbox.connect(data["provider_id"], connection_config=connection())
+    sandbox = await Sandbox.connect(data.provider_id, connection_config=connection())
     try:
         info = await sandbox.get_info()
         metadata = info.metadata or {}
         if any(
-            metadata.get(key) != data[value]
+            metadata.get(key) != getattr(data, value)
             for key, value in (
                 ("catena.sandbox", "sandbox_id"),
                 ("catena.session", "session_id"),
@@ -142,11 +150,11 @@ async def execute(data, write):
             )
         ):
             raise PermissionError("sandbox binding mismatch")
-        request_path = f"/tmp/{data['run_id']}.json"
+        request_path = f"/tmp/{data.run_id}.json"
 
         # SDK 1.2.0 transmits permission digits as text (600, not Python 0o600).
         await sandbox.files.write_files(
-            [WriteEntry(path=request_path, data=json.dumps(data), mode=600, owner="agent", group="agent")]
+            [WriteEntry(path=request_path, data=json.dumps(asdict(data)), mode=600, owner="agent", group="agent")]
         )
         authorize(data)
         pending = ""
@@ -176,9 +184,9 @@ async def execute(data, write):
             write({"kind": "runtime", "data": {"type": "runtime.stderr", "text": message.text[:4096]}})
 
         execution = await sandbox.commands.run(
-            f"mkdir -p /run/catena && mkdir /run/catena/{shlex.quote(data['run_id'])} && exec runuser -u agent -- python3 /opt/catena/entry.py {shlex.quote(request_path)}",
+            f"mkdir -p /run/catena && mkdir /run/catena/{shlex.quote(data.run_id)} && exec python3 /opt/catena/foreground.py {shlex.quote(request_path)}",
             opts=RunCommandOpts(
-                timeout=timedelta(seconds=data["timeout"] + 10), uid=0, gid=0, working_directory="/workspace"
+                timeout=timedelta(seconds=data.timeout + 10), uid=0, gid=0, working_directory="/workspace"
             ),
             handlers=ExecutionHandlers(on_stdout=stdout, on_stderr=stderr, skip_accumulation=True),
         )
@@ -221,7 +229,8 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(length))
             action = self.path.removeprefix("/v1/")
             if action == "execute":
-                authorize(data)
+                turn = Turn(**data)
+                authorize(turn)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/x-ndjson")
                 self.end_headers()
@@ -231,16 +240,30 @@ class Handler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps(event).encode() + b"\n")
                     self.wfile.flush()
 
-                asyncio.run(execute(data, write))
+                asyncio.run(execute(turn, write))
             else:
-                result = asyncio.run(lifecycle(action, data))
+                request_type = {"create": Create, "list": Namespace, "pause": SandboxRef, "resume": SandboxRef,
+                                "terminate": SandboxRef}.get(action)
+                if request_type is None or self.path != "/v1/" + action:
+                    self.send_error(404)
+                    return
+                result = asyncio.run(lifecycle(action, request_type(**data)))
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps(result).encode())
         except Exception as error:
             if not streaming:
-                self.send_error(502, type(error).__name__)
+                if isinstance(error, PermissionError):
+                    status, category = 403, "lease_revoked"
+                elif isinstance(error, (ValueError, TypeError, KeyError)):
+                    status, category = 400, "invalid_request"
+                else:
+                    status, category = 502, "provider_unknown"
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": category}).encode())
             else:
                 detail = str(error)
                 for secret in (TOKEN, os.environ.get("OPEN_SANDBOX_API_KEY", ""), data.get("token", "")):

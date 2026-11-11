@@ -86,7 +86,7 @@ stateDiagram-v2
 
 ## 执行、快照与恢复
 
-官方 Python SDK 在 Sandbox 中启动固定 `codex exec --json`，后续任务用保存的 thread ID 执行 `codex exec resume`。真实 Coding Agent 有 Shell / 文件编辑权限；原只读 Analysis Runtime 保持独立。
+官方 Python SDK 启动 Sandbox 内的 Codex App Server，使用保存的 thread ID 进行 `thread/resume`。Managed、Analysis 与 Improvement 共用 [Agent Harness](refactors/UNIFIED_HARNESS.md)。Managed Profile 可启用 Shell 与文件编辑，内部 Profile 仅启用已授权的动态工具。
 
 `tool_policy=sandbox-write` 表示用户代码可写容器内该用户可写的 Workspace / home / tmp，不能理解为仅凭提示词限定 `/workspace`。Codex 内层采用 `danger-full-access`；外层隔离边界是 Docker / OpenSandbox。工具环境固定最小 PATH，不继承平台密钥。实例没有宿主机目录、Docker Socket、数据库凭证或长期模型密钥挂载。
 
@@ -105,19 +105,19 @@ Adapter 先缓存 stdout 中的 result，等待官方 SDK 的 foreground command
 
 ## 模型治理与 Trace
 
-长期模型 Key 复用原加密配置，只由 Go 解密。Sandbox 收到每 Run 随机短期能力，限制于当前 Lease / Run / 单一 Responses endpoint。专用监听端口只暴露模型路由，**不暴露免登录本地管理 API**；所有模型路由禁止重定向。配置的模型必须匹配请求模型，强制 `store=false`、禁止 background、请求限时 90 秒、最多 3 次 429 / 5xx 尝试和 1 / 2 秒 backoff。每次上游尝试都消费预算。
+长期模型 Key 复用原加密配置，只由 Go 解密。Sandbox 收到每 Run 随机短期能力，限制于当前 Lease / Run / 单一 Responses endpoint。专用监听端口只暴露 capability 鉴权的模型和工具路由；所有模型路由禁止重定向。配置的模型必须匹配请求模型，强制 `store=false`、禁止 background、请求限时 90 秒、最多 3 次 429 / 5xx 尝试和 1 / 2 秒 backoff。每次上游尝试都消费预算。
 
 默认租户 60 请求 / 分钟、每 Run 200 请求、每请求最多 4096 output tokens。是请求次数和输出 token 上限，**不是货币费用预算或完整输入 token 预算**。Provider 返回的 usage 才记账；请求表 NULL 表示未知，Run/UI 展示已观察到的 token 合计。
 
 可信 Go 服务绑定 tenant / agent / session / run / sandbox / attempt / trace。脱敏与长度限制之后才持久事件、结果和 Trace。终态 Trace 使用原 CollectorTraceSink；Kafka / ClickHouse 不可用时保留数据库 outbox 标志并重试，重复交付由原数据面幂等读取处理。包含 Run 根 Span、模型请求 Span、工具执行 Span、排队与运行时间、Runtime / recovery 事件。所有事件按 event_id 分页（每批 100）输出到稳定 ID 的 managed.run.events 子 Span；导出上界、确认游标和未完成工具开始时间持久化，Collector ACK 后才推进。跨页 / 重启后关联工具 Span；ACK 丢失重发相同 Span ID，沿用原数据面的 At-least-once + 幂等读取。Trace 导出独立于 Provider 对账失败。
 
-Run UI 的 Trace 链接进入现有 Trace Explorer，调查、Candidate、Harbor、Review 继续沿原接口操作。Harbor Trial 不等于用户 Session Sandbox。**本轮验证了真实 Run → Collector → Kafka → ClickHouse → Trace 查询；未重跑新 Run 的完整 Investigation → Candidate → Harbor → Review 真实质量实验。** 原业务由回归测试覆盖；本地托管配置默认不另启动 Analysis Engine，需按原部署指南配置 `CATENA_ENGINE_URL` / `CATENA_ENGINE_TOKEN` 才能运行分析。
+Run UI 的 Trace 链接进入现有 Trace Explorer，调查、Candidate、Harbor、Review 继续沿原接口操作。Harbor Trial 不等于用户 Session Sandbox。本机统一部署会启动可信 Workflow Engine。Analysis 和 Improvement 使用独立的临时 Sandbox 槽，既有业务 API 和记录继续可用。
 
 ## 本地运行
 
 见 [部署步骤](../deploy/managed/README.md)、[API](MANAGED_API.md)、[实际验收记录](refactors/MANAGED_ACCEPTANCE.md)。
 
-OpenSandbox 官方源码核对：[Python SDK](https://github.com/opensandbox-group/OpenSandbox/blob/main/docs/sdks/python.md)。执行入口核对：[Codex 非交互执行](https://developers.openai.com/codex/noninteractive/)、[配置](https://developers.openai.com/codex/config-advanced/)。实际固定使用 SDK / Server / execd / egress `release-1.2.0`，没有照搬旧示例中的不兼容组件版本。
+OpenSandbox 官方源码核对：[Python SDK](https://github.com/opensandbox-group/OpenSandbox/blob/main/docs/sdks/python.md)。执行入口核对：[统一 Harness 验收记录](refactors/UNIFIED_HARNESS.md)、[配置](https://developers.openai.com/codex/config-advanced/)。实际固定使用 SDK / Server / execd / egress `release-1.2.0`，没有照搬旧示例中的不兼容组件版本。
 
 ## 安全与扩展边界
 
