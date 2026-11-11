@@ -40,3 +40,7 @@ Trace 数据面采用 Collector Contrib + Kafka + ClickHouse；Go 只做入口�
 原工程工作流继续围绕核心接入、报告可读性、证据可信度、实验操作和真实案例验证。组织共享、通用 Code Patch、经验检索、插件市场与自动采用不属于本轮交付；版本化工程记录继续保留。
 
 下一验收目标是：外部开发者不依赖作者陪同，独立完成 Trace → 调查 → 人工选择优化 → Harbor 评测 → Review。需记录操作阻碍、问题是否被用户认可及决策依据；工程链路通过和优化效果成立分别评价。该验收尚未完成，现有独立实验不能替代它。
+
+## 本轮验收范围
+
+本轮聚焦 Managed Agent Infra 的 Operation Intent / 短事务 / CAS、命令退出一致性、全量分页 Trace 和 10/20/50 个真实 Coding Run 的受限容量执行。保留原 Analysis / Improvement / Harbor / Review 代码、API 和数据并运行自动化回归，不执行新 Run 的真实 Candidate / Harbor 优化效果实验。见 [一致性与并发报告](docs/refactors/MANAGED_CONSISTENCY.md)。

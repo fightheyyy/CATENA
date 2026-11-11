@@ -21,18 +21,20 @@ import (
 )
 
 type ManagedConfig struct {
-	URL        string
-	Token      string
-	ControlURL string
-	Workers    int
-	Capacity   int
-	Lease      time.Duration
-	Idle       time.Duration
-	Namespace  string
+	URL             string
+	Token           string
+	ControlURL      string
+	Workers         int
+	Capacity        int
+	Lease           time.Duration
+	Idle            time.Duration
+	ProviderTimeout time.Duration
+	OperationLease  time.Duration
+	Namespace       string
 }
 
 func ManagedConfigFromEnv() (ManagedConfig, error) {
-	c := ManagedConfig{URL: os.Getenv("CATENA_MANAGED_RUNNER_URL"), Token: os.Getenv("CATENA_MANAGED_RUNNER_TOKEN"), ControlURL: os.Getenv("CATENA_MANAGED_CONTROL_URL"), Workers: 2, Capacity: 4, Lease: 30 * time.Second, Idle: 5 * time.Minute}
+	c := ManagedConfig{URL: os.Getenv("CATENA_MANAGED_RUNNER_URL"), Token: os.Getenv("CATENA_MANAGED_RUNNER_TOKEN"), ControlURL: os.Getenv("CATENA_MANAGED_CONTROL_URL"), Workers: 2, Capacity: 4, Lease: 30 * time.Second, Idle: 5 * time.Minute, ProviderTimeout: 10 * time.Second, OperationLease: 30 * time.Second}
 	if c.URL == "" {
 		return c, nil
 	}
@@ -45,7 +47,7 @@ func ManagedConfigFromEnv() (ManagedConfig, error) {
 			*dst = n
 		}
 	}
-	for k, dst := range map[string]*time.Duration{"CATENA_MANAGED_LEASE": &c.Lease, "CATENA_MANAGED_IDLE": &c.Idle} {
+	for k, dst := range map[string]*time.Duration{"CATENA_MANAGED_LEASE": &c.Lease, "CATENA_MANAGED_IDLE": &c.Idle, "CATENA_MANAGED_PROVIDER_TIMEOUT": &c.ProviderTimeout, "CATENA_MANAGED_OPERATION_LEASE": &c.OperationLease} {
 		if v := os.Getenv(k); v != "" {
 			n, e := time.ParseDuration(v)
 			if e != nil {
@@ -57,6 +59,9 @@ func ManagedConfigFromEnv() (ManagedConfig, error) {
 	return c, c.validate()
 }
 func (c ManagedConfig) validate() error {
+	if (c.ProviderTimeout != 0 && (c.ProviderTimeout < time.Millisecond || c.ProviderTimeout > time.Minute)) || (c.OperationLease != 0 && c.OperationLease <= c.ProviderTimeout) {
+		return errors.New("operation lease must exceed provider timeout")
+	}
 	if c.Workers < 1 || c.Workers > 8 || c.Capacity < 1 || c.Capacity > 8 || len(c.Token) < 32 || c.Lease < time.Second || c.Lease > time.Minute || c.Idle < time.Second {
 		return errors.New("invalid managed worker limits or token (32+ characters required)")
 	}
@@ -130,6 +135,11 @@ func (p *managedPlatform) start() {
 				slog.Warn("managed reconcile", "error", e)
 			}
 			stop()
+			traceCtx, traceStop := context.WithTimeout(ctx, 30*time.Second)
+			if e := p.exportManagedTraces(traceCtx); e != nil && ctx.Err() == nil {
+				slog.Warn("managed trace export", "error", e)
+			}
+			traceStop()
 			if !waitAnalysisBackoff(ctx, time.Second) {
 				return
 			}
@@ -300,55 +310,74 @@ func (p *managedPlatform) execute(parent context.Context, l *managedLease) {
 		return
 	}
 	defer res.Body.Close()
-	scanner := bufio.NewScanner(io.LimitReader(res.Body, 32*1024*1024))
+	if e = p.consumeManagedExecution(ctx, l, res.Body); e != nil {
+		fail(e)
+	}
+}
+
+func (p *managedPlatform) consumeManagedExecution(ctx context.Context, l *managedLease, body io.Reader) error {
+	limited := &io.LimitedReader{R: body, N: 32*1024*1024 + 1}
+	scanner := bufio.NewScanner(limited)
 	scanner.Buffer(make([]byte, 4096), 24*1024*1024)
-	final := false
+	type frame struct {
+		Kind     string          `json:"kind"`
+		Data     json.RawMessage `json:"data"`
+		Result   string          `json:"result"`
+		Snapshot string          `json:"snapshot"`
+		Success  bool            `json:"success"`
+		Error    string          `json:"error"`
+		Exited   bool            `json:"command_exited"`
+		ExitCode *int            `json:"exit_code"`
+	}
+	var final *frame
 	for scanner.Scan() {
-		var event struct {
-			Kind     string          `json:"kind"`
-			Data     json.RawMessage `json:"data"`
-			Result   string          `json:"result"`
-			Snapshot string          `json:"snapshot"`
-			Success  bool            `json:"success"`
-			Error    string          `json:"error"`
+		var event frame
+		if e := json.Unmarshal(scanner.Bytes(), &event); e != nil {
+			return e
 		}
-		if e = json.Unmarshal(scanner.Bytes(), &event); e != nil {
-			fail(e)
-			return
+		if final != nil {
+			return errors.New("unexpected frame after command exit")
 		}
 		if event.Kind == "result" {
-			snapshot, e := base64.StdEncoding.DecodeString(event.Snapshot)
-			if e != nil || len(snapshot) == 0 || len(snapshot) > 16*1024*1024 {
-				fail(errors.New("checkpoint missing or invalid"))
-				return
+			if !event.Exited || event.ExitCode == nil || *event.ExitCode != 0 {
+				return errors.New("unconfirmed sandbox command exit")
 			}
-			state := "COMPLETED"
-			if !event.Success {
-				state = "FAILED"
-			}
-			if e = p.store.finishManaged(ctx, l, state, event.Result, event.Error, snapshot); e != nil {
-				fail(e)
-				return
-			}
-			final = true
-			break
+			final = &event
+			continue
 		}
-		clean := strings.ReplaceAll(string(event.Data), l.Token, "[REDACTED]")
+		clean := redactEvidenceText(strings.ReplaceAll(string(event.Data), l.Token, "[REDACTED]"))
 		var data any
-		clean = redactEvidenceText(clean)
 		if len(clean) > 48*1024 || json.Unmarshal([]byte(clean), &data) != nil {
 			data = map[string]string{"text": bounded(clean, 48*1024)}
 		}
-		if e = p.store.managedEvent(ctx, l, "runtime", data); e != nil {
-			fail(e)
-			return
+		if e := p.store.managedEvent(ctx, l, "runtime", data); e != nil {
+			return e
+		}
+		if event.Kind == "adapter.error" {
+			return fmt.Errorf("adapter execution failed: %s", bounded(clean, 1000))
 		}
 	}
-	if !final {
-		e := scanner.Err()
-		if e == nil {
-			e = errors.New("runtime disconnected without final result")
-		}
-		fail(e)
+	if e := scanner.Err(); e != nil {
+		return e
 	}
+	if limited.N == 0 {
+		return errors.New("execution stream exceeded size limit before EOF")
+	}
+	if final == nil {
+		return errors.New("runtime disconnected without confirmed command exit")
+	}
+	snapshot, e := base64.StdEncoding.DecodeString(final.Snapshot)
+	if e != nil || len(snapshot) == 0 || len(snapshot) > 16*1024*1024 {
+		return errors.New("checkpoint missing or invalid")
+	}
+	// EOF and the adapter's SDK exit acknowledgement precede every terminal write.
+	e = managedCAS(p.store.db.ExecContext(ctx, `UPDATE agent_runs SET command_exited_at=now() WHERE run_id=$1 AND worker_id=$2 AND fencing_token=$3 AND state='RUNNING' AND lease_until>now() AND NOT cancel_requested`, l.Run.ID, l.Run.Worker, l.Run.Fence))
+	if e != nil {
+		return e
+	}
+	state := "COMPLETED"
+	if !final.Success {
+		state = "FAILED"
+	}
+	return p.store.finishManaged(ctx, l, state, strings.ReplaceAll(final.Result, l.Token, "[REDACTED]"), final.Error, snapshot)
 }

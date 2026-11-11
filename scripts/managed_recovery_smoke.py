@@ -100,6 +100,7 @@ def main():
             pass
         time.sleep(0.5)
     assert final is not None, "worker recovery or sandbox quarantine did not converge"
+    assert final.get("isolation_confirmed_at") and final["finished_at"] >= final["isolation_confirmed_at"], "terminal state preceded confirmed isolation"
     assert final["attempt"] == 1 and final["fencing_token"] > old["fencing_token"], (
         "unsafe replay or missing fencing"
     )
@@ -119,6 +120,8 @@ def main():
         "real_tool_execution_observed": True,
         "sandbox_terminated": True,
         "automatic_replay": False,
+        "isolation_confirmed_at": final.get("isolation_confirmed_at"),
+        "terminal_after_isolation": final.get("isolation_confirmed_at") is not None,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(record, indent=2))

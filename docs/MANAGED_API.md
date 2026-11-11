@@ -14,7 +14,7 @@
 | `POST /v1/agent-sessions/{id}/runs` | 持久排队，首次 202，幂等重试 200 |
 | `GET /v1/agent-runs/{id}` | 状态、attempt / fence、结果、用量、Trace、Artifact 引用；不返回 capability hash |
 | `GET /v1/agent-runs/{id}/events` | SSE；支持 `Last-Event-ID` 或 `?after=N` |
-| `POST /v1/agent-runs/{id}/cancel` | 幂等撤销；运行中任务由 Reconciler 隔离回收 |
+| `POST /v1/agent-runs/{id}/cancel` | 幂等撤销；运行中任务先进入 STOPPING，由 Reconciler 确认隔离后再提交 CANCELLED |
 | `GET /v1/agent-runs/{id}/artifact` | gzip tar checkpoint，带 `X-Content-SHA256`，仅 Owner 可下载 |
 | `POST /v1/agent-sessions/{id}/pause` | 空闲会话进入 PAUSING，再调用 Provider pause |
 | `POST /v1/agent-sessions/{id}/resume` | 逻辑 READY，必要时 Provider resume；没有 Sandbox 时在下一 Run 重建 |
@@ -39,7 +39,7 @@ curl -N "$API/v1/agent-runs/RUN_ID/events"
 
 定义可传 `runtime_type`（仅 codex）、`runtime_version`（仅 0.160.0）、`tool_policy`（仅 sandbox-write）。默认超时 600 秒，允许 10–1800 秒，instructions ≤32 KiB。Agent ID 全局唯一，不同 Owner 无法替已有 Agent 增加定义。
 
-Run input 1–65536 bytes；必须传 1–200 bytes `Idempotency-Key`。同租户 / Session / key / input 返回同一 Run；同 key 不同 input 为 409。资源不足时保持 QUEUED；排队超租户上限为 429。一个 Session 只能有一个 RUNNING Run。运行中 pause / resume / close 为 409，先 cancel 并等待隔离；NEEDS_REVIEW 只能关闭，不会直接重新执行。
+Run input 1–65536 bytes；必须传 1–200 bytes `Idempotency-Key`。同租户 / Session / key / input 返回同一 Run；同 key 不同 input 为 409。资源不足时保持 QUEUED；排队超租户上限为 429。一个 Session 只能有一个 RUNNING / STOPPING Run；STOPPING 不属于终态，也会占用并发与 Sandbox 预留。RUNNING / STOPPING 期间 pause / resume / close 为 409，先 cancel 并等待隔离；NEEDS_REVIEW 只能关闭，不会直接重新执行。
 
 SSE 事件按 event_id 递增，单次每批 200 条；连接 25 秒轮换，标准 EventSource 会自动带最后游标重连。每 Run 最多 10000 个持久事件，单事件 ≤64 KiB，浏览器保留最近 500 条显示。历史游标按 Run 过滤，不泄露其他租户数据。POST 的 HTTP 生命周期不等待模型执行完成。
 

@@ -196,7 +196,7 @@ func (s *HTTPServer) managedCancel(w http.ResponseWriter, r *http.Request) {
 	}
 	var out json.RawMessage
 	// Running cancellation retains ownership until reconciliation has isolated its environment.
-	err := managedJSONRaw(s.managed.store.db.QueryRowContext(r.Context(), `UPDATE agent_runs SET cancel_requested=CASE WHEN state IN ('QUEUED','RUNNING') THEN true ELSE cancel_requested END,credential_hash=NULL,finished_at=CASE WHEN state='QUEUED' THEN now() ELSE finished_at END,state=CASE WHEN state='QUEUED' THEN 'CANCELLED' ELSE state END,updated_at=now() WHERE tenant_id=$1 AND run_id=$2 RETURNING to_jsonb(agent_runs)-'credential_hash'`, owner, r.PathValue("run_id")), &out)
+	err := managedJSONRaw(s.managed.store.db.QueryRowContext(r.Context(), `UPDATE agent_runs SET cancel_requested=CASE WHEN state IN ('QUEUED','RUNNING','STOPPING') THEN true ELSE cancel_requested END,credential_hash=NULL,finished_at=CASE WHEN state='QUEUED' THEN now() ELSE finished_at END,state=CASE WHEN state='QUEUED' THEN 'CANCELLED' ELSE state END,updated_at=now() WHERE tenant_id=$1 AND run_id=$2 RETURNING to_jsonb(agent_runs)-'credential_hash'`, owner, r.PathValue("run_id")), &out)
 	managedReply(w, 200, out, err)
 }
 func (s *HTTPServer) managedSessionAction(w http.ResponseWriter, r *http.Request) {
@@ -218,7 +218,7 @@ func (s *HTTPServer) managedSessionAction(w http.ResponseWriter, r *http.Request
 	}
 	defer tx.Rollback()
 	var active bool
-	err = tx.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM agent_runs WHERE session_id=$1 AND tenant_id=$2 AND state='RUNNING')`, r.PathValue("session_id"), owner).Scan(&active)
+	err = tx.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM agent_runs WHERE session_id=$1 AND tenant_id=$2 AND state IN ('RUNNING','STOPPING'))`, r.PathValue("session_id"), owner).Scan(&active)
 	if err == nil && active {
 		writeProblem(w, 409, "cancel the active run and wait for resource cleanup first")
 		return
@@ -247,7 +247,7 @@ func (s *HTTPServer) managedResources(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var quota json.RawMessage
-	err = managedJSONRaw(db.QueryRowContext(r.Context(), `SELECT to_jsonb(q)||jsonb_build_object('reserved_sandboxes',(SELECT count(*) FROM resource_reservations WHERE tenant_id=$1 AND released_at IS NULL),'running',(SELECT count(*) FROM agent_runs WHERE tenant_id=$1 AND state='RUNNING'),'queued',(SELECT count(*) FROM agent_runs WHERE tenant_id=$1 AND state='QUEUED'),'global_capacity',$2::int,'metrics_supported',false,'network_isolation','trusted-local-only') FROM tenant_quotas q WHERE tenant_id=$1`, owner, s.managed.config.Capacity), &quota)
+	err = managedJSONRaw(db.QueryRowContext(r.Context(), `SELECT to_jsonb(q)||jsonb_build_object('reserved_sandboxes',(SELECT count(*) FROM resource_reservations WHERE tenant_id=$1 AND released_at IS NULL),'running',(SELECT count(*) FROM agent_runs WHERE tenant_id=$1 AND state IN ('RUNNING','STOPPING')),'queued',(SELECT count(*) FROM agent_runs WHERE tenant_id=$1 AND state='QUEUED'),'global_capacity',$2::int,'metrics_supported',false,'network_isolation','trusted-local-only') FROM tenant_quotas q WHERE tenant_id=$1`, owner, s.managed.config.Capacity), &quota)
 	if errors.Is(err, ErrNotFound) {
 		quota = json.RawMessage(`null`)
 		err = nil

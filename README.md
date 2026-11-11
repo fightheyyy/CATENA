@@ -64,7 +64,7 @@ python3.12 deploy/managed/dev.py up
 
 打开 [本地托管会话](http://127.0.0.1:18789/agent-sessions)。先在连接页注册 Agent 和配置模型，再创建托管定义、Session 与 Run。新任务全部在 Sandbox 内执行，旧分析 Runtime 保持兼容。
 
-[部署与清理](deploy/managed/README.md) · [实际架构与安全边界](docs/MANAGED_INFRASTRUCTURE.md) · [API](docs/MANAGED_API.md) · [真实执行 / 恢复验收](docs/refactors/MANAGED_ACCEPTANCE.md)
+[部署与清理](deploy/managed/README.md) · [实际架构与安全边界](docs/MANAGED_INFRASTRUCTURE.md) · [API](docs/MANAGED_API.md) · [首轮执行验收](docs/refactors/MANAGED_ACCEPTANCE.md) · [一致性与分级并发](docs/refactors/MANAGED_CONSISTENCY.md)
 
 ## 原工程工作流启动
 

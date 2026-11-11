@@ -8,7 +8,7 @@ type AgentSession = { session_id: string; agent_id: string; state: string; sandb
 type Run = { run_id: string; session_id: string; state: string; input: string; result: string; error: string; trace_id: string; result_ref: string | null; attempt: number; input_tokens: number; output_tokens: number; model_requests: number };
 type Box = { sandbox_id: string; provider_sandbox_id: string | null; session_id: string; state: string; cpu: string; memory: string; generation: number; error: string };
 type Resources = { sandboxes: Box[]; quota: { max_sandboxes: number; max_running: number; max_queued: number; reserved_sandboxes: number; running: number; queued: number; max_model_requests: number; max_output_tokens: number; global_capacity: number } | null };
-const active = (run: Run) => ["QUEUED", "RUNNING"].includes(run.state);
+const active = (run: Run) => ["QUEUED", "RUNNING", "STOPPING"].includes(run.state);
 
 export function ManagedWorkspace({ route, workspace }: { route: Route; workspace: WorkspaceData }) {
   const [sessions, setSessions] = useState<AgentSession[]>([]);

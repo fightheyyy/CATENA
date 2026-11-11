@@ -57,13 +57,13 @@ Tenant 对应现有认证 Owner / 签名项目主体，不新增组织成员或 
 - 默认一个 Session 只有一个 RUNNING Run，数据库 partial unique index 再次保证互斥。其他任务持久排队。
 - 按租户 `last_scheduled_at` 轮转；同时检查全局 Sandbox 容量、租户 active sandbox / concurrent run / queued run 上限。预留早于 Provider create，UNKNOWN 和 PAUSED 仍占容量。
 - Go 默认 2 Worker / 全局 4 Sandbox；本机启动脚本将全局容量限制为 2。默认每租户 2 Sandbox、2 并发 Run、100 排队 Run；CPU 1、memory 1Gi。配额由部署者在数据库中调整，普通用户没有提额 API。
-- Lease 默认 30 秒，心跳间隔 Lease / 4，最长 Run 1800 秒。未开始执行的任务最多 3 次尝试，指数 backoff；已开始执行的失联 Run 不自动重放。
+- Lease 默认 30 秒，心跳间隔 Lease / 4，最长 Run 1800 秒。未开始执行的任务最多 3 次尝试，指数 backoff；已开始执行的失联 Run 不自动重放。取消、超时或租约丢失先进入 STOPPING；只有 Provider 确认旧实例不存在后才提交 CANCELLED / NEEDS_REVIEW 终态。
 - 所有事件、心跳、结果提交使用当前 Worker / fence / 未过期 Lease 的 CAS。旧 Worker 不能覆盖新代际结果。
 - SDK adapter 在 create 和 execute 前通过私有回调校验 Run capability、Sandbox 绑定、generation 和 fence。Sandbox 内 root-owned receipt 防止重复启动同一 Run。
 - Lease 丢失、取消、超时、数据库校验失败会撤销模型能力；网关每秒复核活动 Lease。Reconciler 先提交撤销与状态，再隔离 / 销毁旧 Sandbox。销毁未确认时保留预留并重试。不同 Worker 不复用尚未隔离的旧实例。
 - Provider 不能原子验证数据库代际，**不能保证在租约失效瞬间停止已开始的工具调用**。执行后的失联状态是 `NEEDS_REVIEW`；旧 Sandbox 成功隔离前不启动新的 Session 执行。Provider 不可达时，旧进程可能持续到 Provider TTL，不能声称立即抢占或 Exactly-once。
 - Create 超时不自动补建。通过 namespace + Sandbox metadata 查询外部结果；查不到且结果仍可能晚到时，保留容量到 1 小时 Provider TTL + 1 分钟 grace。宁可暂时损失容量，也不盲目创造孤儿。
-- Reconciler 跨进程串行，核对丢失 / 非活动 / 过期 / 非法绑定 / namespace 孤儿，重试清理。空闲默认 5 分钟；暂停实例也受回收和硬 TTL 约束。
+- Reconciler 使用持久 Operation Intent、短事务、独立操作租约 / fence 与 Sandbox revision CAS；Provider list / pause / resume / terminate 均在事务外。不同控制器可同时处理不同资源；超时或失联的 pause / resume 不重放到可复用实例，而是隔离销毁。核对丢失 / 非活动 / 过期 / 非法绑定 / namespace 孤儿，重试清理。空闲默认 5 分钟；暂停实例也受回收和硬 TTL 约束。
 
 ```mermaid
 stateDiagram-v2
@@ -90,6 +90,8 @@ stateDiagram-v2
 
 `tool_policy=sandbox-write` 表示用户代码可写容器内该用户可写的 Workspace / home / tmp，不能理解为仅凭提示词限定 `/workspace`。Codex 内层采用 `danger-full-access`；外层隔离边界是 Docker / OpenSandbox。工具环境固定最小 PATH，不继承平台密钥。实例没有宿主机目录、Docker Socket、数据库凭证或长期模型密钥挂载。
 
+Adapter 先缓存 stdout 中的 result，等待官方 SDK 的 foreground command complete / exit_code=0 才转发带退出凭证的结果；Go 还必须读到流 EOF，并在当前 Run fence / lease 下记录 command_exited_at，随后才能提交成功或失败终态。同 Session 下一 Run 在此之前不可领取。
+
 每次完整结束保存 Workspace、Codex sessions 和 thread ID；配置文件和模型 capability 不进入主动收集的 Codex 配置快照。用户代码主动写入 Workspace 的内容仍属于用户快照。快照压缩后 ≤16 MiB，展开 ≤64 MiB，最多 4096 文件，不含符号链接和设备文件。恢复校验 SHA-256，并逐项拒绝绝对路径、路径穿越和特殊文件。结果和快照在同一 fenced 事务中提交。
 
 | 操作 | 实际含义 |
@@ -107,7 +109,7 @@ stateDiagram-v2
 
 默认租户 60 请求 / 分钟、每 Run 200 请求、每请求最多 4096 output tokens。是请求次数和输出 token 上限，**不是货币费用预算或完整输入 token 预算**。Provider 返回的 usage 才记账；请求表 NULL 表示未知，Run/UI 展示已观察到的 token 合计。
 
-可信 Go 服务绑定 tenant / agent / session / run / sandbox / attempt / trace。脱敏与长度限制之后才持久事件、结果和 Trace。终态 Trace 使用原 CollectorTraceSink；Kafka / ClickHouse 不可用时保留数据库 outbox 标志并重试，重复交付由原数据面幂等读取处理。包含 Run 根 Span、模型请求 Span、工具执行 Span、排队与运行时间、Runtime / recovery 事件。
+可信 Go 服务绑定 tenant / agent / session / run / sandbox / attempt / trace。脱敏与长度限制之后才持久事件、结果和 Trace。终态 Trace 使用原 CollectorTraceSink；Kafka / ClickHouse 不可用时保留数据库 outbox 标志并重试，重复交付由原数据面幂等读取处理。包含 Run 根 Span、模型请求 Span、工具执行 Span、排队与运行时间、Runtime / recovery 事件。所有事件按 event_id 分页（每批 100）输出到稳定 ID 的 managed.run.events 子 Span；导出上界、确认游标和未完成工具开始时间持久化，Collector ACK 后才推进。跨页 / 重启后关联工具 Span；ACK 丢失重发相同 Span ID，沿用原数据面的 At-least-once + 幂等读取。Trace 导出独立于 Provider 对账失败。
 
 Run UI 的 Trace 链接进入现有 Trace Explorer，调查、Candidate、Harbor、Review 继续沿原接口操作。Harbor Trial 不等于用户 Session Sandbox。**本轮验证了真实 Run → Collector → Kafka → ClickHouse → Trace 查询；未重跑新 Run 的完整 Investigation → Candidate → Harbor → Review 真实质量实验。** 原业务由回归测试覆盖；本地托管配置默认不另启动 Analysis Engine，需按原部署指南配置 `CATENA_ENGINE_URL` / `CATENA_ENGINE_TOKEN` 才能运行分析。
 
@@ -124,3 +126,7 @@ OpenSandbox 官方源码核对：[Python SDK](https://github.com/opensandbox-gro
 - Docker 配置 drop 危险 capabilities、no-new-privileges、PID 128；CPU / memory 限制由 Provider 实际传给 Docker。没有宿主敏感挂载或 Socket。尚无生产逃逸渗透测试、完整侧信道隔离或第三方安全审计。
 - 当前未支持对象存储 GC、磁盘总配额、任意大 Workspace、成本计价、组织权限、任意运行时、跨节点 Sandbox 路由或 HA OpenSandbox 控制面。监控页明确标记实时 CPU / memory 利用率不可用，不用资源配置冒充利用率。
 - 多 Worker 共享 PostgreSQL 状态；跨节点还需 Provider 路由、对象存储、网络与凭证边界、分区 / 故障域和部署者运维验证。当前单机网络地址不代表已完成多节点执行。
+
+## 本轮一致性与并发验收
+
+本轮聚焦 Managed Agent Infrastructure；不执行新 Run → Candidate → Harbor 的真实质量优化实验，也不构造无意义的 Candidate。见[一致性修复与 10/20/50 真实 Run 报告](refactors/MANAGED_CONSISTENCY.md)。

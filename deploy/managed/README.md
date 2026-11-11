@@ -62,3 +62,29 @@ pnpm --dir frontend test:browser
 数据库测试在随机独立 schema 内运行并清理该测试 schema。全 Engine 回归需要原 `engine[dev,evaluation]` 的 Harbor 依赖。Docker 不可用时，仍可使用本机 PostgreSQL 跑数据库测试；真实执行必须单独标为未验收。
 
 [API](../../docs/MANAGED_API.md) · [架构 / 恢复 / 安全边界](../../docs/MANAGED_INFRASTRUCTURE.md) · [真实验收](../../docs/refactors/MANAGED_ACCEPTANCE.md)
+
+## 一致性升级与分级实测
+
+升级前排空旧 Run，再一起升级 Go 与私有 SDK adapter；旧的提前发送 result 协议不会被新 Go 当成退出凭证。增量迁移 005 保留全部历史业务数据；历史终态不伪造 command_exited_at，仅对原先超过 200 个事件的旧导出重新排队。
+
+维护调用可配置 `CATENA_MANAGED_PROVIDER_TIMEOUT=10s`、`CATENA_MANAGED_OPERATION_LEASE=30s`（操作租约必须大于调用超时）。超时不会在数据库事务内等待 Provider，也不会提前释放容量。
+
+```sh
+# 独立空闲本地租户；同时提交 10 / 20 / 50 个真实 Run，每档最多 2 Sandbox。
+.local/managed-dev/venv/bin/python scripts/managed_load.py \
+  --environment .local/managed-dev/env.json --output .local/managed-dev/graded-runs.json
+
+# macOS：单独复测 50 档，避免机器空闲休眠干扰长时间排队。
+caffeinate -i .local/managed-dev/venv/bin/python scripts/managed_load.py --grade 50 \
+  --environment .local/managed-dev/env.json --output .local/managed-dev/grade-50.json
+
+# 在上述真实任务执行期间，停本机专用 Collector 35 秒并核对恢复后的所有 event ID。
+.local/managed-dev/venv/bin/python scripts/managed_trace_recovery.py \
+  --environment .local/managed-dev/env.json --output .local/managed-dev/collector-retry.json
+
+# 可复现慢 Provider、操作租约接管、延迟退出和跨页 ACK 丢失边界测试。
+BARENA_TEST_DATABASE_URL='你的独立测试 PostgreSQL URL' \
+  go -C backend test -count=1 -v -run '^TestManaged(Slow|PauseTimeout|ExecutionWaits|AdapterCrash|TracePagination|Cancellation)' ./internal/control
+```
+
+分级脚本临时限制本机 local 租户为 2 Sandbox / 2 Run、每 Run 最多 4 次模型请求、每次至多 1024 output tokens、每分钟 30 次请求，结束后恢复原配额。每 Run 必须通过实际代码文件 / Python 工具执行 / JSON 产物校验；失败与取消不算成功，不自动重试不确定执行。首次出现失败时不会盲目扩大下一档。最多 80 个正式 Run、320 次上游尝试；模型自身失败和网络故障会如实降低成功率。CPU / memory 采样由 Docker stats 提供，API 仍明确不支持通用实时利用率监控。

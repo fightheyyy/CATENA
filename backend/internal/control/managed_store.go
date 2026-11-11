@@ -46,6 +46,7 @@ type managedRun struct {
 	Finished *time.Time `json:"finished_at"`
 }
 type managedBox struct {
+	Revision   int64  `json:"revision"`
 	ID         string `json:"sandbox_id"`
 	Provider   string `json:"provider_sandbox_id"`
 	Tenant     string `json:"tenant_id"`
@@ -166,9 +167,9 @@ func (s *PostgresStore) claimManaged(ctx context.Context, worker string, ttl tim
 	// Tenant rotation is durable, and the partial unique index independently enforces session exclusion.
 	err = managedJSON(tx.QueryRowContext(ctx, `SELECT to_jsonb(r)-'credential_hash' FROM agent_runs r
  JOIN agent_sessions s USING(session_id) JOIN tenant_quotas q ON q.tenant_id=r.tenant_id
- WHERE r.state='QUEUED' AND r.next_attempt_at<=now() AND s.state='READY'
- AND NOT EXISTS(SELECT 1 FROM agent_runs x WHERE x.session_id=r.session_id AND x.state='RUNNING')
- AND (SELECT count(*) FROM agent_runs x WHERE x.tenant_id=r.tenant_id AND x.state='RUNNING')<q.max_running
+ WHERE NOT EXISTS(SELECT 1 FROM sandbox_operations o JOIN managed_sandboxes b ON b.sandbox_id=o.sandbox_id WHERE b.session_id=r.session_id AND o.kind<>'create' AND o.state IN ('PENDING','UNKNOWN')) AND r.state='QUEUED' AND r.next_attempt_at<=now() AND s.state='READY'
+ AND NOT EXISTS(SELECT 1 FROM agent_runs x WHERE x.session_id=r.session_id AND x.state IN ('RUNNING','STOPPING'))
+ AND (SELECT count(*) FROM agent_runs x WHERE x.tenant_id=r.tenant_id AND x.state IN ('RUNNING','STOPPING'))<q.max_running
  AND (EXISTS(SELECT 1 FROM managed_sandboxes b WHERE b.session_id=r.session_id AND b.state='IDLE') OR
  (NOT EXISTS(SELECT 1 FROM managed_sandboxes b WHERE b.session_id=r.session_id AND b.state<>'TERMINATED')
  AND (SELECT count(*) FROM resource_reservations z WHERE z.released_at IS NULL)<$1
@@ -194,7 +195,7 @@ func (s *PostgresStore) claimManaged(ctx context.Context, worker string, ttl tim
 			_, err = tx.ExecContext(ctx, `INSERT INTO resource_reservations(sandbox_id,tenant_id) VALUES($1,$2)`, l.Box.ID, l.Box.Tenant)
 		}
 	} else if err == nil {
-		_, err = tx.ExecContext(ctx, `UPDATE managed_sandboxes SET state='BUSY',last_activity_at=now() WHERE sandbox_id=$1`, l.Box.ID)
+		_, err = tx.ExecContext(ctx, `UPDATE managed_sandboxes SET state='BUSY',revision=revision+1,last_activity_at=now() WHERE sandbox_id=$1`, l.Box.ID)
 	}
 	if err != nil {
 		return nil, err
@@ -250,7 +251,7 @@ func (s *PostgresStore) finishManaged(ctx context.Context, l *managedLease, stat
 		return err
 	}
 	defer tx.Rollback()
-	err = managedCAS(tx.ExecContext(ctx, `UPDATE agent_runs SET state=$4,result=$5,error=$6,finished_at=now(),updated_at=now(),credential_hash=NULL,lease_until=NULL WHERE run_id=$1 AND worker_id=$2 AND fencing_token=$3 AND state='RUNNING' AND lease_until>now() AND NOT cancel_requested`, l.Run.ID, l.Run.Worker, l.Run.Fence, state, bounded(redactEvidenceText(result), 128*1024), bounded(redactEvidenceText(detail), 1000)))
+	err = managedCAS(tx.ExecContext(ctx, `UPDATE agent_runs SET state=$4,result=$5,error=$6,finished_at=now(),updated_at=now(),credential_hash=NULL,lease_until=NULL WHERE run_id=$1 AND worker_id=$2 AND fencing_token=$3 AND state='RUNNING' AND lease_until>now() AND NOT cancel_requested AND (execution_started_at IS NULL OR command_exited_at IS NOT NULL)`, l.Run.ID, l.Run.Worker, l.Run.Fence, state, bounded(redactEvidenceText(result), 128*1024), bounded(redactEvidenceText(detail), 1000)))
 	if err != nil {
 		return err
 	}
@@ -270,7 +271,7 @@ func (s *PostgresStore) finishManaged(ctx context.Context, l *managedLease, stat
 			return err
 		}
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE managed_sandboxes SET state='IDLE',last_activity_at=now() WHERE sandbox_id=$1 AND state IN ('BUSY','READY')`, l.Box.ID)
+	_, err = tx.ExecContext(ctx, `UPDATE managed_sandboxes SET state='IDLE',revision=revision+1,last_activity_at=now() WHERE sandbox_id=$1 AND state IN ('BUSY','READY')`, l.Box.ID)
 	if err != nil {
 		return err
 	}

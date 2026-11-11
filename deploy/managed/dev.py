@@ -272,7 +272,7 @@ def cleanup():
         if session["state"] != "DELETED":
             detail = request(f"/v1/agent-sessions/{session['session_id']}")
             for item in detail["runs"]:
-                if item["state"] in ("QUEUED", "RUNNING"):
+                if item["state"] in ("QUEUED", "RUNNING", "STOPPING"):
                     request(f"/v1/agent-runs/{item['run_id']}/cancel", "POST", {})
     for _ in range(60):
         pending = False

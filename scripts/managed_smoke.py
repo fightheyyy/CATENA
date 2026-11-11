@@ -29,7 +29,7 @@ def wait_run(api, run_id):
     deadline = time.monotonic() + 240
     while time.monotonic() < deadline:
         run = http(api, "/v1/agent-runs/" + run_id)
-        if run["state"] not in ("QUEUED", "RUNNING"):
+        if run["state"] not in ("QUEUED", "RUNNING", "STOPPING"):
             if run["state"] != "COMPLETED":
                 raise RuntimeError(f"Run {run_id}: {run['state']}: {run['error']}")
             return run

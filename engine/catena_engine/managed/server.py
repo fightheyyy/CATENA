@@ -150,6 +150,17 @@ async def execute(data, write):
         )
         authorize(data)
         pending = ""
+        result = None
+
+        def receive(line):
+            nonlocal result
+            event = json.loads(line)
+            if event.get("kind") == "result":
+                if result is not None:
+                    raise ValueError("duplicate runtime result")
+                result = event
+            else:
+                write(event)
 
         async def stdout(message):
             nonlocal pending
@@ -157,7 +168,7 @@ async def execute(data, write):
             while "\n" in pending:
                 line, pending = pending.split("\n", 1)
                 if line:
-                    write(json.loads(line))
+                    receive(line)
             if len(pending) > 24 * 1024 * 1024:
                 raise ValueError("runtime frame exceeds limit")
 
@@ -172,9 +183,16 @@ async def execute(data, write):
             handlers=ExecutionHandlers(on_stdout=stdout, on_stderr=stderr, skip_accumulation=True),
         )
         if pending.strip():
-            write(json.loads(pending))
-        if execution.error:
-            raise RuntimeError(f"sandbox command failed: {execution.error.name}")
+            receive(pending)
+        if execution.error or execution.complete is None or execution.exit_code != 0:
+            raise RuntimeError(
+                f"sandbox command exit not confirmed: complete={execution.complete is not None}, exit_code={execution.exit_code}, provider_error={execution.error}"
+            )
+        if result is None:
+            raise RuntimeError("sandbox exited without a runtime result")
+        result["command_exited"] = True
+        result["exit_code"] = execution.exit_code
+        write(result)
     finally:
         await sandbox.close()
 
@@ -223,6 +241,21 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as error:
             if not streaming:
                 self.send_error(502, type(error).__name__)
+            else:
+                detail = str(error)
+                for secret in (TOKEN, os.environ.get("OPEN_SANDBOX_API_KEY", ""), data.get("token", "")):
+                    if secret:
+                        detail = detail.replace(secret, "[REDACTED]")
+                try:
+                    self.wfile.write(
+                        json.dumps(
+                            {"kind": "adapter.error", "data": {"type": type(error).__name__, "error": detail[:1000]}}
+                        ).encode()
+                        + b"\n"
+                    )
+                    self.wfile.flush()
+                except OSError:
+                    pass
             # No stream retry: execution may already have produced side effects.
 
 

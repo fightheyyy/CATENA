@@ -363,8 +363,8 @@ func TestManagedCleanupFailureRetainsCapacityAndRetries(t *testing.T) {
 	defer runner.Close()
 	server := &HTTPServer{store: s}
 	p := &managedPlatform{store: s, server: server, config: ManagedConfig{URL: runner.URL, Idle: time.Minute}, client: runner.Client()}
-	if err := p.reconcile(ctx); err != nil {
-		t.Fatal(err)
+	if err := p.reconcile(ctx); err == nil {
+		t.Fatal("provider failure was not reported")
 	}
 	var reserved int
 	if err := s.db.QueryRow(`SELECT count(*) FROM resource_reservations WHERE released_at IS NULL`).Scan(&reserved); err != nil || reserved != 1 {

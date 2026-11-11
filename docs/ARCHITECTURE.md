@@ -64,3 +64,5 @@ Engineering memory reuses versioned Evidence/Candidate/Compare/Review. OpenVikin
 and automatic retrieval remain retired. Historical terminal Jobs are unchanged.
 See [workflow contracts](IMPROVEMENT_WORKFLOW.md), [spec](../SPEC.md)
 · [analysis acceptance](refactors/ANALYSIS_GATE.md) · [improvement acceptance](refactors/UNIFIED_RUNTIME.md) and [historical evidence](refactors/REBIRTH.md).
+
+Managed 生命周期见 `managed_reconcile.go` 的 durable intent / operation lease / revision CAS。所有 Provider I/O 均在事务外；`managed_trace.go` 单独通过持久游标分页导出全部事件，跨页工具关联随 ACK 一起保存。运行退出凭证由官方 SDK foreground command complete 提供，Go 在 EOF 后才提交终态；取消和租约丢失通过 STOPPING 等待实例隔离。
