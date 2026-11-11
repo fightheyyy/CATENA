@@ -58,6 +58,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  managedRead: <T>(path: string) => request<T>(path),
+  managedWrite: <T>(path: string, body?: unknown, key?: string, method = "POST") => request<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body), headers: key ? { "Idempotency-Key": key } : undefined }),
   reviewAnalysisJob: async (jobID: string, artifactID: string, decision: "adopt" | "reject", reason: string) => normalizeAnalysisJob(
     await request<unknown>(`/v1/analysis-jobs/${encodeURIComponent(jobID)}/reviews`, { method: "POST", body: JSON.stringify({ artifact_id: artifactID, decision, reason }) }),
   ),

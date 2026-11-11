@@ -1,6 +1,7 @@
-export const primaryNavigationRoutes = ["home", "traces", "evolution"] as const;
+export const primaryNavigationRoutes = ["home", "sessions", "traces", "evolution"] as const;
 
 export const routePaths = {
+  sessions: "/agent-sessions", runDetail: "/agent-runs", sandboxMonitor: "/sandboxes", resources: "/resources",
   home: "/", assistant: "/assistant", agents: "/agents", apiKeys: "/api-keys",
   traces: "/traces", evolution: "/evolution", settings: "/settings",
 } as const;

@@ -1120,3 +1120,15 @@ to { transform: translateX(0); opacity: 1; } }
 .proactive-goal-actions { flex-direction: row; align-items: center; }
 .proactive-goal-actions > span { max-width: 120px; }
 }
+
+.managed-workspace { display: grid; gap: 1rem; min-width: 0; }
+.managed-panel { padding: 1.25rem; min-width: 0; }
+.managed-panel form, .managed-panel label { display: grid; gap: .5rem; margin-block: .75rem; }
+.managed-panel textarea { min-height: 6rem; width: 100%; resize: vertical; }
+.managed-panel button, .managed-panel select, .managed-panel textarea { font: inherit; padding: .5rem; }
+.managed-panel button { margin: .25rem; }
+.managed-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.managed-panel code { overflow-wrap: anywhere; }
+.managed-events { max-height: 28rem; overflow: auto; }
+.managed-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.managed-quota { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; }

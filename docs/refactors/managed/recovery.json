@@ -1,0 +1,14 @@
+{
+  "run_id": "run-1794319007823-d0366ffd133935d4",
+  "session_id": "session-1794319007819-dd48a409d573169b",
+  "sandbox_id": "sandbox-1794319008195-61f5ae946e38fd32",
+  "provider_id": "150dabde-9cac-4f27-9bb8-2265677730dd",
+  "before_fence": 1,
+  "after_fence": 2,
+  "state": "NEEDS_REVIEW",
+  "attempt": 1,
+  "crash_to_quarantine_seconds": 24.533,
+  "real_tool_execution_observed": true,
+  "sandbox_terminated": true,
+  "automatic_replay": false
+}

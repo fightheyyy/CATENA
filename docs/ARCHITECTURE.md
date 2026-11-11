@@ -1,5 +1,7 @@
 # CATENA architecture
 
+用户托管执行的实际三层架构、状态机、关键表及边界见 [Managed Infrastructure](MANAGED_INFRASTRUCTURE.md)。Go 调度与鉴权，私有官方 SDK adapter 调用 OpenSandbox，用户 Codex 只在 Docker Sandbox 内执行；Run / model / tool Trace 回到现有数据面。旧分析 / Harbor 链路如下，保持独立。
+
 Codex = analysis/improvement Agent. Harbor = evaluation engine.
 CATENA = attribution, orchestration and engineering records.
 
@@ -48,9 +50,8 @@ flowchart TD
 | `executions.py`, `server.py` | Private authentication, owner receipts, operation deduplication |
 | `frontend/src/AgentAnalysisLauncher.tsx`, `AnalysisWorkspace.tsx` | Configuration, state, Compare, candidate files and Human Review |
 
-Harness² supplies method inspiration, not a runtime dependency. No Registry,
-custom optimizer Host/Bench/Proposer, universal Plugin SDK or second durable queue
-remains. Internal analysis Runtime is separate from the evaluated target; the
+Harness² supplies method inspiration, not a runtime dependency. No Registry, custom optimizer Host/Bench/Proposer or universal Plugin SDK remains.
+Managed user Runs now have their own PostgreSQL queue and lifecycle, separate from internal analysis. Internal analysis Runtime is separate from the evaluated target; the
 current target adapter is Codex, not a universal harness format.
 
 Go+React, Python Engine and PostgreSQL retain their control-plane roles. The Trace
@@ -63,3 +64,5 @@ Engineering memory reuses versioned Evidence/Candidate/Compare/Review. OpenVikin
 and automatic retrieval remain retired. Historical terminal Jobs are unchanged.
 See [workflow contracts](IMPROVEMENT_WORKFLOW.md), [spec](../SPEC.md)
 · [analysis acceptance](refactors/ANALYSIS_GATE.md) · [improvement acceptance](refactors/UNIFIED_RUNTIME.md) and [historical evidence](refactors/REBIRTH.md).
+
+Managed 生命周期见 `managed_reconcile.go` 的 durable intent / operation lease / revision CAS。所有 Provider I/O 均在事务外；`managed_trace.go` 单独通过持久游标分页导出全部事件，跨页工具关联随 ACK 一起保存。运行退出凭证由官方 SDK foreground command complete 提供，Go 在 EOF 后才提交终态；取消和租约丢失通过 STOPPING 等待实例隔离。

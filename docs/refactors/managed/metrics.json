@@ -1,0 +1,94 @@
+{
+  "measured_at": "2026-11-10T14:08:09.870814+00:00",
+  "hardware": {
+    "model": "Mac17,3",
+    "host_memory_bytes": 17179869184,
+    "host_cpus": 10,
+    "cpu": "Apple M5",
+    "docker_engine": "29.9.2",
+    "docker_memory_bytes": 8319504384,
+    "docker_cpus": 10
+  },
+  "runs": [
+    {
+      "run_id": "run-1794319154057-a586bfcd9aac035c",
+      "run_ms": 10708.326,
+      "generation": 1,
+      "allocation_ms": 1991,
+      "queue_wait_ms": 121.155,
+      "sandbox_reused": false
+    },
+    {
+      "run_id": "run-1794319168153-2544ca83cbdafeed",
+      "run_ms": 32288.631,
+      "generation": 1,
+      "allocation_ms": 1,
+      "queue_wait_ms": 46.012,
+      "sandbox_reused": true
+    },
+    {
+      "run_id": "run-1794319205386-11d7a1ae2e9c8a8f",
+      "run_ms": 16373.675,
+      "generation": 2,
+      "allocation_ms": 1765,
+      "queue_wait_ms": 262.427,
+      "sandbox_reused": false
+    }
+  ],
+  "traces": [
+    {
+      "trace_id": "e16a410368475a3497683bbc31e170f3",
+      "span_count": 5,
+      "span_names": [
+        "managed.agent.run",
+        "managed.llm.request",
+        "managed.llm.request",
+        "managed.tool.shell",
+        "managed.tool.shell"
+      ]
+    },
+    {
+      "trace_id": "58ca5f15b39018a9b31f397fb55c569a",
+      "span_count": 6,
+      "span_names": [
+        "managed.agent.run",
+        "managed.llm.request",
+        "managed.llm.request",
+        "managed.tool.shell",
+        "managed.tool.shell",
+        "managed.tool.shell"
+      ]
+    },
+    {
+      "trace_id": "cb6d217d2cfe6b3d6e710510fab9e69b",
+      "span_count": 5,
+      "span_names": [
+        "managed.agent.run",
+        "managed.llm.request",
+        "managed.tool.shell",
+        "managed.tool.shell",
+        "managed.llm.request"
+      ]
+    }
+  ],
+  "queue_wait_ms": {
+    "p50": 121.155,
+    "p95": 262.427
+  },
+  "notes": [
+    "Only three real coding runs; not a throughput benchmark.",
+    "allocation_ms is measured from worker execution entry to sandbox readiness; includes controller/SDK overhead. Two cold samples only.",
+    "Resource utilization and generic recovery percentiles were not measured.",
+    "Previous integration/debugging failures are excluded from this named successful acceptance, not concealed as production success rate."
+  ],
+  "cold_allocation_ms": {
+    "sample_count": 2,
+    "p50": 1765,
+    "p95": 1991
+  },
+  "scheduler_load_log": [
+    "managed_test.go:291: PostgreSQL scheduler only: 10 runs, 8 claimants, capacity 4, duration 140.254584ms; no model/provider performance claim",
+    "managed_test.go:291: PostgreSQL scheduler only: 50 runs, 8 claimants, capacity 4, duration 389.453708ms; no model/provider performance claim",
+    "managed_test.go:291: PostgreSQL scheduler only: 100 runs, 8 claimants, capacity 4, duration 683.139208ms; no model/provider performance claim"
+  ]
+}

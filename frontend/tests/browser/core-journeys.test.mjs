@@ -183,7 +183,7 @@ test("Workspace retains exact recent evidence and analysis links", async (t) => 
   const history = page.locator(".proactive-list").filter({ has: page.getByRole("heading", { name: "最近经历", exact: true }) });
   const analyses = page.locator(".proactive-list").filter({ has: page.getByRole("heading", { name: /^分析记录/ }) });
   await visible(history.getByRole("button").first());
-  assert.deepEqual(await page.locator(".sidebar nav button").allTextContents(), ["工作台", "经历", "产出"]);
+  assert.deepEqual(await page.locator(".sidebar nav button").allTextContents(), ["工作台", "托管会话", "经历", "产出"]);
   assert.equal(await history.getByRole("button").count(), 4);
   assert.equal(await history.locator("small").first().innerText(), state.traces[0].input_preview);
   await noOverflow(page);

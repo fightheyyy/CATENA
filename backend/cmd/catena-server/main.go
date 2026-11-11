@@ -108,7 +108,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler, err := control.NewHTTPHandler(store, control.HTTPConfig{Auth: control.AuthConfig{
+	managedConfig, err := control.ManagedConfigFromEnv()
+	if err != nil {
+		return err
+	}
+	handler, err := control.NewHTTPHandler(store, control.HTTPConfig{Managed: managedConfig, Auth: control.AuthConfig{
 		GitHubClientID:        githubClientID,
 		GitHubClientSecret:    githubClientSecret,
 		RedirectURL:           redirectURL,
@@ -120,6 +124,22 @@ func run() error {
 		return err
 	}
 	defer handler.Close()
+	if managedConfig.URL != "" {
+		gatewayAddr := env("CATENA_MANAGED_GATEWAY_ADDR", "0.0.0.0:18788")
+		listener, listenErr := net.Listen("tcp", gatewayAddr)
+		if listenErr != nil {
+			return fmt.Errorf("managed gateway: %w", listenErr)
+		}
+		gateway := &http.Server{Handler: handler.ModelGateway(), ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 60 * time.Second}
+		defer gateway.Close()
+		go func() {
+			if e := gateway.Serve(listener); e != nil && !errors.Is(e, http.ErrServerClosed) {
+				slog.Error("managed gateway stopped", "error", e)
+				stop()
+			}
+		}()
+	}
+
 	server := &http.Server{
 		Addr:              address,
 		Handler:           handler,

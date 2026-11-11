@@ -1,0 +1,3688 @@
+{
+  "started_at": "2026-11-11T03:42:11.289034+00:00",
+  "hardware": [
+    "Mac17,3",
+    "17179869184",
+    "10",
+    "Apple M5"
+  ],
+  "model": "gpt-5.6-luna",
+  "agent_id": "agent-1794368531270-06201747d958e5a8",
+  "sandbox_capacity": 2,
+  "per_run_model_request_limit": 4,
+  "per_request_output_token_limit": 1024,
+  "total_run_limit": 50,
+  "total_model_attempt_limit": 200,
+  "grades": [
+    {
+      "concurrent_submissions": 50,
+      "sessions": [
+        "session-1794368531289-99fef23d0176153f",
+        "session-1794368531291-b5e0f4499cdd81e6"
+      ],
+      "submission_seconds": 0.156,
+      "runs": [
+        {
+          "run_id": "run-1794368531296-235ad892d335e728",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "f6843f7ab24d53b1ad3b0a3779095ef4",
+          "model_requests": 2,
+          "input_tokens": 15843,
+          "output_tokens": 521,
+          "error": "",
+          "queue_wait_ms": 370.742,
+          "execution_ms": 16876.171,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": false,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 2116
+          },
+          "artifact_verified": true,
+          "source_sha256": "7b28bfcba567f0328e07de369e49999ba12b4c62f10433f2310922898b9d3fd0"
+        },
+        {
+          "run_id": "run-1794368531319-5d93fff984c33937",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "d442951e95f146ef867afe56491c2710",
+          "model_requests": 2,
+          "input_tokens": 15757,
+          "output_tokens": 442,
+          "error": "",
+          "queue_wait_ms": 368.776,
+          "execution_ms": 16401.602,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": false,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 2069
+          },
+          "artifact_verified": true,
+          "source_sha256": "734ac92379d7a0c8663cc52278bc7677aecbc9816de515c23a0b3a8eae8e4ea7"
+        },
+        {
+          "run_id": "run-1794368531309-f9546cdb34ef3a32",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "89aa2d37105d11827188087fd1a161f1",
+          "model_requests": 2,
+          "input_tokens": 17224,
+          "output_tokens": 432,
+          "error": "",
+          "queue_wait_ms": 19386.585,
+          "execution_ms": 15922.043,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "be280239274413bd5a2ca963942e3e73d8487ed2f6d1d2e9baf74a51ba18a568"
+        },
+        {
+          "run_id": "run-1794368531330-a9cc48be5e48c8e4",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "2cfed55d25f08eac9f3b79681291ffc9",
+          "model_requests": 2,
+          "input_tokens": 17025,
+          "output_tokens": 391,
+          "error": "",
+          "queue_wait_ms": 18872.12,
+          "execution_ms": 15970.32,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "e9b7ba16c310eaad433a65523f95ea7bb08b61066942ea41ffe54848b27a923e"
+        },
+        {
+          "run_id": "run-1794368531336-4f80f77204d44624",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "0868ac15cde53c5034954c9c89cf853b",
+          "model_requests": 2,
+          "input_tokens": 18219,
+          "output_tokens": 379,
+          "error": "",
+          "queue_wait_ms": 34861.954,
+          "execution_ms": 17961.020999999997,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "0f21d1e564142ffcc00b551331dececc374aaf81138a83dcf9d303f5fc972573"
+        },
+        {
+          "run_id": "run-1794368531312-28f7a6ba4e24fbd0",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "b2a53f1dca5e450c79d6f51e23133c10",
+          "model_requests": 2,
+          "input_tokens": 18511,
+          "output_tokens": 427,
+          "error": "",
+          "queue_wait_ms": 35331.153999999995,
+          "execution_ms": 17310.288,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "ba7bc8673a81c8bb8bcb0da2ffe26090ecf48a9e9490f9ca4e198101193ce979"
+        },
+        {
+          "run_id": "run-1794368531324-7cd73996fda9cf32",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "6aa4cdc66f40ae9ae1d420a9e5f52142",
+          "model_requests": 2,
+          "input_tokens": 19410,
+          "output_tokens": 382,
+          "error": "",
+          "queue_wait_ms": 52839.916000000005,
+          "execution_ms": 15923.248,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 2
+          },
+          "artifact_verified": true,
+          "source_sha256": "b0c90571e724cb80ffc1535e2a21618b5acc1b485b62cc1b9f27858085e1a36b"
+        },
+        {
+          "run_id": "run-1794368531347-94397e910659253e",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "80222e2d9ff7c0f7599b4f7138e1f8c8",
+          "model_requests": 2,
+          "input_tokens": 19779,
+          "output_tokens": 419,
+          "error": "",
+          "queue_wait_ms": 52648.884000000005,
+          "execution_ms": 22058.596,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "e92042eadc4d8b9f00d1516fdba3952e1a3fd66871679192536cbc96f99c1743"
+        },
+        {
+          "run_id": "run-1794368531341-5ec6e17bbde6bd3b",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "5c1ce03bc29e263d0fc2b9d3ea3c58c9",
+          "model_requests": 2,
+          "input_tokens": 20588,
+          "output_tokens": 372,
+          "error": "",
+          "queue_wait_ms": 68778.632,
+          "execution_ms": 16569.689000000002,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "80a7d4bdacdb6956a3b6c09c1be6a7ac63203887472b2af2fd3b2eae68ef760e"
+        },
+        {
+          "run_id": "run-1794368531356-118e5d875ca6cbd0",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "685a20ca38ecbd3d63033e79002535db",
+          "model_requests": 2,
+          "input_tokens": 21044,
+          "output_tokens": 424,
+          "error": "",
+          "queue_wait_ms": 74721.62899999999,
+          "execution_ms": 20952.866,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "530866f50074d90f46df1e87466719b9bf5b0db17bacd089a9f51db635cf48ad"
+        },
+        {
+          "run_id": "run-1794368531350-a8069d57250f0f7d",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "259907c18d3ebe423d72b6e291d390ad",
+          "model_requests": 2,
+          "input_tokens": 21744,
+          "output_tokens": 370,
+          "error": "",
+          "queue_wait_ms": 85365.376,
+          "execution_ms": 22058.18,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "ae7b5e5fa30408e6969f9848abdcb2fdae704f5de55f0338018bbbbef53170ac"
+        },
+        {
+          "run_id": "run-1794368531367-fb9f4750999f4afd",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "97778a4ee5e0604430d293729bff77f0",
+          "model_requests": 2,
+          "input_tokens": 22300,
+          "output_tokens": 414,
+          "error": "",
+          "queue_wait_ms": 95691.784,
+          "execution_ms": 16138.003,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "ee12d2e428c8fec0eb2c37e5e6197326ac097af33965e62fe4aea5cf774d9b13"
+        },
+        {
+          "run_id": "run-1794368531361-5d43d4e9d2237cf4",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "d2fd5ef2dbace93adf6987ff57aeaaaa",
+          "model_requests": 2,
+          "input_tokens": 22904,
+          "output_tokens": 374,
+          "error": "",
+          "queue_wait_ms": 107439.758,
+          "execution_ms": 15964.526,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "c09a5d6a49ac41999741a748451634ca830eb185730449a5e59f22847e99a4cd"
+        },
+        {
+          "run_id": "run-1794368531385-d169c6c8c52e327c",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "c172d1ea0d06ca5f2338f79f533507a5",
+          "model_requests": 2,
+          "input_tokens": 23565,
+          "output_tokens": 427,
+          "error": "",
+          "queue_wait_ms": 111846.719,
+          "execution_ms": 17724.136000000002,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "12771a477ddbaee861fd1bf9ec16cde33c56f99515cc5d5c667961fcdf607d2d"
+        },
+        {
+          "run_id": "run-1794368531380-759d5a917bce0e26",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "d37d10723014337e663d93269a00fe94",
+          "model_requests": 2,
+          "input_tokens": 24077,
+          "output_tokens": 377,
+          "error": "",
+          "queue_wait_ms": 123421.731,
+          "execution_ms": 18517.327,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "2e5ca86b660fea0e1b3e91943137e7f3ce85aed1f2c56fae348cb8bf3ed88a21"
+        },
+        {
+          "run_id": "run-1794368531374-eb6686aa4041241c",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "83371b550521d7bc83ba325033cc2a70",
+          "model_requests": 2,
+          "input_tokens": 24850,
+          "output_tokens": 424,
+          "error": "",
+          "queue_wait_ms": 129580.024,
+          "execution_ms": 17364.195,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "ac8f3cc1fa603ef3c4671141b27ee3e863a81e1dae67a2467b9ddf8c32d2d13e"
+        },
+        {
+          "run_id": "run-1794368531390-5cd62adac99a639d",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "b04307b66c260d2ff21c16ee09e6a163",
+          "model_requests": 2,
+          "input_tokens": 25246,
+          "output_tokens": 372,
+          "error": "",
+          "queue_wait_ms": 141951.14,
+          "execution_ms": 15742.601999999999,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "810e41d4d7cf294b702176dd7f3e97d1a9b1f8de4e01cc895f212227e137d05d"
+        },
+        {
+          "run_id": "run-1794368531393-81bd7093b65c494f",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "6a006ed1545f41c9d51be1c44e992bde",
+          "model_requests": 2,
+          "input_tokens": 26120,
+          "output_tokens": 420,
+          "error": "",
+          "queue_wait_ms": 146955.88799999998,
+          "execution_ms": 16766.314000000002,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "2672750883614d02135fcfc4bf75d678e071ad4f961c870563221d18c708a5bd"
+        },
+        {
+          "run_id": "run-1794368531395-cd63a1b012ddd833",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "e52b30aad433be92d55dfe85f9e4f812",
+          "model_requests": 2,
+          "input_tokens": 26406,
+          "output_tokens": 372,
+          "error": "",
+          "queue_wait_ms": 157704.507,
+          "execution_ms": 17296.358,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "aea6a9ebbeca9d4045657e66db915aeed0057e262ec26a51bf623eb5551c0fcd"
+        },
+        {
+          "run_id": "run-1794368531400-d108d3ecd5c506fa",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "9c04aae0caedadaa4404c05fa26fd44c",
+          "model_requests": 2,
+          "input_tokens": 27378,
+          "output_tokens": 418,
+          "error": "",
+          "queue_wait_ms": 163716.60700000002,
+          "execution_ms": 16581.63,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "3509be699556e909686d394179ab67187078a9943bff7ad0cb33be4779aa34d5"
+        },
+        {
+          "run_id": "run-1794368531396-9cac836c308c0eca",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "1ce0c5931bd263d6f98433ac04f13ebd",
+          "model_requests": 2,
+          "input_tokens": 27579,
+          "output_tokens": 379,
+          "error": "",
+          "queue_wait_ms": 175009.86800000002,
+          "execution_ms": 21453.028,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "9f85f2bec7e54941062215a8bbf783b1837df7e5355c4d945146b6129892a423"
+        },
+        {
+          "run_id": "run-1794368531403-a5b3c4368e2ad883",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "520673b6b8392cf61ca83d2a5731d60a",
+          "model_requests": 2,
+          "input_tokens": 28638,
+          "output_tokens": 420,
+          "error": "",
+          "queue_wait_ms": 180300.418,
+          "execution_ms": 16133.158000000001,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "034c92ac4b16192e711da09394322b321eb8347aa79c2cfae51dd712c0c27704"
+        },
+        {
+          "run_id": "run-1794368531405-8531afcba531c767",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "2289b5fd97a9a04c2d0cc2954fa2b2d1",
+          "model_requests": 2,
+          "input_tokens": 29900,
+          "output_tokens": 420,
+          "error": "",
+          "queue_wait_ms": 196458.588,
+          "execution_ms": 17580.268,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "2664b5c93be1493f71859cb4980baeb02548c121f55cf3126c37bcc10dee9535"
+        },
+        {
+          "run_id": "run-1794368531398-55d13a33d63c1960",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "2e7b8cf75d60fb99dd76d4790ebfd119",
+          "model_requests": 2,
+          "input_tokens": 28748,
+          "output_tokens": 370,
+          "error": "",
+          "queue_wait_ms": 196470.693,
+          "execution_ms": 22351.559,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "2b2690704d7ed76321419b6b34c1c305c147d6ee312037cbd1a2d89b6ce727be"
+        },
+        {
+          "run_id": "run-1794368531408-419ef46cd904cb86",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "9b591ab4b5029a92ba39faec8785103f",
+          "model_requests": 2,
+          "input_tokens": 31154,
+          "output_tokens": 416,
+          "error": "",
+          "queue_wait_ms": 214059.813,
+          "execution_ms": 15962.815,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "cf9fc1f08b5ea59276db2bfb6ff7c94b19537007419bacc9e1a7b757b870da6a"
+        },
+        {
+          "run_id": "run-1794368531401-a7651efbc7b56274",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "1d227c13b36b3939a7d7a7571a4475ed",
+          "model_requests": 2,
+          "input_tokens": 29904,
+          "output_tokens": 372,
+          "error": "",
+          "queue_wait_ms": 218843.383,
+          "execution_ms": 23695.519,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "e82071aacfe05acc62556cc22b5c17a05ad3b384c4e6959409aaf6efe377c2e3"
+        },
+        {
+          "run_id": "run-1794368531410-17f683921849ffb9",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "094ccd7f50cdbab268c328572de57aff",
+          "model_requests": 2,
+          "input_tokens": 32424,
+          "output_tokens": 428,
+          "error": "",
+          "queue_wait_ms": 230031.69,
+          "execution_ms": 18697.682,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "fc2a7ab83ce2abdb1f0dadf4fb477904d1d556ddd8623cf24d1d86e529aa9ba4"
+        },
+        {
+          "run_id": "run-1794368531406-8d691867b1260cee",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "04bf4da5acef44b07ec5451b27858430",
+          "model_requests": 2,
+          "input_tokens": 31076,
+          "output_tokens": 378,
+          "error": "",
+          "queue_wait_ms": 242537.666,
+          "execution_ms": 16631.242000000002,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "0bcd64730c74a8121578f824a053c3844b20b535fd1bf1ca18d6d010386f4b4d"
+        },
+        {
+          "run_id": "run-1794368531411-de6873603f7eb8b0",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "53551439463ae35b8f9733718a65b37e",
+          "model_requests": 2,
+          "input_tokens": 33705,
+          "output_tokens": 421,
+          "error": "",
+          "queue_wait_ms": 248736.506,
+          "execution_ms": 22156.632999999998,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "31c437e5517654b77f176e39eedab34807ce1b44135a7698433a72c92d7a18c1"
+        },
+        {
+          "run_id": "run-1794368531413-bc806cce11e207da",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "e055db472b98fcb46cd192a025dd88ee",
+          "model_requests": 2,
+          "input_tokens": 32252,
+          "output_tokens": 374,
+          "error": "",
+          "queue_wait_ms": 259158.7,
+          "execution_ms": 16292.452999999998,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "6b89a10fa5f872f70e2bf0b12e4a47f2fc7c3d9bdcc0095df90b0df3f7a8e740"
+        },
+        {
+          "run_id": "run-1794368531421-68156328d21c769a",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "db9f2ec1a8d3aa1316970c613ae7c486",
+          "model_requests": 2,
+          "input_tokens": 34965,
+          "output_tokens": 417,
+          "error": "",
+          "queue_wait_ms": 270879.256,
+          "execution_ms": 15564.636999999999,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "2797df19f9ba88ecd9cffd71a70a6d90afc5f650a46121db8331f10d5e67bb96"
+        },
+        {
+          "run_id": "run-1794368531414-9c427d079d942d84",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "942814d12c68fe4fb989b2215c66836a",
+          "model_requests": 2,
+          "input_tokens": 33421,
+          "output_tokens": 375,
+          "error": "",
+          "queue_wait_ms": 275457.666,
+          "execution_ms": 16561.726,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "ee1b3207b5d25b686f67d797c5a04c2f4e0a1770ca4fcd459a3f997756b45ef4"
+        },
+        {
+          "run_id": "run-1794368531422-a8c95f98af7e4a3c",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "794a5c66126ed356ec989ee81d9069ee",
+          "model_requests": 2,
+          "input_tokens": 36222,
+          "output_tokens": 420,
+          "error": "",
+          "queue_wait_ms": 286456.668,
+          "execution_ms": 17616.287,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "3d4027da1ed0db11f997c2e4e1248fd48ae3010ac52d2784bbc1aa1923384b9e"
+        },
+        {
+          "run_id": "run-1794368531416-9d86716075ca12a6",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "a074c19b3a627f78c9b1055e6cc17ce7",
+          "model_requests": 2,
+          "input_tokens": 34602,
+          "output_tokens": 380,
+          "error": "",
+          "queue_wait_ms": 292023.775,
+          "execution_ms": 17193.511000000002,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "6cebeea10395a0587be82966af68f4e708e7227db7c974f7a04bcd4e4f08ed8a"
+        },
+        {
+          "run_id": "run-1794368531429-0b0c6d5d0f00b5be",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "0453d5644d0ed63df7dbb31f37faad84",
+          "model_requests": 2,
+          "input_tokens": 37489,
+          "output_tokens": 423,
+          "error": "",
+          "queue_wait_ms": 304081.534,
+          "execution_ms": 16330.2,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "feadedebfb245f817d09101a3f00e2718b33c4adf4c7f8af6867c0c0e6b28b03"
+        },
+        {
+          "run_id": "run-1794368531418-34a76961a8553b76",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "4dcd25a23037f59865b4a28fd6b3c1b2",
+          "model_requests": 2,
+          "input_tokens": 35790,
+          "output_tokens": 378,
+          "error": "",
+          "queue_wait_ms": 309225.18100000004,
+          "execution_ms": 26136.771,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "c8039252571a03d3d674fb505c8303e49d3b30108b7f011d4cd048b0469a53c2"
+        },
+        {
+          "run_id": "run-1794368531432-41670670dae40257",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "b99e2f145c7fb6d562bc530928b42111",
+          "model_requests": 2,
+          "input_tokens": 38757,
+          "output_tokens": 421,
+          "error": "",
+          "queue_wait_ms": 320421.07700000005,
+          "execution_ms": 27823.429,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "89a4e3ab2df8cedd8c9af16f7146538b8a2c86cfa6c2b230a5f9e15bb5435fb9"
+        },
+        {
+          "run_id": "run-1794368531419-c13fb444a852a7e7",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "106226cc821b9483519ad914ffc3ec46",
+          "model_requests": 2,
+          "input_tokens": 36974,
+          "output_tokens": 378,
+          "error": "",
+          "queue_wait_ms": 335372.967,
+          "execution_ms": 16363.664,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "c74705e5af827becea742d3e0427cb8f06d04858edfd3ad860045dc14b546aef"
+        },
+        {
+          "run_id": "run-1794368531424-e8cf42c485d57f73",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "378bc90c86bb147f8fb9aa1864c53d01",
+          "model_requests": 2,
+          "input_tokens": 38145,
+          "output_tokens": 371,
+          "error": "",
+          "queue_wait_ms": 351747.15400000004,
+          "execution_ms": 15008.951,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "95197c0df05ef14db8ea23c6e4ad6880b1343b33323ae087f8ff7d3d4bbad5db"
+        },
+        {
+          "run_id": "run-1794368531436-3e62871a9f7cbf01",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "2564711703efd5651f365bdccdeae9c2",
+          "model_requests": 2,
+          "input_tokens": 40015,
+          "output_tokens": 417,
+          "error": "",
+          "queue_wait_ms": 348252.98400000005,
+          "execution_ms": 19557.641,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "51afbcc8cd793a526133b49a3719c3134187802220f52dd7ac6c3d0a5a02b57e"
+        },
+        {
+          "run_id": "run-1794368531425-f99c04430df12847",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "cdedc4d58555656cd2292ecc3c399fc8",
+          "model_requests": 2,
+          "input_tokens": 39301,
+          "output_tokens": 371,
+          "error": "",
+          "queue_wait_ms": 366770.635,
+          "execution_ms": 21014.64,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "cd5806d86cca0578575a65155d0b7d4eb29849d7a863a1015b516bf2347b7832"
+        },
+        {
+          "run_id": "run-1794368531438-eae9f8cabeadec69",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "65a61b7527eda58b657d1c25c294933d",
+          "model_requests": 2,
+          "input_tokens": 41256,
+          "output_tokens": 412,
+          "error": "",
+          "queue_wait_ms": 367825.815,
+          "execution_ms": 19894.734,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "8fcf2bffe500d3e352e79a8f8506f6c055f41dad3795d658b9d56e8f898ec3d2"
+        },
+        {
+          "run_id": "run-1794368531427-e1dd25c55d1f7017",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "c36c36cd9dafd7435da8dfe1c2c1eeed",
+          "model_requests": 2,
+          "input_tokens": 40462,
+          "output_tokens": 374,
+          "error": "",
+          "queue_wait_ms": 387796.99299999996,
+          "execution_ms": 19584.658,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "10e9cd1b3370957f2c6a19af4f1aa8f26c5a358e85c6b44f8346e590eff1293b"
+        },
+        {
+          "run_id": "run-1794368531439-f0f64593b721ed93",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "f4e890218cd2553134e75cfd6e5188e6",
+          "model_requests": 2,
+          "input_tokens": 42501,
+          "output_tokens": 419,
+          "error": "",
+          "queue_wait_ms": 387731.16,
+          "execution_ms": 25848.406,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "92402997093ba744f4d64580de857f32120abeaae858766ae46ab73fa6a62707"
+        },
+        {
+          "run_id": "run-1794368531430-a75618635e89d63b",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "d65eca48a4abe4ebb7c969a17ce8c4fa",
+          "model_requests": 2,
+          "input_tokens": 41618,
+          "output_tokens": 368,
+          "error": "",
+          "queue_wait_ms": 407389.499,
+          "execution_ms": 16388.144,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "ae2ed2e4dd658fc428c4a36fa06d0e425c5193751facff5c5002bf202a107387"
+        },
+        {
+          "run_id": "run-1794368531441-281450148230458c",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "f62182837ad6bc3f0628ef0e3b87a184",
+          "model_requests": 2,
+          "input_tokens": 43768,
+          "output_tokens": 424,
+          "error": "",
+          "queue_wait_ms": 413591.11100000003,
+          "execution_ms": 18683.476,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 0
+          },
+          "artifact_verified": true,
+          "source_sha256": "e0bec7fdbb7afa281d9f8e590266636bf9ebbc8b2dc8d25d28b47308e4cf0614"
+        },
+        {
+          "run_id": "run-1794368531434-8e9a94aba5644afc",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "0fde3bd9cb905a3dac9bd3ad6f2b72d2",
+          "model_requests": 2,
+          "input_tokens": 42782,
+          "output_tokens": 378,
+          "error": "",
+          "queue_wait_ms": 423788.496,
+          "execution_ms": 18215.981,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "fed806ff01c5c12c11ee44449266f3c6a14e1281f7c5af5e70b3be34fac4c7b8"
+        },
+        {
+          "run_id": "run-1794368531443-65e8f856f5c4d7bf",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "ecd51eaa10d85a775d697805e42c3aa3",
+          "model_requests": 2,
+          "input_tokens": 45047,
+          "output_tokens": 425,
+          "error": "",
+          "queue_wait_ms": 432284.358,
+          "execution_ms": 20136.416,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "8f2aadad2e5b9b53755e902a4965ab0827ddfaa8d1413b255d4eeb78e8326719"
+        },
+        {
+          "run_id": "run-1794368531444-816963661801e41b",
+          "session_id": "session-1794368531291-b5e0f4499cdd81e6",
+          "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "98bd4766d6d32fda11a9c0ea3165f749",
+          "model_requests": 2,
+          "input_tokens": 43953,
+          "output_tokens": 371,
+          "error": "",
+          "queue_wait_ms": 442023.513,
+          "execution_ms": 15202.425,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531684-09bf7971290778d5",
+            "allocation_ms": 2
+          },
+          "artifact_verified": true,
+          "source_sha256": "5c55a8370284c590450624a2cbd073cf658750e684c7498264685b2cdac3ad53"
+        },
+        {
+          "run_id": "run-1794368531446-be36fbfeaa748501",
+          "session_id": "session-1794368531289-99fef23d0176153f",
+          "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+          "state": "COMPLETED",
+          "attempt": 1,
+          "trace_id": "fb2589d2548991080fb1d0c2cc479e39",
+          "model_requests": 2,
+          "input_tokens": 46319,
+          "output_tokens": 421,
+          "error": "",
+          "queue_wait_ms": 452431.896,
+          "execution_ms": 15599.761,
+          "command_exited_before_finalization": true,
+          "allocation": {
+            "reused": true,
+            "sandbox_id": "sandbox-1794368531669-851be81bad346793",
+            "allocation_ms": 1
+          },
+          "artifact_verified": true,
+          "source_sha256": "edacd19e6e45bffb8e8d89edf1e28f138b00d3f5f780cfe40a549840921ea9cd"
+        }
+      ],
+      "samples": [
+        {
+          "elapsed_seconds": 0.159,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 0,
+          "queued": 50,
+          "reserved_sandboxes": 0
+        },
+        {
+          "elapsed_seconds": 5.206,
+          "host_database_clock_offset_seconds": -0.0,
+          "running": 2,
+          "queued": 48,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 11.552,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 48,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 18.646,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 48,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 25.765,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 46,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 32.513,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 46,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 38.622,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 44,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 44.725,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 44,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 51.514,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 44,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 57.667,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 42,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 63.75,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 42,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 70.533,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 41,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 76.621,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 40,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 83.707,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 40,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 90.49,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 39,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 96.6,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 38,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 103.683,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 38,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 110.521,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 37,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 117.591,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 36,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 124.671,
+          "host_database_clock_offset_seconds": -0.001,
+          "running": 2,
+          "queued": 35,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 131.526,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 34,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 137.611,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 34,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 144.702,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 33,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 151.518,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 32,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 157.609,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 32,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 163.702,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 31,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 170.558,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 30,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 177.646,
+          "host_database_clock_offset_seconds": 0.002,
+          "running": 2,
+          "queued": 29,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 184.803,
+          "host_database_clock_offset_seconds": 0.004,
+          "running": 2,
+          "queued": 28,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 191.566,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 28,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 197.7,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 26,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 204.82,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 26,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 211.524,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 26,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 218.611,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 25,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 225.707,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 24,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 232.526,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 23,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 239.65,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 23,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 245.738,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 22,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 252.539,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 21,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 258.635,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 21,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 264.738,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 20,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 271.502,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 19,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 278.577,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 18,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 284.676,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 18,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 291.544,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 17,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 298.644,
+          "host_database_clock_offset_seconds": -0.001,
+          "running": 2,
+          "queued": 16,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 305.738,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 15,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 312.527,
+          "host_database_clock_offset_seconds": -0.0,
+          "running": 2,
+          "queued": 14,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 318.62,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 14,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 324.693,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 13,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 331.558,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 13,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 337.653,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 12,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 344.734,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 12,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 351.536,
+          "host_database_clock_offset_seconds": 0.002,
+          "running": 2,
+          "queued": 11,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 357.638,
+          "host_database_clock_offset_seconds": 0.002,
+          "running": 2,
+          "queued": 10,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 363.722,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 10,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 370.565,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 8,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 377.636,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 8,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 383.728,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 8,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 390.552,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 6,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 397.651,
+          "host_database_clock_offset_seconds": -0.0,
+          "running": 2,
+          "queued": 6,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 404.747,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 6,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 411.582,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 2,
+          "queued": 5,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 417.718,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 4,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 423.807,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 4,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 430.535,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 3,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 436.633,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 2,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 443.734,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 1,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 450.514,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 2,
+          "queued": 1,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 457.597,
+          "host_database_clock_offset_seconds": 0.001,
+          "running": 1,
+          "queued": 0,
+          "reserved_sandboxes": 2
+        },
+        {
+          "elapsed_seconds": 463.658,
+          "host_database_clock_offset_seconds": 0.0,
+          "running": 1,
+          "queued": 0,
+          "reserved_sandboxes": 2
+        }
+      ],
+      "elapsed_seconds": 468.52,
+      "success_rate": 1.0,
+      "queue_wait_ms": {
+        "samples": 50,
+        "p50": 214059.813,
+        "p95": 432284.358,
+        "max": 452431.896
+      },
+      "execution_ms": {
+        "samples": 50,
+        "p50": 17296.358,
+        "p95": 25848.406,
+        "max": 27823.429
+      },
+      "cold_allocation_ms": {
+        "samples": 2,
+        "p50": 2069,
+        "p95": 2116,
+        "max": 2116
+      },
+      "model_usage": {
+        "model_requests": 100,
+        "input_tokens": 1526757,
+        "output_tokens": 20078
+      },
+      "cleanup_verified": true
+    }
+  ],
+  "resource_samples": [
+    {
+      "grade": 50,
+      "elapsed_seconds": 5.206,
+      "stats": [
+        {
+          "BlockIO": "1.3MB / 324kB",
+          "CPUPerc": "0.19%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.13%",
+          "MemUsage": "42.26MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "7.96kB / 42.7kB",
+          "PIDs": "51"
+        },
+        {
+          "BlockIO": "36.9kB / 324kB",
+          "CPUPerc": "0.18%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.13%",
+          "MemUsage": "42.3MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "7.92kB / 42.7kB",
+          "PIDs": "54"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 11.552,
+      "stats": [
+        {
+          "BlockIO": "1.3MB / 324kB",
+          "CPUPerc": "0.75%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.17%",
+          "MemUsage": "42.71MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "133kB / 55.8kB",
+          "PIDs": "51"
+        },
+        {
+          "BlockIO": "36.9kB / 324kB",
+          "CPUPerc": "0.80%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.11%",
+          "MemUsage": "42.14MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "111kB / 53.1kB",
+          "PIDs": "54"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 18.646,
+      "stats": [
+        {
+          "BlockIO": "1.35MB / 3.33MB",
+          "CPUPerc": "0.18%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.37%",
+          "MemUsage": "44.8MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "260kB / 181kB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "36.9kB / 1.3MB",
+          "CPUPerc": "17.76%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.62%",
+          "MemUsage": "47.28MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "272kB / 182kB",
+          "PIDs": "49"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 25.765,
+      "stats": [
+        {
+          "BlockIO": "1.35MB / 4.9MB",
+          "CPUPerc": "0.63%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.42%",
+          "MemUsage": "45.27MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "383kB / 195kB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "36.9kB / 4.71MB",
+          "CPUPerc": "0.74%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.59%",
+          "MemUsage": "47MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "401kB / 197kB",
+          "PIDs": "49"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 32.513,
+      "stats": [
+        {
+          "BlockIO": "1.35MB / 4.9MB",
+          "CPUPerc": "0.76%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.77%",
+          "MemUsage": "48.89MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "469kB / 254kB",
+          "PIDs": "66"
+        },
+        {
+          "BlockIO": "36.9kB / 4.71MB",
+          "CPUPerc": "0.45%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.91%",
+          "MemUsage": "50.26MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "489kB / 256kB",
+          "PIDs": "62"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 38.622,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 5.19MB",
+          "CPUPerc": "0.27%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.92%",
+          "MemUsage": "50.34MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "514kB / 339kB",
+          "PIDs": "73"
+        },
+        {
+          "BlockIO": "36.9kB / 5.44MB",
+          "CPUPerc": "0.80%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.56%",
+          "MemUsage": "46.69MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "574kB / 340kB",
+          "PIDs": "53"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 44.725,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 5.19MB",
+          "CPUPerc": "8.65%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.29%",
+          "MemUsage": "54.18MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "682kB / 411kB",
+          "PIDs": "86"
+        },
+        {
+          "BlockIO": "36.9kB / 5.44MB",
+          "CPUPerc": "6.37%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.97%",
+          "MemUsage": "50.85MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "720kB / 409kB",
+          "PIDs": "66"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 51.514,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 5.19MB",
+          "CPUPerc": "0.62%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.20%",
+          "MemUsage": "53.21MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "737kB / 415kB",
+          "PIDs": "86"
+        },
+        {
+          "BlockIO": "36.9kB / 5.44MB",
+          "CPUPerc": "7.86%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "0.95%",
+          "MemUsage": "9.723MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "797kB / 442kB",
+          "PIDs": "10"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 57.667,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 6.36MB",
+          "CPUPerc": "0.91%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.83%",
+          "MemUsage": "49.42MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "850kB / 513kB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "36.9kB / 5.5MB",
+          "CPUPerc": "0.32%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.82%",
+          "MemUsage": "49.4MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "802kB / 499kB",
+          "PIDs": "49"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 63.75,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 7.02MB",
+          "CPUPerc": "0.18%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.21%",
+          "MemUsage": "53.34MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "935kB / 584kB",
+          "PIDs": "72"
+        },
+        {
+          "BlockIO": "36.9kB / 6.82MB",
+          "CPUPerc": "0.57%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.81%",
+          "MemUsage": "49.21MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "922kB / 509kB",
+          "PIDs": "49"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 70.533,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 7.22MB",
+          "CPUPerc": "0.14%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "6.56%",
+          "MemUsage": "67.18MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "1.02MB / 686kB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "36.9kB / 6.82MB",
+          "CPUPerc": "0.16%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.11%",
+          "MemUsage": "52.28MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "984kB / 576kB",
+          "PIDs": "62"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 76.621,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 7.22MB",
+          "CPUPerc": "0.51%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "6.48%",
+          "MemUsage": "66.33MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "1.15MB / 697kB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "36.9kB / 7.39MB",
+          "CPUPerc": "0.18%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.86%",
+          "MemUsage": "49.73MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "1.07MB / 675kB",
+          "PIDs": "54"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 83.707,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 8.3MB",
+          "CPUPerc": "10.95%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "1.07%",
+          "MemUsage": "10.93MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "1.27MB / 808kB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "36.9kB / 7.39MB",
+          "CPUPerc": "0.76%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.89%",
+          "MemUsage": "50.11MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "1.16MB / 681kB",
+          "PIDs": "54"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 90.49,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 8.32MB",
+          "CPUPerc": "0.43%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.34%",
+          "MemUsage": "54.67MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "1.27MB / 875kB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "36.9kB / 7.39MB",
+          "CPUPerc": "0.46%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.23%",
+          "MemUsage": "53.56MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "1.25MB / 755kB",
+          "PIDs": "67"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 96.6,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 9.03MB",
+          "CPUPerc": "0.59%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.27%",
+          "MemUsage": "53.91MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "1.4MB / 887kB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "36.9kB / 8.94MB",
+          "CPUPerc": "0.32%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.09%",
+          "MemUsage": "52.15MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "1.33MB / 863kB",
+          "PIDs": "66"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 103.683,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 9.24MB",
+          "CPUPerc": "0.36%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.61%",
+          "MemUsage": "57.47MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "1.44MB / 962kB",
+          "PIDs": "68"
+        },
+        {
+          "BlockIO": "36.9kB / 9.03MB",
+          "CPUPerc": "0.62%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.06%",
+          "MemUsage": "51.86MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "1.48MB / 879kB",
+          "PIDs": "66"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 110.521,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 9.42MB",
+          "CPUPerc": "1.96%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "6.85%",
+          "MemUsage": "70.13MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "1.57MB / 1.08MB",
+          "PIDs": "56"
+        },
+        {
+          "BlockIO": "36.9kB / 9.03MB",
+          "CPUPerc": "2.69%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.39%",
+          "MemUsage": "55.21MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "1.6MB / 955kB",
+          "PIDs": "79"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 117.591,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 9.42MB",
+          "CPUPerc": "3.60%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "7.22%",
+          "MemUsage": "73.92MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "1.7MB / 1.17MB",
+          "PIDs": "69"
+        },
+        {
+          "BlockIO": "36.9kB / 9.23MB",
+          "CPUPerc": "0.29%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.92%",
+          "MemUsage": "60.61MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "1.7MB / 1.08MB",
+          "PIDs": "60"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 124.671,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 9.99MB",
+          "CPUPerc": "0.28%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.02%",
+          "MemUsage": "51.4MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "1.78MB / 1.3MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "36.9kB / 9.23MB",
+          "CPUPerc": "0.16%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "6.64%",
+          "MemUsage": "67.96MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "1.8MB / 1.17MB",
+          "PIDs": "73"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 131.526,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 9.99MB",
+          "CPUPerc": "0.80%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.06%",
+          "MemUsage": "51.81MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "1.88MB / 1.3MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "36.9kB / 10.4MB",
+          "CPUPerc": "0.30%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.17%",
+          "MemUsage": "52.9MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "1.88MB / 1.29MB",
+          "PIDs": "50"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 137.611,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 11.2MB",
+          "CPUPerc": "0.49%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.27%",
+          "MemUsage": "53.94MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "1.99MB / 1.39MB",
+          "PIDs": "70"
+        },
+        {
+          "BlockIO": "36.9kB / 11.1MB",
+          "CPUPerc": "0.79%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.16%",
+          "MemUsage": "52.86MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "2.03MB / 1.31MB",
+          "PIDs": "50"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 144.702,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 11.5MB",
+          "CPUPerc": "1.18%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.83%",
+          "MemUsage": "49.46MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "2.11MB / 1.53MB",
+          "PIDs": "52"
+        },
+        {
+          "BlockIO": "36.9kB / 11.1MB",
+          "CPUPerc": "1.13%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.47%",
+          "MemUsage": "56.04MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "2.13MB / 1.4MB",
+          "PIDs": "63"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 151.518,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 11.5MB",
+          "CPUPerc": "0.90%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.12%",
+          "MemUsage": "52.42MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "2.22MB / 1.63MB",
+          "PIDs": "65"
+        },
+        {
+          "BlockIO": "36.9kB / 11.5MB",
+          "CPUPerc": "1.09%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.14%",
+          "MemUsage": "52.63MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "2.25MB / 1.53MB",
+          "PIDs": "49"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 157.609,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 12.4MB",
+          "CPUPerc": "12.64%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.72%",
+          "MemUsage": "48.31MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "2.3MB / 1.77MB",
+          "PIDs": "49"
+        },
+        {
+          "BlockIO": "36.9kB / 11.5MB",
+          "CPUPerc": "0.25%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.51%",
+          "MemUsage": "56.47MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "2.35MB / 1.63MB",
+          "PIDs": "63"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 163.702,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 12.4MB",
+          "CPUPerc": "0.63%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.68%",
+          "MemUsage": "47.91MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "2.4MB / 1.78MB",
+          "PIDs": "49"
+        },
+        {
+          "BlockIO": "36.9kB / 11.9MB",
+          "CPUPerc": "0.17%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.18%",
+          "MemUsage": "53.09MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "2.44MB / 1.77MB",
+          "PIDs": "58"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 170.558,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 12.5MB",
+          "CPUPerc": "0.34%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.12%",
+          "MemUsage": "52.46MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "2.48MB / 1.88MB",
+          "PIDs": "62"
+        },
+        {
+          "BlockIO": "36.9kB / 11.9MB",
+          "CPUPerc": "1.99%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.19%",
+          "MemUsage": "53.13MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "2.55MB / 1.78MB",
+          "PIDs": "58"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 177.646,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 12.8MB",
+          "CPUPerc": "1.42%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.79%",
+          "MemUsage": "49.05MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "2.61MB / 2.04MB",
+          "PIDs": "50"
+        },
+        {
+          "BlockIO": "36.9kB / 11.9MB",
+          "CPUPerc": "0.31%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.53%",
+          "MemUsage": "56.66MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "2.63MB / 1.88MB",
+          "PIDs": "71"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 184.803,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 12.8MB",
+          "CPUPerc": "0.37%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.12%",
+          "MemUsage": "52.45MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "2.75MB / 2.15MB",
+          "PIDs": "63"
+        },
+        {
+          "BlockIO": "36.9kB / 13.4MB",
+          "CPUPerc": "1.46%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.86%",
+          "MemUsage": "59.98MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "2.8MB / 2.04MB",
+          "PIDs": "54"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 191.566,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 12.9MB",
+          "CPUPerc": "0.46%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.20%",
+          "MemUsage": "53.24MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "2.75MB / 2.15MB",
+          "PIDs": "63"
+        },
+        {
+          "BlockIO": "36.9kB / 13.4MB",
+          "CPUPerc": "9.14%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "6.31%",
+          "MemUsage": "64.66MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "2.92MB / 2.15MB",
+          "PIDs": "67"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 197.7,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 14.3MB",
+          "CPUPerc": "0.25%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.94%",
+          "MemUsage": "50.55MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "2.84MB / 2.31MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "36.9kB / 14.3MB",
+          "CPUPerc": "0.52%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.80%",
+          "MemUsage": "49.13MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "3.03MB / 2.31MB",
+          "PIDs": "57"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 204.82,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 14.3MB",
+          "CPUPerc": "2.59%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.95%",
+          "MemUsage": "50.68MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "2.89MB / 2.31MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "36.9kB / 14.3MB",
+          "CPUPerc": "4.54%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.06%",
+          "MemUsage": "51.83MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "3.17MB / 2.32MB",
+          "PIDs": "70"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 211.524,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 15.2MB",
+          "CPUPerc": "0.19%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.30%",
+          "MemUsage": "54.24MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "3.03MB / 2.42MB",
+          "PIDs": "71"
+        },
+        {
+          "BlockIO": "36.9kB / 15.1MB",
+          "CPUPerc": "0.37%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.13%",
+          "MemUsage": "52.53MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "3.22MB / 2.42MB",
+          "PIDs": "70"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 218.611,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 15.6MB",
+          "CPUPerc": "17.51%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.19%",
+          "MemUsage": "53.19MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "3.12MB / 2.59MB",
+          "PIDs": "60"
+        },
+        {
+          "BlockIO": "36.9kB / 15.3MB",
+          "CPUPerc": "0.70%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.00%",
+          "MemUsage": "51.15MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "3.41MB / 2.6MB",
+          "PIDs": "54"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 225.707,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 15.6MB",
+          "CPUPerc": "0.73%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.28%",
+          "MemUsage": "54.12MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "3.12MB / 2.59MB",
+          "PIDs": "60"
+        },
+        {
+          "BlockIO": "36.9kB / 15.3MB",
+          "CPUPerc": "0.45%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.36%",
+          "MemUsage": "54.91MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "3.49MB / 2.71MB",
+          "PIDs": "67"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 232.526,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 15.6MB",
+          "CPUPerc": "0.78%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.24%",
+          "MemUsage": "53.64MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "3.24MB / 2.61MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "36.9kB / 16.3MB",
+          "CPUPerc": "2.17%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.37%",
+          "MemUsage": "54.96MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "3.63MB / 2.89MB",
+          "PIDs": "51"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 239.65,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 15.6MB",
+          "CPUPerc": "0.43%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.48%",
+          "MemUsage": "56.16MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "3.32MB / 2.71MB",
+          "PIDs": "54"
+        },
+        {
+          "BlockIO": "36.9kB / 16.3MB",
+          "CPUPerc": "4.71%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.71%",
+          "MemUsage": "58.47MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "3.78MB / 3.01MB",
+          "PIDs": "64"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 245.738,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 15.6MB",
+          "CPUPerc": "1.70%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "4.91%",
+          "MemUsage": "50.25MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "3.44MB / 2.89MB",
+          "PIDs": "51"
+        },
+        {
+          "BlockIO": "36.9kB / 16.4MB",
+          "CPUPerc": "1.80%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.65%",
+          "MemUsage": "57.82MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "3.83MB / 3.01MB",
+          "PIDs": "64"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 252.539,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 17.1MB",
+          "CPUPerc": "7.87%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.24%",
+          "MemUsage": "53.69MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "3.57MB / 3.01MB",
+          "PIDs": "64"
+        },
+        {
+          "BlockIO": "36.9kB / 17.3MB",
+          "CPUPerc": "0.27%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.69%",
+          "MemUsage": "58.28MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "3.88MB / 3.2MB",
+          "PIDs": "51"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 258.635,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 17.3MB",
+          "CPUPerc": "18.83%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.02%",
+          "MemUsage": "51.43MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "3.67MB / 3.19MB",
+          "PIDs": "54"
+        },
+        {
+          "BlockIO": "36.9kB / 17.3MB",
+          "CPUPerc": "0.32%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.91%",
+          "MemUsage": "60.51MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "3.92MB / 3.2MB",
+          "PIDs": "51"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 264.738,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 17.3MB",
+          "CPUPerc": "2.48%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.02%",
+          "MemUsage": "51.45MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "3.72MB / 3.2MB",
+          "PIDs": "54"
+        },
+        {
+          "BlockIO": "36.9kB / 17.3MB",
+          "CPUPerc": "0.31%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "6.25%",
+          "MemUsage": "63.96MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "4.08MB / 3.33MB",
+          "PIDs": "64"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 271.502,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 17.3MB",
+          "CPUPerc": "0.15%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.44%",
+          "MemUsage": "55.72MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "3.85MB / 3.33MB",
+          "PIDs": "67"
+        },
+        {
+          "BlockIO": "36.9kB / 17.9MB",
+          "CPUPerc": "0.45%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.65%",
+          "MemUsage": "57.83MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "4.18MB / 3.53MB",
+          "PIDs": "60"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 278.577,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 18.4MB",
+          "CPUPerc": "0.56%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.12%",
+          "MemUsage": "52.45MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "3.98MB / 3.52MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "36.9kB / 18.5MB",
+          "CPUPerc": "0.48%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.62%",
+          "MemUsage": "57.51MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "4.31MB / 3.54MB",
+          "PIDs": "60"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 284.676,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 18.5MB",
+          "CPUPerc": "6.34%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.88%",
+          "MemUsage": "60.18MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "4.14MB / 3.66MB",
+          "PIDs": "70"
+        },
+        {
+          "BlockIO": "36.9kB / 19MB",
+          "CPUPerc": "12.49%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "1.48%",
+          "MemUsage": "15.17MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "4.47MB / 3.75MB",
+          "PIDs": "11"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 291.544,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 19.4MB",
+          "CPUPerc": "0.16%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "9.52%",
+          "MemUsage": "97.46MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "4.23MB / 3.86MB",
+          "PIDs": "65"
+        },
+        {
+          "BlockIO": "36.9kB / 19.8MB",
+          "CPUPerc": "0.45%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.64%",
+          "MemUsage": "57.71MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "4.55MB / 3.88MB",
+          "PIDs": "58"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 298.644,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 19.4MB",
+          "CPUPerc": "1.31%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "9.52%",
+          "MemUsage": "97.47MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "4.37MB / 3.88MB",
+          "PIDs": "65"
+        },
+        {
+          "BlockIO": "36.9kB / 19.8MB",
+          "CPUPerc": "0.30%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.95%",
+          "MemUsage": "60.96MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "4.67MB / 4.01MB",
+          "PIDs": "71"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 305.738,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 19.4MB",
+          "CPUPerc": "0.71%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "9.91%",
+          "MemUsage": "101.5MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "4.43MB / 4MB",
+          "PIDs": "78"
+        },
+        {
+          "BlockIO": "36.9kB / 20.1MB",
+          "CPUPerc": "0.82%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.39%",
+          "MemUsage": "55.24MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "4.81MB / 4.22MB",
+          "PIDs": "51"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 312.527,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 20.4MB",
+          "CPUPerc": "0.33%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.59%",
+          "MemUsage": "57.24MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "4.53MB / 4.21MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "36.9kB / 20.1MB",
+          "CPUPerc": "1.08%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.42%",
+          "MemUsage": "55.55MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "4.93MB / 4.24MB",
+          "PIDs": "51"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 318.62,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 20.5MB",
+          "CPUPerc": "1.30%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.57%",
+          "MemUsage": "56.99MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "4.66MB / 4.23MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "36.9kB / 20.1MB",
+          "CPUPerc": "1.71%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.73%",
+          "MemUsage": "58.71MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "5.03MB / 4.38MB",
+          "PIDs": "64"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 324.693,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 21.3MB",
+          "CPUPerc": "0.20%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "6.33%",
+          "MemUsage": "64.84MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "4.72MB / 4.36MB",
+          "PIDs": "70"
+        },
+        {
+          "BlockIO": "36.9kB / 21.9MB",
+          "CPUPerc": "0.30%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.12%",
+          "MemUsage": "52.46MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "5.08MB / 4.59MB",
+          "PIDs": "50"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 331.558,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 21.3MB",
+          "CPUPerc": "0.63%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "6.03%",
+          "MemUsage": "61.71MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "4.72MB / 4.36MB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "36.9kB / 21.9MB",
+          "CPUPerc": "0.58%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "4.87%",
+          "MemUsage": "49.85MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "5.09MB / 4.59MB",
+          "PIDs": "39"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 337.653,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 21.7MB",
+          "CPUPerc": "1.67%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.96%",
+          "MemUsage": "60.99MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "4.87MB / 4.58MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "36.9kB / 21.9MB",
+          "CPUPerc": "1.15%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.05%",
+          "MemUsage": "51.75MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "5.21MB / 4.6MB",
+          "PIDs": "40"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 344.734,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 21.7MB",
+          "CPUPerc": "0.21%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "6.38%",
+          "MemUsage": "65.28MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "5.01MB / 4.73MB",
+          "PIDs": "70"
+        },
+        {
+          "BlockIO": "36.9kB / 21.9MB",
+          "CPUPerc": "0.34%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.30%",
+          "MemUsage": "54.29MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "5.32MB / 4.81MB",
+          "PIDs": "53"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 351.536,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 22.3MB",
+          "CPUPerc": "22.21%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.23%",
+          "MemUsage": "53.6MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "5.11MB / 4.95MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "36.9kB / 22.2MB",
+          "CPUPerc": "0.20%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.57%",
+          "MemUsage": "57.03MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "5.39MB / 5.04MB",
+          "PIDs": "58"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 357.638,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 22.3MB",
+          "CPUPerc": "0.44%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.29%",
+          "MemUsage": "54.18MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "5.19MB / 4.96MB",
+          "PIDs": "57"
+        },
+        {
+          "BlockIO": "36.9kB / 22.2MB",
+          "CPUPerc": "0.45%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.58%",
+          "MemUsage": "57.17MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "5.49MB / 5.05MB",
+          "PIDs": "58"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 363.722,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 22.3MB",
+          "CPUPerc": "0.84%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.53%",
+          "MemUsage": "56.62MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "5.33MB / 5.17MB",
+          "PIDs": "70"
+        },
+        {
+          "BlockIO": "36.9kB / 22.7MB",
+          "CPUPerc": "0.25%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.98%",
+          "MemUsage": "61.25MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "5.59MB / 5.2MB",
+          "PIDs": "71"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 370.565,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 23.1MB",
+          "CPUPerc": "0.20%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.50%",
+          "MemUsage": "56.36MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "5.4MB / 5.41MB",
+          "PIDs": "54"
+        },
+        {
+          "BlockIO": "36.9kB / 23.5MB",
+          "CPUPerc": "0.48%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.18%",
+          "MemUsage": "53.09MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "5.7MB / 5.43MB",
+          "PIDs": "53"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 377.636,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 23.1MB",
+          "CPUPerc": "4.08%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.92%",
+          "MemUsage": "60.64MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "5.54MB / 5.43MB",
+          "PIDs": "67"
+        },
+        {
+          "BlockIO": "36.9kB / 23.5MB",
+          "CPUPerc": "1.26%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.15%",
+          "MemUsage": "52.75MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "5.84MB / 5.45MB",
+          "PIDs": "53"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 383.728,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 23.1MB",
+          "CPUPerc": "1.60%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.82%",
+          "MemUsage": "59.62MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "5.61MB / 5.57MB",
+          "PIDs": "67"
+        },
+        {
+          "BlockIO": "36.9kB / 23.6MB",
+          "CPUPerc": "1.35%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.55%",
+          "MemUsage": "56.83MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "5.93MB / 5.6MB",
+          "PIDs": "66"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 390.552,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 24.1MB",
+          "CPUPerc": "0.34%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.46%",
+          "MemUsage": "55.89MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "5.69MB / 5.81MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "36.9kB / 24.5MB",
+          "CPUPerc": "0.49%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.28%",
+          "MemUsage": "54.11MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "6MB / 5.84MB",
+          "PIDs": "48"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 397.651,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 24.1MB",
+          "CPUPerc": "0.65%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.38%",
+          "MemUsage": "55.07MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "5.78MB / 5.82MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "36.9kB / 24.5MB",
+          "CPUPerc": "0.52%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.32%",
+          "MemUsage": "54.51MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "6.1MB / 5.85MB",
+          "PIDs": "48"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 404.747,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 25.1MB",
+          "CPUPerc": "1.82%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.76%",
+          "MemUsage": "59MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "5.92MB / 5.97MB",
+          "PIDs": "72"
+        },
+        {
+          "BlockIO": "36.9kB / 25.2MB",
+          "CPUPerc": "1.89%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "6.08%",
+          "MemUsage": "62.27MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "6.2MB / 6.01MB",
+          "PIDs": "61"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 411.582,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 25.3MB",
+          "CPUPerc": "0.87%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.48%",
+          "MemUsage": "56.07MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "6.05MB / 6.23MB",
+          "PIDs": "61"
+        },
+        {
+          "BlockIO": "36.9kB / 25.2MB",
+          "CPUPerc": "1.80%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "6.01%",
+          "MemUsage": "61.56MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "6.25MB / 6.01MB",
+          "PIDs": "61"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 417.718,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 25.3MB",
+          "CPUPerc": "0.49%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "6.07%",
+          "MemUsage": "62.11MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "6.17MB / 6.39MB",
+          "PIDs": "74"
+        },
+        {
+          "BlockIO": "36.9kB / 25.5MB",
+          "CPUPerc": "1.60%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.41%",
+          "MemUsage": "55.45MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "6.37MB / 6.26MB",
+          "PIDs": "65"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 423.807,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 25.7MB",
+          "CPUPerc": "0.27%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.83%",
+          "MemUsage": "59.65MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "6.27MB / 6.65MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "36.9kB / 25.5MB",
+          "CPUPerc": "0.35%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.99%",
+          "MemUsage": "61.36MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "6.51MB / 6.42MB",
+          "PIDs": "79"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 430.535,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 25.7MB",
+          "CPUPerc": "0.74%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "5.79%",
+          "MemUsage": "59.28MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "6.38MB / 6.66MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "36.9kB / 25.5MB",
+          "CPUPerc": "2.97%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.96%",
+          "MemUsage": "61.07MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "6.56MB / 6.43MB",
+          "PIDs": "79"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 436.633,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 26.7MB",
+          "CPUPerc": "1.04%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "6.25%",
+          "MemUsage": "64MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "6.47MB / 6.82MB",
+          "PIDs": "72"
+        },
+        {
+          "BlockIO": "36.9kB / 26.6MB",
+          "CPUPerc": "0.17%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.52%",
+          "MemUsage": "56.48MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "6.62MB / 6.68MB",
+          "PIDs": "54"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 443.734,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 27MB",
+          "CPUPerc": "0.68%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "6.12%",
+          "MemUsage": "62.64MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "6.61MB / 7.09MB",
+          "PIDs": "68"
+        },
+        {
+          "BlockIO": "36.9kB / 26.6MB",
+          "CPUPerc": "0.51%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.41%",
+          "MemUsage": "55.37MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "6.76MB / 6.7MB",
+          "PIDs": "54"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 450.514,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 27MB",
+          "CPUPerc": "0.25%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "6.55%",
+          "MemUsage": "67.09MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "6.77MB / 7.27MB",
+          "PIDs": "81"
+        },
+        {
+          "BlockIO": "36.9kB / 26.7MB",
+          "CPUPerc": "1.10%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.75%",
+          "MemUsage": "58.85MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "6.88MB / 6.86MB",
+          "PIDs": "67"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 457.597,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 27.6MB",
+          "CPUPerc": "0.00%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "1.45%",
+          "MemUsage": "14.82MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "6.88MB / 7.38MB",
+          "PIDs": "12"
+        },
+        {
+          "BlockIO": "36.9kB / 27.5MB",
+          "CPUPerc": "0.98%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "5.61%",
+          "MemUsage": "57.41MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "7.02MB / 7.14MB",
+          "PIDs": "54"
+        }
+      ],
+      "observer_status": 0
+    },
+    {
+      "grade": 50,
+      "elapsed_seconds": 463.658,
+      "stats": [
+        {
+          "BlockIO": "1.49MB / 28.3MB",
+          "CPUPerc": "0.01%",
+          "Container": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "ID": "a1b8da872aea",
+          "MemPerc": "1.44%",
+          "MemUsage": "14.71MiB / 1GiB",
+          "Name": "sandbox-da901c31-11a0-4592-88d8-c5783705f0ea",
+          "NetIO": "6.88MB / 7.38MB",
+          "PIDs": "12"
+        },
+        {
+          "BlockIO": "36.9kB / 27.6MB",
+          "CPUPerc": "0.30%",
+          "Container": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "ID": "e001d865759f",
+          "MemPerc": "6.20%",
+          "MemUsage": "63.49MiB / 1GiB",
+          "Name": "sandbox-7b42264a-ceee-4b99-acf9-2b1fdf9e6d1e",
+          "NetIO": "7.15MB / 7.31MB",
+          "PIDs": "67"
+        }
+      ],
+      "observer_status": 0
+    }
+  ],
+  "scope": "real coding runs; concurrent submission is not concurrent sandbox count",
+  "finished_at": "2026-11-11T03:50:00.837457+00:00",
+  "all_runs_complete": true
+}

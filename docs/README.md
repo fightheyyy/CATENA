@@ -40,3 +40,5 @@
 [refactors/](refactors/) 保存迁移过程及原始证据。历史文档中“当前”“已完成”等表述只适用于当时版本。
 
 修改行为时更新对应的当前文档；新增历史记录放入归档或验收记录，不再向 `docs/` 根目录堆叠日期方案。
+
+- [Managed Agent Infrastructure](MANAGED_INFRASTRUCTURE.md) · [API](MANAGED_API.md) · [实测验收](refactors/MANAGED_ACCEPTANCE.md)

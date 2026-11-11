@@ -1,0 +1,32 @@
+{
+  "real_postgresql": true,
+  "controlled_http_provider_fixture": true,
+  "real_model_or_sandbox_claim": false,
+  "cases": [
+    {
+      "name": "TestManagedSlowProviderDoesNotHoldAdmissionLock",
+      "seconds": 0.14
+    },
+    {
+      "name": "TestManagedPauseTimeoutQuarantinesBeforeReuse",
+      "seconds": 0.16
+    },
+    {
+      "name": "TestManagedExecutionWaitsForEOFAndRejectsExpiredResult",
+      "seconds": 0.19
+    },
+    {
+      "name": "TestManagedAdapterCrashDoesNotPublishResult",
+      "seconds": 0.08
+    },
+    {
+      "name": "TestManagedTracePaginationCrossPageToolAndRetry",
+      "seconds": 0.18
+    },
+    {
+      "name": "TestManagedCancellationRemainsStoppingUntilProviderConfirmsExit",
+      "seconds": 0.1
+    }
+  ],
+  "purpose": "operation locks, leases, CAS, exit/EOF, pagination and lost ACK contracts; never uploaded as user Trace or quality evidence"
+}

@@ -17,6 +17,7 @@ build-backend = "setuptools.build_meta"
 include = ["catena_engine*"]
 
 [project.optional-dependencies]
+managed = ["opensandbox==1.2.0"]
 evaluation = [
   "harbor==0.23.0",
 ]

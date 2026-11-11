@@ -2,7 +2,9 @@
 
 # CATENA
 
-**Trace-driven Agent Engineering Control Plane**
+**Multi-tenant Managed Agent Infrastructure & Reliability Platform**
+
+新增可信本地 Docker / OpenSandbox 托管执行；保留 Trace 驱动的分析、Harbor 评测与人工 Review。生产恶意多租户强隔离尚未交付。
 
 CATENA 从真实 Agent Trace 中定位问题，由人工决定是否生成候选，再通过 Harbor 独立验证并记录改进决策。
 
@@ -20,19 +22,20 @@ Agent Trace → Evidence → Codex Analysis → Problem / Evidence
 
 ## 产品范围
 
-面向维护 Coding Agent 的开发者，当前只围绕三个用户动作交付：
+面向维护 Coding Agent 的开发者，保留工程业务，并新增本地托管执行：
 
 | 用户动作 | 当前入口 | 得到什么 |
 |---|---|---|
+| 托管 Coding Agent | `/agent-sessions`、`/agent-runs`、`/sandboxes`、`/resources` | 持久 Run、真实 Codex、事件、快照恢复与配额 |
 | 找到值得调查的执行记录 | 经历 `/traces` | 原始 Trace、工具调用、错误和执行上下文 |
 | 调查问题，决定是否优化 | 产出 `/evolution?job=…` 的分析报告 | 问题、证据引用、根因假设和不确定性 |
 | 验证候选，决定采纳或拒绝 | 同一入口的改进任务 | 候选文件、Harbor 对比、人工决定 |
 
 调查报告和改进实验目前共用产出页，不是三个独立工作台。连接、Agent 和设置只提供必要的接入与配置。
 
-当前固定 **Go 控制面 + Codex 内部 Agent + Harbor 评测**。Skill 是内部策略扩展手段，不建设插件市场；工程记忆先保留版本化记录。暂不扩展新的 Runtime、Memory 检索、自动采用或通用 Code Patch。
+当前采用 **Go 控制面 + OpenSandbox 用户 Codex + Codex 内部分析 Agent + Harbor 独立评测**。Skill 是内部策略扩展手段，不建设插件市场；工程记忆先保留版本化记录。暂不扩展新的 Runtime、Memory 检索、自动采用或通用 Code Patch。
 
-下一阶段只解决核心使用障碍和真实案例验证：让一位外部开发者在没有作者陪同的情况下，完成一次 Trace → 调查 → 人工选择优化 → 评测 → Review。这个目标尚未验收。
+原工程工作流的下一验收仍是：让一位外部开发者在没有作者陪同的情况下，完成一次 Trace → 调查 → 人工选择优化 → 评测 → Review。这个目标尚未验收。
 
 ## 架构
 
@@ -50,7 +53,20 @@ Go 保留 Lease / Heartbeat / Fencing、幂等、重试、取消和超时。工�
 
 Harness² 只提供 Propose / Compose 方法启发，已不是运行依赖。OpenViking 和旧 Memory API/UI 已退役。
 
-## 启动
+## 托管 Agent 本地启动
+
+macOS + Docker Desktop，Go 1.25 / Python 3.12 / Node 24 / pnpm 10.24：
+
+```sh
+python3.12 deploy/managed/dev.py setup
+python3.12 deploy/managed/dev.py up
+```
+
+打开 [本地托管会话](http://127.0.0.1:18789/agent-sessions)。先在连接页注册 Agent 和配置模型，再创建托管定义、Session 与 Run。新任务全部在 Sandbox 内执行，旧分析 Runtime 保持兼容。
+
+[部署与清理](deploy/managed/README.md) · [实际架构与安全边界](docs/MANAGED_INFRASTRUCTURE.md) · [API](docs/MANAGED_API.md) · [首轮执行验收](docs/refactors/MANAGED_ACCEPTANCE.md) · [一致性与分级并发](docs/refactors/MANAGED_CONSISTENCY.md)
+
+## 原工程工作流启动
 
 需要 Docker Engine / Docker Desktop 和 Compose v2.20+。常驻服务为 Go + React、Python Engine、PostgreSQL、ClickHouse、Collector Gateway/Consumer 与 Kafka；不引入 Redis。[Trace 数据面与迁移](docs/TRACE_DATA_PLANE.md)。
 
@@ -81,6 +97,8 @@ docs/      当前文档；archive/ 保存旧方案，refactors/ 保存迁移证�
 [文档索引](docs/README.md) · [当前规格](SPEC.md) · [架构与源码](docs/ARCHITECTURE.md) · [Workflow](docs/IMPROVEMENT_WORKFLOW.md) · [开发与维护](CONTRIBUTING.md)
 
 ## 验证状态
+
+- 新托管链路：真实 Coding / 同 Session 复用 / Provider pause-resume / 丢失后 checkpoint 重建 / 回收 / Collector→Kafka→ClickHouse 查询均已实测；强杀 Worker 后保守隔离为 NEEDS_REVIEW，无自动重放。详见[证据与局限](docs/refactors/MANAGED_ACCEPTANCE.md)。
 
 - [真实 Trace 调查](docs/refactors/TRACE_INVESTIGATION.md)：7 次工具调用，读取单条 Trace 的 95/145 个 Span，保存 3 个问题，不自动启动优化。
 - [真实候选与 Harbor 对比](docs/refactors/UNIFIED_RUNTIME.md)：工程链路已运行，该候选已由人工拒绝。

@@ -250,6 +250,7 @@ func (w *analysisWorker) attempt(parent context.Context, l AnalysisLease, j Anal
 type ManagedHTTPHandler struct {
 	http.Handler
 	workers *analysisWorker
+	managed *managedPlatform
 }
 
-func (h *ManagedHTTPHandler) Close() error { h.workers.close(); return nil }
+func (h *ManagedHTTPHandler) Close() error { h.workers.close(); h.managed.close(); return nil }

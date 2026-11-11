@@ -1,0 +1,819 @@
+{
+  "checked_at": "2026-11-11T03:50:50.403598+00:00",
+  "load_batches": [
+    {
+      "evidence_file": "reuse-graded-runs.json",
+      "runs": [
+        {
+          "run_id": "run-1794325014269-4be541e160ee0484",
+          "trace_id": "861e107e327dc118e572a8605c0932aa",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325014262-349a81018479e823",
+          "trace_id": "1ed9afc30468ca0a3b2f2e83b44b7d1b",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325014301-1a52c67c07491ee3",
+          "trace_id": "5ac69ad11133b1b81d9e171413b978bf",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325014273-72ed7b0f800f43b9",
+          "trace_id": "ad8483c3d3cd391ac38f0a5e8fe3f7d8",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325014280-c5402629e9c16f5b",
+          "trace_id": "3b7dd2008f011d9a44a60fc83413f2b5",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325014286-405f783817921f6a",
+          "trace_id": "63f1860a5613f6c5afb33ebc4ab85705",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325014315-f722872500f6870c",
+          "trace_id": "9db9d6194f4b256a974a226860b48bc3",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325014309-80520108ba002435",
+          "trace_id": "4e83e2c79c72fd3360ce7532126eb8bb",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325014320-750686f6594dd0cd",
+          "trace_id": "6be798342c4e3cab5027a15b01dfdd09",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325014326-64389dec8c7c4a91",
+          "trace_id": "c3ee9484a78cf74724b4386171e10d51",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100220-e152e7879e9f0c79",
+          "trace_id": "fd8ad674b0f9342b820f17528afb122d",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100226-12be3b0e6e5c2bbe",
+          "trace_id": "392b01af73defae7deebcea5cf3fa1f0",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100252-1095765468253ca3",
+          "trace_id": "6a069c45b0da1905bd0e178009139cbc",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100232-32946ae0430c1b84",
+          "trace_id": "28e21261ae66d49de721f89cdc5ade4f",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100246-451d392361731c83",
+          "trace_id": "2bf65133fe6bd81ce8acd7f4b507c2b1",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100257-5708f00013d301f7",
+          "trace_id": "45aeb3dc66b34310ae97aaf0be6c5dfe",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100262-cfbaec4feaafb63f",
+          "trace_id": "ddad730d947a8bb3ff55a6f9198cecdf",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100238-07a06de9deac8f39",
+          "trace_id": "6eea9aff637522bbff79f7d93423287c",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100287-47d851679607e94a",
+          "trace_id": "c1e5324bead07e80f5bfc6a5d07d7531",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100267-c0f45b8c89e221f2",
+          "trace_id": "e7f0b3ed566cbbe77f5b5642b15e096c",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100272-3e65ec0b5fd43dac",
+          "trace_id": "7bfa272ca4f1a76532706ec259bf9885",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100282-d8371e029877d04a",
+          "trace_id": "7fb1e61052abc84a04573ee6b32f4b6a",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100298-dad6574da156e266",
+          "trace_id": "f3127d5c4dec2c3fa6aef1437228c8b5",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100277-ba4da78de5ba3d91",
+          "trace_id": "f205356005cb39cdac54ab52f8ffa119",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100292-a6fb33bade2b161a",
+          "trace_id": "61ab2fb62148b828dfefbe72a6d16c66",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100304-8d20b503f618fa0a",
+          "trace_id": "23948c6c13f50ed9411067d4250f77a0",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100307-4a6888068e3f2eda",
+          "trace_id": "ed3bdf4f887bd0951688112800bb5a74",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100310-95b90c07526b429e",
+          "trace_id": "ea32488b3eaa8e59347c25571062ab2c",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100315-7f97cbf277b568d8",
+          "trace_id": "ca7f50d1ee751f9f8bdc9f76b830ee36",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325100313-093f6be05a7175a5",
+          "trace_id": "62cb3a3ea3d510e9999d13c5b0360cbd",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294260-a096027eb8a49673",
+          "trace_id": "e31b65fe73243a5e58cd91d61560e60d",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294271-39a04c73ebdd61e3",
+          "trace_id": "5efbb6b39a4133d2baeb55f3c6ce5842",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294277-9f668bdba0b47096",
+          "trace_id": "6f4fc2f9d87ac768933c4a7d62180052",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294283-fbbeef02c42762ae",
+          "trace_id": "e88666759df28a7703e4dff46f3f9634",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294294-c0a87a35d78e6562",
+          "trace_id": "0b16d34b022da6f1523aedde44e05da8",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294288-a975959419e6348d",
+          "trace_id": "393b33d2cbd7a9f5fa3b4b4a32b0ce67",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294313-fd3e490730a77e5f",
+          "trace_id": "aa6aa0fc2ff4b8a1752fd8eaf57ddbd7",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294328-1e34ee033f02349f",
+          "trace_id": "3443dea8418daded361039e33feaa9e8",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294299-43d969c1e5d2446e",
+          "trace_id": "a7efc9fbffe87e04261c6ead99037411",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294323-5e07b0eea1b37fa4",
+          "trace_id": "e22419fc22ad5757038129f7f6cdb9b2",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294309-ca7183e26d24861e",
+          "trace_id": "0b240af28f44411ae259d19703921262",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294318-b49ffb7085b31e6c",
+          "trace_id": "7a32cc58c98eacd4157578a4ba7e256c",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294304-a539acb02e553f55",
+          "trace_id": "d7b3c00c459d4566cfdc43d9fbf75d9d",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294333-45052bc5706820e7",
+          "trace_id": "0db318b39e351933a9b84ab33591feed",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294350-5ba9b200643cc192",
+          "trace_id": "1a8ce9289599c46892d283080a6743ac",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294345-63182dbf69d9ac07",
+          "trace_id": "ecd5730834734a83754b4bcc3623ad51",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294352-772ab22563ef10ff",
+          "trace_id": "a83703871226f968f9968ab19ae86947",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294340-9a605e3d7ab3b213",
+          "trace_id": "69fb7a6aa5cf3e0fd44616737fcca6c7",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294354-ace41966b2b13288",
+          "trace_id": "4ed456c12224ffa4165f1023841d88b8",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294335-955141ec19359fbb",
+          "trace_id": "c1499f9f8ffaed6be727dad2671ecaf0",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294358-e28c85ae26b07fa6",
+          "trace_id": "8e11cae46b0cbe073330d5cba5f241e2",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294347-1884fd52990a4315",
+          "trace_id": "40d9e02d576845d25f3786f85008d2ee",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294360-45dbe83bdaca6d49",
+          "trace_id": "4bfa62fc948a745b77ea5b9a629e720a",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294349-b3637a7f763c73c8",
+          "trace_id": "81f2aba999471e3f72ae4141d8fadc87",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294362-b042ef9fd407ef45",
+          "trace_id": "95ddcabbd6bf4a6680d3606bf3b78b88",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294355-83535d3fc4193dcb",
+          "trace_id": "256272966b559c0b7d64cf7d7a7ce0a5",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294364-cc0c823da0766543",
+          "trace_id": "2bef3f2fd6af3ba3871a01f8146e0a6f",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294357-7d7dd513da823466",
+          "trace_id": "55a3638ba6cb7c3d0208098dcfb83063",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294365-0c5e7aec264c84b6",
+          "trace_id": "65d54879754a655d72fcabc57678759b",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294367-8b32994d2791cc96",
+          "trace_id": "b6b19ada317aec70f5d2b86c37db28e8",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294369-836232973ab96ee8",
+          "trace_id": "2f8de1ac450ee52aff52fb3ed8525257",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294372-896714214962876e",
+          "trace_id": "6f8b91cd3b28bb456869874e2bf7d64f",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294370-b7b258c2116a2042",
+          "trace_id": "0f00c3ab53ab2aa298f50e09899882f1",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294374-c84e6d063fa62d15",
+          "trace_id": "c4a23f6b218476994a93b1c07f32c0ff",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294377-c0cc4ad7907cf1d0",
+          "trace_id": "8cadbbbd97a6a8c460363c02924b4b18",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294375-a3a4aea549d39c9c",
+          "trace_id": "bcef5922bc3246b6016a68204af1d303",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294378-109b862065ee7655",
+          "trace_id": "a7720fd2d5bcefaa3b20040ecac2002f",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294383-0ef818f60bf62b5e",
+          "trace_id": "d49f808124b38635037ccada25234bf2",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294380-5df9adb2894d25bb",
+          "trace_id": "fe71c59d93a9335bb40ebaa26db903d4",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294385-fba00940acc64d84",
+          "trace_id": "286ee2c45fb3ec93ebbf8e0912c1f8e8",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294382-640187a74cf8fc5c",
+          "trace_id": "2bd0c8d6b8b543030867352a15641d35",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294386-73c599185db562bb",
+          "trace_id": "216c32bdfe48619c5d392dff98e87db6",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294388-2f933bc69534f3bd",
+          "trace_id": "f16931a730051915be7b68d0ddf301fa",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294391-0df8811e0912388b",
+          "trace_id": "6521adedbb30476a609346a2536a6f90",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794325294395-4d0b834536bcf3c1",
+          "trace_id": "fa30d4a7f9433e39c841479a9fe899d1",
+          "events": 1,
+          "spans": 2
+        },
+        {
+          "run_id": "run-1794325294400-41beb0d0e9200496",
+          "trace_id": "d411f0ba5baab82e76c75a3675175381",
+          "events": 1,
+          "spans": 2
+        },
+        {
+          "run_id": "run-1794325294390-65e81e5db2b62ce3",
+          "trace_id": "fc122663fa60e8382a228fa374aac102",
+          "events": 10,
+          "spans": 3
+        },
+        {
+          "run_id": "run-1794325294396-946d7d7f5d933f9c",
+          "trace_id": "6f7580016fa057cfc3d5fef4f6314eb8",
+          "events": 1,
+          "spans": 2
+        },
+        {
+          "run_id": "run-1794325294398-f76018ea1fcbc9c8",
+          "trace_id": "a8342c6b5ce19e46fb21dff1e01ee3d3",
+          "events": 1,
+          "spans": 2
+        },
+        {
+          "run_id": "run-1794325294393-3a6c8b1a8ada2123",
+          "trace_id": "914f5aa2ca9fdc12ad71c0a523b7695f",
+          "events": 10,
+          "spans": 3
+        }
+      ],
+      "same_session_intervals_checked": 70,
+      "event_ids_exact_no_duplicates": true,
+      "completed_have_tool_model_exit_evidence": true,
+      "total_events": 912,
+      "max_events_per_run": 12
+    },
+    {
+      "evidence_file": "graded-50-awake.json",
+      "runs": [
+        {
+          "run_id": "run-1794368531296-235ad892d335e728",
+          "trace_id": "f6843f7ab24d53b1ad3b0a3779095ef4",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531319-5d93fff984c33937",
+          "trace_id": "d442951e95f146ef867afe56491c2710",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531309-f9546cdb34ef3a32",
+          "trace_id": "89aa2d37105d11827188087fd1a161f1",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531330-a9cc48be5e48c8e4",
+          "trace_id": "2cfed55d25f08eac9f3b79681291ffc9",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531336-4f80f77204d44624",
+          "trace_id": "0868ac15cde53c5034954c9c89cf853b",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531312-28f7a6ba4e24fbd0",
+          "trace_id": "b2a53f1dca5e450c79d6f51e23133c10",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531324-7cd73996fda9cf32",
+          "trace_id": "6aa4cdc66f40ae9ae1d420a9e5f52142",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531347-94397e910659253e",
+          "trace_id": "80222e2d9ff7c0f7599b4f7138e1f8c8",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531341-5ec6e17bbde6bd3b",
+          "trace_id": "5c1ce03bc29e263d0fc2b9d3ea3c58c9",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531356-118e5d875ca6cbd0",
+          "trace_id": "685a20ca38ecbd3d63033e79002535db",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531350-a8069d57250f0f7d",
+          "trace_id": "259907c18d3ebe423d72b6e291d390ad",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531367-fb9f4750999f4afd",
+          "trace_id": "97778a4ee5e0604430d293729bff77f0",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531361-5d43d4e9d2237cf4",
+          "trace_id": "d2fd5ef2dbace93adf6987ff57aeaaaa",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531385-d169c6c8c52e327c",
+          "trace_id": "c172d1ea0d06ca5f2338f79f533507a5",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531380-759d5a917bce0e26",
+          "trace_id": "d37d10723014337e663d93269a00fe94",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531374-eb6686aa4041241c",
+          "trace_id": "83371b550521d7bc83ba325033cc2a70",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531390-5cd62adac99a639d",
+          "trace_id": "b04307b66c260d2ff21c16ee09e6a163",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531393-81bd7093b65c494f",
+          "trace_id": "6a006ed1545f41c9d51be1c44e992bde",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531395-cd63a1b012ddd833",
+          "trace_id": "e52b30aad433be92d55dfe85f9e4f812",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531400-d108d3ecd5c506fa",
+          "trace_id": "9c04aae0caedadaa4404c05fa26fd44c",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531396-9cac836c308c0eca",
+          "trace_id": "1ce0c5931bd263d6f98433ac04f13ebd",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531403-a5b3c4368e2ad883",
+          "trace_id": "520673b6b8392cf61ca83d2a5731d60a",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531405-8531afcba531c767",
+          "trace_id": "2289b5fd97a9a04c2d0cc2954fa2b2d1",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531398-55d13a33d63c1960",
+          "trace_id": "2e7b8cf75d60fb99dd76d4790ebfd119",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531408-419ef46cd904cb86",
+          "trace_id": "9b591ab4b5029a92ba39faec8785103f",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531401-a7651efbc7b56274",
+          "trace_id": "1d227c13b36b3939a7d7a7571a4475ed",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531410-17f683921849ffb9",
+          "trace_id": "094ccd7f50cdbab268c328572de57aff",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531406-8d691867b1260cee",
+          "trace_id": "04bf4da5acef44b07ec5451b27858430",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531411-de6873603f7eb8b0",
+          "trace_id": "53551439463ae35b8f9733718a65b37e",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531413-bc806cce11e207da",
+          "trace_id": "e055db472b98fcb46cd192a025dd88ee",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531421-68156328d21c769a",
+          "trace_id": "db9f2ec1a8d3aa1316970c613ae7c486",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531414-9c427d079d942d84",
+          "trace_id": "942814d12c68fe4fb989b2215c66836a",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531422-a8c95f98af7e4a3c",
+          "trace_id": "794a5c66126ed356ec989ee81d9069ee",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531416-9d86716075ca12a6",
+          "trace_id": "a074c19b3a627f78c9b1055e6cc17ce7",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531429-0b0c6d5d0f00b5be",
+          "trace_id": "0453d5644d0ed63df7dbb31f37faad84",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531418-34a76961a8553b76",
+          "trace_id": "4dcd25a23037f59865b4a28fd6b3c1b2",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531432-41670670dae40257",
+          "trace_id": "b99e2f145c7fb6d562bc530928b42111",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531419-c13fb444a852a7e7",
+          "trace_id": "106226cc821b9483519ad914ffc3ec46",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531424-e8cf42c485d57f73",
+          "trace_id": "378bc90c86bb147f8fb9aa1864c53d01",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531436-3e62871a9f7cbf01",
+          "trace_id": "2564711703efd5651f365bdccdeae9c2",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531425-f99c04430df12847",
+          "trace_id": "cdedc4d58555656cd2292ecc3c399fc8",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531438-eae9f8cabeadec69",
+          "trace_id": "65a61b7527eda58b657d1c25c294933d",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531427-e1dd25c55d1f7017",
+          "trace_id": "c36c36cd9dafd7435da8dfe1c2c1eeed",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531439-f0f64593b721ed93",
+          "trace_id": "f4e890218cd2553134e75cfd6e5188e6",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531430-a75618635e89d63b",
+          "trace_id": "d65eca48a4abe4ebb7c969a17ce8c4fa",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531441-281450148230458c",
+          "trace_id": "f62182837ad6bc3f0628ef0e3b87a184",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531434-8e9a94aba5644afc",
+          "trace_id": "0fde3bd9cb905a3dac9bd3ad6f2b72d2",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531443-65e8f856f5c4d7bf",
+          "trace_id": "ecd51eaa10d85a775d697805e42c3aa3",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531444-816963661801e41b",
+          "trace_id": "98bd4766d6d32fda11a9c0ea3165f749",
+          "events": 12,
+          "spans": 5
+        },
+        {
+          "run_id": "run-1794368531446-be36fbfeaa748501",
+          "trace_id": "fb2589d2548991080fb1d0c2cc479e39",
+          "events": 12,
+          "spans": 5
+        }
+      ],
+      "same_session_intervals_checked": 48,
+      "event_ids_exact_no_duplicates": true,
+      "completed_have_tool_model_exit_evidence": true,
+      "total_events": 600,
+      "max_events_per_run": 12
+    }
+  ],
+  "worker_crash": {
+    "run_id": "run-1794369001576-2cd2c5f87ccb4cdd",
+    "trace_id": "362b048198e4f53895f603db9140530e",
+    "events": 10,
+    "spans": 3,
+    "exact_event_id_match": true
+  },
+  "final_resource_counts": {
+    "active": 0,
+    "queued": 0,
+    "reserved": 0,
+    "docker_sandbox_containers": 0,
+    "docker_egress_sidecars": 0
+  }
+}
