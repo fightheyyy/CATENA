@@ -62,4 +62,30 @@ flowchart LR
 
 ## 验收
 
-以 PR #6 的 `265876e` 建立基线，Go PostgreSQL race、Python 54 项、前端 38 项与浏览器 13 项通过。本轮验收记录和失败说明见下方报告。
+以 PR #6 的 `265876e` 建立基线，Go PostgreSQL race、Python 54 项、前端 38 项与浏览器 13 项通过。
+
+### 真实运行
+
+`caffeinate -i python scripts/managed_load.py --environment <local-env> --output <grading.json>` 在 Apple M5 / 16 GiB、Docker Desktop、OpenSandbox 1.2.0、Codex 0.160.0 和真实 Responses 模型上运行。每档两个持久 Session，每实例 1 CPU / 1 GiB / 128 PIDs。每 Run 上限四次模型请求、每次最多 1024 output tokens、租户每分钟 30 次请求。每个 Run 实际生成并执行 Python 代码，核验产物、快照和退出证据。两 Sandbox 代表执行并发，10 / 20 / 50 代表同时提交的任务数。
+
+| 并发提交 | 真实执行通过 | 排队 P95 | 执行 P95 | 冷分配 P95 | 模型请求 | input / output tokens |
+|---:|---:|---:|---:|---:|---:|---:|
+| 10 | 10/10 | 75.68 s | 19.99 s | 2.24 s | 20 | 100,416 / 3,419 |
+| 20 | 20/20 | 144.20 s | 17.96 s | 1.94 s | 40 | 252,575 / 6,403 |
+| 50 | 50/50 | 377.63 s | 17.79 s | 1.95 s | 100 | 1,061,594 / 17,053 |
+
+[分级证据](unified-harness-evidence/grading.json)保留每个 Run、用量、产物哈希和 Docker 采样统计。50 档 0.147 秒提交完，418.993 秒完成。每档 Managed 峰值均为两个，结束预留归零；采样峰值 22.77% CPU、99.00 MiB、65 PIDs。冷分配每档仅两次，不能用于外推 SLA。这批测试使用已统一 App Server 的集成镜像。最终版本的类型化 adapter 和 Linux 后代检查另行通过真实 Profile、Analysis 和 Worker 崩溃验证。
+
+- [Managed 会话](unified-harness-evidence/managed-smoke.json)：三轮真实执行，含复用、pause/resume、checkpoint 与物理 Sandbox 丢失后恢复。
+- [自定义 Profile](unified-harness-evidence/profile.json)：最终镜像加载只读 Managed Skill，模型返回只存在于 Skill 中的标记。
+- [Analysis](unified-harness-evidence/analysis.json)：最终镜像读取真实 Managed Trace，执行 `list_traces` 与 `get_trace`，返回带来源引用的 `analysis_report`。首次集成尝试因 Worker 仍要求临时会话提供 checkpoint 而失败，修复后同场景重跑通过。
+- [Improvement 工具契约](unified-harness-evidence/improvement-contract.json)：最终镜像中的真实 Codex 调用 `evaluate_candidate`，通过正式候选校验器检查变更范围，并读回测试回执、返回合法结构。测试 Engine 故意拒绝生成业务 Artifact，Job 记录为失败且 Artifact 为 0。该结果只证明工具契约。
+- [Worker 强杀](unified-harness-evidence/worker-crash.json)：在真实 90 秒工具命令中发送 SIGKILL，27.046 秒确认隔离，fence 1 → 2，旧 Run 进入 `NEEDS_REVIEW` 且不重放。Docker 内单独验证 Linux wrapper 拒绝仍存活的 `setsid` 子进程。
+- [Trace 覆盖](unified-harness-evidence/trace-coverage.json)：80 个 Run 的 800 个事件逐条与 PostgreSQL 匹配。74 组相邻同 Session 执行没有重叠。Worker 崩溃 Run 也读回 8 个事件。最后核对活跃、排队、预留、Sandbox 与 sidecar 全部为零。独立 PostgreSQL 协议测试覆盖 255 条事件、跨页工具 Span 和 ACK 丢失。此前真实 Collector 故障重试记录见 [PR #6 验收](MANAGED_CONSISTENCY.md)。
+
+### 回归与范围
+
+- 独立 PostgreSQL 上运行 `go -C backend test -race -count=1 ./...`，配置 `CATENA_ENGINE_TEST_PYTHON` 运行 Go / Python 跨进程协议。并发 Claim、租约和越权、配额隔离、Provider 慢响应、故障接管和状态收敛通过。 `go -C backend vet ./...` 通过。
+- `cd engine && python -m pytest` 54 项通过，覆盖 Analysis、Improvement、Harbor contract 和 Sandbox adapter。Ruff 通过。 `pnpm -C frontend test` 38 项、`pnpm -C frontend test:browser` 13 项通过，覆盖 Compare 和 Human Review。
+- 两个 Compose 配置校验通过。实际构建 Engine 和 Sandbox 镜像，Engine 的 `command -v codex` 返回不可用，Sandbox 固定 Codex 0.160.0。宿主 App Server 启动入口和单独 CLI exec/resume 适配已删除。 Harbor 独立保留其任务运行时。
+- 保留既有 Harbor 回归与比较/审查契约。没有为重构额外生成新的真实 Harbor 质量对照、Candidate 或 Review 结论。
